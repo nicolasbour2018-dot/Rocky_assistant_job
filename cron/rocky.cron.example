@@ -1,0 +1,4 @@
+# Veille Rocky chaque matin à 07 h 30, heure locale du Mac.
+# Copie seulement la ligne suivante dans la sortie de : crontab -e
+30 7 * * * cd "/Users/nicolasbour/Desktop/Projets_IA /job_ass_gpt" && "/Users/nicolasbour/Desktop/Projets_IA /job_ass_gpt/.venv/bin/python" scripts/run_watch.py >> "/Users/nicolasbour/Desktop/Projets_IA /job_ass_gpt/logs/cron.log" 2>&1
+

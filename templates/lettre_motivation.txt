@@ -1,0 +1,33 @@
+{sender_name}
+{sender_address}
+{sender_phone}
+{sender_email}
+
+{recipient}
+{company_name}
+{company_address}
+
+{city_and_date}
+
+Objet : Candidature pour le poste de {job_title}
+
+Madame, Monsieur,
+
+Je souhaite vous proposer ma candidature au poste de {job_title} au sein de {company_name}.
+
+Après plusieurs expériences professionnelles dans les domaines de la recherche scientifique, de la rééducation et de l’enseignement, j’ai choisi de mettre mes capacités d’analyse, de résolution de problèmes et de compréhension des besoins humains au service des métiers de la data. Cette reconversion s’inscrit dans la continuité de mon parcours : observer une situation, en identifier les mécanismes, structurer les informations disponibles et proposer des solutions adaptées ont toujours occupé une place centrale dans mes fonctions.
+
+Afin de concrétiser ce projet, j’ai suivi les formations Data et Full Stack Data Science de Jedha afin d’aboutir sur la certification RNCP35288 (Niveau 6). Elles m’ont permis de développer des compétences en Python, SQL, analyse et visualisation de données, statistiques, Machine Learning, traitement du langage naturel et déploiement de modèles. J’ai notamment travaillé sur plusieurs projets appliqués, parmi lesquels une application financière intégrant un LLM et un système RAG, des outils d’analyse et de pilotage destinés à une association et à des PME. Ces réalisations m’ont appris à intervenir sur l’ensemble d’un projet data, depuis l’exploration et la préparation des données jusqu’à la modélisation, l’évaluation des résultats et leur restitution au travers d’un workflow déployé complet.
+
+Mon parcours antérieur constitue également un atout dans cette nouvelle fonction. L’enseignement m’a appris à rendre accessibles des sujets complexes, à adapter ma communication à différents interlocuteurs et à organiser mon travail avec rigueur. Mes expériences dans la recherche et la rééducation m’ont, quant à elles, donné l’habitude de partir d’un besoin concret, de suivre des indicateurs et d’ajuster mes décisions en fonction des résultats observés.
+
+{company_paragraph}
+
+En tant que candidat au poste de {job_title}, je souhaite aujourd’hui rejoindre une équipe dans laquelle je pourrai continuer à progresser techniquement tout en apportant dès mon arrivée ma capacité de travail, ma maturité professionnelle, mon autonomie et mon regard orienté métier.
+
+Je serais heureux de pouvoir échanger avec vous afin de vous présenter plus précisément ma démarche, mes projets et les compétences que je pourrais mettre au service de {company_name}.
+
+Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.
+
+{sender_name}
+

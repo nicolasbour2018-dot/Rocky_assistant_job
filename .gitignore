@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+.hf_deploy/
+logs/*.log
+data/profiles/*/cv.pdf
+output/candidatures/
+tmp/

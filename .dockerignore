@@ -1,0 +1,16 @@
+.env
+.venv
+.git
+.pytest_cache
+__pycache__
+*.pyc
+.DS_Store
+tmp
+output
+logs
+data
+tests
+deployment
+LM Lidl Bour Nicolas.pdf
+LM_CCM_Bour Nicolas.pdf
+Template_lm_datascientist.pages
