@@ -6,6 +6,7 @@ __pycache__/
 .DS_Store
 .hf_deploy/
 logs/*.log
+logs/rocky_streamlit.pid
 data/profiles/*/cv.pdf
 output/candidatures/
 tmp/
