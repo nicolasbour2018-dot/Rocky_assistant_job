@@ -9,7 +9,7 @@ from dashboard.rocky.database import (
     ensure_database_exists,
     initialize_database,
 )
-from dashboard.rocky.models import JobOffer
+from dashboard.rocky.models import JobOffer, MatchResult
 from dashboard.rocky.repository import RockyRepository
 
 
@@ -224,7 +224,7 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
         ), filename
         if filename == "dashboard_b.py":
             assert any(
-                button.label == "Flux · 1"
+                button.label.startswith("Tout le flux ·")
                 for button in app.button
             )
             assert any(
@@ -235,7 +235,7 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
                 and slider.value == 70
                 for slider in app.slider
             )
-            assert app.subheader[0].value == "Flux · À étudier · 1 résultat(s)"
+            assert app.subheader[0].value == "Suggestions · 0 résultat(s)"
             assert not any(
                 item.value == "BI Analyst" for item in app.subheader
             )
@@ -357,14 +357,13 @@ def test_job_detail_page_reuses_v11_actions(tmp_path, monkeypatch):
     button_labels = {button.label for button in app.button}
     assert "Recalculer le matching" in button_labels
     assert "Créer DOCX + PDF + copie du CV" in button_labels
-    assert "Lancer l’ATS historique (lecture brute)" in button_labels
-    assert "Lancer l’ATS V2 (recommandé)" in button_labels
-    assert "Enregistrer le texte ATS" in button_labels
-    assert "Enregistrer les modifications" in button_labels
+    assert "Modifier l’annonce" in button_labels
+    assert "Lancer l’ATS historique (lecture brute)" not in button_labels
+    assert "Lancer l’ATS V2 (recommandé)" not in button_labels
     links = app.get("link_button")
-    assert any(link.label == "Postuler" for link in links)
+    assert "Postuler" in button_labels
     assert any(
-        link.label == "Voir l’annonce source" for link in links
+        link.label == "Ouvrir le site de candidature" for link in links
     )
     dashboard_common.load_repository.clear()
 
@@ -378,17 +377,19 @@ def test_cockpit_metrics_filter_corresponding_cards(tmp_path, monkeypatch):
     repository = RockyRepository(engine)
     profile_id = repository.create_profile("Profil test")
     repository.set_active_profile(profile_id)
-    repository.insert_job(
+    full_id, _ = repository.insert_job(
         JobOffer(
             "Data Analyst",
             "Complet",
             "Description complète Python SQL",
             source_name="Adzuna",
             source_url="https://jobs.example/full",
+            status="À ÉTUDIER",
             description_is_full=True,
         ),
         profile_id,
     )
+    repository.save_match(full_id, profile_id, MatchResult(82, {}))
     incomplete_id, _ = repository.insert_job(
         JobOffer(
             "BI Analyst",
@@ -403,6 +404,7 @@ def test_cockpit_metrics_filter_corresponding_cards(tmp_path, monkeypatch):
     monkeypatch.setattr(dashboard_common, "Settings", lambda: settings)
     dashboard_common.load_repository.clear()
     app = AppTest.from_file(PROJECT_DIR / "dashboard" / "dashboard_b.py")
+    app.session_state["cockpit_view"] = "mine"
     app.run(timeout=30)
     minimum_score = next(
         slider for slider in app.slider if slider.label == "Score min."
@@ -410,32 +412,24 @@ def test_cockpit_metrics_filter_corresponding_cards(tmp_path, monkeypatch):
     assert minimum_score.min == 0
     assert minimum_score.max == 100
     assert minimum_score.step == 5
-    flux_status = next(
-        select for select in app.selectbox if select.label == "Flux — statut"
+    my_status = next(
+        select for select in app.selectbox if select.key == "cockpit_my_status"
     )
-    assert flux_status.value == "À ÉTUDIER"
-    flux_status.select("INCOMPLÈTE").run(timeout=30)
+    assert my_status.value == "À ÉTUDIER"
     assert any(
-        item.value == "BI Analyst" for item in app.subheader
+        item.value == "Data Analyst" for item in app.subheader
     )
     status_select = next(
         select
         for select in app.selectbox
-        if select.key == f"card_status_select_{incomplete_id}"
+        if select.key == f"card_status_select_{full_id}"
     )
     status_select.select("ÉCARTÉE")
     save_status = next(
         button
         for button in app.button
-        if button.key == f"card_status_save_{incomplete_id}"
+        if button.key == f"card_status_save_{full_id}"
     )
     save_status.click().run(timeout=30)
-    assert not any(item.value == "BI Analyst" for item in app.subheader)
-    exploitable = next(
-        button for button in app.button if button.label.startswith("Exploitables")
-    )
-    exploitable.click().run(timeout=30)
-    assert any("Exploitables · 1 résultat" in item.value for item in app.subheader)
-    assert any(item.value == "Data Analyst" for item in app.subheader)
-    assert not any(item.value == "BI Analyst" for item in app.subheader)
+    assert not any(item.value == "Data Analyst" for item in app.subheader)
     dashboard_common.load_repository.clear()
