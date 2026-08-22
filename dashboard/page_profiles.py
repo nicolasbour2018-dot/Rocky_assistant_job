@@ -137,6 +137,10 @@ if save_profile:
     st.rerun()
 
 st.subheader("CV associé")
+cv_result_key = f"v2_cv_save_result_{profile.id}"
+cv_result = st.session_state.pop(cv_result_key, None)
+if cv_result:
+    st.success(cv_result)
 if profile.cv_path:
     st.success(f"CV disponible : {Path(profile.cv_path).name}")
 uploaded_cv = st.file_uploader(
@@ -153,9 +157,11 @@ if uploaded_cv and st.button("Enregistrer ce CV"):
             profile.id,
             project_relative(cv_path, settings.project_dir),
         )
-        st.success("CV enregistré pour ce profil.")
+        st.session_state[cv_result_key] = (
+            f"CV « {uploaded_cv.name} » enregistré pour ce profil."
+        )
         st.rerun()
-    except RockyError as error:
+    except (RockyError, OSError) as error:
         st.error(str(error))
 
 st.markdown("#### Détection depuis le CV")

@@ -834,3 +834,22 @@ class RockyRepository:
             self.engine,
             params={"limit": max(1, int(limit))},
         )
+
+    def fetch_latest_completed_watch_run(
+        self, profile_id: int
+    ) -> dict[str, Any] | None:
+        """Retourne la dernière veille terminée pour le profil demandé."""
+        with self.engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT * FROM watch_runs
+                    WHERE profile_id = :profile_id
+                      AND finished_at IS NOT NULL
+                    ORDER BY finished_at DESC, id DESC
+                    LIMIT 1
+                    """
+                ),
+                {"profile_id": profile_id},
+            ).mappings().first()
+        return dict(row) if row else None

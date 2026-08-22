@@ -17,6 +17,11 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.dashboard_common import load_data, plain_description
+from dashboard.job_detail_components import render_ats_report, render_ats_v2_report
+from dashboard.rocky.ats import (
+    analyze_application_ats,
+    analyze_application_ats_v2,
+)
 from dashboard.rocky.ats_v3 import (
     AtsV3Report,
     analyze_ats_v3,
@@ -31,6 +36,13 @@ CV_BYTES_KEY = "ats_v3_cv_bytes"
 CV_NAME_KEY = "ats_v3_cv_name"
 JOB_ID_KEY = "ats_v3_report_job_id"
 INPUT_FINGERPRINT_KEY = "ats_v3_input_fingerprint"
+MY_JOB_STATUSES = {
+    "À ÉTUDIER",
+    "RETENUE",
+    "CANDIDATURE ENVOYÉE",
+    "ENTRETIEN",
+    "REFUS",
+}
 
 
 def _percent(value: int | None) -> str:
@@ -65,7 +77,7 @@ def _job_label(row: pd.Series) -> str:
 
 def _selected_job(jobs: pd.DataFrame) -> tuple[int | None, pd.Series | None]:
     if jobs.empty:
-        st.info("Aucune annonce Rocky n’est disponible. Utilise le texte manuel.")
+        st.info("Aucune annonce de « Mes annonces » n’est disponible. Utilise le texte manuel.")
         return None, None
     rows = [row for _, row in jobs.iterrows()]
     requested = st.session_state.get("ats_v3_job_id") or st.session_state.get(
@@ -81,6 +93,54 @@ def _selected_job(jobs: pd.DataFrame) -> tuple[int | None, pd.Series | None]:
         key="ats_v3_selected_job",
     )
     return int(selected_id), rows[ids.index(selected_id)]
+
+
+def _my_jobs(frame: pd.DataFrame) -> pd.DataFrame:
+    """Retient les mêmes annonces que la vue « Mes annonces » du cockpit."""
+    if frame.empty:
+        return frame.copy()
+    statuses = frame["status"].fillna("").astype(str).str.strip().str.upper()
+    full = frame["description_is_full"].fillna(False).astype(bool)
+    scores = pd.to_numeric(frame["match_score"], errors="coerce")
+    return frame[full & scores.notna() & statuses.isin(MY_JOB_STATUSES)].copy()
+
+
+def _existing_letter_text(
+    settings: Any, repository: Any, profile_id: int, job_id: int
+) -> tuple[str, str]:
+    """Retrouve le brouillon courant ou la dernière lettre DOCX enregistrée."""
+    draft = str(st.session_state.get(f"v2_letter_editor_{job_id}") or "").strip()
+    if draft:
+        return draft, "brouillon de lettre en cours"
+    applications = repository.fetch_applications()
+    if applications.empty:
+        return "", ""
+    matching = applications[
+        (applications["job_id"] == job_id)
+        & (applications["profile_id"] == profile_id)
+    ]
+    for _, application in matching.iterrows():
+        stored_path = application.get("letter_docx_path")
+        if not stored_path or pd.isna(stored_path):
+            continue
+        docx_path = Path(str(stored_path))
+        if not docx_path.is_absolute():
+            docx_path = settings.project_dir / docx_path
+        if not docx_path.is_file():
+            continue
+        try:
+            from docx import Document
+
+            text = "\n".join(
+                paragraph.text.strip()
+                for paragraph in Document(docx_path).paragraphs
+                if paragraph.text.strip()
+            )
+        except (ImportError, OSError, ValueError):
+            continue
+        if text:
+            return text, "dernière lettre DOCX enregistrée"
+    return "", ""
 
 
 def _job_text(row: pd.Series | None) -> tuple[str, str]:
@@ -155,6 +215,107 @@ def _source_controls(
                 placeholder="Colle ici les missions, exigences et compétences attendues.",
             )
     return cv_data, file_name, description, job_title, selected_id
+
+
+def _legacy_ats_controls(
+    settings: Any,
+    repository: Any,
+    profile: Any,
+    selected_job_id: int | None,
+) -> None:
+    """Centralise les analyses ATS V1 et V2 liées au CV du profil."""
+    st.divider()
+    st.subheader("ATS V1 et V2")
+    st.caption(
+        "Ces deux analyses utilisent le CV PDF du profil actif, l’annonce Rocky "
+        "sélectionnée et le texte de la lettre de motivation."
+    )
+    if selected_job_id is None:
+        st.info("Sélectionne une annonce Rocky pour lancer ATS V1 ou V2.")
+        return
+    if profile is None or not profile.cv_path:
+        st.warning("Ajoute un CV PDF au profil actif pour lancer ATS V1 ou V2.")
+        return
+
+    cv_path = _cv_path(settings, profile)
+    if cv_path is None or not cv_path.is_file():
+        st.warning("Le CV associé au profil est introuvable.")
+        return
+    if cv_path.suffix.lower() != ".pdf":
+        st.warning("ATS V1 et V2 attendent actuellement le CV du profil en PDF.")
+        return
+    offer = repository.fetch_job_offer(selected_job_id)
+    if offer is None:
+        st.error("Cette annonce Rocky n’existe plus.")
+        return
+
+    letter_key = f"ats_letter_{selected_job_id}"
+    if letter_key not in st.session_state:
+        letter_text, letter_source = _existing_letter_text(
+            settings, repository, profile.id, selected_job_id
+        )
+        if not letter_text:
+            st.info(
+                "Aucune lettre de motivation n’est encore disponible pour cette "
+                "annonce. Génère-la avant de lancer ATS V1 ou V2."
+            )
+            if st.button(
+                "Générer la lettre de motivation",
+                key=f"ats_generate_letter_{selected_job_id}",
+                type="primary",
+            ):
+                st.session_state.selected_job_id = selected_job_id
+                st.session_state["v2_detail_default_tab"] = (
+                    "Lettre et candidature"
+                )
+                st.switch_page("page_job_detail.py")
+            return
+        st.session_state[letter_key] = letter_text
+        st.caption(f"Lettre récupérée : {letter_source}.")
+    letter_text = st.text_area(
+        "Lettre de motivation utilisée par ATS V1 et V2",
+        key=letter_key,
+        height=360,
+        placeholder="Prépare ou colle ici la lettre de motivation à analyser.",
+    )
+
+    actions = st.columns(2)
+    if actions[0].button(
+        "Lancer ATS V1",
+        key=f"ats_v1_run_{selected_job_id}",
+        disabled=not letter_text.strip(),
+        use_container_width=True,
+    ):
+        try:
+            with st.spinner("Lecture brute du CV et contrôle ATS V1…"):
+                report_v1 = analyze_application_ats(cv_path, letter_text, offer)
+            st.session_state[f"v2_ats_report_{selected_job_id}"] = report_v1
+        except (RockyError, OSError) as error:
+            st.error(str(error))
+    if actions[1].button(
+        "Lancer ATS V2",
+        key=f"ats_v2_run_{selected_job_id}",
+        type="primary",
+        disabled=not letter_text.strip(),
+        use_container_width=True,
+    ):
+        try:
+            with st.spinner("Normalisation du CV et rapprochement des compétences…"):
+                report_v2 = analyze_application_ats_v2(
+                    cv_path,
+                    letter_text,
+                    offer,
+                )
+            st.session_state[f"v2_ats_v2_report_{selected_job_id}"] = report_v2
+        except (RockyError, OSError) as error:
+            st.error(str(error))
+
+    report_v1 = st.session_state.get(f"v2_ats_report_{selected_job_id}")
+    if report_v1:
+        render_ats_report(report_v1)
+    report_v2 = st.session_state.get(f"v2_ats_v2_report_{selected_job_id}")
+    if report_v2:
+        render_ats_v2_report(report_v2)
 
 
 def _summary(report: AtsV3Report, job_id: int | None) -> None:
@@ -423,14 +584,10 @@ def _raw_parser_tabs(report: AtsV3Report) -> None:
                 st.json(asdict(extraction.structured), expanded=True)
 
 
-st.title("Banc de test ATS V3")
+st.title("ATS")
 st.write(
-    "Teste la robustesse du fichier réellement envoyé à un recruteur avec plusieurs "
-    "moteurs indépendants, puis sépare parsing, présence lexicale et équivalences."
-)
-st.info(
-    "V1 et V2 restent inchangés dans la fiche annonce. V3 est un diagnostic "
-    "indépendant : il n’utilise ni leur éditeur texte ni les compétences du profil."
+    "Centralise les contrôles ATS V1, V2 et V3 pour comparer le CV, la lettre "
+    "et l’annonce dans un seul espace."
 )
 
 try:
@@ -440,11 +597,12 @@ except Exception as error:
     st.code(type(error).__name__)
     st.stop()
 
+my_jobs = _my_jobs(jobs)
 cv_data, file_name, description, job_title, selected_job_id = _source_controls(
-    settings, profile, jobs
+    settings, profile, my_jobs
 )
 
-actions = st.columns([2, 1, 1])
+actions = st.columns([2, 1])
 if actions[0].button(
     "Lancer le banc de test V3",
     type="primary",
@@ -469,15 +627,10 @@ if actions[0].button(
     except (DocumentError, RockyError, OSError) as error:
         st.error(str(error))
 
-if selected_job_id and actions[1].button(
-    "Comparer avec V1 / V2",
-    width="stretch",
-):
-    st.session_state.selected_job_id = selected_job_id
-    st.switch_page("page_job_detail.py")
-
 if len(description.strip()) < 80:
-    actions[2].caption("Description trop courte : 80 caractères minimum.")
+    actions[1].caption("Description trop courte : 80 caractères minimum.")
+
+_legacy_ats_controls(settings, repository, profile, selected_job_id)
 
 report = st.session_state.get(REPORT_KEY)
 if report:
@@ -488,23 +641,23 @@ if report:
             "Les documents sélectionnés ont changé depuis ce rapport. Relance V3 "
             "pour actualiser les résultats."
         )
-    st.divider()
-    summary_tab, parsing_tab, matching_tab, benchmark_tab, diagnostic_tab, raw_tab = st.tabs(
-        ("Résumé", "Parsing", "Matching annonce", "Benchmarks ATS", "Diagnostic", "Vue brute")
-    )
-    with summary_tab:
-        _summary(report, st.session_state.get(JOB_ID_KEY))
-    with parsing_tab:
-        _parser_comparison(report)
-    with matching_tab:
-        _matching(report)
-    with benchmark_tab:
-        _benchmarks(report)
-    with diagnostic_tab:
-        _diagnostic(report)
-    with raw_tab:
-        _raw_view(
-            report,
-            st.session_state.get(CV_BYTES_KEY, b""),
-            st.session_state.get(CV_NAME_KEY, report.file_name),
+    with st.expander("Rapport ATS V3", expanded=False):
+        summary_tab, parsing_tab, matching_tab, benchmark_tab, diagnostic_tab, raw_tab = st.tabs(
+            ("Résumé", "Parsing", "Matching annonce", "Benchmarks ATS", "Diagnostic", "Vue brute")
         )
+        with summary_tab:
+            _summary(report, st.session_state.get(JOB_ID_KEY))
+        with parsing_tab:
+            _parser_comparison(report)
+        with matching_tab:
+            _matching(report)
+        with benchmark_tab:
+            _benchmarks(report)
+        with diagnostic_tab:
+            _diagnostic(report)
+        with raw_tab:
+            _raw_view(
+                report,
+                st.session_state.get(CV_BYTES_KEY, b""),
+                st.session_state.get(CV_NAME_KEY, report.file_name),
+            )

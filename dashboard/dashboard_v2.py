@@ -9,7 +9,7 @@ from dashboard.dashboard_common import render_floating_chatbot
 
 # Configuration de la l'application Streamlit.
 # Configure l'apparence globale de l'application avant le rendu des pages.
-st.set_page_config(page_title="Rocky V2", page_icon="🎛️", layout="wide")
+st.set_page_config(page_title="Rocky V1.2", page_icon="🎛️", layout="wide")
 
 # Définition des pages de l'application.
 # Expose les pages et défini leur visibilité dans la navigation.
@@ -51,9 +51,9 @@ monitoring = st.Page(
     title="Monitoring",
     icon="🩺",
 )
-ats_v3 = st.Page(
+ats = st.Page(
     "page_ats_v3.py",
-    title="ATS V3",
+    title="ATS",
     icon="🧪",
 )
 
@@ -61,15 +61,15 @@ ats_v3 = st.Page(
 # Organise la navigation de l'application en regroupant les pages par catégorie et en définissant leur position dans l'interface.
 navigation = st.navigation(
     {
-        "Rocky V2": [cockpit, all_jobs, ats_v3, enrichment, job_detail],
-        "Outils V1.1": [add_url, profiles, monitoring],
+        "Rocky": [cockpit, profiles, ats, add_url, enrichment, job_detail],
+        "Outils": [all_jobs, monitoring],
     },
     position="sidebar",
     expanded=True,
 )
 # Affichage du footer dans la sidebar.
 with st.sidebar:
-    st.caption("Rocky V2 · cockpit et outils personnels")
+    st.caption("Rocky · recherche d’emploi personnelle")
 
 # Affichage du chatbot flottant.
 render_floating_chatbot()

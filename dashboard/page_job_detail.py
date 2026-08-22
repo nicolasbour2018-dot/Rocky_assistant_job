@@ -60,33 +60,32 @@ heading[1].metric(
     display_score(row.get("match_score")),
 )
 
-links = st.columns(4)
+links = st.columns([2, 1])
 application_url = offer.application_url or offer.source_url
 if application_url:
-    links[0].link_button(
+    if links[0].button(
         "Postuler",
-        application_url,
         type="primary",
+        key=f"v2_detail_apply_{job_id}",
         use_container_width=True,
-    )
-if offer.source_url:
-    links[1].link_button(
-        "Voir l’annonce source",
-        offer.source_url,
-        use_container_width=True,
+    ):
+        repository.update_job_status(int(job_id), "CANDIDATURE ENVOYÉE")
+        st.rerun()
+    links[0].link_button(
+        "Ouvrir le site de candidature", application_url, use_container_width=True
     )
 status_index = (
     list(JOB_STATUS_OPTIONS).index(offer.status)
     if offer.status in JOB_STATUS_OPTIONS
     else 0
 )
-new_status = links[2].selectbox(
+new_status = links[1].selectbox(
     "Statut",
     JOB_STATUS_OPTIONS,
     index=status_index,
     key=f"v2_detail_status_{job_id}",
 )
-if links[3].button(
+if links[1].button(
     "Enregistrer le statut",
     key=f"v2_detail_save_status_{job_id}",
     use_container_width=True,
@@ -116,11 +115,56 @@ else:
             st.rerun()
         st.error(hydration.warning or "Description toujours indisponible.")
 
+tab_labels = ["Annonce et modifications", "Matching détaillé", "Lettre et candidature"]
+requested_tab = st.session_state.pop("v2_detail_default_tab", None)
 overview_tab, matching_tab, application_tab = st.tabs(
-    ["Annonce et modifications", "Matching détaillé", "Lettre et candidature"]
+    tab_labels,
+    default=requested_tab if requested_tab in tab_labels else None,
 )
 
 with overview_tab:
+    provenance_key = f"v2_detail_show_provenance_{job_id}"
+    edit_key = f"v2_detail_show_edit_{job_id}"
+    quick_actions = st.columns([1, 1, 5])
+    if quick_actions[0].button(
+        "Provenance",
+        key=f"v2_detail_toggle_provenance_{job_id}",
+        width="content",
+    ):
+        st.session_state[provenance_key] = not st.session_state.get(
+            provenance_key, False
+        )
+    if quick_actions[1].button(
+        "Modifier l’annonce",
+        key=f"v2_detail_toggle_edit_{job_id}",
+        width="content",
+    ):
+        st.session_state[edit_key] = not st.session_state.get(edit_key, False)
+
+    if st.session_state.get(provenance_key):
+        with st.container(border=True):
+            st.caption("Provenance et identifiants")
+            st.write(f"**Identifiant interne Rocky :** {job_id}")
+            st.write(
+                f"**Source de collecte :** {offer.source_name or 'Non précisée'}"
+            )
+            st.write(
+                f"**Identifiant externe :** {offer.external_id or 'Non précisé'}"
+            )
+            st.write(f"**URL source :** {offer.source_url or 'Non précisée'}")
+            st.write(
+                "**Source d’enrichissement :** "
+                f"{offer.description_enrichment_source or 'Aucune'}"
+            )
+    if st.session_state.get(edit_key):
+        render_edit_form(
+            int(job_id),
+            offer,
+            repository,
+            profile,
+            expander_label=None,
+        )
+
     metadata = st.columns(4)
     metadata[0].write(f"**Lieu**  \n{offer.city or 'Non précisé'}")
     metadata[1].write(
@@ -153,40 +197,17 @@ with overview_tab:
             f"Description enrichie via {offer.description_enrichment_source}. "
             f"La source de collecte reste {offer.source_name}."
         )
-    with st.expander("Provenance et identifiants"):
-        st.write(f"**Identifiant interne Rocky :** {job_id}")
-        st.write(f"**Source de collecte :** {offer.source_name or 'Non précisée'}")
-        st.write(f"**Identifiant externe :** {offer.external_id or 'Non précisé'}")
-        st.write(f"**URL source :** {offer.source_url or 'Non précisée'}")
-        st.write(
-            "**Source d’enrichissement :** "
-            f"{offer.description_enrichment_source or 'Aucune'}"
-        )
-    render_edit_form(int(job_id), offer, repository, profile)
 
 with matching_tab:
     render_matching_detail(row, offer, repository, profile)
 
 with application_tab:
-    ats_v3_access = st.columns([3, 1])
-    ats_v3_access[0].info(
-        "ATS V3 teste le CV réel avec plusieurs parseurs indépendants. "
-        "Les analyses V1 et V2 restent disponibles ci-dessous."
-    )
-    if ats_v3_access[1].button(
-        "Ouvrir ATS V3",
-        key=f"open_ats_v3_{job_id}",
-        type="primary",
-        width="stretch",
-    ):
-        st.session_state.ats_v3_job_id = int(job_id)
-        st.switch_page("page_ats_v3.py")
     render_letter_workshop(int(job_id), offer, settings, repository, profile)
     if application_url:
-        st.link_button(
+        if st.button(
             "Postuler sur le site officiel",
-            application_url,
             type="primary",
-        )
-    if offer.source_url:
-        st.link_button("Revoir l’annonce source", offer.source_url)
+            key=f"v2_detail_apply_official_{job_id}",
+        ):
+            repository.update_job_status(int(job_id), "CANDIDATURE ENVOYÉE")
+            st.rerun()

@@ -19,6 +19,7 @@ from dashboard.dashboard_common import (
     render_job_detail,
     selected_row_ids,
 )
+from dashboard.job_detail_components import render_edit_form
 from dashboard.rocky.enrichment import reenrich_saved_jobs
 from dashboard.rocky.statuses import JOB_STATUS_OPTIONS
 
@@ -226,6 +227,26 @@ for _, row in filtered.iterrows():
             f"Lieu : {row.get('city') or 'non précisé'}"
         )
         with st.expander("Voir l’aperçu et réenrichir"):
+            job_id = int(row["id"])
+            edit_key = f"enrichment_edit_job_{job_id}"
+            if st.button(
+                "Modifier l'annonce",
+                key=f"enrichment_open_edit_{job_id}",
+                use_container_width=True,
+            ):
+                st.session_state[edit_key] = True
+            if st.session_state.get(edit_key):
+                offer = repository.fetch_job_offer(job_id)
+                if offer is None:
+                    st.error("Cette annonce n’existe plus dans Rocky.")
+                else:
+                    render_edit_form(
+                        job_id,
+                        offer,
+                        repository,
+                        profile,
+                        expander_label=None,
+                    )
             render_job_detail(
                 row, settings, repository, profile, "enrichment"
             )

@@ -18,6 +18,7 @@ import streamlit as st
 
 # Importation des modules internes
 from dashboard.dashboard_common import matching_category_summary
+from dashboard.job_analysis import SOFT_SKILLS, TECHNICAL_SKILLS
 from dashboard.rocky.ats import (
     AtsReport,
     AtsV2Report,
@@ -44,19 +45,15 @@ from dashboard.rocky.llm import RockyLLM
 from dashboard.rocky.matching import calculate_match
 from dashboard.rocky.models import CandidateProfile, JobOffer, MatchResult
 from dashboard.rocky.repository import RockyRepository
-from dashboard.rocky.text_utils import ensure_list, project_relative
+from dashboard.rocky.text_utils import ensure_list, normalize_text, project_relative
 
 #################################################################################################
 # Bloc de fonctions utilitaires pour l'affichage des composants de la fiche annonce complète de Rocky.
 #################################################################################################
 
-def _letter_editor_height(text: str) -> int:
-    """Estime une hauteur suffisante pour afficher la lettre sans défilement."""
-    visual_lines = sum(
-        max(1, (len(line) + 57) // 58)
-        for line in (text.splitlines() or [""])
-    )
-    return max(700, 70 + visual_lines * 23)
+def _letter_editor_height(_text: str) -> int:
+    """Conserve un éditeur de lettre compact, avec défilement si nécessaire."""
+    return 460
 
 
 def _reset_ats_editor(editor_key: str, cv_path: str) -> None:
@@ -100,6 +97,20 @@ def _badges(skills: list[str], kind: str) -> None:
     )
     st.markdown(f"<div>{badges}</div>", unsafe_allow_html=True)
 
+
+def _profile_skill_category(skill: str) -> str:
+    """Retourne la catégorie de profil correspondant à la taxonomie Rocky."""
+    normalized_skill = normalize_text(skill)
+    if normalized_skill in {
+        normalize_text(candidate) for candidate in TECHNICAL_SKILLS
+    }:
+        return "technical"
+    if normalized_skill in {
+        normalize_text(candidate) for candidate in SOFT_SKILLS
+    }:
+        return "soft"
+    return "business"
+
 #################################################################################################
 # Bloc de modification des informations de l'annonce.
 #################################################################################################
@@ -109,9 +120,15 @@ def render_edit_form(
     offer: JobOffer,
     repository: RockyRepository,
     profile: CandidateProfile | None,
+    expander_label: str | None = "Modifier les informations de l’annonce",
 ) -> None:
     """ Fonction de modification des informations de l'annonce. ( !  Modifie la base de donnée) """
-    with st.expander("Modifier les informations de l’annonce"):
+    edit_container = (
+        st.expander(expander_label)
+        if expander_label is not None
+        else st.container()
+    )
+    with edit_container:
         st.caption(
             "L’identifiant Rocky et l’identifiant externe restent inchangés afin "
             "de préserver la provenance et l’historique."
@@ -318,6 +335,13 @@ def render_matching_detail(
     if profile is None:
         st.warning("Active un profil pour calculer le matching.")
         return
+    added_skill_key = f"v2_profile_skill_added_{job_id}"
+    added_skill = st.session_state.pop(added_skill_key, None)
+    if added_skill:
+        st.success(
+            f"« {added_skill} » a été ajoutée au profil et le matching "
+            "a été recalculé."
+        )
     if st.button(
         "Recalculer le matching",
         key=f"v2_recalculate_{job_id}",
@@ -371,20 +395,59 @@ def render_matching_detail(
         st.markdown("#### 🔎 Compétences à vérifier")
         st.caption(
             "Elles sont demandées dans l’annonce mais non reconnues dans le "
-            "profil. Une proximité lexicale éventuelle est indiquée sans changer "
-            "le score."
+            "profil. Ajoute uniquement celles que tu maîtrises : elles seront "
+            "créées au niveau intermédiaire, sans ancienneté renseignée et non "
+            "principales."
         )
         if not summary["to_review"]:
             st.success("Aucune compétence à vérifier.")
+        existing_skills = {
+            normalize_text(str(skill.get("skill_name") or ""))
+            for skill in repository.fetch_skills(profile.id)
+        }
         for item in summary["to_review"]:
+            skill = str(item["skill"])
+            skill_key = normalize_text(skill)
+            details, action = st.columns([4, 1])
             if item["close_profile_skill"]:
-                st.write(
-                    f"- **{item['skill']}** — proche de "
-                    f"« {item['close_profile_skill']} » ({item['similarity']} %), "
-                    "à confirmer"
+                details.write(
+                    f"**{skill}** — proche de « {item['close_profile_skill']} » "
+                    f"({item['similarity']} %), à confirmer"
                 )
             else:
-                st.write(f"- **{item['skill']}** — non reconnue dans le profil")
+                details.write(f"**{skill}** — non reconnue dans le profil")
+            if skill_key in existing_skills:
+                action.button(
+                    "Déjà au profil",
+                    key=f"v2_profile_skill_exists_{job_id}_{skill_key}",
+                    disabled=True,
+                    use_container_width=True,
+                )
+                continue
+            if action.button(
+                "Ajouter au profil",
+                key=f"v2_add_profile_skill_{job_id}_{skill_key}",
+                use_container_width=True,
+                help=(
+                    "Ajoute cette compétence comme "
+                    f"{_profile_skill_category(skill)}, niveau intermédiaire, "
+                    "sans ancienneté et non-principale."
+                ),
+            ):
+                repository.add_skill(
+                    profile.id,
+                    skill,
+                    _profile_skill_category(skill),
+                    "intermédiaire",
+                    None,
+                    False,
+                )
+                result = calculate_match(
+                    offer, profile, repository.fetch_skills(profile.id)
+                )
+                repository.save_match(job_id, profile.id, result)
+                st.session_state[added_skill_key] = skill
+                st.rerun()
 
     result: MatchResult = summary["result"]
     with st.expander("Voir la composition complète du score"):
@@ -421,8 +484,11 @@ def render_matching_detail(
 # Bloc d'affichage des rapports de compatibilité ATS.
 #################################################################################################
 
-def _render_ats_report(report: AtsReport) -> None:
-    with st.container(border=True):
+def render_ats_report(report: AtsReport) -> None:
+    with st.expander(
+        f"Rapport ATS V1 · {report.score} / 100",
+        expanded=False,
+    ):
         st.markdown("#### Rapport court de compatibilité ATS")
         metrics = st.columns(4)
         metrics[0].metric("Score indicatif", f"{report.score} / 100")
@@ -475,8 +541,11 @@ def _render_ats_report(report: AtsReport) -> None:
         )
 
 
-def _render_ats_v2_report(report: AtsV2Report) -> None:
-    with st.container(border=True):
+def render_ats_v2_report(report: AtsV2Report) -> None:
+    with st.expander(
+        f"Rapport ATS V2 · {report.score} / 100",
+        expanded=False,
+    ):
         st.markdown("#### Rapport ATS V2 — lecture tolérante")
         metrics = st.columns(5)
         metrics[0].metric("Score V2", f"{report.score} / 100")
@@ -581,10 +650,9 @@ def render_letter_workshop(
         "À l’attention du Service des Ressources Humaines",
         key=f"v2_recipient_{job_id}",
     )
-    address = st.text_area(
+    address = st.text_input(
         "Adresse de l’entreprise (facultatif)",
         key=f"v2_address_{job_id}",
-        height=70,
     )
     company_paragraph = st.text_area(
         "Paragraphe personnalisé",
@@ -609,37 +677,24 @@ def render_letter_workshop(
             st.session_state[editor_key] = generated
         st.session_state[base_key] = generated
 
-        editor, preview = st.columns(2)
-        with editor:
-            st.markdown("#### Lettre modifiable")
-            if st.button(
-                "Recharger depuis le modèle", key=f"v2_reset_letter_{job_id}"
-            ):
-                st.session_state[editor_key] = generated
-            st.markdown(
-                """
-                <style>
-                textarea[aria-label="Contenu de la lettre"] {
-                    resize: none !important;
-                    overflow-y: hidden !important;
-                    field-sizing: content;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
-            editor_height = _letter_editor_height(
-                str(st.session_state.get(editor_key) or generated)
-            )
-            letter_preview = st.text_area(
-                "Contenu de la lettre",
-                key=editor_key,
-                height=editor_height,
-                label_visibility="collapsed",
-            )
-        with preview:
-            st.markdown("#### Aperçu mis en forme")
-            st.caption("Aperçu complet, sans zone de défilement interne.")
+        st.markdown("#### Lettre modifiable")
+        if st.button(
+            "Recharger depuis le modèle", key=f"v2_reset_letter_{job_id}"
+        ):
+            st.session_state[editor_key] = generated
+        editor_height = _letter_editor_height(
+            str(st.session_state.get(editor_key) or generated)
+        )
+        letter_preview = st.text_area(
+            "Contenu de la lettre",
+            key=editor_key,
+            height=editor_height,
+            label_visibility="collapsed",
+        )
+
+        st.markdown("#### Aperçu mis en forme")
+        st.caption("Aperçu complet dans une zone défilable.")
+        with st.container(height=700, border=True):
             st.markdown(
                 render_letter_preview_html(variables, letter_preview),
                 unsafe_allow_html=True,
@@ -656,6 +711,7 @@ def render_letter_workshop(
         key=f"v2_prepare_{job_id}",
         type="primary",
         disabled=not confirm or not letter_preview or not profile.cv_path,
+        use_container_width=True,
     ):
         try:
             files = prepare_application(
@@ -676,7 +732,6 @@ def render_letter_workshop(
             st.success(f"Dossier créé : {files.directory.name}")
         except (RockyError, OSError) as error:
             st.error(str(error))
-
     files = st.session_state.get(f"v2_files_{job_id}")
     if files:
         downloads = st.columns(3)
@@ -692,129 +747,3 @@ def render_letter_workshop(
                 key=f"v2_download_{job_id}_{label}",
                 use_container_width=True,
             )
-
-    st.divider()
-    st.markdown("#### Vérifier la compatibilité ATS")
-    st.caption(
-        "L’ATS historique montre la lecture brute du PDF. L’ATS V2 répare les "
-        "espacements typographiques et distingue les correspondances exactes, "
-        "proches et absentes. Aucun document ne quitte Rocky."
-    )
-    cv_path = settings.project_dir / profile.cv_path
-    ats_override_path = ats_text_path(settings.profiles_dir, profile.id)
-    ats_editor_key = f"v2_ats_cv_editor_{profile.id}"
-    if profile.cv_path and ats_editor_key not in st.session_state:
-        try:
-            cv_text, _ = load_ats_cv_text(cv_path, ats_override_path)
-            st.session_state[ats_editor_key] = cv_text
-        except RockyError as error:
-            st.error(str(error))
-
-    with st.expander("Éditer le texte du CV utilisé par l’ATS V2"):
-        st.caption(
-            "Cette zone corrige uniquement le texte analysé. Le PDF original, "
-            "sa mise en page et le CV joint aux candidatures ne sont pas modifiés."
-        )
-        editor_actions = st.columns([1, 1, 1])
-        if profile.cv_path:
-            editor_actions[0].button(
-                "Recharger depuis le PDF",
-                key=f"v2_ats_reset_cv_{profile.id}",
-                on_click=_reset_ats_editor,
-                args=(ats_editor_key, str(cv_path)),
-                use_container_width=True,
-            )
-        cv_text_for_ats = st.text_area(
-            "Texte du CV analysé",
-            key=ats_editor_key,
-            height=600,
-            disabled=not profile.cv_path,
-            placeholder="Ajoute un CV PDF au profil pour extraire son texte.",
-        )
-        if editor_actions[1].button(
-            "Enregistrer le texte ATS",
-            key=f"v2_ats_save_cv_{profile.id}",
-            disabled=not cv_text_for_ats.strip(),
-            use_container_width=True,
-        ):
-            try:
-                save_ats_cv_text(ats_override_path, cv_text_for_ats)
-                st.success(
-                    "Texte ATS enregistré. Le PDF original reste inchangé."
-                )
-            except (RockyError, OSError) as error:
-                st.error(str(error))
-        editor_actions[2].download_button(
-            "Télécharger le texte (.txt)",
-            cv_text_for_ats,
-            file_name="CV_Nicolas_Bour_ATS.txt",
-            mime="text/plain",
-            disabled=not cv_text_for_ats.strip(),
-            use_container_width=True,
-        )
-
-    ats_buttons = st.columns(2)
-    if ats_buttons[0].button(
-        "Lancer l’ATS historique (lecture brute)",
-        key=f"v2_test_ats_{job_id}",
-        disabled=not profile.cv_path or not letter_preview,
-        use_container_width=True,
-    ):
-        try:
-            with st.spinner("Lecture brute du CV et contrôle ATS historique…"):
-                report = analyze_application_ats(cv_path, letter_preview, offer)
-            st.session_state[f"v2_ats_report_{job_id}"] = report
-            st.session_state[f"v2_ats_letter_snapshot_{job_id}"] = letter_preview
-        except (RockyError, OSError) as error:
-            st.error(str(error))
-
-    if ats_buttons[1].button(
-        "Lancer l’ATS V2 (recommandé)",
-        key=f"v2_test_ats_v2_{job_id}",
-        type="primary",
-        disabled=(
-            not profile.cv_path
-            or not letter_preview
-            or not cv_text_for_ats.strip()
-        ),
-        use_container_width=True,
-    ):
-        try:
-            with st.spinner("Normalisation du CV et rapprochement des compétences…"):
-                report_v2 = analyze_application_ats_v2(
-                    cv_path,
-                    letter_preview,
-                    offer,
-                    cv_text_override=cv_text_for_ats,
-                )
-            st.session_state[f"v2_ats_v2_report_{job_id}"] = report_v2
-            st.session_state[f"v2_ats_v2_letter_snapshot_{job_id}"] = letter_preview
-            st.session_state[f"v2_ats_v2_cv_snapshot_{job_id}"] = cv_text_for_ats
-        except (RockyError, OSError) as error:
-            st.error(str(error))
-
-    ats_v2_report = st.session_state.get(f"v2_ats_v2_report_{job_id}")
-    if ats_v2_report:
-        if (
-            st.session_state.get(f"v2_ats_v2_letter_snapshot_{job_id}")
-            != letter_preview
-            or st.session_state.get(f"v2_ats_v2_cv_snapshot_{job_id}")
-            != cv_text_for_ats
-        ):
-            st.info(
-                "Le CV textuel ou la lettre a changé depuis ce rapport V2. "
-                "Relance le test pour l’actualiser."
-            )
-        _render_ats_v2_report(ats_v2_report)
-
-    ats_report = st.session_state.get(f"v2_ats_report_{job_id}")
-    if ats_report:
-        if (
-            st.session_state.get(f"v2_ats_letter_snapshot_{job_id}")
-            != letter_preview
-        ):
-            st.info(
-                "La lettre a changé depuis ce rapport. Relance le test pour "
-                "actualiser les statistiques."
-            )
-        _render_ats_report(ats_report)

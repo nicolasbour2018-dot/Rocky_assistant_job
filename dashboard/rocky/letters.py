@@ -159,7 +159,7 @@ def render_letter_preview_html(
 
     return f"""
     <div style="
-        max-width: 760px;
+        max-width: none;
         margin: 0 auto;
         padding: 2rem 2.4rem;
         border: 1px solid #d8d8d8;
