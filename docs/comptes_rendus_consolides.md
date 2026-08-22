@@ -1177,7 +1177,77 @@ ne constituent pas un dysfonctionnement de V3.
 Aucune modification de code, de configuration ou de donnée n’a été effectuée
 pendant ce diagnostic. Seul le présent compte rendu consolidé a été complété.
 
-## 23. Index des documents associés
+## 23. Évolutions d’interface et consolidation ATS — 22 août 2026
+
+### Cockpit, file d’enrichissement et fiche annonce
+
+- la carte du cockpit expose désormais directement le bouton « Ouvrir la fiche
+  complète » ; il n’est plus caché dans l’analyse du matching ;
+- le tri « Plus récentes » convertit explicitement les dates avant classement,
+  ce qui évite l’erreur Pandas sur des colonnes catégorielles non ordonnées ;
+- chaque annonce de la file « À enrichir » peut être modifiée manuellement depuis
+  son expander. Le formulaire partagé marque la description comme complète,
+  ajuste le statut si nécessaire et recalcule le matching ;
+- dans la fiche annonce, le lien source redondant a été retiré, l’enregistrement
+  du statut se trouve sous son sélecteur et les accès compacts « Provenance » et
+  « Modifier l’annonce » ont été regroupés avant les métadonnées ;
+- l’onglet de lettre présente maintenant l’éditeur pleine largeur, suivi de son
+  aperçu pleine largeur dans une zone défilable. L’adresse de l’entreprise est
+  saisie sur une ligne ; les liens superflus après « Postuler » ont été retirés.
+
+### Navigation et profils
+
+La navigation latérale est organisée en deux sections :
+
+| Section | Pages visibles |
+| --- | --- |
+| Rocky | Cockpit, Mes profils, ATS, Ajouter une URL |
+| Outils | Tout le flux, Monitoring |
+
+Les pages internes « À enrichir » et « Fiche annonce » restent masquées de la
+barre latérale et sont ouvertes depuis les actions contextuelles.
+
+La page « Mes profils » conserve désormais le résultat du chargement du CV après
+le rerun : le nom du fichier est confirmé en cas de succès et toute erreur PDF ou
+d’écriture est affichée.
+
+### ATS centralisé
+
+La page anciennement nommée « ATS V3 » s’appelle désormais simplement « ATS ».
+Elle centralise les trois analyses :
+
+- le lancement V3 se situe directement sous le choix du CV et de l’annonce ;
+- V1 et V2 utilisent le CV PDF réellement associé au profil, la lettre de
+  motivation et l’annonce sélectionnée ;
+- le sélecteur d’annonce se limite aux éléments de « Mes annonces » : annonces
+  complètes, scorées et dans un statut de suivi ;
+- la lettre existante est récupérée en priorité depuis le brouillon courant, puis
+  depuis le dernier DOCX enregistré. En son absence, le bouton « Générer la lettre
+  de motivation » ouvre la fiche concernée directement sur l’onglet Lettre ;
+- ATS V2 n’offre plus de correction manuelle du texte extrait : les analyses V1
+  et V2 mesurent le PDF réel pour exposer tout défaut de parsing à corriger dans le
+  CV lui-même ;
+- les rapports V1, V2 et V3 sont repliés dans des expanders pour préserver la
+  lisibilité de la page.
+
+### Vérification, Git et configuration locale
+
+La suite complète a été exécutée après mise à jour des tests d’interface pour le
+cockpit actuel et la centralisation ATS : **75 tests réussis**. Seuls des
+avertissements Pandas non bloquants subsistent sur un calcul de durée.
+
+La branche `nico-dev`, créée depuis `main`, contient les commits de mise à jour
+des tests et de nettoyage du runtime Streamlit. Le fichier
+`logs/rocky_streamlit.pid` est maintenant ignoré par Git : il ne doit jamais être
+publié car il dépend de la machine locale.
+
+Lorsqu’un clone local est placé dans un nouveau dossier, il faut y fournir un
+fichier `.env` non versionné contenant la configuration PostgreSQL (ou
+`DATABASE_URL`). Sans ce fichier, le serveur Streamlit démarre mais l’application
+ne peut pas se connecter à la base. Cette configuration reste locale et ne doit
+pas être ajoutée au dépôt.
+
+## 24. Index des documents associés
 
 - `README.md` — installation, exploitation et architecture courante ;
 - `docs/theirstack_enrichment.md` — rapprochement d’enrichissement ;
