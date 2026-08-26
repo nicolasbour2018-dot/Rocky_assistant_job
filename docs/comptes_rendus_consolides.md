@@ -1247,7 +1247,46 @@ fichier `.env` non versionné contenant la configuration PostgreSQL (ou
 ne peut pas se connecter à la base. Cette configuration reste locale et ne doit
 pas être ajoutée au dépôt.
 
-## 24. Index des documents associés
+## 24. Nettoyage du dépôt après déplacement — 26 août 2026
+
+### Objectif
+
+Rattacher le dossier local déplacé `Rocky_assistant_job` à la branche GitHub
+`nico-dev` et empêcher la publication d'artefacts locaux ou de documents
+personnels introduits pendant la réorganisation.
+
+### Fichiers modifiés
+
+- `.gitignore` ;
+- `docs/comptes_rendus_consolides.md` ;
+- `Template_lm_datascientist.pages` et
+  `data/profiles/1/cv_ats.txt`, retirés de l'index Git mais conservés sur le
+  disque local.
+
+### Changements et décisions
+
+- la branche locale suit désormais `origin/nico-dev`, qui contenait déjà les
+  trois commits légitimes de tests, de nettoyage du PID Streamlit et de
+  documentation ;
+- l'ancien état local reste récupérable dans la branche
+  `backup/nico-before-cleanup-20260826` ;
+- les caches Python, environnements virtuels, journaux, PID, sorties de
+  candidatures, anciens exports, CV et fichiers temporaires sont ignorés ;
+- le fichier `.env` local et les documents privés restent présents sur la
+  machine, sans être suivis par Git ;
+- aucune modification fonctionnelle du code applicatif n'a été nécessaire.
+
+### Vérifications et limites
+
+- suite complète : **75 tests réussis**, avec 10 avertissements de dépréciation
+  Pandas/NumPy déjà connus ;
+- Streamlit démarré sur `127.0.0.1:8501` et endpoint de santé validé avec la
+  réponse `ok` ;
+- les appels réels aux services tiers ne font pas partie de cette vérification
+  locale ; leurs identifiants et quotas restent dépendants de la configuration
+  privée du fichier `.env`.
+
+## 25. Index des documents associés
 
 - `README.md` — installation, exploitation et architecture courante ;
 - `docs/theirstack_enrichment.md` — rapprochement d’enrichissement ;
