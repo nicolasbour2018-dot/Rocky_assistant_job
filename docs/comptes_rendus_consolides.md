@@ -1177,7 +1177,165 @@ ne constituent pas un dysfonctionnement de V3.
 Aucune modification de code, de configuration ou de donnée n’a été effectuée
 pendant ce diagnostic. Seul le présent compte rendu consolidé a été complété.
 
-## 23. Index des documents associés
+## 23. Évolutions d’interface et consolidation ATS — 22 août 2026
+
+### Cockpit, file d’enrichissement et fiche annonce
+
+- la carte du cockpit expose désormais directement le bouton « Ouvrir la fiche
+  complète » ; il n’est plus caché dans l’analyse du matching ;
+- le tri « Plus récentes » convertit explicitement les dates avant classement,
+  ce qui évite l’erreur Pandas sur des colonnes catégorielles non ordonnées ;
+- chaque annonce de la file « À enrichir » peut être modifiée manuellement depuis
+  son expander. Le formulaire partagé marque la description comme complète,
+  ajuste le statut si nécessaire et recalcule le matching ;
+- dans la fiche annonce, le lien source redondant a été retiré, l’enregistrement
+  du statut se trouve sous son sélecteur et les accès compacts « Provenance » et
+  « Modifier l’annonce » ont été regroupés avant les métadonnées ;
+- l’onglet de lettre présente maintenant l’éditeur pleine largeur, suivi de son
+  aperçu pleine largeur dans une zone défilable. L’adresse de l’entreprise est
+  saisie sur une ligne ; les liens superflus après « Postuler » ont été retirés.
+
+### Navigation et profils
+
+La navigation latérale est organisée en deux sections :
+
+| Section | Pages visibles |
+| --- | --- |
+| Rocky | Cockpit, Mes profils, ATS, Ajouter une URL |
+| Outils | Tout le flux, Monitoring |
+
+Les pages internes « À enrichir » et « Fiche annonce » restent masquées de la
+barre latérale et sont ouvertes depuis les actions contextuelles.
+
+La page « Mes profils » conserve désormais le résultat du chargement du CV après
+le rerun : le nom du fichier est confirmé en cas de succès et toute erreur PDF ou
+d’écriture est affichée.
+
+### ATS centralisé
+
+La page anciennement nommée « ATS V3 » s’appelle désormais simplement « ATS ».
+Elle centralise les trois analyses :
+
+- le lancement V3 se situe directement sous le choix du CV et de l’annonce ;
+- V1 et V2 utilisent le CV PDF réellement associé au profil, la lettre de
+  motivation et l’annonce sélectionnée ;
+- le sélecteur d’annonce se limite aux éléments de « Mes annonces » : annonces
+  complètes, scorées et dans un statut de suivi ;
+- la lettre existante est récupérée en priorité depuis le brouillon courant, puis
+  depuis le dernier DOCX enregistré. En son absence, le bouton « Générer la lettre
+  de motivation » ouvre la fiche concernée directement sur l’onglet Lettre ;
+- ATS V2 n’offre plus de correction manuelle du texte extrait : les analyses V1
+  et V2 mesurent le PDF réel pour exposer tout défaut de parsing à corriger dans le
+  CV lui-même ;
+- les rapports V1, V2 et V3 sont repliés dans des expanders pour préserver la
+  lisibilité de la page.
+
+### Vérification, Git et configuration locale
+
+La suite complète a été exécutée après mise à jour des tests d’interface pour le
+cockpit actuel et la centralisation ATS : **75 tests réussis**. Seuls des
+avertissements Pandas non bloquants subsistent sur un calcul de durée.
+
+La branche `nico-dev`, créée depuis `main`, contient les commits de mise à jour
+des tests et de nettoyage du runtime Streamlit. Le fichier
+`logs/rocky_streamlit.pid` est maintenant ignoré par Git : il ne doit jamais être
+publié car il dépend de la machine locale.
+
+Lorsqu’un clone local est placé dans un nouveau dossier, il faut y fournir un
+fichier `.env` non versionné contenant la configuration PostgreSQL (ou
+`DATABASE_URL`). Sans ce fichier, le serveur Streamlit démarre mais l’application
+ne peut pas se connecter à la base. Cette configuration reste locale et ne doit
+pas être ajoutée au dépôt.
+
+## 24. Nettoyage du dépôt après déplacement — 26 août 2026
+
+### Objectif
+
+Rattacher le dossier local déplacé `Rocky_assistant_job` à la branche GitHub
+`nico-dev` et empêcher la publication d'artefacts locaux ou de documents
+personnels introduits pendant la réorganisation.
+
+### Fichiers modifiés
+
+- `.gitignore` ;
+- `docs/comptes_rendus_consolides.md` ;
+- `Template_lm_datascientist.pages` et
+  `data/profiles/1/cv_ats.txt`, retirés de l'index Git mais conservés sur le
+  disque local.
+
+### Changements et décisions
+
+- la branche locale suit désormais `origin/nico-dev`, qui contenait déjà les
+  trois commits légitimes de tests, de nettoyage du PID Streamlit et de
+  documentation ;
+- l'ancien état local reste récupérable dans la branche
+  `backup/nico-before-cleanup-20260826` ;
+- les caches Python, environnements virtuels, journaux, PID, sorties de
+  candidatures, anciens exports, CV et fichiers temporaires sont ignorés ;
+- le fichier `.env` local et les documents privés restent présents sur la
+  machine, sans être suivis par Git ;
+- aucune modification fonctionnelle du code applicatif n'a été nécessaire.
+
+### Vérifications et limites
+
+- suite complète : **75 tests réussis**, avec 10 avertissements de dépréciation
+  Pandas/NumPy déjà connus ;
+- Streamlit démarré sur `127.0.0.1:8501` et endpoint de santé validé avec la
+  réponse `ok` ;
+- les appels réels aux services tiers ne font pas partie de cette vérification
+  locale ; leurs identifiants et quotas restent dépendants de la configuration
+  privée du fichier `.env`.
+
+## 98. Extraction exhaustive d’une fiche Apec avec Playwright — 31 août 2026
+
+### Objectif
+
+Explorer réellement une fiche Apec dans un navigateur visible et fournir un
+script réutilisable qui exporte l’intégralité des informations nécessaires à
+une future alimentation de la base Rocky, sans écrire encore en base.
+
+### Fichiers modifiés
+
+- `dashboard/rocky/sources/apec_detail.py` ;
+- `scripts/extract_apec_offer.py` ;
+- `tests/test_apec_detail.py` ;
+- `output/apec/179302541W.json` ;
+- `README.md` ;
+- `docs/comptes_rendus_consolides.md`.
+
+### Changements et décisions
+
+- la page fournie a été ouverte et inspectée avec Playwright CLI en mode
+  visible ; l’XPath désigne le composant Angular
+  `apec-poste-informations`, mais ce composant ne contient pas seul toutes les
+  données de la fiche ;
+- l’exploration réseau a identifié l’endpoint public de détail de l’offre et
+  l’endpoint du profil entreprise ; l’extracteur les appelle depuis le contexte
+  du navigateur afin de réutiliser sa session et de respecter la protection
+  DataDome rencontrée sur Apec ;
+- la sortie JSON distingue les données normalisées des payloads bruts : titre,
+  entreprise, lieux, contrat, salaire, dates, coordonnées, candidature,
+  description du poste, profil, entreprise, compétences visibles ou masquées,
+  profil entreprise et contenu DOM complet ;
+- le navigateur est visible par défaut ; `--headless` reste une option
+  explicite pour une automatisation ultérieure ;
+- aucune candidature n’est déclenchée et aucune donnée n’est ajoutée ou
+  modifiée dans la base Rocky à ce stade.
+
+### Vérifications et limites
+
+- trois tests unitaires d’URL, de conversion HTML et de structure exhaustive
+  passent avec l’auto-chargement des plugins Pytest désactivé ;
+- compilation Python et contrôle `git diff --check` réussis ;
+- exécution réelle réussie sur l’offre `179302541W` : fichier JSON de 83 083
+  octets, 46 champs d’offre bruts, 13 champs entreprise bruts, 7 savoir-être,
+  30 savoir-faire et présence vérifiée du descriptif complet ;
+- les libellés de référentiel calculés par l’interface Apec sont conservés via
+  le DOM, tandis que les identifiants d’origine restent dans le payload brut ;
+- l’étape suivante devra définir le mapping vers `JobOffer` et les colonnes de
+  persistance avant toute insertion en base.
+
+## 25. Index des documents associés
 
 - `README.md` — installation, exploitation et architecture courante ;
 - `docs/theirstack_enrichment.md` — rapprochement d’enrichissement ;

@@ -1,11 +1,16 @@
 .env
 .venv/
+venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .DS_Store
 .hf_deploy/
 logs/*.log
+logs/*.pid
 data/profiles/*/cv.pdf
+data/profiles/*/cv_ats.txt
 output/candidatures/
+output/previous_outputs/
+Template_lm_datascientist.pages
 tmp/

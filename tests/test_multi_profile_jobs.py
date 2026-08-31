@@ -131,12 +131,20 @@ def test_switching_active_profile_changes_the_existing_cockpit(
     settings, engine, repository = _repository(tmp_path)
     profile_a = repository.create_profile("Data Scientist")
     profile_b = repository.create_profile("Enseignement / EdTech")
-    repository.insert_job(_offer("Offre Data uniquement", "a"), profile_a)
-    repository.insert_job(_offer("Offre EdTech uniquement", "b"), profile_b)
+    data_id, _ = repository.insert_job(
+        _offer("Offre Data uniquement", "a"), profile_a
+    )
+    edtech_id, _ = repository.insert_job(
+        _offer("Offre EdTech uniquement", "b"), profile_b
+    )
     shared_id, _ = repository.insert_job(
         _offer("Offre commune", "shared"), profile_a
     )
     repository.link_job_to_profile(shared_id, profile_b)
+    repository.save_match(data_id, profile_a, MatchResult(75, {}))
+    repository.save_match(edtech_id, profile_b, MatchResult(75, {}))
+    repository.save_match(shared_id, profile_a, MatchResult(75, {}))
+    repository.save_match(shared_id, profile_b, MatchResult(75, {}))
     repository.set_active_profile(profile_a)
 
     monkeypatch.setattr(dashboard_common, "Settings", lambda: settings)
@@ -144,10 +152,8 @@ def test_switching_active_profile_changes_the_existing_cockpit(
     app = AppTest.from_file(
         settings.project_dir / "dashboard" / "dashboard_b.py"
     )
+    app.session_state["cockpit_view"] = "flow"
     app.run(timeout=30)
-    next(
-        select for select in app.selectbox if select.label == "Flux — statut"
-    ).set_value("NOUVELLE").run(timeout=30)
     titles_a = {item.value for item in app.subheader}
 
     repository.set_active_profile(profile_b)
