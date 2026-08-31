@@ -1,4 +1,5 @@
 .env
+.secrets
 .venv
 .git
 .pytest_cache
@@ -9,6 +10,11 @@ tmp
 output
 logs
 data
+backups
+.agents
+.claude/skills
+.playwright
+.playwright-cli
 tests
 deployment
 LM Lidl Bour Nicolas.pdf
