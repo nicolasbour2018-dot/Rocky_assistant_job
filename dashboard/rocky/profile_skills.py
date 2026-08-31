@@ -21,6 +21,7 @@ from .text_utils import normalize_text
 
 @dataclass(frozen=True)
 class InferredProfileSkill:
+    """Compétence déduite localement du CV pour préremplir la revue du profil."""
     name: str
     category: str
     level: str
@@ -28,11 +29,13 @@ class InferredProfileSkill:
 
 
 def _forms(skill: str) -> tuple[str, ...]:
+    """Énumère les formes normalisées d'une compétence pour une détection reproductible."""
     values = [skill, *SKILL_ALIASES.get(skill, [])]
     return tuple(dict.fromkeys(normalize_text(value) for value in values if value))
 
 
 def _occurrences(text: str, forms: tuple[str, ...]) -> list[tuple[int, int]]:
+    """Repère les occurrences complètes sans confondre une compétence avec un sous-mot."""
     found: set[tuple[int, int]] = set()
     for form in forms:
         pattern = r"(?<![a-z0-9])" + re.escape(form) + r"(?![a-z0-9])"
@@ -41,6 +44,7 @@ def _occurrences(text: str, forms: tuple[str, ...]) -> list[tuple[int, int]]:
 
 
 def _level(text: str, occurrences: list[tuple[int, int]]) -> str:
+    """Infère un niveau indicatif depuis le contexte du CV, à faire valider par la personne."""
     surroundings = [
         (
             text[max(0, start - 55):start].rstrip(),
@@ -92,6 +96,7 @@ def _level(text: str, occurrences: list[tuple[int, int]]) -> str:
 
 
 def _category(skill: str) -> str:
+    """Rattache une compétence détectée aux catégories utilisées par le profil Rocky."""
     if skill in TECHNICAL_SKILLS:
         return "technical"
     if skill in BUSINESS_SKILLS:

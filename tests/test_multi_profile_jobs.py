@@ -171,7 +171,7 @@ def test_switching_active_profile_changes_the_existing_cockpit(
     engine.dispose()
 
 
-def test_idempotent_schema_backfills_a_legacy_watch_without_match(tmp_path):
+def test_existing_schema_validation_does_not_create_profile_links(tmp_path):
     settings, engine, repository = _repository(tmp_path)
     old_profile = repository.create_profile("Profil historique")
     watch_profile = repository.create_profile("Profil de veille")
@@ -199,7 +199,6 @@ def test_idempotent_schema_backfills_a_legacy_watch_without_match(tmp_path):
         },
     )
 
-    initialize_database(engine, settings)
     initialize_database(engine, settings)
 
     assert job_id in set(repository.get_jobs_for_profile(watch_profile)["id"])

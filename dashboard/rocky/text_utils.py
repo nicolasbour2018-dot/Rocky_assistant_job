@@ -10,6 +10,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 
 def normalize_text(value: object) -> str:
+    """Normalise accents, casse et espaces pour les comparaisons métier tolérantes."""
     if value is None:
         return ""
     text = unicodedata.normalize("NFKD", str(value))
@@ -51,9 +52,24 @@ def canonical_url(url: str) -> str:
 
 
 def safe_slug(value: str, fallback: str = "element") -> str:
+    """Produit un identifiant de fichier stable à partir d'un libellé utilisateur."""
     text = normalize_text(value)
     text = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
     return text[:70] or fallback
+
+
+def safe_filename_component(value: object, fallback: str = "element") -> str:
+    """Prépare un intitulé lisible pour l'insérer dans un nom de fichier.
+
+    Contrairement à :func:`safe_slug`, cette variante conserve les majuscules
+    afin que les PDF téléchargés restent proches des intitulés affichés dans
+    Rocky. Les accents et caractères de ponctuation sont retirés pour éviter
+    les noms incompatibles avec certains systèmes de fichiers.
+    """
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    text = re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_")
+    return text[:80] or fallback
 
 
 def project_relative(path: str | Path, project_dir: Path) -> str:

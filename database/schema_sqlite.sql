@@ -1,12 +1,51 @@
--- Schéma SQLite utilisé par le Space Hugging Face.
+-- Schéma SQLite courant pour une base vide.
 -- Les listes et objets JSON sont stockés sous forme de texte JSON.
 
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
 PRAGMA busy_timeout = 30000;
 
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    password_hash TEXT,
+    email_verified_at TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    failed_login_count INTEGER NOT NULL DEFAULT 0,
+    locked_until TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user
+    ON user_sessions (user_id, expires_at);
+
+CREATE TABLE IF NOT EXISTS account_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    purpose TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_account_tokens_user
+    ON account_tokens (user_id, purpose, expires_at);
+
 CREATE TABLE IF NOT EXISTS job_offers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     external_id TEXT,
     source_name TEXT,
     collector_name TEXT,
@@ -41,6 +80,9 @@ CREATE TABLE IF NOT EXISTS job_offers (
     publication_date DATE,
     application_deadline DATE,
     status TEXT NOT NULL DEFAULT 'NOUVELLE',
+    detected_language TEXT NOT NULL DEFAULT 'fr',
+    language_confidence NUMERIC,
+    language_override TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -54,6 +96,7 @@ CREATE INDEX IF NOT EXISTS idx_job_offers_source_url
 
 CREATE TABLE IF NOT EXISTS candidate_profiles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     profile_name TEXT NOT NULL,
     summary TEXT,
     target_job_titles TEXT NOT NULL DEFAULT '[]',
@@ -63,17 +106,65 @@ CREATE TABLE IF NOT EXISTS candidate_profiles (
     minimum_salary NUMERIC,
     cv_path TEXT,
     is_active BOOLEAN NOT NULL DEFAULT 0,
+    full_name TEXT,
+    email TEXT,
+    phone TEXT,
+    address TEXT,
+    postal_code TEXT,
+    home_city TEXT,
+    linkedin_url TEXT,
+    github_url TEXT,
+    portfolio_url TEXT,
+    onboarding_status TEXT NOT NULL DEFAULT 'COMPLETE',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_one_active_candidate_profile
-    ON candidate_profiles (is_active) WHERE is_active = 1;
+CREATE TABLE IF NOT EXISTS profile_localizations (
+    profile_id INTEGER NOT NULL REFERENCES candidate_profiles(id) ON DELETE CASCADE,
+    locale TEXT NOT NULL CHECK (locale IN ('fr', 'en')),
+    summary TEXT,
+    target_job_titles TEXT NOT NULL DEFAULT '[]',
+    target_domains TEXT NOT NULL DEFAULT '[]',
+    translation_status TEXT NOT NULL DEFAULT 'ready',
+    source_hash TEXT,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (profile_id, locale)
+);
+
+CREATE TABLE IF NOT EXISTS profile_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_id INTEGER NOT NULL REFERENCES candidate_profiles(id) ON DELETE CASCADE,
+    locale TEXT NOT NULL CHECK (locale IN ('fr', 'en')),
+    kind TEXT NOT NULL,
+    source_path TEXT NOT NULL,
+    preview_pdf_path TEXT,
+    origin TEXT NOT NULL CHECK (origin IN ('uploaded', 'generated')),
+    status TEXT NOT NULL DEFAULT 'ready',
+    sha256 TEXT NOT NULL,
+    source_hash TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
+    is_current BOOLEAN NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (profile_id, locale, kind, version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_profile_documents_profile
+    ON profile_documents (profile_id, locale, kind);
+
+CREATE TABLE IF NOT EXISTS profile_analyses (
+    profile_id INTEGER PRIMARY KEY REFERENCES candidate_profiles(id) ON DELETE CASCADE,
+    analysis_data TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'ready',
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS candidate_skills (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     profile_id INTEGER NOT NULL REFERENCES candidate_profiles(id) ON DELETE CASCADE,
     skill_name TEXT NOT NULL,
+    skill_name_en TEXT,
     skill_category TEXT NOT NULL,
     skill_level TEXT,
     years_experience NUMERIC,
@@ -103,9 +194,28 @@ CREATE TABLE IF NOT EXISTS job_matches (
     breakdown TEXT NOT NULL DEFAULT '{}',
     strengths TEXT NOT NULL DEFAULT '[]',
     gaps TEXT NOT NULL DEFAULT '[]',
+    profile_locale TEXT NOT NULL DEFAULT 'fr',
     analyzed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (job_id, profile_id)
 );
+
+-- ``job_matches`` fournit la valeur courante ; chaque recalcul est conservé
+-- ici pour pouvoir analyser l'évolution des résultats et du moteur employé.
+CREATE TABLE IF NOT EXISTS job_match_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER NOT NULL REFERENCES job_offers(id) ON DELETE CASCADE,
+    profile_id INTEGER NOT NULL REFERENCES candidate_profiles(id) ON DELETE CASCADE,
+    score NUMERIC NOT NULL,
+    breakdown TEXT NOT NULL DEFAULT '{}',
+    strengths TEXT NOT NULL DEFAULT '[]',
+    gaps TEXT NOT NULL DEFAULT '[]',
+    profile_locale TEXT NOT NULL DEFAULT 'fr',
+    scoring_version TEXT NOT NULL DEFAULT 'matching-v1',
+    analyzed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_match_history_pair
+    ON job_match_history (job_id, profile_id, analyzed_at DESC);
 
 CREATE TABLE IF NOT EXISTS applications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,15 +223,97 @@ CREATE TABLE IF NOT EXISTS applications (
     profile_id INTEGER NOT NULL REFERENCES candidate_profiles(id) ON DELETE CASCADE,
     status TEXT NOT NULL DEFAULT 'DOSSIER PRÉPARÉ',
     cv_path TEXT NOT NULL,
-    letter_docx_path TEXT NOT NULL,
+    letter_docx_path TEXT,
     letter_pdf_path TEXT NOT NULL,
     notes TEXT,
     prepared_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    applied_at TIMESTAMP
+    applied_at TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status_source TEXT NOT NULL DEFAULT 'USER',
+    last_email_at TIMESTAMP,
+    profile_locale TEXT NOT NULL DEFAULT 'fr'
+);
+
+CREATE TABLE IF NOT EXISTS profile_projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_id INTEGER NOT NULL REFERENCES candidate_profiles(id) ON DELETE CASCADE,
+    locale TEXT NOT NULL DEFAULT 'fr' CHECK (locale IN ('fr', 'en')),
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    problem TEXT NOT NULL DEFAULT '',
+    stack TEXT NOT NULL DEFAULT '[]',
+    deliverable TEXT NOT NULL DEFAULT '',
+    details TEXT NOT NULL DEFAULT '',
+    skills TEXT NOT NULL DEFAULT '[]',
+    results TEXT NOT NULL DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    synced_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (profile_id, locale, slug)
+);
+
+CREATE TABLE IF NOT EXISTS application_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    path TEXT NOT NULL,
+    sha256 TEXT NOT NULL,
+    is_current BOOLEAN NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS application_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL,
+    old_status TEXT,
+    new_status TEXT,
+    source TEXT NOT NULL DEFAULT 'USER',
+    confidence NUMERIC,
+    details TEXT NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reverted_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS email_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    gmail_account TEXT NOT NULL,
+    gmail_message_id TEXT NOT NULL,
+    gmail_thread_id TEXT,
+    sender TEXT,
+    subject TEXT,
+    received_at TIMESTAMP,
+    snippet TEXT,
+    classification TEXT NOT NULL DEFAULT 'UNKNOWN',
+    classification_manual BOOLEAN NOT NULL DEFAULT FALSE,
+    confidence NUMERIC NOT NULL DEFAULT 0,
+    matched_application_id INTEGER REFERENCES applications(id) ON DELETE SET NULL,
+    processing_state TEXT NOT NULL DEFAULT 'PENDING',
+    reason TEXT,
+    extracted_links TEXT NOT NULL DEFAULT '[]',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, gmail_account, gmail_message_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_messages_state
+    ON email_messages (processing_state, received_at DESC);
+
+CREATE TABLE IF NOT EXISTS application_browser_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    target_url TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'STARTING',
+    filled_fields TEXT NOT NULL DEFAULT '[]',
+    missing_fields TEXT NOT NULL DEFAULT '[]',
+    error_message TEXT,
+    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS watch_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     profile_id INTEGER REFERENCES candidate_profiles(id) ON DELETE SET NULL,
     started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     finished_at TIMESTAMP,
@@ -130,31 +322,19 @@ CREATE TABLE IF NOT EXISTS watch_runs (
     inserted_count INTEGER NOT NULL DEFAULT 0,
     duplicate_count INTEGER NOT NULL DEFAULT 0,
     rejected_count INTEGER NOT NULL DEFAULT 0,
+    searched_job_titles TEXT NOT NULL DEFAULT '[]',
     errors TEXT NOT NULL DEFAULT '[]',
     source_results TEXT NOT NULL DEFAULT '[]'
 );
 
-INSERT OR IGNORE INTO profile_jobs (profile_id, job_id)
-SELECT DISTINCT profile_id, job_id FROM job_matches;
+CREATE TABLE IF NOT EXISTS monitoring_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    profile_id INTEGER REFERENCES candidate_profiles(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
-INSERT OR IGNORE INTO profile_jobs (profile_id, job_id)
-SELECT DISTINCT profile_id, job_id FROM applications;
-
-INSERT OR IGNORE INTO profile_jobs (profile_id, job_id)
-SELECT DISTINCT runs.profile_id, jobs.id
-FROM watch_runs AS runs
-JOIN job_offers AS jobs
-  ON jobs.created_at >= runs.started_at
- AND jobs.created_at <= runs.finished_at
-WHERE runs.profile_id IS NOT NULL
-  AND runs.finished_at IS NOT NULL;
-
-INSERT OR IGNORE INTO profile_jobs (profile_id, job_id)
-SELECT (
-        SELECT id FROM candidate_profiles ORDER BY created_at, id LIMIT 1
-    ), jobs.id
-FROM job_offers AS jobs
-WHERE EXISTS (SELECT 1 FROM candidate_profiles)
-  AND NOT EXISTS (
-      SELECT 1 FROM profile_jobs AS links WHERE links.job_id = jobs.id
-  );
+CREATE INDEX IF NOT EXISTS idx_monitoring_notes_profile
+    ON monitoring_notes (profile_id, updated_at DESC);

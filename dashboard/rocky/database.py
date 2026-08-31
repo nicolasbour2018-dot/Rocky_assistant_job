@@ -1,14 +1,87 @@
-"""Connexion et initialisation de PostgreSQL."""
+"""Connexion et initialisation de la base Rocky."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import Engine, create_engine, inspect, make_url, text
+from sqlalchemy import Engine, create_engine, inspect, make_url
 
 from .config import Settings
-from .contracts import normalize_contract_details
 from .errors import ConfigurationError
+
+
+REQUIRED_SCHEMA: dict[str, frozenset[str]] = {
+    "users": frozenset({"id", "email", "password_hash", "status"}),
+    "user_sessions": frozenset({"id", "user_id", "token_hash", "expires_at"}),
+    "account_tokens": frozenset({"id", "user_id", "purpose", "token_hash"}),
+    "job_offers": frozenset(
+        {
+            "id",
+            "user_id",
+            "application_url",
+            "collector_name",
+            "work_schedule",
+            "description_is_full",
+            "detected_language",
+            "language_confidence",
+            "language_override",
+        }
+    ),
+    "candidate_profiles": frozenset(
+        {
+            "id",
+            "user_id",
+            "full_name",
+            "email",
+            "onboarding_status",
+        }
+    ),
+    "profile_localizations": frozenset(
+        {"profile_id", "locale", "target_domains", "translation_status"}
+    ),
+    "profile_documents": frozenset(
+        {"id", "profile_id", "locale", "kind", "version", "is_current"}
+    ),
+    "profile_analyses": frozenset({"profile_id", "analysis_data", "status"}),
+    "candidate_skills": frozenset({"id", "profile_id", "skill_name_en"}),
+    "profile_jobs": frozenset({"profile_id", "job_id"}),
+    "job_matches": frozenset({"job_id", "profile_id", "profile_locale"}),
+    "job_match_history": frozenset(
+        {"job_id", "profile_id", "profile_locale", "scoring_version"}
+    ),
+    "applications": frozenset(
+        {
+            "id",
+            "job_id",
+            "profile_id",
+            "status_source",
+            "last_email_at",
+            "profile_locale",
+        }
+    ),
+    "profile_projects": frozenset({"id", "profile_id", "locale", "slug"}),
+    "application_documents": frozenset({"id", "application_id", "kind", "path"}),
+    "application_events": frozenset(
+        {"id", "application_id", "old_status", "new_status", "event_type"}
+    ),
+    "email_messages": frozenset(
+        {
+            "id",
+            "gmail_message_id",
+            "gmail_account",
+            "user_id",
+            "extracted_links",
+            "classification_manual",
+        }
+    ),
+    "application_browser_sessions": frozenset(
+        {"id", "application_id", "target_url", "status"}
+    ),
+    "watch_runs": frozenset(
+        {"id", "profile_id", "user_id", "source_results", "searched_job_titles"}
+    ),
+    "monitoring_notes": frozenset({"id", "user_id", "profile_id", "content"}),
+}
 
 
 def create_db_engine(settings: Settings) -> Engine:
@@ -27,11 +100,7 @@ def create_db_engine(settings: Settings) -> Engine:
 
 
 def ensure_database_exists(settings: Settings) -> bool:
-    """Crée la base cible si elle manque.
-
-    Retourne True uniquement lorsqu'une nouvelle base a été créée. La requête
-    utilise un identifiant SQL sécurisé et ne journalise jamais le mot de passe.
-    """
+    """Crée la base cible si elle manque."""
     if not settings.database_url:
         raise ConfigurationError(
             "La connexion PostgreSQL n'est pas configurée dans le fichier .env."
@@ -65,22 +134,61 @@ def ensure_database_exists(settings: Settings) -> bool:
             if cursor.fetchone():
                 return False
             cursor.execute(
-                sql.SQL("CREATE DATABASE {}").format(
-                    sql.Identifier(settings.db_name)
-                )
+                sql.SQL("CREATE DATABASE {}").format(sql.Identifier(settings.db_name))
             )
             return True
     finally:
         connection.close()
 
 
+def _validate_schema(engine: Engine) -> None:
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    missing_tables = sorted(set(REQUIRED_SCHEMA) - existing_tables)
+    missing_columns: dict[str, list[str]] = {}
+    for table_name, required_columns in REQUIRED_SCHEMA.items():
+        if table_name not in existing_tables:
+            continue
+        existing_columns = {
+            column["name"] for column in inspector.get_columns(table_name)
+        }
+        missing = sorted(required_columns - existing_columns)
+        if missing:
+            missing_columns[table_name] = missing
+    if not missing_tables and not missing_columns:
+        return
+
+    details: list[str] = []
+    if missing_tables:
+        details.append("tables absentes : " + ", ".join(missing_tables))
+    if missing_columns:
+        details.append(
+            "colonnes absentes : "
+            + "; ".join(
+                f"{table}({', '.join(columns)})"
+                for table, columns in sorted(missing_columns.items())
+            )
+        )
+    raise ConfigurationError(
+        "Le schéma de la base est incompatible avec cette version de Rocky ; "
+        + " - ".join(details)
+        + ". Utilise une base vide créée avec les schémas SQL courants."
+    )
+
+
 def initialize_database(engine: Engine, settings: Settings) -> None:
-    """Applique le schéma idempotent livré avec Rocky."""
+    """Crée une base vide ou valide une base Rocky déjà au schéma courant."""
+    existing_tables = set(inspect(engine).get_table_names())
+    if existing_tables & set(REQUIRED_SCHEMA):
+        _validate_schema(engine)
+        return
+
     schema_name = (
         "schema_sqlite.sql" if engine.dialect.name == "sqlite" else "schema.sql"
     )
-    schema_path = settings.project_dir / "database" / schema_name
-    schema = schema_path.read_text(encoding="utf-8")
+    schema = (settings.project_dir / "database" / schema_name).read_text(
+        encoding="utf-8"
+    )
     if engine.dialect.name == "sqlite":
         raw_connection = engine.raw_connection()
         try:
@@ -91,141 +199,4 @@ def initialize_database(engine: Engine, settings: Settings) -> None:
     else:
         with engine.begin() as connection:
             connection.exec_driver_sql(schema)
-    _ensure_job_offer_columns(engine)
-    _ensure_watch_run_columns(engine)
-    _repair_contract_columns(engine)
-    _repair_description_flags(engine)
-    _repair_incomplete_statuses(engine)
-
-
-def _ensure_job_offer_columns(engine: Engine) -> None:
-    """Ajoute les nouvelles colonnes aux anciennes bases SQLite.
-
-    PostgreSQL est migré par ``ADD COLUMN IF NOT EXISTS`` dans son schéma.
-    SQLite ne gère pas cette syntaxe sur toutes les versions prises en charge,
-    donc la présence de la colonne est vérifiée explicitement.
-    """
-    columns = {
-        column["name"]
-        for column in inspect(engine).get_columns("job_offers")
-    }
-    missing_columns = {
-        "collector_name": "TEXT",
-        "work_schedule": "TEXT",
-        "description_is_full": "BOOLEAN NOT NULL DEFAULT 0",
-        "description_enrichment_source": "TEXT",
-        "description_enrichment_external_id": "TEXT",
-    }
-    with engine.begin() as connection:
-        for column_name, column_type in missing_columns.items():
-            if column_name in columns:
-                continue
-            connection.exec_driver_sql(
-                f"ALTER TABLE job_offers ADD COLUMN {column_name} {column_type}"
-            )
-
-
-def _ensure_watch_run_columns(engine: Engine) -> None:
-    """Ajoute les diagnostics de connecteurs aux anciennes bases SQLite."""
-    columns = {
-        column["name"]
-        for column in inspect(engine).get_columns("watch_runs")
-    }
-    if "source_results" in columns:
-        return
-    with engine.begin() as connection:
-        connection.exec_driver_sql(
-            "ALTER TABLE watch_runs "
-            "ADD COLUMN source_results TEXT NOT NULL DEFAULT '[]'"
-        )
-
-
-def _repair_contract_columns(engine: Engine) -> None:
-    """Répare sans perte les annonces créées avant la séparation des champs."""
-    with engine.begin() as connection:
-        rows = connection.execute(
-            text(
-                """
-                SELECT id, contract_type, work_schedule,
-                       responsibilities, short_description
-                FROM job_offers
-                """
-            )
-        ).mappings().all()
-        for row in rows:
-            contract_type, work_schedule = normalize_contract_details(
-                row.get("contract_type"),
-                row.get("work_schedule"),
-                row.get("responsibilities"),
-                row.get("short_description"),
-            )
-            current_contract = str(row.get("contract_type") or "").strip()
-            current_schedule = str(row.get("work_schedule") or "").strip()
-            if (
-                contract_type == current_contract
-                and work_schedule == current_schedule
-            ):
-                continue
-            connection.execute(
-                text(
-                    """
-                    UPDATE job_offers
-                    SET contract_type = :contract_type,
-                        work_schedule = :work_schedule
-                    WHERE id = :job_id
-                    """
-                ),
-                {
-                    "job_id": row["id"],
-                    "contract_type": contract_type or None,
-                    "work_schedule": work_schedule or None,
-                },
-            )
-
-
-def _repair_description_flags(engine: Engine) -> None:
-    """Répare les indicateurs historiques sans inventer de texte complet."""
-    with engine.begin() as connection:
-        # Les anciens imports Apec ont pu prendre l'extrait de recherche pour
-        # une description complète. Un extrait coupé ne doit jamais être scoré.
-        connection.execute(
-            text(
-                """
-                UPDATE job_offers
-                SET description_is_full = FALSE
-                WHERE LOWER(source_name) = 'apec'
-                  AND responsibilities IS NOT NULL
-                  AND (
-                      TRIM(responsibilities) LIKE '%...'
-                      OR TRIM(responsibilities) LIKE '%…'
-                  )
-                """
-            )
-        )
-        connection.execute(
-            text(
-                """
-                UPDATE job_offers
-                SET description_is_full = TRUE
-                WHERE description_is_full = FALSE
-                  AND source_name IN ('France Travail', 'Wellfound')
-                  AND responsibilities IS NOT NULL
-                  AND LENGTH(TRIM(responsibilities)) > 0
-                """
-            )
-        )
-
-
-def _repair_incomplete_statuses(engine: Engine) -> None:
-    """Rend visibles les aperçus historiques sans écraser un choix utilisateur."""
-    with engine.begin() as connection:
-        connection.execute(
-            text(
-                """
-                UPDATE job_offers
-                SET status = 'INCOMPLÈTE'
-                WHERE description_is_full = FALSE
-                  AND status = 'NOUVELLE'
-                """
-            )
-        )
+    _validate_schema(engine)
