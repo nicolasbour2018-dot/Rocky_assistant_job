@@ -1,0 +1,45 @@
+[features]
+hooks = true
+
+[[hooks.UserPromptSubmit]]
+
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = '/usr/bin/python3 "$(git rev-parse --show-toplevel)/.codex/hooks/codex_path_rules.py" check'
+timeout = 10
+statusMessage = "Checking path rules setup"
+
+[[hooks.PreToolUse]]
+matcher = "^(Bash|apply_patch|Edit|Write|MultiEdit)$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = '/usr/bin/python3 "$(git rev-parse --show-toplevel)/.codex/hooks/codex_path_rules.py" run'
+timeout = 10
+statusMessage = "Loading path rules"
+
+[[hooks.SessionStart]]
+matcher = "startup|clear"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = '/usr/bin/python3 "$(git rev-parse --show-toplevel)/.codex/hooks/codex_path_rules.py" run'
+timeout = 10
+statusMessage = "Resetting path rules"
+
+[[hooks.SessionEnd]]
+
+[[hooks.SessionEnd.hooks]]
+type = "command"
+command = '/usr/bin/python3 "$(git rev-parse --show-toplevel)/.codex/hooks/codex_path_rules.py" run'
+timeout = 3
+statusMessage = "Cleaning path rules state"
+
+[[hooks.PostCompact]]
+matcher = "manual|auto"
+
+[[hooks.PostCompact.hooks]]
+type = "command"
+command = '/usr/bin/python3 "$(git rev-parse --show-toplevel)/.codex/hooks/codex_path_rules.py" run'
+timeout = 10
+statusMessage = "Resetting path rules"
