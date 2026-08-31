@@ -2298,6 +2298,27 @@ class RockyRepository:
                 },
             )
 
+    def fetch_browser_session(self, session_id: int) -> dict[str, Any] | None:
+        """Retourne une session de navigateur appartenant au compte connecté."""
+        if self.user_id is None:
+            raise PermissionError(
+                "Un compte authentifié est requis pour lire une session navigateur."
+            )
+        with self.engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT s.*
+                    FROM application_browser_sessions s
+                    JOIN applications a ON a.id = s.application_id
+                    JOIN candidate_profiles p ON p.id = a.profile_id
+                    WHERE s.id = :id AND p.user_id = :user_id
+                    """
+                ),
+                {"id": session_id, "user_id": self.user_id},
+            ).mappings().first()
+        return dict(row) if row else None
+
     def fetch_browser_sessions(self, application_id: int) -> pd.DataFrame:
         """Restitue les ouvertures ou préremplissages tracés, sans prétendre à un envoi."""
         return pd.read_sql(

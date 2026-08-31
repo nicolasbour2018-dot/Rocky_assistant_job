@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "source_sha256": "bf947b41a80de81f127e633cc19200682bbb5024dc18bca1bdf3daf599d80651",
+  "page_count": 1,
+  "background_rgb": [247, 246, 241],
+  "zones": {
+    "technical": [10, 382, 176, 512],
+    "transversal": [8, 657, 178, 750],
+    "project_1_title": [188, 236, 312, 259],
+    "project_1_body": [192, 263, 311, 423],
+    "project_2_title": [320, 257, 450, 281],
+    "project_2_body": [326, 286, 446, 446],
+    "project_3_title": [454, 281, 590, 307],
+    "project_3_body": [462, 310, 581, 466]
+  }
+}

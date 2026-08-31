@@ -1,6 +1,13 @@
-"""Fiche complète d’une annonce, ouverte depuis le cockpit Rocky V2."""
+"""Fiche de décision complète d'une annonce Rocky.
+
+Cette destination du cockpit réunit données source, détail de matching,
+édition contrôlée, diagnostics ATS et préparation de candidature. Elle
+oriente vers le parcours dédié plutôt que d'envoyer une candidature elle-même.
+"""
 
 from __future__ import annotations
+
+from dataclasses import replace
 
 import streamlit as st
 
@@ -60,17 +67,54 @@ heading[1].metric(
     display_score(row.get("match_score")),
 )
 
+language = st.columns([2, 1])
+current_language = offer.language_override or "auto"
+language_choice = language[0].selectbox(
+    "Langue de l'annonce et du profil",
+    ["auto", "fr", "en"],
+    index=["auto", "fr", "en"].index(current_language if current_language in {"fr", "en"} else "auto"),
+    format_func=lambda value: {
+        "auto": f"Automatique · {(offer.detected_language or 'fr').upper()}",
+        "fr": "Français",
+        "en": "English",
+    }[value],
+)
+if language[1].button("Appliquer la langue", use_container_width=True):
+    repository.set_job_language(
+        int(job_id), None if language_choice == "auto" else language_choice
+    )
+    if profile:
+        repository.recalculate_job_match(int(job_id), profile.id)
+    st.rerun()
+if not offer.language_override and (offer.language_confidence or 0) < 0.7:
+    st.caption("Détection incertaine : vérifie la langue avant de préparer le dossier.")
+
+# Le profil reste le même, mais ses champs localisés et son kit documentaire
+# suivent la langue effective de l'annonce. Cette sélection est effectuée aussi
+# sur la fiche directe, pas seulement dans le parcours « Préparer candidature ».
+profile_for_offer = repository.profile_for_offer(profile.id, offer) if profile else None
+if profile_for_offer and profile_for_offer.locale == "en":
+    english_documents = {
+        document.kind: document
+        for document in repository.fetch_profile_documents(profile_for_offer.id, "en")
+    }
+    english_cv = english_documents.get("cv")
+    if english_cv:
+        profile_for_offer = replace(profile_for_offer, cv_path=english_cv.source_path)
+
 links = st.columns([2, 1])
 application_url = offer.application_url or offer.source_url
 if application_url:
     if links[0].button(
-        "Postuler",
+        "Préparer la candidature",
         type="primary",
         key=f"v2_detail_apply_{job_id}",
         use_container_width=True,
     ):
-        repository.update_job_status(int(job_id), "CANDIDATURE ENVOYÉE")
-        st.rerun()
+        # Ouvrir une page dédiée rend l'action explicite et évite que le
+        # changement d'onglet soit perdu lors d'un rerun Streamlit.
+        st.session_state.selected_job_id = int(job_id)
+        st.switch_page("page_application_prepare.py")
     links[0].link_button(
         "Ouvrir le site de candidature", application_url, use_container_width=True
     )
@@ -199,15 +243,14 @@ with overview_tab:
         )
 
 with matching_tab:
-    render_matching_detail(row, offer, repository, profile)
+    render_matching_detail(row, offer, repository, profile_for_offer or profile)
 
 with application_tab:
-    render_letter_workshop(int(job_id), offer, settings, repository, profile)
+    render_letter_workshop(
+        int(job_id), offer, settings, repository, profile_for_offer or profile
+    )
     if application_url:
-        if st.button(
-            "Postuler sur le site officiel",
-            type="primary",
-            key=f"v2_detail_apply_official_{job_id}",
-        ):
-            repository.update_job_status(int(job_id), "CANDIDATURE ENVOYÉE")
-            st.rerun()
+        st.info(
+            "Après génération des deux PDF, ouvre la page Candidatures pour "
+            "préremplir le site. Le statut envoyé ne change qu'après confirmation."
+        )

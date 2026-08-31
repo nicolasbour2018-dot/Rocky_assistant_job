@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 import re
 from dataclasses import dataclass, field
 from datetime import date
@@ -12,33 +11,38 @@ from string import Formatter
 
 from .config import Settings
 from .errors import DocumentError
-from .models import CandidateProfile, JobOffer
-from .text_utils import safe_slug
 
 
 @dataclass(frozen=True)
 class LetterVariables:
+    """Variables factuelles injectées dans le modèle de lettre d'une candidature."""
     job_title: str
     company_name: str
     company_paragraph: str
     recipient: str = "À l’attention du Service des Ressources Humaines"
     company_address: str = ""
-    city: str = "Paris"
+    city: str = ""
     letter_date: date = field(default_factory=date.today)
-    sender_name: str = "Nicolas Bour"
-    sender_address: str = "7, rue Drouet - 28230 Épernon"
-    sender_phone: str = "06 43 16 91 48"
-    sender_email: str = "nicolasbour2018@gmail.com"
+    sender_name: str = ""
+    sender_address: str = ""
+    sender_phone: str = ""
+    sender_email: str = ""
+    locale: str = "fr"
 
     def template_values(self) -> dict[str, str]:
+        """Expose les variables contrôlées injectables dans le modèle de lettre."""
         months = [
             "janvier", "février", "mars", "avril", "mai", "juin",
             "juillet", "août", "septembre", "octobre", "novembre", "décembre",
         ]
         french_date = (
-            f"{self.letter_date.day} "
-            f"{months[self.letter_date.month - 1]} "
+            f"{self.letter_date.day} {months[self.letter_date.month - 1]} "
             f"{self.letter_date.year}"
+        )
+        displayed_date = (
+            self.letter_date.strftime("%B %d, %Y")
+            if self.locale == "en"
+            else french_date
         )
         return {
             "job_title": self.job_title.strip(),
@@ -46,20 +50,16 @@ class LetterVariables:
             "company_paragraph": self.company_paragraph.strip(),
             "recipient": self.recipient.strip(),
             "company_address": self.company_address.strip(),
-            "city_and_date": f"{self.city.strip()}, le {french_date}",
+            "city_and_date": (
+                f"{self.city.strip()}, {displayed_date}"
+                if self.locale == "en"
+                else f"{self.city.strip()}, le {displayed_date}"
+            ),
             "sender_name": self.sender_name,
             "sender_address": self.sender_address,
             "sender_phone": self.sender_phone,
             "sender_email": self.sender_email,
         }
-
-
-@dataclass(frozen=True)
-class ApplicationFiles:
-    directory: Path
-    cv_path: Path
-    docx_path: Path
-    pdf_path: Path
 
 
 @dataclass(frozen=True)
@@ -75,6 +75,7 @@ class LetterSections:
 
 
 def _template(settings: Settings) -> str:
+    """Charge le modèle de lettre validé, sans en modifier le texte métier."""
     return (
         settings.project_dir / "templates" / "lettre_motivation.txt"
     ).read_text(encoding="utf-8")
@@ -82,6 +83,18 @@ def _template(settings: Settings) -> str:
 
 def render_letter(settings: Settings, variables: LetterVariables) -> str:
     """Remplace uniquement les variables autorisées du modèle."""
+    if variables.locale == "en":
+        return render_letter_from_body(
+            variables,
+            (
+                f"I am applying for the {variables.job_title.strip()} position "
+                f"at {variables.company_name.strip()}.",
+                variables.company_paragraph.strip(),
+                "My attached resume presents the experience, skills and projects "
+                "supporting this application.",
+                "I would welcome the opportunity to discuss the role and my application.",
+            ),
+        )
     template = _template(settings)
     allowed = set(variables.template_values())
     requested = {
@@ -102,6 +115,45 @@ def render_letter(settings: Settings, variables: LetterVariables) -> str:
     if "{" in result or "}" in result:
         raise DocumentError("Une variable non remplacée reste dans la lettre.")
     return result
+
+
+def render_letter_from_body(
+    variables: LetterVariables, body_paragraphs: tuple[str, ...]
+) -> str:
+    """Assemble un corps ciblé dans la structure PDF validée de Rocky."""
+    values = variables.template_values()
+    if not 4 <= len(body_paragraphs) <= 6:
+        raise DocumentError("La lettre ciblée doit contenir 4 à 6 paragraphes.")
+    recipient_lines = [values["recipient"], values["company_name"]]
+    if values["company_address"]:
+        recipient_lines.append(values["company_address"])
+    english = variables.locale == "en"
+    blocks = [
+        "\n".join(
+            [
+                values["sender_name"],
+                values["sender_address"],
+                values["sender_phone"],
+                values["sender_email"],
+            ]
+        ),
+        "\n".join(recipient_lines),
+        values["city_and_date"],
+        (
+            f"Subject: Application for the {values['job_title']} position"
+            if english
+            else f"Objet : Candidature pour le poste de {values['job_title']}"
+        ),
+        "Dear Hiring Team," if english else "Madame, Monsieur,",
+        *[" ".join(paragraph.split()) for paragraph in body_paragraphs],
+        (
+            "Yours sincerely,"
+            if english
+            else "Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées."
+        ),
+        values["sender_name"],
+    ]
+    return "\n\n".join(blocks).strip() + "\n"
 
 
 def parse_letter_sections(letter_text: str) -> LetterSections:
@@ -142,6 +194,7 @@ def render_letter_preview_html(
     sections = parse_letter_sections(letter_text)
 
     def lines(value: str) -> str:
+        """Échappe et conserve les sauts de ligne pour l'aperçu HTML de la lettre."""
         return "<br>".join(
             escape(line) for line in value.splitlines() if line.strip()
         )
@@ -186,6 +239,7 @@ def render_letter_preview_html(
 
 
 def _add_docx_paragraph(document, text: str, alignment=None, bold=False):
+    """Ajoute un paragraphe DOCX homogène pendant le rendu de la lettre finale."""
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.ns import qn
     from docx.shared import Pt
@@ -358,37 +412,3 @@ def save_profile_cv(
     target = profile_dir / "cv.pdf"
     target.write_bytes(content)
     return target
-
-
-def prepare_application(
-    settings: Settings,
-    profile: CandidateProfile,
-    offer: JobOffer,
-    variables: LetterVariables,
-    letter_text: str | None = None,
-) -> ApplicationFiles:
-    """Crée le dossier avec la lettre éditée ou, à défaut, le modèle."""
-    cv_source = settings.project_dir / profile.cv_path
-    if not profile.cv_path or not cv_source.is_file():
-        raise DocumentError(
-            "Ajoute d'abord un CV PDF au profil candidat sélectionné."
-        )
-    folder_name = "_".join(
-        [
-            date.today().isoformat(),
-            safe_slug(offer.company_name, "entreprise"),
-            safe_slug(offer.job_title, "poste"),
-        ]
-    )
-    directory = settings.output_dir / folder_name
-    directory.mkdir(parents=True, exist_ok=True)
-    cv_path = directory / "CV_Nicolas_Bour.pdf"
-    docx_path = directory / "Lettre_motivation_Nicolas_Bour.docx"
-    pdf_path = directory / "Lettre_motivation_Nicolas_Bour.pdf"
-    shutil.copy2(cv_source, cv_path)
-    final_letter_text = letter_text or render_letter(settings, variables)
-    # Valide la structure avant d'écrire les fichiers finaux.
-    parse_letter_sections(final_letter_text)
-    create_docx(docx_path, variables, final_letter_text)
-    create_pdf(pdf_path, variables, final_letter_text)
-    return ApplicationFiles(directory, cv_path, docx_path, pdf_path)

@@ -3,7 +3,12 @@
                         # Intègre les blocs d'affichage des rapports de compatibilité ATS et d'affichage des résultats. 
                     #############################################################################################################
 
-"""Composants de la fiche annonce complète de Rocky V2."""
+"""Composants de la fiche détaillée d'une annonce Rocky.
+
+Les fonctions regroupent l'édition contrôlée de l'offre, l'explication du
+matching, l'atelier CV/lettre et la restitution ATS. Elles orchestrent les
+services métier sans décider seules d'un statut ou d'une soumission.
+"""
 
 # Importation des librairies standard
 from __future__ import annotations
@@ -11,13 +16,23 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import date
 from html import escape
+from pathlib import Path
+import tempfile
 from typing import Any
 
 import pandas as pd
+import pymupdf
 import streamlit as st
 
 # Importation des modules internes
 from dashboard.dashboard_common import matching_category_summary
+from dashboard.rocky.applications import generate_application
+from dashboard.rocky.cv_tailoring import (
+    TECHNICAL_GROUPS,
+    build_tailored_cv_plan,
+    build_tailored_cv_plan_from_selection,
+    create_tailored_cv,
+)
 from dashboard.job_analysis import SOFT_SKILLS, TECHNICAL_SKILLS
 from dashboard.rocky.ats import (
     AtsReport,
@@ -30,22 +45,29 @@ from dashboard.rocky.ats import (
 )
 from dashboard.rocky.config import Settings
 from dashboard.rocky.contracts import CONTRACT_TYPES, WORK_SCHEDULES
-from dashboard.rocky.errors import RockyError
+from dashboard.rocky.errors import DocumentError, RockyError
 from dashboard.rocky.job_importer import (
     description_is_probably_truncated,
     hydrate_job_offer,
 )
 from dashboard.rocky.letters import (
     LetterVariables,
-    prepare_application,
     render_letter,
+    render_letter_from_body,
     render_letter_preview_html,
 )
 from dashboard.rocky.llm import RockyLLM
 from dashboard.rocky.matching import calculate_match
-from dashboard.rocky.models import CandidateProfile, JobOffer, MatchResult
+from dashboard.rocky.models import (
+    CandidateProfile,
+    JobOffer,
+    MatchResult,
+    ProfileProject,
+    TailoredCvPlan,
+)
+from dashboard.rocky.projects import load_profile_projects
 from dashboard.rocky.repository import RockyRepository
-from dashboard.rocky.text_utils import ensure_list, normalize_text, project_relative
+from dashboard.rocky.text_utils import ensure_list, normalize_text
 
 #################################################################################################
 # Bloc de fonctions utilitaires pour l'affichage des composants de la fiche annonce complète de Rocky.
@@ -57,11 +79,13 @@ def _letter_editor_height(_text: str) -> int:
 
 
 def _reset_ats_editor(editor_key: str, cv_path: str) -> None:
+    """Réinitialise le brouillon ATS lorsque le CV ou l'annonce de référence change."""
     text, _ = load_ats_cv_text(cv_path)
     st.session_state[editor_key] = text
 
 
 def _optional_date(value: Any) -> date | None:
+    """Convertit une date d'interface facultative avant persistance de l'annonce."""
     if value in (None, ""):
         return None
     if isinstance(value, date):
@@ -298,8 +322,9 @@ def render_edit_form(
         if updated.status != offer.status:
             repository.update_job_status(job_id, updated.status)
         if profile:
+            localized = repository.profile_for_offer(profile.id, updated) or profile
             result = calculate_match(
-                updated, profile, repository.fetch_skills(profile.id)
+                updated, localized, repository.fetch_skills(profile.id)
             )
             repository.save_match(job_id, profile.id, result)
         st.success("Annonce mise à jour et matching recalculé.")
@@ -485,6 +510,7 @@ def render_matching_detail(
 #################################################################################################
 
 def render_ats_report(report: AtsReport) -> None:
+    """Affiche le diagnostic ATS historique comme repère, sans modifier le matching."""
     with st.expander(
         f"Rapport ATS V1 · {report.score} / 100",
         expanded=False,
@@ -542,6 +568,7 @@ def render_ats_report(report: AtsReport) -> None:
 
 
 def render_ats_v2_report(report: AtsV2Report) -> None:
+    """Présente le rapport ATS V2 explicable dans le flux de préparation du dossier."""
     with st.expander(
         f"Rapport ATS V2 · {report.score} / 100",
         expanded=False,
@@ -609,22 +636,325 @@ def render_ats_v2_report(report: AtsV2Report) -> None:
         )
 
 
-@st.fragment
+def _cv_source_path(settings: Settings, profile: CandidateProfile) -> Path:
+    """Résout le chemin du CV canonique sans modifier le profil."""
+    path = Path(profile.cv_path or "").expanduser()
+    return path if path.is_absolute() else settings.project_dir / path
+
+
+def _profile_skill_badge_groups(
+    skills: list[dict[str, object]],
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Classe toutes les compétences du profil dans les badges du CV.
+
+    Chaque compétence n'apparaît qu'une fois. Les compétences métier et soft
+    sont affichées dans le groupe transversal, tandis que les autres restent
+    dans un groupe technique, y compris lorsqu'elles ne correspondent pas à la
+    taxonomie prédéfinie.
+    """
+    technical: list[str] = []
+    transversal: list[str] = []
+    seen: set[str] = set()
+    for skill in skills:
+        name = str(skill.get("skill_name") or "").strip()
+        normalized = normalize_text(name)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        category = str(skill.get("skill_category") or "").lower()
+        (transversal if category in {"soft", "business"} else technical).append(name)
+
+    groups: list[tuple[str, tuple[str, ...]]] = []
+    assigned: set[str] = set()
+    for label, markers in TECHNICAL_GROUPS:
+        values = tuple(
+            name
+            for name in technical
+            if (
+                normalize_text(name) not in assigned
+                and any(marker in normalize_text(name) for marker in markers)
+            )
+        )
+        if values:
+            groups.append((label, values))
+            assigned.update(normalize_text(name) for name in values)
+    remaining = tuple(
+        name for name in technical if normalize_text(name) not in assigned
+    )
+    if remaining:
+        groups.append(("Outils et méthodes", remaining))
+    if transversal:
+        groups.append(("Compétences transversales", tuple(transversal)))
+    return tuple(groups)
+
+
+def _limit_badge_selection(widget_key: str, maximum: int) -> None:
+    """Conserve les premiers badges lorsqu'un clic dépasse la limite affichée."""
+    selection = st.session_state.get(widget_key, [])
+    if isinstance(selection, list) and len(selection) > maximum:
+        st.session_state[widget_key] = selection[:maximum]
+
+
+def _render_cv_review(
+    job_id: int,
+    offer: JobOffer,
+    settings: Settings,
+    repository: RockyRepository,
+    profile: CandidateProfile,
+    projects: list[ProfileProject],
+) -> tuple[TailoredCvPlan | None, bool]:
+    """Affiche l'éditeur borné du CV et un aperçu PDF avant génération.
+
+    Les seuls champs exposés correspondent aux rectangles déjà autorisés par le
+    modèle Canva : deux blocs de compétences et trois projets maximum. Le PDF
+    de prévisualisation est temporaire et n'est jamais enregistré comme version
+    de candidature avant la validation explicite de l'utilisateur.
+    """
+    st.markdown("#### CV ciblé · vérification avant génération")
+    if profile.locale == "en":
+        # Le CV anglais est déjà un document Rocky structuré ou un import manuel.
+        # Il ne faut pas lui appliquer les zones fixes du gabarit français.
+        st.caption(
+            "Pour une annonce anglaise, Rocky utilise la version EN validée sans "
+            "réécrire sa mise en page ni remplacer un import manuel."
+        )
+        source = _cv_source_path(settings, profile)
+        if source.is_file():
+            st.pdf(source.read_bytes(), height=680)
+        else:
+            st.warning("Le CV anglais validé est introuvable.")
+        cv_confirm = st.checkbox(
+            "I reviewed and approve this English CV",
+            key=f"v2_confirm_cv_{job_id}",
+        )
+        return None, cv_confirm
+    st.caption(
+        "Rocky pré-sélectionne les éléments les plus pertinents du profil. "
+        "Clique sur un badge pour l'ajouter ou le retirer du CV ciblé."
+    )
+    try:
+        profile_skills = repository.fetch_skills(profile.id)
+        initial_plan = build_tailored_cv_plan(
+            offer,
+            profile_skills,
+            projects,
+        )
+    except DocumentError as error:
+        st.error(str(error))
+        return None, False
+    with st.container(border=True):
+        st.markdown("##### Compétences du profil")
+        st.info(
+            "Clique sur les badges colorés pour les retirer ou sur les badges gris "
+            "pour les ajouter. Tu peux sélectionner au maximum 6 compétences par "
+            "type et 3 projets."
+        )
+        recommended_technical = {
+            normalize_text(value)
+            for _, values in initial_plan.technical_groups
+            for value in values
+        }
+        recommended_transversal = {
+            normalize_text(value) for value in initial_plan.transversal_skills
+        }
+        selected_groups: list[tuple[str, tuple[str, ...]]] = []
+        selected_transversal: tuple[str, ...] = ()
+        for index, (label, options) in enumerate(
+            _profile_skill_badge_groups(profile_skills)
+        ):
+            widget_key = f"v2_cv_badges_{job_id}_{profile.id}_{index}"
+            is_transversal = label == "Compétences transversales"
+            recommended = (
+                recommended_transversal if is_transversal else recommended_technical
+            )
+            defaults = [
+                option
+                for option in options
+                if normalize_text(option) in recommended
+            ][:6]
+            selected = st.pills(
+                f"{label} · {len(defaults) if widget_key not in st.session_state else len(st.session_state[widget_key])}/6",
+                options,
+                selection_mode="multi",
+                default=defaults,
+                key=widget_key,
+                on_change=_limit_badge_selection,
+                args=(widget_key, 6),
+                help="Les badges colorés seront ajoutés au CV ; les badges gris n'y figureront pas.",
+            )
+            selected_values = tuple(selected or ())[:6]
+            if is_transversal:
+                selected_transversal = selected_values
+            else:
+                selected_groups.append((label, selected_values))
+
+        st.markdown("##### Projets du profil")
+        active_projects = [project for project in projects if project.is_active]
+        projects_by_slug = {project.slug: project for project in active_projects}
+        project_widget_key = f"v2_cv_projects_{job_id}_{profile.id}"
+        selected_project_slugs = st.pills(
+            f"Projets retenus · {len(initial_plan.projects) if project_widget_key not in st.session_state else len(st.session_state[project_widget_key])}/3",
+            options=list(projects_by_slug),
+            selection_mode="multi",
+            default=[project.slug for project in initial_plan.projects],
+            format_func=lambda slug: projects_by_slug[str(slug)].name,
+            key=project_widget_key,
+            on_change=_limit_badge_selection,
+            args=(project_widget_key, 3),
+            help="Les trois projets colorés au plus seront intégrés au CV ciblé.",
+        )
+        selected_projects = [
+            projects_by_slug[slug]
+            for slug in (selected_project_slugs or [])[:3]
+            if slug in projects_by_slug
+        ]
+
+    plan = build_tailored_cv_plan_from_selection(
+        selected_groups,
+        selected_transversal,
+        selected_projects,
+    )
+    # L'aperçu et l'enregistrement emploient la sélection visible ; le snapshot
+    # enregistré plus bas continue de protéger le PDF final d'un changement futur.
+    st.session_state[f"v2_cv_plan_{job_id}"] = plan
+
+    preview_col, check_col = st.columns([1.25, 1])
+    with preview_col:
+        st.markdown("##### Aperçu du CV ciblé")
+        source = _cv_source_path(settings, profile)
+        if source.is_file() and plan.technical_groups and plan.projects:
+            try:
+                with tempfile.TemporaryDirectory(prefix="rocky_cv_preview_") as folder:
+                    preview_path = Path(folder) / "cv_preview.pdf"
+                    create_tailored_cv(source, preview_path, plan, settings)
+                    with pymupdf.open(preview_path) as document:
+                        pixmap = document[0].get_pixmap(matrix=pymupdf.Matrix(1.25, 1.25), alpha=False)
+                        st.image(pixmap.tobytes("png"), width="stretch")
+            except (DocumentError, OSError) as error:
+                st.error(f"Aperçu CV indisponible : {error}")
+        else:
+            st.warning("Ajoute un CV source et au moins un projet pour afficher l'aperçu.")
+    with check_col:
+        st.markdown("##### Contrôle")
+        st.info(
+            "Seules les compétences techniques, transversales et les trois "
+            "cartes projets seront remplacées. Le profil, les expériences et "
+            "la mise en page restent verrouillés."
+        )
+        cv_confirm = st.checkbox(
+            "J’ai relu le CV ciblé et je valide son contenu",
+            key=f"v2_confirm_cv_{job_id}",
+        )
+    return plan, cv_confirm
+
+
 def render_letter_workshop(
     job_id: int,
     offer: JobOffer,
     settings: Settings,
     repository: RockyRepository,
     profile: CandidateProfile | None,
+    active_section: str = "all",
 ) -> None:
-    """Réutilise l’atelier V1.1 de lettre modifiable et de dossier final."""
-    st.subheader("Lettre de motivation et candidature")
+    """Affiche l'atelier CV, lettre et PDF sans changer le flux métier.
+
+    ``active_section`` permet à la page dédiée d'afficher un seul jalon à la
+    fois. La fiche annonce conserve ``all`` : les clés de session, validations
+    et appels de génération restent les mêmes dans les deux parcours. Cette
+    fonction ne constitue pas un fragment Streamlit : les sauvegardes doivent
+    recharger la page entière pour mettre à jour les badges et la zone
+    « Postuler ! » située après l'atelier.
+    """
     if profile is None:
         st.warning("Active un profil avant de préparer une candidature.")
         return
     llm = RockyLLM(settings)
     if not profile.cv_path:
         st.warning("Ajoute un CV au profil avant de créer le dossier final.")
+    profile_documents = {
+        document.kind: document
+        for document in repository.fetch_profile_documents(profile.id, profile.locale)
+    }
+    if profile.locale == "en" and profile_documents.get("cv"):
+        # Les anciens écrans peuvent arriver ici avec le chemin CV français
+        # stocké dans le profil partagé. L'atelier doit néanmoins travailler sur
+        # le PDF anglais importé dès que l'annonce a sélectionné cette locale.
+        profile = replace(profile, cv_path=profile_documents["cv"].source_path)
+    english_kit_ready = (
+        profile.locale != "en"
+        or (
+            {"cv", "letter"} <= set(profile_documents)
+            and all(document.status == "ready" for document in profile_documents.values())
+        )
+    )
+    if not english_kit_ready:
+        st.warning(
+            "Cette annonce utilise la version anglaise. Importe le CV PDF et la "
+            "lettre DOCX anglais dans Profil & CV avant de préparer le dossier."
+        )
+    try:
+        profile_projects = load_profile_projects(
+            profile.id, settings, repository, profile.locale
+        )
+    except RockyError as error:
+        profile_projects = []
+        st.warning(
+            "Les projets validés ne sont pas encore utilisables pour cette "
+            f"candidature : {error}"
+        )
+    show_cv = active_section in {"all", "cv"}
+    show_letter = active_section in {"all", "letter"}
+    # ``postulate`` est le nom de la troisième carte du parcours dédié. Le
+    # mode ``all`` de la fiche annonce conserve l'atelier complet.
+    show_postulate = active_section in {"all", "postulate", "final"}
+    plan_key = f"v2_cv_plan_{job_id}"
+    cv_saved_key = f"v2_prepare_cv_saved_{job_id}"
+    saved_cv_plan_key = f"v2_prepare_saved_cv_plan_{job_id}"
+    letter_saved_key = f"v2_prepare_letter_saved_{job_id}"
+    saved_letter_key = f"v2_prepare_saved_letter_text_{job_id}"
+    cv_plan = st.session_state.get(plan_key)
+    cv_confirm = bool(st.session_state.get(f"v2_confirm_cv_{job_id}"))
+
+    if show_cv:
+        with st.container(border=True):
+            st.markdown("#### 01 · Ton CV ciblé")
+            st.caption("Choisis les éléments que Rocky peut modifier, puis relis l’aperçu avant génération.")
+            cv_plan, cv_confirm = _render_cv_review(
+                job_id,
+                offer,
+                settings,
+                repository,
+                profile,
+                profile_projects,
+            )
+        # La génération ne relit jamais le brouillon courant : elle utilisera
+        # la copie explicite ci-dessous. Ainsi une retouche ultérieure ne peut
+        # pas modifier silencieusement le dossier qui sera généré.
+        can_save_cv = bool(
+            cv_confirm
+            and (
+                (profile.locale == "en" and english_kit_ready)
+                or (
+                    cv_plan
+                    and cv_plan.technical_groups
+                    and cv_plan.projects
+                )
+            )
+            and profile.cv_path
+        )
+        if st.button(
+            "✅ Enregistrer ce CV ciblé",
+            key=f"v2_prepare_save_cv_{job_id}",
+            type="primary",
+            disabled=not can_save_cv,
+            use_container_width=True,
+        ):
+            st.session_state[saved_cv_plan_key] = cv_plan
+            st.session_state[cv_saved_key] = True
+            # Ferme visuellement l'étape CV en basculant immédiatement sur la
+            # carte suivante ; le rerun complet rend aussi son badge validé.
+            st.session_state[f"v2_prepare_active_section_{job_id}"] = "letter"
+            st.rerun()
 
     paragraph_key = f"v2_company_paragraph_{job_id}"
     if paragraph_key not in st.session_state:
@@ -633,40 +963,107 @@ def render_letter_workshop(
             f"{offer.company_name}, dont les missions correspondent à mon projet "
             "d’utiliser la data comme outil d’aide à la décision."
         )
-    if st.button(
-        "Proposer le paragraphe avec Rocky",
-        key=f"v2_llm_paragraph_{job_id}",
-        disabled=not llm.is_configured,
-    ):
-        try:
-            st.session_state[paragraph_key] = llm.company_paragraph(offer)
-        except RockyError as error:
-            st.error(str(error))
-    if not llm.is_configured:
-        st.caption("Mistral non configuré : le brouillon reste modifiable manuellement.")
+    message_key = f"v2_application_message_{job_id}"
+    if message_key not in st.session_state:
+        st.session_state[message_key] = (
+            f"Bonjour, je vous adresse ma candidature au poste de "
+            f"{offer.job_title or 'Data Scientist'} chez "
+            f"{offer.company_name or 'votre entreprise'}. Mon parcours data et "
+            "mon intérêt pour vos missions me donnent envie d'échanger avec vous."
+        )
 
-    recipient = st.text_input(
-        "Destinataire",
-        "À l’attention du Service des Ressources Humaines",
-        key=f"v2_recipient_{job_id}",
+    company_paragraph = str(st.session_state[paragraph_key])
+    recipient_key = f"v2_recipient_{job_id}"
+    address_key = f"v2_address_{job_id}"
+    recipient = str(
+        st.session_state.get(recipient_key, "À l’attention du Service des Ressources Humaines")
     )
-    address = st.text_input(
-        "Adresse de l’entreprise (facultatif)",
-        key=f"v2_address_{job_id}",
-    )
-    company_paragraph = st.text_area(
-        "Paragraphe personnalisé",
-        key=paragraph_key,
-        height=110,
-    )
+    address = str(st.session_state.get(address_key, ""))
+
+    if show_letter:
+        # Le message est volontairement replié à l'ouverture : il est utile,
+        # mais ne doit pas repousser la lettre complète hors de l'écran.
+        with st.expander("02 · Ton message d’accompagnement", expanded=False):
+            st.caption("À coller dans le champ libre du site de candidature ; il n'est pas ajouté au PDF.")
+            if st.button(
+                "Rocky : générer le message",
+                key=f"v2_llm_application_message_{job_id}",
+                disabled=not llm.is_configured,
+                use_container_width=True,
+            ):
+                try:
+                    st.session_state[message_key] = llm.application_accompanying_message(
+                        offer,
+                        profile,
+                        repository.fetch_skills(profile.id),
+                        profile_projects,
+                        profile.locale,
+                    )
+                    st.rerun()
+                except RockyError as error:
+                    st.error(str(error))
+            st.text_area(
+                "Message d’accompagnement à copier",
+                key=message_key,
+                height=145,
+                help="Ce message reste éditable et n'est pas ajouté au PDF.",
+            )
+
+        with st.container(border=True):
+            st.markdown("#### 03 · Ta lettre de motivation")
+            st.caption("Le paragraphe Rocky y est intégré ; adapte ensuite la lettre complète si tu le souhaites.")
+            if st.button(
+                "Rocky : générer le paragraphe pour la lettre",
+                key=f"v2_llm_paragraph_{job_id}",
+                disabled=not llm.is_configured,
+                use_container_width=True,
+            ):
+                try:
+                    st.session_state[paragraph_key] = llm.company_paragraph(
+                        offer, profile.locale
+                    )
+                    st.rerun()
+                except RockyError as error:
+                    st.error(str(error))
+            company_paragraph = st.text_area(
+                "Paragraphe personnalisé pour la lettre",
+                key=paragraph_key,
+                height=130,
+                help="Ce texte est intégré dans la lettre PDF.",
+            )
+            with st.expander("Personnaliser l’en-tête de la lettre", expanded=False):
+                recipient = st.text_input(
+                    "Destinataire",
+                    recipient,
+                    key=recipient_key,
+                )
+                address = st.text_input(
+                    "Adresse de l’entreprise (facultatif)",
+                    address,
+                    key=address_key,
+                )
+        if not llm.is_configured:
+            st.caption(
+                "Mistral non configuré : les deux brouillons restent modifiables manuellement."
+            )
     variables = LetterVariables(
         job_title=offer.job_title,
         company_name=offer.company_name,
         company_paragraph=company_paragraph,
         recipient=recipient,
         company_address=address,
+        sender_name=profile.full_name or profile.profile_name,
+        sender_address=" · ".join(
+            value
+            for value in (profile.address, profile.postal_code, profile.home_city)
+            if value
+        ),
+        sender_phone=profile.phone,
+        sender_email=profile.email,
+        city=profile.home_city,
+        locale=profile.locale,
     )
-    letter_preview = ""
+    letter_preview = str(st.session_state.get(f"v2_letter_editor_{job_id}") or "")
     try:
         generated = render_letter(settings, variables)
         editor_key = f"v2_letter_editor_{job_id}"
@@ -677,69 +1074,150 @@ def render_letter_workshop(
             st.session_state[editor_key] = generated
         st.session_state[base_key] = generated
 
-        st.markdown("#### Lettre modifiable")
-        if st.button(
-            "Recharger depuis le modèle", key=f"v2_reset_letter_{job_id}"
-        ):
-            st.session_state[editor_key] = generated
-        editor_height = _letter_editor_height(
-            str(st.session_state.get(editor_key) or generated)
-        )
-        letter_preview = st.text_area(
-            "Contenu de la lettre",
-            key=editor_key,
-            height=editor_height,
-            label_visibility="collapsed",
-        )
-
-        st.markdown("#### Aperçu mis en forme")
-        st.caption("Aperçu complet dans une zone défilable.")
-        with st.container(height=700, border=True):
-            st.markdown(
-                render_letter_preview_html(variables, letter_preview),
-                unsafe_allow_html=True,
-            )
+        if show_letter:
+            with st.container(border=True):
+                st.markdown("#### Relecture et mise en forme")
+                actions, _ = st.columns([1.2, 2])
+                with actions:
+                    if st.button(
+                        "Adapter toute la lettre avec Rocky",
+                        key=f"v2_tailor_full_letter_{job_id}",
+                        disabled=not llm.is_configured,
+                        type="primary",
+                        use_container_width=True,
+                    ):
+                        try:
+                            paragraphs = llm.tailored_letter_body(
+                                offer,
+                                profile,
+                                repository.fetch_skills(profile.id),
+                                profile_projects,
+                                profile.locale,
+                            )
+                            tailored = render_letter_from_body(variables, paragraphs)
+                            st.session_state[editor_key] = tailored
+                            st.session_state[base_key] = tailored
+                            st.rerun()
+                        except RockyError as error:
+                            st.error(str(error))
+                    if st.button(
+                        "Recharger depuis le modèle", key=f"v2_reset_letter_{job_id}", use_container_width=True
+                    ):
+                        st.session_state[editor_key] = generated
+                        st.rerun()
+                edit_tab, preview_tab = st.tabs(["✍️ Édition", "👁 Aperçu mis en forme"])
+                with edit_tab:
+                    editor_height = _letter_editor_height(
+                        str(st.session_state.get(editor_key) or generated)
+                    )
+                    letter_preview = st.text_area(
+                        "Contenu de la lettre",
+                        key=editor_key,
+                        height=editor_height,
+                        label_visibility="collapsed",
+                    )
+                with preview_tab:
+                    st.caption("Aperçu complet de la lettre dans sa mise en forme PDF.")
+                    with st.container(height=700, border=True):
+                        st.markdown(
+                            render_letter_preview_html(
+                                variables,
+                                str(st.session_state.get(editor_key) or generated),
+                            ),
+                            unsafe_allow_html=True,
+                        )
+        # Le bouton de génération reçoit le brouillon en session, y compris si
+        # l'utilisateur ouvre directement la dernière carte de progression.
+        letter_preview = str(st.session_state.get(editor_key) or generated)
     except RockyError as error:
         st.error(str(error))
 
-    confirm = st.checkbox(
-        "J’ai relu la lettre et je valide la génération",
-        key=f"v2_confirm_letter_{job_id}",
-    )
-    if st.button(
-        "Créer DOCX + PDF + copie du CV",
-        key=f"v2_prepare_{job_id}",
-        type="primary",
-        disabled=not confirm or not letter_preview or not profile.cv_path,
-        use_container_width=True,
-    ):
-        try:
-            files = prepare_application(
-                settings,
-                profile,
-                offer,
-                variables,
-                letter_text=letter_preview,
-            )
-            repository.create_application(
-                job_id,
-                profile.id,
-                project_relative(files.cv_path, settings.project_dir),
-                project_relative(files.docx_path, settings.project_dir),
-                project_relative(files.pdf_path, settings.project_dir),
-            )
-            st.session_state[f"v2_files_{job_id}"] = files
-            st.success(f"Dossier créé : {files.directory.name}")
-        except (RockyError, OSError) as error:
-            st.error(str(error))
-    files = st.session_state.get(f"v2_files_{job_id}")
-    if files:
-        downloads = st.columns(3)
-        for column, label, path in (
-            (downloads[0], "CV", files.cv_path),
-            (downloads[1], "DOCX", files.docx_path),
-            (downloads[2], "PDF", files.pdf_path),
+    if show_letter:
+        # La sauvegarde inclut le message d'accompagnement et la lettre. Le
+        # premier reste à copier sur le portail, le second devient le PDF.
+        letter_confirm = st.checkbox(
+            "J’ai relu le message et la lettre, et je valide cette version",
+            key=f"v2_confirm_letter_{job_id}",
+        )
+        if st.button(
+            "✅ Enregistrer les messages et la lettre",
+            key=f"v2_prepare_save_letter_{job_id}",
+            type="primary",
+            disabled=not bool(letter_confirm and letter_preview),
+            use_container_width=True,
         ):
+            st.session_state[saved_letter_key] = letter_preview
+            st.session_state[letter_saved_key] = True
+            # Même logique : le bloc s'efface au profit de Postuler, ce qui
+            # évite de demander un second clic de navigation.
+            st.session_state[f"v2_prepare_active_section_{job_id}"] = "postulate"
+            st.rerun()
+
+    if show_postulate:
+        saved_cv_plan = st.session_state.get(saved_cv_plan_key)
+        saved_letter = str(st.session_state.get(saved_letter_key) or "")
+        cv_is_saved = bool(st.session_state.get(cv_saved_key))
+        letter_is_saved = bool(st.session_state.get(letter_saved_key))
+        can_generate = bool(
+            cv_is_saved
+            and letter_is_saved
+            and (
+                (profile.locale == "en" and english_kit_ready)
+                or (
+                    saved_cv_plan
+                    and saved_cv_plan.technical_groups
+                    and saved_cv_plan.projects
+                )
+            )
+            and saved_letter
+            and profile.cv_path
+        )
+        with st.container(border=True):
+            st.markdown("#### 03 · Générer tes deux PDF")
+            st.caption(
+                "Rocky utilisera uniquement le CV et la lettre que tu as enregistrés dans les deux cartes précédentes."
+            )
+            if not cv_is_saved or not letter_is_saved:
+                missing = []
+                if not cv_is_saved:
+                    missing.append("CV ciblé")
+                if not letter_is_saved:
+                    missing.append("messages et lettre")
+                st.warning("À enregistrer avant la génération : " + " et ".join(missing) + ".")
+            if st.button(
+                "Créer le CV ciblé + la lettre PDF",
+                key=f"v2_prepare_{job_id}",
+                type="primary",
+                disabled=not can_generate,
+                use_container_width=True,
+            ):
+                try:
+                    package = generate_application(
+                        job_id,
+                        profile,
+                        offer,
+                        saved_letter,
+                        settings,
+                        repository,
+                        plan=saved_cv_plan,
+                        rocky_paragraph=company_paragraph,
+                    )
+                    st.session_state[f"v2_files_{job_id}"] = package
+                    # Le bouton fusée est rendu par la page parente, après cet
+                    # atelier. Un rerun applicatif complet le rend visible dès
+                    # la fin de la génération, sans attendre un téléchargement.
+                    st.session_state[f"v2_prepare_active_section_{job_id}"] = "postulate"
+                    st.rerun()
+                except (RockyError, OSError) as error:
+                    st.error(str(error))
+    files = st.session_state.get(f"v2_files_{job_id}")
+    if files and show_postulate:
+        downloads = st.columns(2)
+        for column, label, path in (
+            (downloads[0], "CV ciblé", files.cv_pdf_path),
+            (downloads[1], "Lettre PDF", files.letter_pdf_path),
+        ):
+            path = Path(path)
             column.download_button(
                 f"Télécharger {label}",
                 path.read_bytes(),

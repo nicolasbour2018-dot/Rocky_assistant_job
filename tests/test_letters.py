@@ -21,6 +21,11 @@ def variables():
             "proposées par Entreprise Exemple."
         ),
         company_address="10 rue Exemple\n75000 Paris",
+        city="Paris",
+        sender_name="Camille Exemple",
+        sender_address="1 rue Exemple, 75000 Paris",
+        sender_phone="0102030405",
+        sender_email="camille@example.test",
         letter_date=date(2026, 8, 7),
     )
 
