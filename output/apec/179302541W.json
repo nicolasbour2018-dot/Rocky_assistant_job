@@ -1,0 +1,1257 @@
+{
+  "schema_version": "apec-offer-extraction-v1",
+  "extracted_at": "2026-08-31T20:09:53.316177+00:00",
+  "source": "Apec",
+  "source_url": "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179302541W",
+  "offer": {
+    "external_id": "179302541W",
+    "numeric_id": 179302541,
+    "title": "Software Engineer Fullstack JS - Scaleup SaaS F/H",
+    "company_name": "Externatic",
+    "company_establishment_id": 712953,
+    "company_reference": "568-97802f21247c60c--NK3",
+    "locations": [
+      "Paris 08 - 75"
+    ],
+    "contract_type": "CDI",
+    "number_of_positions": 2,
+    "salary_text": "A partir de 65 k€ brut annuel",
+    "part_time": false,
+    "publication_date": "2026-08-31T12:38:42.000+0000",
+    "updated_date": "2026-08-31T12:38:42.000+0000",
+    "application_url": "https://www.apec.fr/candidat/recherche-emploi/postuler-a-une-offre.html#candidature/promotion/179302541W?to=int",
+    "application_type": "EMAIL_ONLY",
+    "latitude": 48.8727215,
+    "longitude": 2.312556,
+    "detail_fields": {
+      "salary_text": "A partir de 65 k€ brut annuel",
+      "start_date_text": "Dès que possible",
+      "experience_text": "Minimum 4 ans",
+      "job_family": "Ingénieur informatique industrielle",
+      "job_status": "Cadre du secteur privé",
+      "travel_zone": "Pas de déplacement",
+      "industry": "CONSEIL POUR LES AFFAIRES ET AUTRES CONSEILS DE GESTION"
+    },
+    "description": {
+      "html": "<p><strong>L'entreprise accompagnée dans son recrutement CDI </strong><br /><br />Il s'agit d'une scale-up de la <strong>Tech (cybersécurité)</strong> en pleine phase d’accélération européenne, qui protège déjà plus de 12 000 entreprises à travers 6 pays.<br />Suite à plusieurs levées de fonds (<strong>70</strong><strong> millions d'euros)</strong>, cette structure affiche des ambitions claires et une trajectoire solide pour 2026 / 2027.<br />Dans le cadre de cette croissance, le cabinet <strong>Externatic</strong> vous propose un poste en <strong>CDI directement chez ce client final</strong> (aucune activité de type ESN).<br /><br />Vous intégrerez une des tribus de l'équipe Tech, une équipe à taille humaine structurée en squads autonomes (composées chacune de 5 développeurs, 1 Product Manager et 1 Designer).<br />Ici, l'accent est mis sur l'<strong>indépendance technologique</strong>, l'<strong>absence de barrières</strong> et un <strong>fort impact sur le produit</strong>.<br /><br /><strong>Les missions / rôles </strong><br /><br />En tant que Développeur Senior, votre quotidien ne se limitera pas à aligner des lignes de code.<br />Vous interviendrez sur <strong>l'ensemble du cycle de vie</strong> des fonctionnalités et participerez activement aux <strong>chantiers d'architecture</strong> :</p><p> </p><p> </p><ul><li><strong>Conception & Delivery End-to-End :</strong> Prendre la responsabilité complète de nouvelles fonctionnalités, depuis le cadrage initial et les spécifications techniques jusqu'à la mise en production.</li><li><strong>Évolution de l'Architecture :</strong> Participer activement à la transition vers un <strong>monolithe modulaire</strong> afin d'assurer la scalabilité et la haute maintenabilité de la plateforme.</li><li><strong>Culture Product-Led :</strong> Collaborer étroitement avec les équipes Produit et Design pour traduire les besoins business en solutions techniques simples et élégantes.</li><li><strong>Automation & Excellence Opérationnelle :</strong> Piloter vos propres pipelines CI/CD et participer à l'éradication de la dette manuelle. La qualité est l'affaire de tous : vous assurez vos propres tests et revues de code.</li><li><strong>Pragmatisme Tech & IA :</strong> Utiliser au quotidien des outils d'assistance de pointe (Claude, Cursor) pour maximiser l'efficience collective, tout en garantissant un code robuste, transparent et maîtrisé.</li></ul><p><strong>Stack et culture tech</strong><br /><br />L'équipe met un point d'honneur à offrir une excellente Developer Experience (DX) à travers un tooling moderne :</p><p> </p><p> </p><p> </p><ul><li><strong>Backend :</strong> NestJS, Node.js, Redis, RabbitMQ</li><li><strong>Frontend :</strong> React, TypeScript</li><li><strong>Infra & DevSecOps :</strong> AWS, Kubernetes, GitHub Actions, PostgreSQL</li><li><strong>Méthodologie :</strong> Intégration continue, autonomie DevOps, approche orientée résolution de problèmes complexes.</li></ul><p> </p>",
+      "text": "L'entreprise accompagnée dans son recrutement CDI\n\nIl s'agit d'une scale-up de la\nTech (cybersécurité)\nen pleine phase d’accélération européenne, qui protège déjà plus de 12 000 entreprises à travers 6 pays.\n\nSuite à plusieurs levées de fonds (\n70\nmillions d'euros)\n, cette structure affiche des ambitions claires et une trajectoire solide pour 2026 / 2027.\n\nDans le cadre de cette croissance, le cabinet\nExternatic\nvous propose un poste en\nCDI directement chez ce client final\n(aucune activité de type ESN).\n\nVous intégrerez une des tribus de l'équipe Tech, une équipe à taille humaine structurée en squads autonomes (composées chacune de 5 développeurs, 1 Product Manager et 1 Designer).\n\nIci, l'accent est mis sur l'\nindépendance technologique\n, l'\nabsence de barrières\net un\nfort impact sur le produit\n.\n\nLes missions / rôles\n\nEn tant que Développeur Senior, votre quotidien ne se limitera pas à aligner des lignes de code.\n\nVous interviendrez sur\nl'ensemble du cycle de vie\ndes fonctionnalités et participerez activement aux\nchantiers d'architecture\n:\n\n- Conception & Delivery End-to-End : Prendre la responsabilité complète de nouvelles fonctionnalités, depuis le cadrage initial et les spécifications techniques jusqu'à la mise en production.\n\n- Évolution de l'Architecture : Participer activement à la transition vers un monolithe modulaire afin d'assurer la scalabilité et la haute maintenabilité de la plateforme.\n\n- Culture Product-Led : Collaborer étroitement avec les équipes Produit et Design pour traduire les besoins business en solutions techniques simples et élégantes.\n\n- Automation & Excellence Opérationnelle : Piloter vos propres pipelines CI/CD et participer à l'éradication de la dette manuelle. La qualité est l'affaire de tous : vous assurez vos propres tests et revues de code.\n\n- Pragmatisme Tech & IA : Utiliser au quotidien des outils d'assistance de pointe (Claude, Cursor) pour maximiser l'efficience collective, tout en garantissant un code robuste, transparent et maîtrisé.\n\nStack et culture tech\n\nL'équipe met un point d'honneur à offrir une excellente Developer Experience (DX) à travers un tooling moderne :\n\n- Backend : NestJS, Node.js, Redis, RabbitMQ\n\n- Frontend : React, TypeScript\n\n- Infra & DevSecOps : AWS, Kubernetes, GitHub Actions, PostgreSQL\n\n- Méthodologie : Intégration continue, autonomie DevOps, approche orientée résolution de problèmes complexes."
+    },
+    "candidate_profile": {
+      "html": "<p>Ce poste est fait pour vous si vous aimez rendre simples les sujets complexes et possédez un fort esprit entrepreneurial.<br /> </p><ul><li><strong>Parcours technique :</strong> Vous justifiez d'au minimum <strong>4</strong><strong> ans d'expérience</strong> en développement logiciel, idéalement acquise dans des environnements agiles de type startup, scale-up ou éditeur logiciel.</li><li><strong>Maîtrise technologique :</strong> Vous disposez d’une expertise solide sur <strong>NestJS</strong> (indispensable pour les chantiers d'architecture backend en cours) et d'une maîtrise éprouvée de <strong>React</strong> et <strong>TypeScript</strong>.</li><li><strong>Mindset Produit :</strong> Vous êtes \"owner\" de vos sujets. Vous aimez comprendre l'impact business de ce que vous développez et appréciez l'autonomie sur la CI/CD.</li><li><strong>Savoir-être :</strong> Esprit d'équipe, culture du feedback, pragmatisme face à l'utilisation des IA génératives et sensibilité aux enjeux de scalabilité.</li></ul><p><br /><strong>Conditions de travail et avantages</strong></p><p> </p><p> </p><ul><li><strong>Rémunération fixe </strong>entre <strong>65 000 € et 80 000 € brut annuel</strong> (selon profil et niveau d'expérience) + <strong>BSPCE</strong></li><li>Contrat 39h / 10aine<strong> de RTT</strong> par an.</li><li>Politique de télétravail flexible (pas de règles, mais une culture d'entreprise globale qui aime se retrouver au bureau pour le collectif).</li><li><strong>Paris 8ème à 2 pas des Champs Elysées</strong></li><li>Tickets Restaurant, prise en charge du pass Navigo et excellente mutuelle santé.</li></ul><p><strong>Process de recrutement </strong><br /><br />En postulant via Externatic, vous bénéficiez d'un accompagnement personnalisé et transparent tout au long des étapes, sans intermédiaire de type ESN.<br /><br />Le parcours de sélection chez notre client est fluide et se déroule en 3 étapes :</p><p> </p><p> </p><p> </p><p> </p><ul><li><strong>Premier échange (30 min) :</strong> Un call en visioconférence avec l'Engineering Manager pour faire connaissance et valider l'adéquation culturelle et humaine.</li><li><strong>Évaluation Technique :</strong> Un exercice à préparer chez vous, suivi d'un débriefing technique en visio avec une session de live-coding axée sur votre logique et votre réflexion produit.</li><li><strong>Rencontre Finale (2h sur place) :</strong> Une immersion dans les locaux à Paris pour rencontrer les équipes de développement ainsi que les co-fondateurs de la structure.</li></ul><p> </p><p> </p>",
+      "text": "Ce poste est fait pour vous si vous aimez rendre simples les sujets complexes et possédez un fort esprit entrepreneurial.\n\n- Parcours technique : Vous justifiez d'au minimum 4 ans d'expérience en développement logiciel, idéalement acquise dans des environnements agiles de type startup, scale-up ou éditeur logiciel.\n\n- Maîtrise technologique : Vous disposez d’une expertise solide sur NestJS (indispensable pour les chantiers d'architecture backend en cours) et d'une maîtrise éprouvée de React et TypeScript .\n\n- Mindset Produit : Vous êtes \"owner\" de vos sujets. Vous aimez comprendre l'impact business de ce que vous développez et appréciez l'autonomie sur la CI/CD.\n\n- Savoir-être : Esprit d'équipe, culture du feedback, pragmatisme face à l'utilisation des IA génératives et sensibilité aux enjeux de scalabilité.\n\nConditions de travail et avantages\n\n- Rémunération fixe entre 65 000 € et 80 000 € brut annuel (selon profil et niveau d'expérience) + BSPCE\n\n- Contrat 39h / 10aine de RTT par an.\n\n- Politique de télétravail flexible (pas de règles, mais une culture d'entreprise globale qui aime se retrouver au bureau pour le collectif).\n\n- Paris 8ème à 2 pas des Champs Elysées\n\n- Tickets Restaurant, prise en charge du pass Navigo et excellente mutuelle santé.\n\nProcess de recrutement\n\nEn postulant via Externatic, vous bénéficiez d'un accompagnement personnalisé et transparent tout au long des étapes, sans intermédiaire de type ESN.\n\nLe parcours de sélection chez notre client est fluide et se déroule en 3 étapes :\n\n- Premier échange (30 min) : Un call en visioconférence avec l'Engineering Manager pour faire connaissance et valider l'adéquation culturelle et humaine.\n\n- Évaluation Technique : Un exercice à préparer chez vous, suivi d'un débriefing technique en visio avec une session de live-coding axée sur votre logique et votre réflexion produit.\n\n- Rencontre Finale (2h sur place) : Une immersion dans les locaux à Paris pour rencontrer les équipes de développement ainsi que les co-fondateurs de la structure."
+    },
+    "company_description": {
+      "html": "<p>Crée il y a 15 ans, Externatic est l'un des 1ers cabinets de recrutement spécialisés <strong>\"Informatique, Data & Cybersécurité\" à voir le jour en France. </strong><br /><br />Notre credo est simple : \"permettre à nos candidats, via notre réseau, d'accéder au marché caché et d'être recruté uniquement au sein d'entreprises finales (0% d'ESN) \".<br /><br />Externatic en bref :<br /> </p><ul><li>15 ans de professionnalisme sur le recrutement \"tech\" externalisé pour des entreprises HORS ESN</li><li><strong>Près de 300 postes ouverts en permanence et 100% entreprise finale </strong></li><li>Près de <strong>30 consultants </strong></li><li><strong>Des implantations de proximité couvrant le territoire </strong> : Paris, Lyon, Lille, Strasbourg, Toulouse, Bordeaux, Nantes, Rennes, Angers, Montpellier, ...</li><li>Plus de <strong>700 sociétés accompagnées</strong> dans leurs recrutements depuis 2010 : DSI, éditeurs, ETI/PME, Centre R&D, Startup/scale-up, organismes publics et para-publiques, ...</li><li>Près de <strong>300 candidats accompagnés par an</strong> : CTO, DSI, RSSI, Architecte, chef de projet, développeur, devops, administrateur systèmes / réseaux, Data engineer, Analyste SOC, PO/PM, consultant fonctionnel, etc !</li><li>Du recrutement mais pas que ! des outils comme notre grille de salaires faisant référence depuis 2015, des guides de préparation d'entretien, de négociation de la rémunération, des analyses de marchés, ...</li></ul><p><br />Pour en savoir plus et découvrir d'autres postes à pourvoir, rendez vous sur notre site !</p>",
+      "text": "Crée il y a 15 ans, Externatic est l'un des 1ers cabinets de recrutement spécialisés\n\"Informatique, Data & Cybersécurité\" à voir le jour en France.\n\nNotre credo est simple : \"permettre à nos candidats, via notre réseau, d'accéder au marché caché et d'être recruté uniquement au sein d'entreprises finales (0% d'ESN) \".\n\nExternatic en bref :\n\n- 15 ans de professionnalisme sur le recrutement \"tech\" externalisé pour des entreprises HORS ESN\n\n- Près de 300 postes ouverts en permanence et 100% entreprise finale\n\n- Près de 30 consultants\n\n- Des implantations de proximité couvrant le territoire : Paris, Lyon, Lille, Strasbourg, Toulouse, Bordeaux, Nantes, Rennes, Angers, Montpellier, ...\n\n- Plus de 700 sociétés accompagnées dans leurs recrutements depuis 2010 : DSI, éditeurs, ETI/PME, Centre R&D, Startup/scale-up, organismes publics et para-publiques, ...\n\n- Près de 300 candidats accompagnés par an : CTO, DSI, RSSI, Architecte, chef de projet, développeur, devops, administrateur systèmes / réseaux, Data engineer, Analyste SOC, PO/PM, consultant fonctionnel, etc !\n\n- Du recrutement mais pas que ! des outils comme notre grille de salaires faisant référence depuis 2015, des guides de préparation d'entretien, de négociation de la rémunération, des analyses de marchés, ...\n\nPour en savoir plus et découvrir d'autres postes à pourvoir, rendez vous sur notre site !"
+    },
+    "skills": {
+      "soft_skills": [
+        {
+          "label": "Autonomie",
+          "type": "SAVOIR_ETRE",
+          "level_id": null,
+          "skill_id": 4391
+        },
+        {
+          "label": "Esprit d'équipe",
+          "type": "SAVOIR_ETRE",
+          "level_id": null,
+          "skill_id": 5821
+        },
+        {
+          "label": "Sens pratique",
+          "type": "SAVOIR_ETRE",
+          "level_id": null,
+          "skill_id": 4338
+        },
+        {
+          "label": "Ambition",
+          "type": "SAVOIR_ETRE",
+          "level_id": null,
+          "skill_id": 6827
+        },
+        {
+          "label": "Capacité à résoudre des problèmes",
+          "type": "SAVOIR_ETRE",
+          "level_id": null,
+          "skill_id": 4409
+        },
+        {
+          "label": "Entreprenant",
+          "type": "SAVOIR_ETRE",
+          "level_id": null,
+          "skill_id": 6830
+        },
+        {
+          "label": "Flexibilité",
+          "type": "SAVOIR_ETRE",
+          "level_id": null,
+          "skill_id": 4326
+        }
+      ],
+      "hard_skills": [
+        {
+          "label": "Amazon Web Services",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 7049
+        },
+        {
+          "label": "Architecture",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 8635
+        },
+        {
+          "label": "BSPCE",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 1100
+        },
+        {
+          "label": "Codage",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 1566
+        },
+        {
+          "label": "Conception informatique",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 3511
+        },
+        {
+          "label": "Culture",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 1341
+        },
+        {
+          "label": "Cycle de vie",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 3092
+        },
+        {
+          "label": "Design produit",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 481
+        },
+        {
+          "label": "DevOps",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 2023
+        },
+        {
+          "label": "Devsecops",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 4626
+        },
+        {
+          "label": "Extensibilité",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 7116
+        },
+        {
+          "label": "Github",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 8599
+        },
+        {
+          "label": "Intégration continue",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 6640
+        },
+        {
+          "label": "Intelligence artificielle",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 7987
+        },
+        {
+          "label": "JavaScript",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 6810
+        },
+        {
+          "label": "Kubernetes",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 1468
+        },
+        {
+          "label": "Led",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 698
+        },
+        {
+          "label": "Microsoft Visio",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 1655
+        },
+        {
+          "label": "Mise en production",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 45
+        },
+        {
+          "label": "Node.js",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 6815
+        },
+        {
+          "label": "PostgreSQL",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 2075
+        },
+        {
+          "label": "Processus de recrutement",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 2998
+        },
+        {
+          "label": "Qualité",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 2770
+        },
+        {
+          "label": "RabbitMQ",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 6922
+        },
+        {
+          "label": "ReactJS",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 6791
+        },
+        {
+          "label": "Rédaction de spécifications techniques et fonctionnelles",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 2010
+        },
+        {
+          "label": "REX",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 592
+        },
+        {
+          "label": "SAAS",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 3625
+        },
+        {
+          "label": "SSII",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 1272
+        },
+        {
+          "label": "Systèmes de gestion de bases de données",
+          "type": "SAVOIR_FAIRE",
+          "level_id": 599732,
+          "skill_id": 3327
+        }
+      ],
+      "languages": [],
+      "other": []
+    },
+    "recruiter": {
+      "first_name": "Hadrien",
+      "last_name": "VANKEERBERGHEN",
+      "contact_id": 100325163
+    },
+    "postal_address": {
+      "adresseCodePostal": "44000",
+      "adresseComplementAdresse": "PREMIER ETAGE",
+      "adresseNumeroEtVoie": "1 RUE RACINE",
+      "adresseVille": "NANTES",
+      "idPays": 799,
+      "id": 147946727
+    }
+  },
+  "company_profile": {
+    "id": 1082,
+    "account_id": 712953,
+    "name": "EXTERNATIC",
+    "tagline": "Développons des connexions durables",
+    "title": "Cabinet de recrutement informatique ▪️ 100% clients finaux ▪️ NO ESN",
+    "description": {
+      "html": "<p><strong>Externatic, cabinet de recrutement informatique</strong></p>\n\n<p>En tant qu&rsquo;expert du recrutement informatique, Externatic est l&agrave; pour mieux vous conna&icirc;tre et pour vous guider dans vos choix. Vous questionner et affiner vos besoins. Vous accompagner, vous conseiller et vous aiguiller. Tel est notre m&eacute;tier.</p>\n\n<p>Pas d&rsquo;ESN.&nbsp;Pas de bullshit. Pas de fausses promesses.&nbsp;</p>\n\n<p>Les connexions que nous tissons, nous les entretenons sur la dur&eacute;e. Nous sommes acteurs de l&rsquo;&eacute;cosyst&egrave;me tech local, et nous nous appuyons sur un r&eacute;seau riche d&rsquo;exp&eacute;riences et d&rsquo;expertises.</p>\n\n<p>Nous d&eacute;veloppons des connexions durables entre les candidats et les entreprises.</p>\n\n<p><strong>Les connexions les plus durables.</strong></p>\n",
+      "text": "Externatic, cabinet de recrutement informatique\n\nEn tant qu’expert du recrutement informatique, Externatic est là pour mieux vous connaître et pour vous guider dans vos choix. Vous questionner et affiner vos besoins. Vous accompagner, vous conseiller et vous aiguiller. Tel est notre métier.\n\nPas d’ESN. Pas de bullshit. Pas de fausses promesses.\n\nLes connexions que nous tissons, nous les entretenons sur la durée. Nous sommes acteurs de l’écosystème tech local, et nous nous appuyons sur un réseau riche d’expériences et d’expertises.\n\nNous développons des connexions durables entre les candidats et les entreprises.\n\nLes connexions les plus durables."
+    },
+    "postal_address": {
+      "adresseBatimentImmResidence": null,
+      "adresseCodePostal": "44000",
+      "adresseComplementAdresse": "PREMIER ETAGE",
+      "adresseLieuDitBp": null,
+      "adresseNumeroEtVoie": "1 RUE RACINE",
+      "adresseVille": "NANTES",
+      "audit": {
+        "dateCreation": 1586278293000,
+        "dateModification": 1752683635000,
+        "utilisateurCreation": "021187",
+        "utilisateurModification": "100026987W"
+      },
+      "idPays": 799,
+      "numeroVersion": 24,
+      "latitude": null,
+      "longitude": null,
+      "idNomNormalisation": null,
+      "indicateurQPV": null,
+      "indicateurZR": null,
+      "id": 130211659
+    },
+    "benefits": [
+      {
+        "id": 3915,
+        "idPageEntreprise": 1082,
+        "idNomAvantage": 20840,
+        "avantage": null,
+        "numeroVersion": 14,
+        "audit": {
+          "dateCreation": 1678784071000,
+          "dateModification": 1752683635000,
+          "utilisateurCreation": "100161392W",
+          "utilisateurModification": "100026987W"
+        }
+      },
+      {
+        "id": 3916,
+        "idPageEntreprise": 1082,
+        "idNomAvantage": 20841,
+        "avantage": null,
+        "numeroVersion": 14,
+        "audit": {
+          "dateCreation": 1678784071000,
+          "dateModification": 1752683635000,
+          "utilisateurCreation": "100161392W",
+          "utilisateurModification": "100026987W"
+        }
+      },
+      {
+        "id": 3917,
+        "idPageEntreprise": 1082,
+        "idNomAvantage": 20842,
+        "avantage": null,
+        "numeroVersion": 14,
+        "audit": {
+          "dateCreation": 1678784071000,
+          "dateModification": 1752683635000,
+          "utilisateurCreation": "100161392W",
+          "utilisateurModification": "100026987W"
+        }
+      },
+      {
+        "id": 3918,
+        "idPageEntreprise": 1082,
+        "idNomAvantage": 20843,
+        "avantage": null,
+        "numeroVersion": 14,
+        "audit": {
+          "dateCreation": 1678784071000,
+          "dateModification": 1752683635000,
+          "utilisateurCreation": "100161392W",
+          "utilisateurModification": "100026987W"
+        }
+      },
+      {
+        "id": 13442,
+        "idPageEntreprise": 1082,
+        "idNomAvantage": 20844,
+        "avantage": "100 % entreprise finale (pas d'ESN)",
+        "numeroVersion": 0,
+        "audit": {
+          "dateCreation": 1752683635000,
+          "dateModification": null,
+          "utilisateurCreation": "100026987W",
+          "utilisateurModification": null
+        }
+      }
+    ],
+    "sections": [
+      {
+        "id": 4230,
+        "idPageEntreprise": 1082,
+        "titre": "Externatic en quelques chiffres",
+        "texteUn": "<p>🔸 100 % hors ESN uniquement des enreprises finales</p>\n\n<p>🔸 300 candidats&middot;es accompagn&eacute;&middot;es par an allant du DSi au technicien support IT</p>\n\n<p>🔸 95&thinsp;% de p&eacute;riodes d&rsquo;essai r&eacute;ussies</p>\n\n<p>🔸 +300 postes &quot;informatique&quot; &agrave; pourvoir en permanence</p>\n\n<p>🔸 + de 500 entreprises en recrutement acompagn&eacute;es depuis 2010</p>\n\n<p>🔸 Pr&egrave;s de 30 consultants</p>\n\n<p>🔸 12 agences de proximit&eacute; en France : Paris, Lyon, Nantes, Rennes, Lille, Toulouse , Bordeaux,&nbsp; Angers,&nbsp; La Roche-Sur-Yon, Montpellier, Le Mans, Niort, ...</p>\n",
+        "imageUne": "/presentation_entreprise/712953/img_712953_8656696874057630_78f2121a-12dd-49cd-a19f-683c4d51ce4a.jpeg",
+        "texteDeux": null,
+        "imageDeux": null,
+        "numeroVersion": 1,
+        "audit": {
+          "dateCreation": 1733490797000,
+          "dateModification": 1752683635000,
+          "utilisateurCreation": "100313475W",
+          "utilisateurModification": "100026987W"
+        }
+      }
+    ],
+    "key_facts": {
+      "anneeCreation": 2011,
+      "secteurActivite": 101606,
+      "effectif": 596780,
+      "chiffreAffaires": null,
+      "pariteFH": 0,
+      "ancienneteMoyenne": 4,
+      "tauxSeniors": null,
+      "tauxJeunesDiplomes": null,
+      "tauxCadres": 90,
+      "siteWeb": "https://www.externatic.fr/",
+      "siteCarrieres": "https://www.externatic.fr/offre-emploi/",
+      "email": "contact@externatic.fr",
+      "lienFacebook": null,
+      "lienInstagram": "https://www.instagram.com/externatic/?hl=fr",
+      "lienLinkedin": "https://www.linkedin.com/company/externatic/",
+      "lienTwitter": "https://twitter.com/Externatic",
+      "lienYoutube": "https://www.youtube.com/channel/UCjC385zJOe-0BwIXxfvKCyA"
+    }
+  },
+  "dom": {
+    "xpath": "/html/body/main/div/apec-offres/div/apec-detail-emploi/div/div/div[2]/article/div/div/apec-poste-informations",
+    "page_title": "Software Engineer Fullstack JS - Scaleup SaaS F/H | Apec",
+    "heading": "Software Engineer Fullstack JS - Scaleup SaaS F/H",
+    "metadata_text": "Ref. Apec : 179302541W / Ref. Société : 568-97802f21247c60c--NK3\nExternatic\n 2 \n CDI \nParis 08 - 75\nPubliée le 31/08/2026\nActualisée le 31/08/2026\nPostuler",
+    "metadata_items": [
+      "Externatic",
+      "2 CDI",
+      "Paris 08 - 75"
+    ],
+    "date_lines": [
+      "Publiée le 31/08/2026",
+      "Actualisée le 31/08/2026"
+    ],
+    "detail_fields": {
+      "salary_text": "A partir de 65 k€ brut annuel",
+      "start_date_text": "Dès que possible",
+      "experience_text": "Minimum 4 ans",
+      "job_family": "Ingénieur informatique industrielle",
+      "job_status": "Cadre du secteur privé",
+      "travel_zone": "Pas de déplacement",
+      "industry": "CONSEIL POUR LES AFFAIRES ET AUTRES CONSEILS DE GESTION"
+    },
+    "application_url": "https://www.apec.fr/candidat/recherche-emploi/postuler-a-une-offre.html#candidature/promotion/179302541W?to=int",
+    "component_text": "Salaire\nA partir de 65 k€ brut annuel\nPrise de poste\nDès que possible\nExpérience\nMinimum 4 ans\nMétier\nIngénieur informatique industrielle\nStatut du poste\nCadre du secteur privé\nZone de déplacement\nPas de déplacement\nSecteur d’activité du poste\nCONSEIL POUR LES AFFAIRES ET AUTRES CONSEILS DE GESTION\nSignaler cette offre\nDescriptif du poste\n\nL'entreprise accompagnée dans son recrutement CDI\n\nIl s'agit d'une scale-up de la Tech (cybersécurité) en pleine phase d’accélération européenne, qui protège déjà plus de 12 000 entreprises à travers 6 pays.\nSuite à plusieurs levées de fonds (70 millions d'euros), cette structure affiche des ambitions claires et une trajectoire solide pour 2026 / 2027.\nDans le cadre de cette croissance, le cabinet Externatic vous propose un poste en CDI directement chez ce client final (aucune activité de type ESN).\n\nVous intégrerez une des tribus de l'équipe Tech, une équipe à taille humaine structurée en squads autonomes (composées chacune de 5 développeurs, 1 Product Manager et 1 Designer).\nIci, l'accent est mis sur l'indépendance technologique, l'absence de barrières et un fort impact sur le produit.\n\nLes missions / rôles\n\nEn tant que Développeur Senior, votre quotidien ne se limitera pas à aligner des lignes de code.\nVous interviendrez sur l'ensemble du cycle de vie des fonctionnalités et participerez activement aux chantiers d'architecture :\n\n \n\n \n\nConception & Delivery End-to-End : Prendre la responsabilité complète de nouvelles fonctionnalités, depuis le cadrage initial et les spécifications techniques jusqu'à la mise en production.\nÉvolution de l'Architecture : Participer activement à la transition vers un monolithe modulaire afin d'assurer la scalabilité et la haute maintenabilité de la plateforme.\nCulture Product-Led : Collaborer étroitement avec les équipes Produit et Design pour traduire les besoins business en solutions techniques simples et élégantes.\nAutomation & Excellence Opérationnelle : Piloter vos propres pipelines CI/CD et participer à l'éradication de la dette manuelle. La qualité est l'affaire de tous : vous assurez vos propres tests et revues de code.\nPragmatisme Tech & IA : Utiliser au quotidien des outils d'assistance de pointe (Claude, Cursor) pour maximiser l'efficience collective, tout en garantissant un code robuste, transparent et maîtrisé.\n\nStack et culture tech\n\nL'équipe met un point d'honneur à offrir une excellente Developer Experience (DX) à travers un tooling moderne :\n\n \n\n \n\n \n\nBackend : NestJS, Node.js, Redis, RabbitMQ\nFrontend : React, TypeScript\nInfra & DevSecOps : AWS, Kubernetes, GitHub Actions, PostgreSQL\nMéthodologie : Intégration continue, autonomie DevOps, approche orientée résolution de problèmes complexes.\n\n \n\nProfil recherché\n\nCe poste est fait pour vous si vous aimez rendre simples les sujets complexes et possédez un fort esprit entrepreneurial.\n \n\nParcours technique : Vous justifiez d'au minimum 4 ans d'expérience en développement logiciel, idéalement acquise dans des environnements agiles de type startup, scale-up ou éditeur logiciel.\nMaîtrise technologique : Vous disposez d’une expertise solide sur NestJS (indispensable pour les chantiers d'architecture backend en cours) et d'une maîtrise éprouvée de React et TypeScript.\nMindset Produit : Vous êtes \"owner\" de vos sujets. Vous aimez comprendre l'impact business de ce que vous développez et appréciez l'autonomie sur la CI/CD.\nSavoir-être : Esprit d'équipe, culture du feedback, pragmatisme face à l'utilisation des IA génératives et sensibilité aux enjeux de scalabilité.\n\n\nConditions de travail et avantages\n\n \n\n \n\nRémunération fixe entre 65 000 € et 80 000 € brut annuel (selon profil et niveau d'expérience) + BSPCE\nContrat 39h / 10aine de RTT par an.\nPolitique de télétravail flexible (pas de règles, mais une culture d'entreprise globale qui aime se retrouver au bureau pour le collectif).\nParis 8ème à 2 pas des Champs Elysées\nTickets Restaurant, prise en charge du pass Navigo et excellente mutuelle santé.\n\nProcess de recrutement\n\nEn postulant via Externatic, vous bénéficiez d'un accompagnement personnalisé et transparent tout au long des étapes, sans intermédiaire de type ESN.\n\nLe parcours de sélection chez notre client est fluide et se déroule en 3 étapes :\n\n \n\n \n\n \n\n \n\nPremier échange (30 min) : Un call en visioconférence avec l'Engineering Manager pour faire connaissance et valider l'adéquation culturelle et humaine.\nÉvaluation Technique : Un exercice à préparer chez vous, suivi d'un débriefing technique en visio avec une session de live-coding axée sur votre logique et votre réflexion produit.\nRencontre Finale (2h sur place) : Une immersion dans les locaux à Paris pour rencontrer les équipes de développement ainsi que les co-fondateurs de la structure.\n\n \n\n \n\nCompétences attendues\nLangues\n\nAucune langue attendue\n\nSavoir-être\n\nAmbition\n\nAutonomie\n\nVoir plus\n\nSavoir-faire\n\nAmazon Web Services\n\nArchitecture\n\nVoir plus\n\nEntreprise\n\nCrée il y a 15 ans, Externatic est l'un des 1ers cabinets de recrutement spécialisés \"Informatique, Data & Cybersécurité\" à voir le jour en France.\n\nNotre credo est simple : \"permettre à nos candidats, via notre réseau, d'accéder au marché caché et d'être recruté uniquement au sein d'entreprises finales (0% d'ESN) \".\n\nExternatic en bref :\n \n\n15 ans de professionnalisme sur le recrutement \"tech\" externalisé pour des entreprises HORS ESN\nPrès de 300 postes ouverts en permanence et 100% entreprise finale\nPrès de 30 consultants\nDes implantations de proximité couvrant le territoire : Paris, Lyon, Lille, Strasbourg, Toulouse, Bordeaux, Nantes, Rennes, Angers, Montpellier, ...\nPlus de 700 sociétés accompagnées dans leurs recrutements depuis 2010 : DSI, éditeurs, ETI/PME, Centre R&D, Startup/scale-up, organismes publics et para-publiques, ...\nPrès de 300 candidats accompagnés par an : CTO, DSI, RSSI, Architecte, chef de projet, développeur, devops, administrateur systèmes / réseaux, Data engineer, Analyste SOC, PO/PM, consultant fonctionnel, etc !\nDu recrutement mais pas que ! des outils comme notre grille de salaires faisant référence depuis 2015, des guides de préparation d'entretien, de négociation de la rémunération, des analyses de marchés, ...\n\n\nPour en savoir plus et découvrir d'autres postes à pourvoir, rendez vous sur notre site !\n\nAutres offres de l'entreprise\n\nPostuler",
+    "component_html": "<apec-poste-informations><div class=\"row border-T\"><div class=\"col-lg-4\"><div class=\"details-post\"><h4>Salaire</h4><span>A partir de 65 k€ brut annuel</span></div><div class=\"details-post\"><h4>Prise de poste</h4><span>Dès que possible</span></div><div class=\"details-post\"><h4>Expérience</h4><span>Minimum 4 ans</span></div><!----><div class=\"details-post\"><h4>Métier</h4><span>Ingénieur informatique industrielle</span></div><!----><div class=\"details-post\"><h4>Statut du poste</h4><span>Cadre du secteur privé</span></div><div class=\"details-post\"><h4>Zone de déplacement</h4><span>Pas de déplacement</span></div><!----><div class=\"details-post\"><h4>Secteur d’activité du poste</h4><span>CONSEIL POUR LES AFFAIRES ET AUTRES CONSEILS DE GESTION</span></div><!----><!----><!----><!----><!----><div class=\"error-link\">Signaler cette offre</div></div><div class=\"col-lg-8 border-L\"><div class=\"details-post\"><h4>Descriptif du poste</h4><p><p><strong>L'entreprise accompagnée dans son recrutement CDI </strong><br><br>Il s'agit d'une scale-up de la <strong>Tech (cybersécurité)</strong> en pleine phase d’accélération européenne, qui protège déjà plus de 12 000 entreprises à travers 6 pays.<br>Suite à plusieurs levées de fonds (<strong>70</strong><strong> millions d'euros)</strong>, cette structure affiche des ambitions claires et une trajectoire solide pour 2026 / 2027.<br>Dans le cadre de cette croissance, le cabinet <strong>Externatic</strong> vous propose un poste en <strong>CDI directement chez ce client final</strong> (aucune activité de type ESN).<br><br>Vous intégrerez une des tribus de l'équipe Tech, une équipe à taille humaine structurée en squads autonomes (composées chacune de 5 développeurs, 1 Product Manager et 1 Designer).<br>Ici, l'accent est mis sur l'<strong>indépendance technologique</strong>, l'<strong>absence de barrières</strong> et un <strong>fort impact sur le produit</strong>.<br><br><strong>Les missions / rôles </strong><br><br>En tant que Développeur Senior, votre quotidien ne se limitera pas à aligner des lignes de code.<br>Vous interviendrez sur <strong>l'ensemble du cycle de vie</strong> des fonctionnalités et participerez activement aux <strong>chantiers d'architecture</strong> :</p><p>&nbsp;</p><p>&nbsp;</p><ul><li><strong>Conception &amp; Delivery End-to-End :</strong> Prendre la responsabilité complète de nouvelles fonctionnalités, depuis le cadrage initial et les spécifications techniques jusqu'à la mise en production.</li><li><strong>Évolution de l'Architecture :</strong> Participer activement à la transition vers un <strong>monolithe modulaire</strong> afin d'assurer la scalabilité et la haute maintenabilité de la plateforme.</li><li><strong>Culture Product-Led :</strong> Collaborer étroitement avec les équipes Produit et Design pour traduire les besoins business en solutions techniques simples et élégantes.</li><li><strong>Automation &amp; Excellence Opérationnelle :</strong> Piloter vos propres pipelines CI/CD et participer à l'éradication de la dette manuelle. La qualité est l'affaire de tous : vous assurez vos propres tests et revues de code.</li><li><strong>Pragmatisme Tech &amp; IA :</strong> Utiliser au quotidien des outils d'assistance de pointe (Claude, Cursor) pour maximiser l'efficience collective, tout en garantissant un code robuste, transparent et maîtrisé.</li></ul><p><strong>Stack et culture tech</strong><br><br>L'équipe met un point d'honneur à offrir une excellente Developer Experience (DX) à travers un tooling moderne :</p><p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p><ul><li><strong>Backend :</strong> NestJS, Node.js, Redis, RabbitMQ</li><li><strong>Frontend :</strong> React, TypeScript</li><li><strong>Infra &amp; DevSecOps :</strong> AWS, Kubernetes, GitHub Actions, PostgreSQL</li><li><strong>Méthodologie :</strong> Intégration continue, autonomie DevOps, approche orientée résolution de problèmes complexes.</li></ul><p>&nbsp;</p></p><h4>Profil recherché</h4><!----><p><p>Ce poste est fait pour vous si vous aimez rendre simples les sujets complexes et possédez un fort esprit entrepreneurial.<br>&nbsp;</p><ul><li><strong>Parcours technique :</strong> Vous justifiez d'au minimum <strong>4</strong><strong> ans d'expérience</strong> en développement logiciel, idéalement acquise dans des environnements agiles de type startup, scale-up ou éditeur logiciel.</li><li><strong>Maîtrise technologique :</strong> Vous disposez d’une expertise solide sur <strong>NestJS</strong> (indispensable pour les chantiers d'architecture backend en cours) et d'une maîtrise éprouvée de <strong>React</strong> et <strong>TypeScript</strong>.</li><li><strong>Mindset Produit :</strong> Vous êtes \"owner\" de vos sujets. Vous aimez comprendre l'impact business de ce que vous développez et appréciez l'autonomie sur la CI/CD.</li><li><strong>Savoir-être :</strong> Esprit d'équipe, culture du feedback, pragmatisme face à l'utilisation des IA génératives et sensibilité aux enjeux de scalabilité.</li></ul><p><br><strong>Conditions de travail et avantages</strong></p><p>&nbsp;</p><p>&nbsp;</p><ul><li><strong>Rémunération fixe </strong>entre <strong>65 000 € et 80 000 € brut annuel</strong> (selon profil et niveau d'expérience) + <strong>BSPCE</strong></li><li>Contrat 39h / 10aine<strong> de RTT</strong> par an.</li><li>Politique de télétravail flexible (pas de règles, mais une culture d'entreprise globale qui aime se retrouver au bureau pour le collectif).</li><li><strong>Paris 8ème à 2 pas des Champs Elysées</strong></li><li>Tickets Restaurant, prise en charge du pass Navigo et excellente mutuelle santé.</li></ul><p><strong>Process de recrutement </strong><br><br>En postulant via Externatic, vous bénéficiez d'un accompagnement personnalisé et transparent tout au long des étapes, sans intermédiaire de type ESN.<br><br>Le parcours de sélection chez notre client est fluide et se déroule en 3 étapes :</p><p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p><ul><li><strong>Premier échange (30 min) :</strong> Un call en visioconférence avec l'Engineering Manager pour faire connaissance et valider l'adéquation culturelle et humaine.</li><li><strong>Évaluation Technique :</strong> Un exercice à préparer chez vous, suivi d'un débriefing technique en visio avec une session de live-coding axée sur votre logique et votre réflexion produit.</li><li><strong>Rencontre Finale (2h sur place) :</strong> Une immersion dans les locaux à Paris pour rencontrer les équipes de développement ainsi que les co-fondateurs de la structure.</li></ul><p>&nbsp;</p><p>&nbsp;</p></p><div class=\"col-md-12 added-skills-container mb-10 mt-40 p-0\"><div class=\"added-skills-manager no-modif\"><div style=\"display: flex; align-items: center;\"><h4>Compétences attendues</h4><div style=\"padding-left: 4px;\"><button type=\"button\" data-toggle=\"tooltip\" data-placement=\"auto\" title=\"Visualisez directement les compétences que vous possédez et qui sont attendues par le recruteur\" data-original-title=\"Visualisez directement les compétences que vous possédez et qui sont attendues par le recruteur\" data-html=\"true\" class=\"pictoQuestion\"></button></div></div><div class=\"added-skills-manager__language mb-0\"><span class=\"seeMore\"><div class=\"flex-collapse\"><div class=\"skills-manager-subtitle\"><h5>Langues</h5></div><p class=\"m-0\"><label>Aucune langue attendue</label></p><!----><!----><!----></div></span></div></div></div><div class=\"col-md-12 added-skills-container mb-10 p-0\"><div class=\"added-skills-manager no-modif\"><div class=\"added-skills-manager__knowhow mb-0\"><span class=\"seeMore\"><div class=\"flex-collapse\"><div class=\"skills-manager-subtitle\"><h5>Savoir-être</h5></div><!----><div class=\"added-skills-language\"><div class=\"highlighted-label-skills\"><apec-competence-detail><!----><p>Ambition</p><!----></apec-competence-detail></div></div><div class=\"added-skills-language\"><div class=\"highlighted-label-skills\"><apec-competence-detail><!----><p>Autonomie</p><!----></apec-competence-detail></div></div><!----><p class=\"m-0\"><label><span>Voir plus</span></label></p><!----></div></span></div></div></div><div class=\"col-md-12 added-skills-container mb-40 p-0\"><div class=\"added-skills-manager no-modif\"><div class=\"added-skills-manager__knowledge mb-0\"><span class=\"seeMore\"><div class=\"flex-collapse\"><div class=\"skills-manager-subtitle\"><h5>Savoir-faire</h5></div><!----><div class=\"added-skills-language\"><div class=\"highlighted-label-skills\"><apec-competence-detail><div class=\"infos_skills\"><p>Amazon Web Services</p><div class=\"beginner jauge\"></div></div><apec-competence-tooltip-niveau class=\"detail_skills\"><div class=\"pointer_down\"></div><h4>Débutant</h4><p>Minimum 1 an d’expérience</p></apec-competence-tooltip-niveau><!----><!----></apec-competence-detail></div></div><div class=\"added-skills-language\"><div class=\"highlighted-label-skills\"><apec-competence-detail><div class=\"infos_skills\"><p>Architecture</p><div class=\"beginner jauge\"></div></div><apec-competence-tooltip-niveau class=\"detail_skills\"><div class=\"pointer_down\"></div><h4>Débutant</h4><p>Minimum 1 an d’expérience</p></apec-competence-tooltip-niveau><!----><!----></apec-competence-detail></div></div><!----><p class=\"m-0\"><label><span>Voir plus</span></label></p><!----></div></span></div></div></div><div><h4>Entreprise</h4><p><p>Crée il y a 15 ans, Externatic est l'un des 1ers cabinets de recrutement spécialisés <strong>\"Informatique, Data &amp; Cybersécurité\" à voir le jour en France. </strong><br><br>Notre credo est simple : \"permettre à nos candidats, via notre réseau, d'accéder au marché caché et d'être recruté uniquement au sein d'entreprises finales (0% d'ESN) \".<br><br>Externatic en bref :<br>&nbsp;</p><ul><li>15 ans de professionnalisme sur le recrutement \"tech\" externalisé pour des entreprises HORS ESN</li><li><strong>Près de 300 postes ouverts en permanence et 100% entreprise finale </strong></li><li>Près de <strong>30 consultants </strong></li><li><strong>Des implantations de proximité couvrant le territoire </strong> : Paris, Lyon, Lille, Strasbourg, Toulouse, Bordeaux, Nantes, Rennes, Angers, Montpellier, ...</li><li>Plus de <strong>700 sociétés accompagnées</strong> dans leurs recrutements depuis 2010 : DSI, éditeurs, ETI/PME, Centre R&amp;D, Startup/scale-up, organismes publics et para-publiques, ...</li><li>Près de <strong>300 candidats accompagnés par an</strong> : CTO, DSI, RSSI, Architecte, chef de projet, développeur, devops, administrateur systèmes / réseaux, Data engineer, Analyste SOC, PO/PM, consultant fonctionnel, etc !</li><li>Du recrutement mais pas que ! des outils comme notre grille de salaires faisant référence depuis 2015, des guides de préparation d'entretien, de négociation de la rémunération, des analyses de marchés, ...</li></ul><p><br>Pour en savoir plus et découvrir d'autres postes à pourvoir, rendez vous sur notre site !</p></p><!----><div><div><!----><p class=\"mb-20\"><a class=\"small-link d-flex mb-0\" style=\"text-decoration: underline;\"> Autres offres de l'entreprise <img src=\"/modules/apec-jahia-module/assets/img/symboles/arrow/small/right.svg\" alt=\"fleche droite\" style=\"width: 17px; margin-left: 10px;\"></a></p></div><!----><!----><!----></div></div><!----><div><!----><!----><!----><!----></div></div><div class=\"form-cta mt-20 mb-20\"><div class=\"clearfix text-center\"><div class=\"actions\"><!----><a class=\"btn btn-primary mr-12 mb-20\" href=\"/candidat/recherche-emploi/postuler-a-une-offre.html#candidature/promotion/179302541W?to=int\">Postuler</a><!----><!----></div><!----></div></div></div></div></apec-poste-informations>"
+  },
+  "raw": {
+    "offer_api": {
+      "adresseOffre": {
+        "adresseCodePostal": "44000",
+        "adresseComplementAdresse": "PREMIER ETAGE",
+        "adresseNumeroEtVoie": "1 RUE RACINE",
+        "adresseVille": "NANTES",
+        "idPays": 799,
+        "id": 147946727
+      },
+      "audit": {
+        "dateModification": "2026-08-31T12:38:42.000+0000"
+      },
+      "comptePersonnelIdNomOrganisation": 143850,
+      "datePublication": "2026-08-31T12:38:42.000+0000",
+      "datePremierePublication": "2026-08-31T12:38:42.000+0000",
+      "id": 179302541,
+      "idEtablissement": 712953,
+      "idInterlocuteurDirect": 100325163,
+      "idNomFonction": 101810,
+      "idNomMetier": 600055,
+      "idNomNiveauExperience": 597154,
+      "idNomSecteurActivite": 101606,
+      "idSecteurActiviteParent": 101762,
+      "idNomStatut": 101872,
+      "idNomOrigine": 101866,
+      "idNomTypeContrat": 101888,
+      "idNomTypePoste": 101900,
+      "idNomZoneDeplacement": 596720,
+      "idResponsable": "9267",
+      "intitule": "Software Engineer Fullstack JS - Scaleup SaaS F/H",
+      "lieux": [
+        {
+          "idNomLieu": 590718,
+          "libelleLieu": "Paris 08 - 75"
+        }
+      ],
+      "competences": [
+        {
+          "libelle": "Autonomie",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_ETRE",
+          "idOffreCompetence": 360428759,
+          "idNomCompetence": 4391,
+          "idOffre": 179302541,
+          "id": 360428759
+        },
+        {
+          "libelle": "Esprit d'équipe",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_ETRE",
+          "idOffreCompetence": 360428761,
+          "idNomCompetence": 5821,
+          "idOffre": 179302541,
+          "id": 360428761
+        },
+        {
+          "libelle": "Sens pratique",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_ETRE",
+          "idOffreCompetence": 360428763,
+          "idNomCompetence": 4338,
+          "idOffre": 179302541,
+          "id": 360428763
+        },
+        {
+          "libelle": "Ambition",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_ETRE",
+          "idOffreCompetence": 360428765,
+          "idNomCompetence": 6827,
+          "idOffre": 179302541,
+          "id": 360428765
+        },
+        {
+          "libelle": "Capacité à résoudre des problèmes",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_ETRE",
+          "idOffreCompetence": 360428767,
+          "idNomCompetence": 4409,
+          "idOffre": 179302541,
+          "id": 360428767
+        },
+        {
+          "libelle": "Entreprenant",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_ETRE",
+          "idOffreCompetence": 360428769,
+          "idNomCompetence": 6830,
+          "idOffre": 179302541,
+          "id": 360428769
+        },
+        {
+          "libelle": "Flexibilité",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_ETRE",
+          "idOffreCompetence": 360428771,
+          "idNomCompetence": 4326,
+          "idOffre": 179302541,
+          "id": 360428771
+        },
+        {
+          "libelle": "Amazon Web Services",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428773,
+          "idNomCompetence": 7049,
+          "idOffre": 179302541,
+          "id": 360428773
+        },
+        {
+          "libelle": "Architecture",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428775,
+          "idNomCompetence": 8635,
+          "idOffre": 179302541,
+          "id": 360428775
+        },
+        {
+          "libelle": "BSPCE",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428777,
+          "idNomCompetence": 1100,
+          "idOffre": 179302541,
+          "id": 360428777
+        },
+        {
+          "libelle": "Codage",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428779,
+          "idNomCompetence": 1566,
+          "idOffre": 179302541,
+          "id": 360428779
+        },
+        {
+          "libelle": "Conception informatique",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428781,
+          "idNomCompetence": 3511,
+          "idOffre": 179302541,
+          "id": 360428781
+        },
+        {
+          "libelle": "Culture",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428783,
+          "idNomCompetence": 1341,
+          "idOffre": 179302541,
+          "id": 360428783
+        },
+        {
+          "libelle": "Cycle de vie",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428785,
+          "idNomCompetence": 3092,
+          "idOffre": 179302541,
+          "id": 360428785
+        },
+        {
+          "libelle": "Design produit",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428787,
+          "idNomCompetence": 481,
+          "idOffre": 179302541,
+          "id": 360428787
+        },
+        {
+          "libelle": "DevOps",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428789,
+          "idNomCompetence": 2023,
+          "idOffre": 179302541,
+          "id": 360428789
+        },
+        {
+          "libelle": "Devsecops",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428791,
+          "idNomCompetence": 4626,
+          "idOffre": 179302541,
+          "id": 360428791
+        },
+        {
+          "libelle": "Extensibilité",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428793,
+          "idNomCompetence": 7116,
+          "idOffre": 179302541,
+          "id": 360428793
+        },
+        {
+          "libelle": "Github",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428795,
+          "idNomCompetence": 8599,
+          "idOffre": 179302541,
+          "id": 360428795
+        },
+        {
+          "libelle": "Intégration continue",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428797,
+          "idNomCompetence": 6640,
+          "idOffre": 179302541,
+          "id": 360428797
+        },
+        {
+          "libelle": "Intelligence artificielle",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428799,
+          "idNomCompetence": 7987,
+          "idOffre": 179302541,
+          "id": 360428799
+        },
+        {
+          "libelle": "JavaScript",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428801,
+          "idNomCompetence": 6810,
+          "idOffre": 179302541,
+          "id": 360428801
+        },
+        {
+          "libelle": "Kubernetes",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428803,
+          "idNomCompetence": 1468,
+          "idOffre": 179302541,
+          "id": 360428803
+        },
+        {
+          "libelle": "Led",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428805,
+          "idNomCompetence": 698,
+          "idOffre": 179302541,
+          "id": 360428805
+        },
+        {
+          "libelle": "Microsoft Visio",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428807,
+          "idNomCompetence": 1655,
+          "idOffre": 179302541,
+          "id": 360428807
+        },
+        {
+          "libelle": "Mise en production",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428809,
+          "idNomCompetence": 45,
+          "idOffre": 179302541,
+          "id": 360428809
+        },
+        {
+          "libelle": "Node.js",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428811,
+          "idNomCompetence": 6815,
+          "idOffre": 179302541,
+          "id": 360428811
+        },
+        {
+          "libelle": "PostgreSQL",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428813,
+          "idNomCompetence": 2075,
+          "idOffre": 179302541,
+          "id": 360428813
+        },
+        {
+          "libelle": "Processus de recrutement",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428815,
+          "idNomCompetence": 2998,
+          "idOffre": 179302541,
+          "id": 360428815
+        },
+        {
+          "libelle": "Qualité",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428817,
+          "idNomCompetence": 2770,
+          "idOffre": 179302541,
+          "id": 360428817
+        },
+        {
+          "libelle": "RabbitMQ",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428819,
+          "idNomCompetence": 6922,
+          "idOffre": 179302541,
+          "id": 360428819
+        },
+        {
+          "libelle": "ReactJS",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428821,
+          "idNomCompetence": 6791,
+          "idOffre": 179302541,
+          "id": 360428821
+        },
+        {
+          "libelle": "Rédaction de spécifications techniques et fonctionnelles",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428823,
+          "idNomCompetence": 2010,
+          "idOffre": 179302541,
+          "id": 360428823
+        },
+        {
+          "libelle": "REX",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428825,
+          "idNomCompetence": 592,
+          "idOffre": 179302541,
+          "id": 360428825
+        },
+        {
+          "libelle": "SAAS",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428827,
+          "idNomCompetence": 3625,
+          "idOffre": 179302541,
+          "id": 360428827
+        },
+        {
+          "libelle": "SSII",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428829,
+          "idNomCompetence": 1272,
+          "idOffre": 179302541,
+          "id": 360428829
+        },
+        {
+          "libelle": "Systèmes de gestion de bases de données",
+          "audit": {
+            "dateCreation": "2026-08-24T16:10:49.000+0000",
+            "dateModification": "2026-08-31T12:38:31.000+0000",
+            "utilisateurCreation": "ADEP SEP",
+            "utilisateurModification": "005303"
+          },
+          "numeroVersion": 3,
+          "type": "SAVOIR_FAIRE",
+          "idNomNiveau": 599732,
+          "idOffreCompetence": 360428831,
+          "idNomCompetence": 3327,
+          "idOffre": 179302541,
+          "id": 360428831
+        }
+      ],
+      "legacyLieux": false,
+      "logoEtablissement": "/media_entreprise/712953/logo_EXTERNATIC_712953_1492379.png",
+      "nombrePostes": 2,
+      "nomCompteEtablissement": "EXTERNATIC",
+      "nomInterlocuteur": "VANKEERBERGHEN",
+      "numeroOffre": "179302541W",
+      "offreConfidentielle": false,
+      "offreQualifiee": true,
+      "prenomInterlocuteur": "Hadrien",
+      "referenceClientOffre": "568-97802f21247c60c--NK3",
+      "salaireTexte": "A partir de 65 k€ brut annuel",
+      "tempsPartiel": false,
+      "texteHtml": "<p><strong>L'entreprise accompagnée dans son recrutement CDI </strong><br /><br />Il s'agit d'une scale-up de la <strong>Tech (cybersécurité)</strong> en pleine phase d’accélération européenne, qui protège déjà plus de 12 000 entreprises à travers 6 pays.<br />Suite à plusieurs levées de fonds (<strong>70</strong><strong> millions d'euros)</strong>, cette structure affiche des ambitions claires et une trajectoire solide pour 2026 / 2027.<br />Dans le cadre de cette croissance, le cabinet <strong>Externatic</strong> vous propose un poste en <strong>CDI directement chez ce client final</strong> (aucune activité de type ESN).<br /><br />Vous intégrerez une des tribus de l'équipe Tech, une équipe à taille humaine structurée en squads autonomes (composées chacune de 5 développeurs, 1 Product Manager et 1 Designer).<br />Ici, l'accent est mis sur l'<strong>indépendance technologique</strong>, l'<strong>absence de barrières</strong> et un <strong>fort impact sur le produit</strong>.<br /><br /><strong>Les missions / rôles </strong><br /><br />En tant que Développeur Senior, votre quotidien ne se limitera pas à aligner des lignes de code.<br />Vous interviendrez sur <strong>l'ensemble du cycle de vie</strong> des fonctionnalités et participerez activement aux <strong>chantiers d'architecture</strong> :</p><p> </p><p> </p><ul><li><strong>Conception & Delivery End-to-End :</strong> Prendre la responsabilité complète de nouvelles fonctionnalités, depuis le cadrage initial et les spécifications techniques jusqu'à la mise en production.</li><li><strong>Évolution de l'Architecture :</strong> Participer activement à la transition vers un <strong>monolithe modulaire</strong> afin d'assurer la scalabilité et la haute maintenabilité de la plateforme.</li><li><strong>Culture Product-Led :</strong> Collaborer étroitement avec les équipes Produit et Design pour traduire les besoins business en solutions techniques simples et élégantes.</li><li><strong>Automation & Excellence Opérationnelle :</strong> Piloter vos propres pipelines CI/CD et participer à l'éradication de la dette manuelle. La qualité est l'affaire de tous : vous assurez vos propres tests et revues de code.</li><li><strong>Pragmatisme Tech & IA :</strong> Utiliser au quotidien des outils d'assistance de pointe (Claude, Cursor) pour maximiser l'efficience collective, tout en garantissant un code robuste, transparent et maîtrisé.</li></ul><p><strong>Stack et culture tech</strong><br /><br />L'équipe met un point d'honneur à offrir une excellente Developer Experience (DX) à travers un tooling moderne :</p><p> </p><p> </p><p> </p><ul><li><strong>Backend :</strong> NestJS, Node.js, Redis, RabbitMQ</li><li><strong>Frontend :</strong> React, TypeScript</li><li><strong>Infra & DevSecOps :</strong> AWS, Kubernetes, GitHub Actions, PostgreSQL</li><li><strong>Méthodologie :</strong> Intégration continue, autonomie DevOps, approche orientée résolution de problèmes complexes.</li></ul><p> </p>",
+      "typeCandidature": "EMAIL_ONLY",
+      "offreSalon": false,
+      "latitude": 48.8727215,
+      "longitude": 2.312556,
+      "geolocalisable": true,
+      "texteHtmlProfil": "<p>Ce poste est fait pour vous si vous aimez rendre simples les sujets complexes et possédez un fort esprit entrepreneurial.<br /> </p><ul><li><strong>Parcours technique :</strong> Vous justifiez d'au minimum <strong>4</strong><strong> ans d'expérience</strong> en développement logiciel, idéalement acquise dans des environnements agiles de type startup, scale-up ou éditeur logiciel.</li><li><strong>Maîtrise technologique :</strong> Vous disposez d’une expertise solide sur <strong>NestJS</strong> (indispensable pour les chantiers d'architecture backend en cours) et d'une maîtrise éprouvée de <strong>React</strong> et <strong>TypeScript</strong>.</li><li><strong>Mindset Produit :</strong> Vous êtes \"owner\" de vos sujets. Vous aimez comprendre l'impact business de ce que vous développez et appréciez l'autonomie sur la CI/CD.</li><li><strong>Savoir-être :</strong> Esprit d'équipe, culture du feedback, pragmatisme face à l'utilisation des IA génératives et sensibilité aux enjeux de scalabilité.</li></ul><p><br /><strong>Conditions de travail et avantages</strong></p><p> </p><p> </p><ul><li><strong>Rémunération fixe </strong>entre <strong>65 000 € et 80 000 € brut annuel</strong> (selon profil et niveau d'expérience) + <strong>BSPCE</strong></li><li>Contrat 39h / 10aine<strong> de RTT</strong> par an.</li><li>Politique de télétravail flexible (pas de règles, mais une culture d'entreprise globale qui aime se retrouver au bureau pour le collectif).</li><li><strong>Paris 8ème à 2 pas des Champs Elysées</strong></li><li>Tickets Restaurant, prise en charge du pass Navigo et excellente mutuelle santé.</li></ul><p><strong>Process de recrutement </strong><br /><br />En postulant via Externatic, vous bénéficiez d'un accompagnement personnalisé et transparent tout au long des étapes, sans intermédiaire de type ESN.<br /><br />Le parcours de sélection chez notre client est fluide et se déroule en 3 étapes :</p><p> </p><p> </p><p> </p><p> </p><ul><li><strong>Premier échange (30 min) :</strong> Un call en visioconférence avec l'Engineering Manager pour faire connaissance et valider l'adéquation culturelle et humaine.</li><li><strong>Évaluation Technique :</strong> Un exercice à préparer chez vous, suivi d'un débriefing technique en visio avec une session de live-coding axée sur votre logique et votre réflexion produit.</li><li><strong>Rencontre Finale (2h sur place) :</strong> Une immersion dans les locaux à Paris pour rencontrer les équipes de développement ainsi que les co-fondateurs de la structure.</li></ul><p> </p><p> </p>",
+      "texteHtmlEntreprise": "<p>Crée il y a 15 ans, Externatic est l'un des 1ers cabinets de recrutement spécialisés <strong>\"Informatique, Data & Cybersécurité\" à voir le jour en France. </strong><br /><br />Notre credo est simple : \"permettre à nos candidats, via notre réseau, d'accéder au marché caché et d'être recruté uniquement au sein d'entreprises finales (0% d'ESN) \".<br /><br />Externatic en bref :<br /> </p><ul><li>15 ans de professionnalisme sur le recrutement \"tech\" externalisé pour des entreprises HORS ESN</li><li><strong>Près de 300 postes ouverts en permanence et 100% entreprise finale </strong></li><li>Près de <strong>30 consultants </strong></li><li><strong>Des implantations de proximité couvrant le territoire </strong> : Paris, Lyon, Lille, Strasbourg, Toulouse, Bordeaux, Nantes, Rennes, Angers, Montpellier, ...</li><li>Plus de <strong>700 sociétés accompagnées</strong> dans leurs recrutements depuis 2010 : DSI, éditeurs, ETI/PME, Centre R&D, Startup/scale-up, organismes publics et para-publiques, ...</li><li>Près de <strong>300 candidats accompagnés par an</strong> : CTO, DSI, RSSI, Architecte, chef de projet, développeur, devops, administrateur systèmes / réseaux, Data engineer, Analyste SOC, PO/PM, consultant fonctionnel, etc !</li><li>Du recrutement mais pas que ! des outils comme notre grille de salaires faisant référence depuis 2015, des guides de préparation d'entretien, de négociation de la rémunération, des analyses de marchés, ...</li></ul><p><br />Pour en savoir plus et découvrir d'autres postes à pourvoir, rendez vous sur notre site !</p>",
+      "enseigne": "Externatic",
+      "affichageLogo": true,
+      "indicateurLm": false,
+      "indicateurFaibleCandidature": false
+    },
+    "company_api": {
+      "id": 1082,
+      "idCompte": 712953,
+      "idNomStatut": 101872,
+      "idNomSituation": 30307,
+      "idInterlocuteur": 100026987,
+      "enTete": {
+        "banniere": "/presentation_entreprise/712953/img_712953_8662549788431097_2f4902db-14c6-475a-a715-dc591b28129c.png",
+        "accroche": "Développons des connexions durables",
+        "raisonSociale": "EXTERNATIC",
+        "logoEntreprise": "/presentation_entreprise/712953/img_712953_6396710751360836_04125c72-fbe0-4574-9fb9-4802fb3c044a.png"
+      },
+      "mainSection": {
+        "entrepriseTitre": "Cabinet de recrutement informatique ▪️ 100% clients finaux ▪️ NO ESN",
+        "entrepriseImage": null,
+        "entreprise": "<p><strong>Externatic, cabinet de recrutement informatique</strong></p>\n\n<p>En tant qu&rsquo;expert du recrutement informatique, Externatic est l&agrave; pour mieux vous conna&icirc;tre et pour vous guider dans vos choix. Vous questionner et affiner vos besoins. Vous accompagner, vous conseiller et vous aiguiller. Tel est notre m&eacute;tier.</p>\n\n<p>Pas d&rsquo;ESN.&nbsp;Pas de bullshit. Pas de fausses promesses.&nbsp;</p>\n\n<p>Les connexions que nous tissons, nous les entretenons sur la dur&eacute;e. Nous sommes acteurs de l&rsquo;&eacute;cosyst&egrave;me tech local, et nous nous appuyons sur un r&eacute;seau riche d&rsquo;exp&eacute;riences et d&rsquo;expertises.</p>\n\n<p>Nous d&eacute;veloppons des connexions durables entre les candidats et les entreprises.</p>\n\n<p><strong>Les connexions les plus durables.</strong></p>\n",
+        "lienVideo": "https://www.youtube.com/watch?v=BYmNVsS5J58"
+      },
+      "adressePostale": {
+        "adresseBatimentImmResidence": null,
+        "adresseCodePostal": "44000",
+        "adresseComplementAdresse": "PREMIER ETAGE",
+        "adresseLieuDitBp": null,
+        "adresseNumeroEtVoie": "1 RUE RACINE",
+        "adresseVille": "NANTES",
+        "audit": {
+          "dateCreation": 1586278293000,
+          "dateModification": 1752683635000,
+          "utilisateurCreation": "021187",
+          "utilisateurModification": "100026987W"
+        },
+        "idPays": 799,
+        "numeroVersion": 24,
+        "latitude": null,
+        "longitude": null,
+        "idNomNormalisation": null,
+        "indicateurQPV": null,
+        "indicateurZR": null,
+        "id": 130211659
+      },
+      "avantages": [
+        {
+          "id": 3915,
+          "idPageEntreprise": 1082,
+          "idNomAvantage": 20840,
+          "avantage": null,
+          "numeroVersion": 14,
+          "audit": {
+            "dateCreation": 1678784071000,
+            "dateModification": 1752683635000,
+            "utilisateurCreation": "100161392W",
+            "utilisateurModification": "100026987W"
+          }
+        },
+        {
+          "id": 3916,
+          "idPageEntreprise": 1082,
+          "idNomAvantage": 20841,
+          "avantage": null,
+          "numeroVersion": 14,
+          "audit": {
+            "dateCreation": 1678784071000,
+            "dateModification": 1752683635000,
+            "utilisateurCreation": "100161392W",
+            "utilisateurModification": "100026987W"
+          }
+        },
+        {
+          "id": 3917,
+          "idPageEntreprise": 1082,
+          "idNomAvantage": 20842,
+          "avantage": null,
+          "numeroVersion": 14,
+          "audit": {
+            "dateCreation": 1678784071000,
+            "dateModification": 1752683635000,
+            "utilisateurCreation": "100161392W",
+            "utilisateurModification": "100026987W"
+          }
+        },
+        {
+          "id": 3918,
+          "idPageEntreprise": 1082,
+          "idNomAvantage": 20843,
+          "avantage": null,
+          "numeroVersion": 14,
+          "audit": {
+            "dateCreation": 1678784071000,
+            "dateModification": 1752683635000,
+            "utilisateurCreation": "100161392W",
+            "utilisateurModification": "100026987W"
+          }
+        },
+        {
+          "id": 13442,
+          "idPageEntreprise": 1082,
+          "idNomAvantage": 20844,
+          "avantage": "100 % entreprise finale (pas d'ESN)",
+          "numeroVersion": 0,
+          "audit": {
+            "dateCreation": 1752683635000,
+            "dateModification": null,
+            "utilisateurCreation": "100026987W",
+            "utilisateurModification": null
+          }
+        }
+      ],
+      "sections": [
+        {
+          "id": 4230,
+          "idPageEntreprise": 1082,
+          "titre": "Externatic en quelques chiffres",
+          "texteUn": "<p>🔸 100 % hors ESN uniquement des enreprises finales</p>\n\n<p>🔸 300 candidats&middot;es accompagn&eacute;&middot;es par an allant du DSi au technicien support IT</p>\n\n<p>🔸 95&thinsp;% de p&eacute;riodes d&rsquo;essai r&eacute;ussies</p>\n\n<p>🔸 +300 postes &quot;informatique&quot; &agrave; pourvoir en permanence</p>\n\n<p>🔸 + de 500 entreprises en recrutement acompagn&eacute;es depuis 2010</p>\n\n<p>🔸 Pr&egrave;s de 30 consultants</p>\n\n<p>🔸 12 agences de proximit&eacute; en France : Paris, Lyon, Nantes, Rennes, Lille, Toulouse , Bordeaux,&nbsp; Angers,&nbsp; La Roche-Sur-Yon, Montpellier, Le Mans, Niort, ...</p>\n",
+          "imageUne": "/presentation_entreprise/712953/img_712953_8656696874057630_78f2121a-12dd-49cd-a19f-683c4d51ce4a.jpeg",
+          "texteDeux": null,
+          "imageDeux": null,
+          "numeroVersion": 1,
+          "audit": {
+            "dateCreation": 1733490797000,
+            "dateModification": 1752683635000,
+            "utilisateurCreation": "100313475W",
+            "utilisateurModification": "100026987W"
+          }
+        }
+      ],
+      "eltCles": {
+        "anneeCreation": 2011,
+        "secteurActivite": 101606,
+        "effectif": 596780,
+        "chiffreAffaires": null,
+        "pariteFH": 0,
+        "ancienneteMoyenne": 4,
+        "tauxSeniors": null,
+        "tauxJeunesDiplomes": null,
+        "tauxCadres": 90,
+        "siteWeb": "https://www.externatic.fr/",
+        "siteCarrieres": "https://www.externatic.fr/offre-emploi/",
+        "email": "contact@externatic.fr",
+        "lienFacebook": null,
+        "lienInstagram": "https://www.instagram.com/externatic/?hl=fr",
+        "lienLinkedin": "https://www.linkedin.com/company/externatic/",
+        "lienTwitter": "https://twitter.com/Externatic",
+        "lienYoutube": "https://www.youtube.com/channel/UCjC385zJOe-0BwIXxfvKCyA"
+      },
+      "numeroVersion": 39,
+      "audit": {
+        "dateCreation": 1586278293000,
+        "dateModification": 1752683635000,
+        "utilisateurCreation": "021187",
+        "utilisateurModification": "100026987W"
+      }
+    }
+  }
+}

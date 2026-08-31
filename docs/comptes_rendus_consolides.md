@@ -1286,6 +1286,55 @@ personnels introduits pendant la réorganisation.
   locale ; leurs identifiants et quotas restent dépendants de la configuration
   privée du fichier `.env`.
 
+## 98. Extraction exhaustive d’une fiche Apec avec Playwright — 31 août 2026
+
+### Objectif
+
+Explorer réellement une fiche Apec dans un navigateur visible et fournir un
+script réutilisable qui exporte l’intégralité des informations nécessaires à
+une future alimentation de la base Rocky, sans écrire encore en base.
+
+### Fichiers modifiés
+
+- `dashboard/rocky/sources/apec_detail.py` ;
+- `scripts/extract_apec_offer.py` ;
+- `tests/test_apec_detail.py` ;
+- `output/apec/179302541W.json` ;
+- `README.md` ;
+- `docs/comptes_rendus_consolides.md`.
+
+### Changements et décisions
+
+- la page fournie a été ouverte et inspectée avec Playwright CLI en mode
+  visible ; l’XPath désigne le composant Angular
+  `apec-poste-informations`, mais ce composant ne contient pas seul toutes les
+  données de la fiche ;
+- l’exploration réseau a identifié l’endpoint public de détail de l’offre et
+  l’endpoint du profil entreprise ; l’extracteur les appelle depuis le contexte
+  du navigateur afin de réutiliser sa session et de respecter la protection
+  DataDome rencontrée sur Apec ;
+- la sortie JSON distingue les données normalisées des payloads bruts : titre,
+  entreprise, lieux, contrat, salaire, dates, coordonnées, candidature,
+  description du poste, profil, entreprise, compétences visibles ou masquées,
+  profil entreprise et contenu DOM complet ;
+- le navigateur est visible par défaut ; `--headless` reste une option
+  explicite pour une automatisation ultérieure ;
+- aucune candidature n’est déclenchée et aucune donnée n’est ajoutée ou
+  modifiée dans la base Rocky à ce stade.
+
+### Vérifications et limites
+
+- trois tests unitaires d’URL, de conversion HTML et de structure exhaustive
+  passent avec l’auto-chargement des plugins Pytest désactivé ;
+- compilation Python et contrôle `git diff --check` réussis ;
+- exécution réelle réussie sur l’offre `179302541W` : fichier JSON de 83 083
+  octets, 46 champs d’offre bruts, 13 champs entreprise bruts, 7 savoir-être,
+  30 savoir-faire et présence vérifiée du descriptif complet ;
+- les libellés de référentiel calculés par l’interface Apec sont conservés via
+  le DOM, tandis que les identifiants d’origine restent dans le payload brut ;
+- l’étape suivante devra définir le mapping vers `JobOffer` et les colonnes de
+  persistance avant toute insertion en base.
+
 ## 25. Index des documents associés
 
 - `README.md` — installation, exploitation et architecture courante ;

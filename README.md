@@ -195,6 +195,8 @@ et le montage du volume se font sans suppression de fichier :
     dashboard/rocky/llm.py            seul accès à Mistral
     dashboard/rocky/letters.py        prévisualisation, DOCX et PDF
     dashboard/rocky/sources/          connecteurs de veille indépendants
+    dashboard/rocky/sources/apec_detail.py extraction exhaustive des fiches Apec
+    scripts/extract_apec_offer.py     export JSON Apec avec navigateur visible
     dashboard/rocky/watch.py          orchestration quotidienne
     database/schema_sqlite.sql        schéma du Space Hugging Face
     Dockerfile                        image Streamlit du Space
@@ -202,6 +204,22 @@ et le montage du volume se font sans suppression de fichier :
 Pour ajouter une source, crée une classe avec un nom et une méthode `search`
 qui renvoie une liste de `JobOffer`, puis ajoute-la uniquement dans
 `dashboard/rocky/sources/registry.py`.
+
+### Extraction détaillée d’une offre Apec
+
+Le script Playwright dédié ouvre par défaut un navigateur visible, charge la
+fiche Angular, puis exporte les champs normalisés, les trois descriptions
+(poste, profil et entreprise), toutes les compétences, le profil entreprise,
+le composant DOM ciblé et les réponses JSON brutes :
+
+```bash
+.venv/bin/python scripts/extract_apec_offer.py \
+  "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179302541W"
+```
+
+Le résultat est écrit dans `output/apec/<numero-offre>.json`. L’option
+`--headless` est disponible pour une future automatisation ; le script
+n’enregistre rien dans la base et ne clique jamais sur « Postuler ».
 
 ## 9. Débogage
 
