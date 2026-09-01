@@ -8,6 +8,7 @@ import json
 import logging
 import sys
 from pathlib import Path
+from typing import TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ def _run_account(
             "sources": len(build_watch_sources(settings)),
         }
         return result
-    gmail_accounts: dict[str, object] = {}
+    gmail_accounts: dict[str, dict[str, object]] = {}
     for gmail in gmail_services:
         if not gmail.is_configured:
             gmail_accounts[gmail.account_email] = {"status": "NOT_CONFIGURED"}
@@ -91,17 +92,16 @@ def _run_account(
                 "status": "FAILED",
                 "error": type(error).__name__,
             }
-    account_statuses = {
-        str(dict(account_result).get("status"))
-        for account_result in gmail_accounts.values()
+    observed_statuses = {
+        str(account_result.get("status")) for account_result in gmail_accounts.values()
     }
-    if account_statuses == {"SUCCESS"}:
+    if observed_statuses == {"SUCCESS"}:
         gmail_status = "SUCCESS"
-    elif "SUCCESS" in account_statuses:
+    elif "SUCCESS" in observed_statuses:
         gmail_status = "PARTIAL"
-    elif "FAILED" in account_statuses:
+    elif "FAILED" in observed_statuses:
         gmail_status = "FAILED"
-    elif "AUTHORIZATION_REQUIRED" in account_statuses:
+    elif "AUTHORIZATION_REQUIRED" in observed_statuses:
         gmail_status = "AUTHORIZATION_REQUIRED"
     else:
         gmail_status = "NOT_CONFIGURED"
@@ -115,14 +115,21 @@ def _run_account(
     return result
 
 
-def run(dry_run: bool = False) -> dict[str, object]:
+class DailySummary(TypedDict):
+    """Bilan sérialisable d'une exécution quotidienne, un bloc par compte."""
+
+    dry_run: bool
+    accounts: dict[str, dict[str, object]]
+
+
+def run(dry_run: bool = False) -> DailySummary:
     """Exécute la veille indépendamment pour chaque compte actif vérifié."""
     settings = Settings()
     engine = create_db_engine(settings)
     initialize_database(engine, settings)
     base_repository = RockyRepository(engine)
     user_ids = base_repository.fetch_active_user_ids()
-    account_results: dict[str, object] = {}
+    account_results: dict[str, dict[str, object]] = {}
     for user_id in user_ids:
         repository = base_repository.for_user(user_id)
         if repository.fetch_active_profile() is None:
@@ -164,10 +171,7 @@ def main() -> int:
             return 0
         summary = run(arguments.dry_run)
         logger.info("Résumé : %s", json.dumps(summary, ensure_ascii=False, default=str))
-    statuses = {
-        str(dict(value).get("status"))
-        for value in dict(summary.get("accounts") or {}).values()
-    }
+    statuses = {str(value.get("status")) for value in summary["accounts"].values()}
     return 1 if statuses == {"FAILED"} else 0
 
 

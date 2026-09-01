@@ -178,14 +178,15 @@ class TheirStackClient:
             cache_key = (normalize_text(location), country_code.upper())
             if cache_key not in self._location_cache:
                 try:
+                    catalog_params: dict[str, str | int] = {
+                        "name": location,
+                        "country_code": country_code.upper(),
+                        "limit": 5,
+                    }
                     response = requests.get(
                         THEIRSTACK_LOCATION_CATALOG_URL,
                         headers=self._headers(),
-                        params={
-                            "name": location,
-                            "country_code": country_code.upper(),
-                            "limit": 5,
-                        },
+                        params=catalog_params,
                         timeout=self.timeout,
                     )
                     response.raise_for_status()

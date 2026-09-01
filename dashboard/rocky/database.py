@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import Engine, create_engine, inspect, make_url
 
@@ -89,7 +90,7 @@ def create_db_engine(settings: Settings) -> Engine:
         raise ConfigurationError(
             "La connexion PostgreSQL n'est pas configurée dans le fichier .env."
         )
-    options = {"pool_pre_ping": True}
+    options: dict[str, Any] = {"pool_pre_ping": True}
     if settings.database_url.startswith("sqlite"):
         options["connect_args"] = {
             "check_same_thread": False,

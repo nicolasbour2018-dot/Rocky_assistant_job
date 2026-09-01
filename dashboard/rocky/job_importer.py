@@ -220,9 +220,11 @@ def parse_html(html: str, url: str) -> ImportPreview:
             break
 
     canonical_tag = soup.find("link", rel=lambda value: value and "canonical" in value)
+    # BeautifulSoup rend une liste dès qu'un attribut HTML est déclaré multivalué.
+    canonical_href = canonical_tag.get("href") if canonical_tag else None
     final_url = (
-        urljoin(url, canonical_tag.get("href"))
-        if canonical_tag and canonical_tag.get("href")
+        urljoin(url, canonical_href)
+        if isinstance(canonical_href, str) and canonical_href
         else url
     )
 

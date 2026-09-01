@@ -65,7 +65,7 @@ class AdzunaSource:
         location = profile.preferred_locations[0] if profile.preferred_locations else ""
         collected: list[JobOffer] = []
         for query in queries:
-            params = {
+            params: dict[str, str | int] = {
                 "app_id": self.settings.adzuna_app_id,
                 "app_key": self.settings.adzuna_app_key,
                 "results_per_page": results_per_query,

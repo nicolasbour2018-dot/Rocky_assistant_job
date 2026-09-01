@@ -11,6 +11,7 @@ import hashlib
 import html
 import json
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 
 import pymupdf
@@ -277,22 +278,42 @@ def build_tailored_cv_plan(
     return plan
 
 
-def _template(settings: Settings) -> dict[str, object]:
+@dataclass(frozen=True)
+class _CvTemplate:
+    """Description des zones modifiables du CV de référence."""
+
+    source_sha256: str
+    page_count: int
+    zones: dict[str, tuple[float, float, float, float]]
+    background_rgb: tuple[int, int, int]
+
+
+def _template(settings: Settings) -> _CvTemplate:
     """Charge la description des zones autorisées du modèle Canva, sans modifier le PDF."""
     path = settings.project_dir / "assets" / "cv_template_v1.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    red, green, blue = payload["background_rgb"]
+    return _CvTemplate(
+        source_sha256=str(payload["source_sha256"]),
+        page_count=int(payload["page_count"]),
+        zones={
+            str(name): (float(x0), float(y0), float(x1), float(y1))
+            for name, (x0, y0, x1, y1) in payload["zones"].items()
+        },
+        background_rgb=(int(red), int(green), int(blue)),
+    )
 
 
-def _validate_source(source: Path, template: dict[str, object]) -> None:
+def _validate_source(source: Path, template: _CvTemplate) -> None:
     """Vérifie l'empreinte du CV de référence avant toute adaptation ciblée."""
     if not source.is_file():
         raise DocumentError(f"CV source introuvable : {source}")
-    if file_sha256(source) != template["source_sha256"]:
+    if file_sha256(source) != template.source_sha256:
         raise DocumentError(
             "Le CV source a changé. Recalibre le modèle avant de générer un CV ciblé."
         )
     with pymupdf.open(source) as document:
-        if document.page_count != int(template["page_count"]):
+        if document.page_count != template.page_count:
             raise DocumentError("Le CV source doit contenir exactement une page.")
 
 
@@ -348,10 +369,8 @@ def create_tailored_cv(
     """Crée une copie ciblée en ne modifiant que les zones autorisées."""
     template = _template(settings)
     _validate_source(source, template)
-    zones = {
-        name: pymupdf.Rect(values) for name, values in dict(template["zones"]).items()
-    }
-    rgb = tuple(int(value) / 255 for value in template["background_rgb"])
+    zones = {name: pymupdf.Rect(values) for name, values in template.zones.items()}
+    rgb = tuple(value / 255 for value in template.background_rgb)
     document = pymupdf.open(source)
     page = document[0]
     for zone in zones.values():

@@ -10,6 +10,7 @@ import statistics
 import subprocess
 import tempfile
 import zipfile
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from itertools import combinations, pairwise
 from pathlib import Path
@@ -377,7 +378,7 @@ def _extract_title(lines: list[str], name: str) -> str:
     return ""
 
 
-def _unique(values: list[str]) -> tuple[str, ...]:
+def _unique(values: Iterable[str]) -> tuple[str, ...]:
     """Déduplique des éléments extraits tout en conservant une sortie stable."""
     found: dict[str, str] = {}
     for value in values:

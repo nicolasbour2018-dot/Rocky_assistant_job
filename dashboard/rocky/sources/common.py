@@ -108,9 +108,11 @@ def iso_date(value: object) -> date | None:
 
 def unix_date(value: object) -> date | None:
     """Convertit un timestamp Unix en date UTC."""
+    if not isinstance(value, int | float | str):
+        return None
     try:
         return datetime.fromtimestamp(float(value), tz=UTC).date()
-    except (TypeError, ValueError, OSError):
+    except (ValueError, OSError):
         return None
 
 

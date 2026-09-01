@@ -262,7 +262,8 @@ def _decode_body(payload: dict[str, object]) -> str:
     def visit(part: dict[str, object]) -> None:
         """Parcourt récursivement les parties MIME textuelles d'un message Gmail."""
         mime = str(part.get("mimeType") or "")
-        data = dict(part.get("body") or {}).get("data")
+        body = part.get("body")
+        data = body.get("data") if isinstance(body, dict) else None
         if data and mime in {"text/plain", "text/html"}:
             with contextlib.suppress(ValueError, UnicodeError):
                 chunks.append(
@@ -270,7 +271,8 @@ def _decode_body(payload: dict[str, object]) -> str:
                         "utf-8", errors="replace"
                     )
                 )
-        for child in part.get("parts") or []:
+        children = part.get("parts")
+        for child in children if isinstance(children, list) else []:
             if isinstance(child, dict):
                 visit(child)
 
