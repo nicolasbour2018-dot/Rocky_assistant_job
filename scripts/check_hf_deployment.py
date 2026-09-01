@@ -6,7 +6,6 @@ import os
 
 import requests
 
-
 DEFAULT_REPO = "Neomac21/rocky-job-assistant"
 
 

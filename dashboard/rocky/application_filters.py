@@ -6,7 +6,6 @@ import pandas as pd
 
 from dashboard.rocky.application_statuses import APPLICATION_STATUS_OPTIONS
 
-
 # Les segments décrivent les phases consultables du parcours sans exposer les
 # annonces écartées dans la page dédiée aux candidatures.
 PIPELINE_SEGMENTS = {

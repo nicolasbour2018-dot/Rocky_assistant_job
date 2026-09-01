@@ -8,15 +8,14 @@ est propre : URL, paramètres et conversion vers :class:`JobOffer`.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from datetime import UTC, date, datetime
 from typing import Any
-from collections.abc import Iterable
 
 import requests
 
 from ..errors import SourceError
 from ..models import JobOffer
-
 
 BROWSER_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
@@ -102,7 +101,7 @@ def iso_date(value: object) -> date | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
+        return datetime.fromisoformat(str(value)).date()
     except ValueError:
         return None
 

@@ -7,6 +7,8 @@ seul le jeton de session opaque est conservé côté navigateur.
 
 from __future__ import annotations
 
+import contextlib
+
 import streamlit as st
 
 from dashboard.dashboard_common import load_repository
@@ -14,8 +16,6 @@ from dashboard.rocky.auth import AuthService
 from dashboard.rocky.config import Settings
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.models import AuthenticatedUser
-import contextlib
-
 
 COOKIE_NAME = "rocky_session"
 

@@ -13,7 +13,6 @@ from dashboard.rocky.errors import ConfigurationError
 from dashboard.rocky.gmail_service import GmailService
 from dashboard.rocky.repository import RockyRepository
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 FIRST_ACCOUNT = "first@example.test"
 SECOND_ACCOUNT = "second@example.test"

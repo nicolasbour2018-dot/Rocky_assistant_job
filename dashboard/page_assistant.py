@@ -17,7 +17,6 @@ from dashboard.rocky.assistant_agent import plan_rocky_action
 from dashboard.rocky.llm import RockyLLM
 from dashboard.rocky.mascot import mascot_data_uri
 
-
 st.markdown(
     '<div class="rocky-kicker">Copilote personnel</div>', unsafe_allow_html=True
 )

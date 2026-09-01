@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import math
 import re
@@ -19,8 +20,6 @@ from dashboard.job_analysis import SKILL_ALIASES, analyze_job
 
 from .errors import DocumentError
 from .text_utils import normalize_text
-import contextlib
-
 
 ATS_SCREENER_SOURCE = "https://github.com/sunnypatell/ats-screener"
 

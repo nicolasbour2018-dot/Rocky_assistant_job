@@ -11,7 +11,6 @@ from dashboard.rocky.job_importer import (
 )
 from dashboard.rocky.models import JobOffer
 
-
 HTML = """
 <html>
   <head>

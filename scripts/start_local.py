@@ -14,7 +14,6 @@ from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 LOGS_DIR = PROJECT_DIR / "logs"
 PID_PATH = LOGS_DIR / "rocky_streamlit.pid"

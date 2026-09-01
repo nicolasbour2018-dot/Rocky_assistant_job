@@ -28,7 +28,6 @@ from dashboard.job_detail_components import render_edit_form
 from dashboard.rocky.enrichment import reenrich_saved_jobs
 from dashboard.rocky.statuses import JOB_STATUS_OPTIONS
 
-
 st.title("À enrichir")
 st.caption(
     "Ces annonces sont conservées mais restent hors matching tant que leur "

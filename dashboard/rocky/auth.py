@@ -11,7 +11,7 @@ import hashlib
 import re
 import secrets
 import smtplib
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 from typing import Any
 
@@ -22,7 +22,6 @@ from sqlalchemy import Engine, text
 from .config import Settings
 from .errors import ConfigurationError, RockyError
 from .models import AuthenticatedUser
-
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PASSWORD_MIN_LENGTH = 12
@@ -67,7 +66,7 @@ def _as_datetime(value: Any) -> datetime | None:
         result = value
     else:
         try:
-            result = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            result = datetime.fromisoformat(str(value))
         except ValueError:
             return None
     return result.replace(tzinfo=result.tzinfo or UTC)

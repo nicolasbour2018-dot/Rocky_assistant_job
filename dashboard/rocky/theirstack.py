@@ -18,7 +18,6 @@ from .job_importer import (
 from .models import JobOffer
 from .text_utils import canonical_url, normalize_text
 
-
 THEIRSTACK_JOB_SEARCH_URL = "https://api.theirstack.com/v1/jobs/search"
 THEIRSTACK_LOCATION_CATALOG_URL = "https://api.theirstack.com/v0/catalog/locations"
 THEIRSTACK_RESULT_LIMIT = 3

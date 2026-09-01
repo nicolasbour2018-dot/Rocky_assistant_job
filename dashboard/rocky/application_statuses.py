@@ -6,7 +6,6 @@ entretien ou un refus.
 
 from __future__ import annotations
 
-
 APPLICATION_STATUS_OPTIONS = (
     "DOSSIER PRÉPARÉ",
     "PRÊTE À ENVOYER",

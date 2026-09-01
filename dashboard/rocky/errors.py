@@ -9,7 +9,7 @@ class ConfigurationError(RockyError):
     """Une configuration ou un credential obligatoire manque."""
 
 
-class ImportError(RockyError):
+class JobImportError(RockyError):
     """Une annonce n'a pas pu être importée."""
 
 

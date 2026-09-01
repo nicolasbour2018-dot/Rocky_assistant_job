@@ -24,7 +24,6 @@ from dashboard.rocky.models import JobOffer
 from dashboard.rocky.projects import parse_projects_markdown
 from dashboard.rocky.repository import RockyRepository
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 
 

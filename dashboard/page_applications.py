@@ -23,7 +23,6 @@ from dashboard.rocky.browser_apply import (
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.gmail_service import GmailService
 
-
 EMAIL_STATUS = {
     "REFUSAL": "REFUS",
     "INTERVIEW": "ENTRETIEN",

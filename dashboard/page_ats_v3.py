@@ -30,7 +30,6 @@ from dashboard.rocky.ats_v3 import (
 )
 from dashboard.rocky.errors import DocumentError, RockyError
 
-
 REPORT_KEY = "ats_v3_report"
 CV_BYTES_KEY = "ats_v3_cv_bytes"
 CV_NAME_KEY = "ats_v3_cv_name"

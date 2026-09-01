@@ -12,11 +12,10 @@ from urllib.parse import quote, urljoin, urlsplit
 import requests
 from bs4 import BeautifulSoup
 
-from .errors import ImportError
+from .errors import JobImportError
 from .llm import RockyLLM
 from .models import JobOffer
 from .text_utils import canonical_url
-
 
 MAX_HTML_BYTES = 3_000_000
 USER_AGENT = (
@@ -60,7 +59,7 @@ def _validate_url(url: str) -> str:
     """Valide une URL HTTP(S) avant toute lecture distante d'annonce."""
     parts = urlsplit(url.strip())
     if parts.scheme not in {"http", "https"} or not parts.netloc:
-        raise ImportError("L'URL doit commencer par http:// ou https://.")
+        raise JobImportError("L'URL doit commencer par http:// ou https://.")
     return canonical_url(url)
 
 
@@ -79,15 +78,15 @@ def fetch_html(url: str, timeout: int = 15) -> tuple[str, str]:
         )
         response.raise_for_status()
     except requests.RequestException as error:
-        raise ImportError(
+        raise JobImportError(
             "La page refuse l'accès ou ne répond pas. "
             "Tu peux coller le texte de l'annonce dans le formulaire."
         ) from error
     content_type = response.headers.get("Content-Type", "")
     if "html" not in content_type.lower():
-        raise ImportError("Cette URL ne renvoie pas une page HTML.")
+        raise JobImportError("Cette URL ne renvoie pas une page HTML.")
     if len(response.content) > MAX_HTML_BYTES:
-        raise ImportError("La page est trop volumineuse pour un import sûr.")
+        raise JobImportError("La page est trop volumineuse pour un import sûr.")
     return response.text, canonical_url(response.url)
 
 

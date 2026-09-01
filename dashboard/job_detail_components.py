@@ -13,11 +13,11 @@ services métier sans décider seules d'un statut ou d'une soumission.
 # Importation des librairies standard
 from __future__ import annotations
 
+import tempfile
 from dataclasses import replace
 from datetime import date
 from html import escape
 from pathlib import Path
-import tempfile
 from typing import Any
 
 import pandas as pd
@@ -26,14 +26,8 @@ import streamlit as st
 
 # Importation des modules internes
 from dashboard.dashboard_common import matching_category_summary
-from dashboard.rocky.applications import generate_application
-from dashboard.rocky.cv_tailoring import (
-    TECHNICAL_GROUPS,
-    build_tailored_cv_plan,
-    build_tailored_cv_plan_from_selection,
-    create_tailored_cv,
-)
 from dashboard.job_analysis import SOFT_SKILLS, TECHNICAL_SKILLS
+from dashboard.rocky.applications import generate_application
 from dashboard.rocky.ats import (
     AtsReport,
     AtsV2Report,
@@ -41,6 +35,12 @@ from dashboard.rocky.ats import (
 )
 from dashboard.rocky.config import Settings
 from dashboard.rocky.contracts import CONTRACT_TYPES, WORK_SCHEDULES
+from dashboard.rocky.cv_tailoring import (
+    TECHNICAL_GROUPS,
+    build_tailored_cv_plan,
+    build_tailored_cv_plan_from_selection,
+    create_tailored_cv,
+)
 from dashboard.rocky.errors import DocumentError, RockyError
 from dashboard.rocky.job_importer import (
     description_is_probably_truncated,
@@ -1223,11 +1223,11 @@ def render_letter_workshop(
             (downloads[0], "CV ciblé", files.cv_pdf_path),
             (downloads[1], "Lettre PDF", files.letter_pdf_path),
         ):
-            path = Path(path)
+            pdf_path = Path(path)
             column.download_button(
                 f"Télécharger {label}",
-                path.read_bytes(),
-                file_name=path.name,
+                pdf_path.read_bytes(),
+                file_name=pdf_path.name,
                 key=f"v2_download_{job_id}_{label}",
                 use_container_width=True,
             )

@@ -7,12 +7,11 @@ from sqlalchemy import text
 from streamlit.testing.v1 import AppTest
 
 from dashboard import dashboard_common
+from dashboard.rocky.application_filters import filter_applications
 from dashboard.rocky.config import Settings
 from dashboard.rocky.database import create_db_engine, initialize_database
-from dashboard.rocky.application_filters import filter_applications
 from dashboard.rocky.models import JobOffer, MatchResult
 from dashboard.rocky.repository import RockyRepository
-
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 

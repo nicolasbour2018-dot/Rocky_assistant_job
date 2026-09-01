@@ -10,8 +10,8 @@ from __future__ import annotations
 import hashlib
 import html
 import json
-from pathlib import Path
 from collections.abc import Iterable
+from pathlib import Path
 
 import pymupdf
 
@@ -24,7 +24,6 @@ from .models import (
     TailoredProject,
 )
 from .text_utils import normalize_text
-
 
 TECHNICAL_GROUPS = (
     (

@@ -14,7 +14,6 @@ from .repository import RockyRepository
 from .sources.base import JobSource
 from .statuses import INCOMPLETE_STATUS
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -217,14 +216,14 @@ class WatchService:
                     _, inserted = self.repository.insert_job(incomplete, profile.id)
                     summary["inserted_count"] += int(inserted)
                     continue
-                offer = hydration.offer
-                localized = self._localized_profile(profile, offer)
-                result = calculate_match(offer, localized, skills)
+                hydrated = hydration.offer
+                localized = self._localized_profile(profile, hydrated)
+                result = calculate_match(hydrated, localized, skills)
                 if result.score < self.settings.match_threshold:
                     summary["below_threshold_count"] += 1
                     summary["rejected_count"] += 1
                     continue
-                job_id, inserted = self.repository.insert_job(offer, profile.id)
+                job_id, inserted = self.repository.insert_job(hydrated, profile.id)
                 self.repository.save_match(job_id, profile.id, result)
                 summary["inserted_count"] += int(inserted)
 

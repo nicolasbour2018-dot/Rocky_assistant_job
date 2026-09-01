@@ -26,7 +26,7 @@ def _launch_daily(project_dir: Path) -> None:
 
 def ensure_local_scheduler(project_dir: Path):
     """Démarre une seule tâche quotidienne à midi, heure de Paris."""
-    global _scheduler
+    global _scheduler  # noqa: PLW0603 - singleton APScheduler du processus
     if _scheduler and _scheduler.running:
         return _scheduler
     from apscheduler.schedulers.background import BackgroundScheduler

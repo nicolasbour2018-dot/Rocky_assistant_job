@@ -13,7 +13,6 @@ from pathlib import Path
 from huggingface_hub import CommitOperationAdd, HfApi, Volume
 from huggingface_hub.errors import HfHubHTTPError
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_REPO = "Neomac21/rocky-job-assistant"
 

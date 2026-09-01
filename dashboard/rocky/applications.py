@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 from .config import Settings
 from .cv_tailoring import build_tailored_cv_plan, create_tailored_cv, file_sha256
 from .errors import DocumentError
 from .letters import LetterVariables, create_docx, create_pdf
 from .models import ApplicationPackage, CandidateProfile, JobOffer, TailoredCvPlan
-from .projects import load_profile_projects
 from .profile_documents import convert_docx_to_pdf, fill_letter_template
+from .projects import load_profile_projects
 from .repository import RockyRepository
 from .text_utils import project_relative, safe_filename_component, safe_slug
 

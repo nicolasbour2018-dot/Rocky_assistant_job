@@ -16,9 +16,8 @@ from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
-from playwright.sync_api import sync_playwright
-
+from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 APEC_HOSTS = {"apec.fr", "www.apec.fr"}
 DETAIL_XPATH = (

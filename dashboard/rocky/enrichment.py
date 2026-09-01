@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING
-from collections.abc import Callable
 
 from .config import Settings
 from .errors import RockyError

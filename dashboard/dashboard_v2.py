@@ -7,10 +7,11 @@ règles métier, qui restent isolées dans les services Rocky.
 
 # Importation des libairies nécessaires.
 from __future__ import annotations
+
 import streamlit as st
 
 # importation des modules internes
-from dashboard.auth_ui import require_authenticated_user, render_account_sidebar
+from dashboard.auth_ui import render_account_sidebar, require_authenticated_user
 from dashboard.dashboard_common import (
     load_data,
     load_repository,

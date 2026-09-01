@@ -6,7 +6,6 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
 from typing import Any, Literal
 
-
 Locale = Literal["fr", "en"]
 
 

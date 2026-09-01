@@ -10,7 +10,6 @@ from dashboard.job_analysis import analyze_job
 from .models import CandidateProfile, JobOffer, MatchResult
 from .text_utils import normalize_text
 
-
 WEIGHTS = {
     "skills": 55.0,
     "title": 20.0,

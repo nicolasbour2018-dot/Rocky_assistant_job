@@ -17,7 +17,6 @@ from dashboard.rocky.config import Settings
 from dashboard.rocky.database import create_db_engine
 from dashboard.rocky.repository import RockyRepository
 
-
 FIELD_SELECTORS = {
     "Nom complet": (
         "input[autocomplete='name']",

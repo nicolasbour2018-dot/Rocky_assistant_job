@@ -190,7 +190,7 @@ def test_existing_incompatible_schema_fails_clearly(tmp_path):
 
 
 def test_docx_marker_is_found_even_when_split_between_runs(tmp_path):
-    Document = pytest.importorskip("docx").Document
+    Document = pytest.importorskip("docx").Document  # noqa: N806 - classe, pas variable
     valid = tmp_path / "valid.docx"
     document = Document()
     paragraph = document.add_paragraph("Mon introduction. ")

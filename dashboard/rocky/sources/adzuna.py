@@ -32,9 +32,7 @@ class AdzunaSource:
         publication_date = None
         if created:
             try:
-                publication_date = datetime.fromisoformat(
-                    str(created).replace("Z", "+00:00")
-                ).date()
+                publication_date = datetime.fromisoformat(str(created)).date()
             except ValueError:
                 publication_date = None
         return JobOffer(

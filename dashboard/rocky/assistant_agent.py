@@ -9,7 +9,6 @@ from .models import ProposedAction
 from .statuses import JOB_STATUS_OPTIONS
 from .text_utils import normalize_text
 
-
 FIELD_LABELS = {
     "ville": "city",
     "entreprise": "company_name",
@@ -47,7 +46,7 @@ def plan_rocky_action(message: str) -> ProposedAction:
     if not cleaned:
         return ProposedAction("ANSWER", "Pose-moi une question précise.")
     application_match = re.search(
-        r"(?:candidature|dossier)\s*#?\s*(\d+)", cleaned, re.I
+        r"(?:candidature|dossier)\s*#?\s*(\d+)", cleaned, re.IGNORECASE
     )
     if application_match:
         application_id = int(application_match.group(1))
@@ -60,7 +59,9 @@ def plan_rocky_action(message: str) -> ProposedAction:
                 status,
                 requires_confirmation=True,
             )
-        note_match = re.search(r"(?:note|ajoute)\s*[:=]\s*(.+)$", cleaned, re.I)
+        note_match = re.search(
+            r"(?:note|ajoute)\s*[:=]\s*(.+)$", cleaned, re.IGNORECASE
+        )
         if note_match:
             note = note_match.group(1).strip()
             return ProposedAction(
@@ -70,7 +71,7 @@ def plan_rocky_action(message: str) -> ProposedAction:
                 note,
                 requires_confirmation=True,
             )
-    job_match = re.search(r"annonce\s*#?\s*(\d+)", cleaned, re.I)
+    job_match = re.search(r"annonce\s*#?\s*(\d+)", cleaned, re.IGNORECASE)
     if job_match:
         job_id = int(job_match.group(1))
         status = _status_in_message(cleaned, JOB_STATUS_OPTIONS)
@@ -84,7 +85,9 @@ def plan_rocky_action(message: str) -> ProposedAction:
             )
         normalized = normalize_text(cleaned)
         for label, field in FIELD_LABELS.items():
-            match = re.search(rf"{re.escape(label)}\s*[:=]\s*(.+)$", normalized, re.I)
+            match = re.search(
+                rf"{re.escape(label)}\s*[:=]\s*(.+)$", normalized, re.IGNORECASE
+            )
             if match:
                 value = cleaned[-len(match.group(1)) :].strip()
                 return ProposedAction(

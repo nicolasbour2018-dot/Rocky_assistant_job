@@ -28,7 +28,6 @@ from dashboard.rocky.matching import calculate_match
 from dashboard.rocky.models import JobOffer
 from dashboard.rocky.statuses import JOB_STATUS_OPTIONS
 
-
 st.title("Ajouter une URL")
 st.caption(
     "Import V1.1 conservé : Rocky lit la page puis permet de vérifier les "

@@ -13,11 +13,10 @@ from pathlib import Path
 
 from .config import Settings
 from .errors import DocumentError
-from .models import ProfileProject
 from .llm import RockyLLM
+from .models import ProfileProject
 from .repository import RockyRepository
 from .text_utils import ensure_list, safe_slug
-
 
 FIELD_NAMES = {
     "problem": "problem",

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -1231,7 +1231,7 @@ class RockyRepository:
         jours deviennent ``ANCIENNE`` et 15 jours ou plus deviennent
         ``ÉCARTÉE``. Une date inconnue reste volontairement inchangée.
         """
-        today = reference_date or date.today()
+        today = reference_date or datetime.now(ZoneInfo("Europe/Paris")).date()
         ancient_start = today - timedelta(days=14)
         ancient_end = today - timedelta(days=8)
         discarded_before = today - timedelta(days=15)
@@ -2571,9 +2571,12 @@ class RockyRepository:
                 {"user_id": self.user_id},
             ).fetchall()
         paris = ZoneInfo("Europe/Paris")
-        for (started_at,) in row:
-            if isinstance(started_at, str):
-                started_at = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+        for (raw_started_at,) in row:
+            started_at = (
+                datetime.fromisoformat(raw_started_at)
+                if isinstance(raw_started_at, str)
+                else raw_started_at
+            )
             if not isinstance(started_at, datetime):
                 continue
             if started_at.tzinfo is None:

@@ -8,7 +8,9 @@ actions métier restent déléguées aux services Rocky dédiés.
 
 # Importation des librairies standardes
 from __future__ import annotations
+
 from zoneinfo import ZoneInfo
+
 import pandas as pd
 import streamlit as st
 
@@ -19,16 +21,15 @@ from dashboard.dashboard_common import (
     display_salary,
     display_score,
     filter_jobs,
+    jobs_to_enrich,
     load_data,
     options,
     render_matching_category_summary,
     run_watch,
-    jobs_to_enrich,
 )
 
 ## Importation des constantes de statuts de jobs ##
 from dashboard.rocky.statuses import JOB_STATUS_OPTIONS
-
 
 st.markdown(
     '<div class="rocky-kicker">Recherche & décisions</div>', unsafe_allow_html=True

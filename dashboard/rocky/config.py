@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 
 from .errors import ConfigurationError
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 ENV_PATH = PROJECT_DIR / ".env"
 load_dotenv(ENV_PATH)

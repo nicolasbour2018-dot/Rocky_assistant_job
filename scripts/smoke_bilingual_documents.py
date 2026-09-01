@@ -19,7 +19,6 @@ from dashboard.rocky.profile_documents import (
 )
 from dashboard.rocky.repository import RockyRepository
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 
 

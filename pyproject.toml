@@ -109,7 +109,38 @@ target-version = "py311"
 #   RUF    règles propres à ruff signalements que les autres outils n'ont pas
 #   SIM    flake8-simplify       code juste, mais exprimable plus simplement
 #   UP     pyupgrade             écritures dépréciées, à moderniser
-select = ["E", "F", "W", "B", "C4", "PERF", "PIE", "RET", "RUF", "SIM", "UP"]
+#
+# Familles ajoutées après comparaison avec 10 dépôts Python majeurs. `I` est la
+# plus adoptée de toutes celles qui manquaient : 8 dépôts sur 10 l'activent,
+# autant que `F`.
+#
+#   A      flake8-builtins       nom qui masque une fonction interne de Python
+#   ASYNC  flake8-async          appel bloquant dans du code asynchrone
+#   DTZ    flake8-datetimez      date ou heure construite sans fuseau horaire
+#   EXE    flake8-executable     ligne shebang et bit d'exécution incohérents
+#   FLY    flynt                 concaténation remplaçable par une f-string
+#   FURB   refurb                écritures verbeuses ayant une forme directe
+#   G      flake8-logging-format appel de log mal formé
+#   I      isort                 ordre et groupement des imports
+#   INT    flake8-gettext        pièges de traduction gettext
+#   ISC    flake8-implicit-str-concat  chaînes collées par accident
+#   LOG    flake8-logging        usage incorrect du module logging
+#   N      pep8-naming           conventions de nommage PEP 8
+#   PGH    pygrep-hooks          `# noqa` et `# type: ignore` sans code précis
+#   PLW    Pylint, avertissements  pièges réels : variable de boucle réassignée
+#   PTH    flake8-use-pathlib    appel `os.path` remplaçable par `pathlib`
+#   PYI    flake8-pyi            fichiers de stubs
+#   SLOT   flake8-slots          `__slots__` manquant sur une sous-classe
+#   T20    flake8-print          `print` oublié dans du code d'application
+#   YTT    flake8-2020           comparaison fragile sur `sys.version`
+#
+# Neuf d'entre elles ne signalent rien aujourd'hui. Elles sont activées pour
+# empêcher l'apparition, pas pour corriger l'existant.
+select = [
+    "A", "ASYNC", "B", "C4", "DTZ", "E", "EXE", "F", "FLY", "FURB", "G", "I",
+    "INT", "ISC", "LOG", "N", "PERF", "PGH", "PIE", "PLW", "PTH", "PYI", "RET",
+    "RUF", "SIM", "SLOT", "T20", "UP", "W", "YTT",
+]
 
 # Règles désactivées pour tout le projet.
 #
@@ -188,8 +219,19 @@ max-line-length = 120
 # Python ne les trouve pas. Remonter ces imports en tête casserait les scripts.
 #
 # 56 signalements, tous dus à ce seul motif.
-"scripts/*.py" = ["E402"]
+# T20 interdit `print`. Dans `scripts/`, la sortie console est l'interface :
+# ces scripts sont lancés à la main ou par cron, et leur `print` est le
+# résultat attendu. La règle reste active sur `dashboard/`, où un `print`
+# oublié n'irait nulle part.
+"scripts/*.py" = ["E402", "T20"]
 "dashboard/dashboard_common.py" = ["E402"]
+
+# DTZ011 interdit `date.today()`, qui suit le fuseau du serveur. La règle vaut
+# pour le code applicatif : sur le Space Hugging Face le serveur est en UTC, et
+# la date bascule deux heures après Paris. Dans les tests, « aujourd'hui » est
+# la date locale de la machine qui les exécute, et c'est bien ce qu'on veut
+# comparer.
+"tests/*.py" = ["DTZ011"]
 
 # E501 signale les lignes trop longues. Ces trois fichiers embarquent du CSS et
 # du SVG dans des chaînes triple-quotées, avec des règles allant jusqu'à

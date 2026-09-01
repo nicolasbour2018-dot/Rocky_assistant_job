@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-from html import escape
 import re
 import shutil
 import subprocess
 import tempfile
-from pathlib import Path
 from collections.abc import Iterable
+from html import escape
+from pathlib import Path
 
 from pypdf import PdfReader
 
@@ -21,7 +21,6 @@ from .models import ProfileAnalysis
 from .profile_skills import infer_profile_skills_from_cv
 from .repository import RockyRepository
 from .text_utils import project_relative
-
 
 ROCKY_MARKER = "[paragraphe Rocky]"
 PROTECTED_MARKER = "__ROCKY_PARAGRAPH__"

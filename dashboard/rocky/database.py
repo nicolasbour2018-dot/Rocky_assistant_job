@@ -9,7 +9,6 @@ from sqlalchemy import Engine, create_engine, inspect, make_url
 from .config import Settings
 from .errors import ConfigurationError
 
-
 REQUIRED_SCHEMA: dict[str, frozenset[str]] = {
     "users": frozenset({"id", "email", "password_hash", "status"}),
     "user_sessions": frozenset({"id", "user_id", "token_hash", "expires_at"}),

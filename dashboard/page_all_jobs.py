@@ -17,7 +17,6 @@ from dashboard.dashboard_common import load_repository, options, selected_row_id
 from dashboard.rocky.repository import RockyRepository
 from dashboard.rocky.statuses import JOB_STATUS_OPTIONS
 
-
 BATCH_SIZE = 50
 SYNTHETIC_MATCH_COLUMNS = (
     "match_score",

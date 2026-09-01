@@ -9,13 +9,13 @@ interprétés.
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 import json
-import os
 import re
 import time
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from email.utils import parseaddr
 from html import unescape
 from pathlib import Path
@@ -29,8 +29,6 @@ from .matching import calculate_match
 from .models import CandidateProfile, EmailDecision
 from .repository import RockyRepository
 from .text_utils import normalize_text
-import contextlib
-
 
 GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 # Les deux seuils gardent les décisions Gmail prudentes : l'absence de lien
@@ -512,7 +510,7 @@ class GmailService:
             ),
             encoding="utf-8",
         )
-        os.chmod(pending_path, 0o600)
+        pending_path.chmod(0o600)
         return authorization_url
 
     def complete_browser_authorization(
@@ -662,7 +660,7 @@ class GmailService:
         # L'écriture n'arrive qu'après le contrôle de l'identité.
         self.token_path.parent.mkdir(parents=True, exist_ok=True)
         self.token_path.write_text(credentials.to_json(), encoding="utf-8")
-        os.chmod(self.token_path, 0o600)
+        self.token_path.chmod(0o600)
         return client
 
     def _import_links(self, links: list[str]) -> int:

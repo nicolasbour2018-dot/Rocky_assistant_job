@@ -124,9 +124,7 @@ class FranceTravailSource:
         publication_date = None
         if published:
             try:
-                publication_date = datetime.fromisoformat(
-                    str(published).replace("Z", "+00:00")
-                ).date()
+                publication_date = datetime.fromisoformat(str(published)).date()
             except ValueError:
                 publication_date = None
         source_url = str(

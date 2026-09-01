@@ -26,7 +26,6 @@ from dashboard.job_detail_components import (
 from dashboard.rocky.enrichment import reenrich_saved_job
 from dashboard.rocky.statuses import JOB_STATUS_OPTIONS
 
-
 if st.button("← Retour au cockpit"):
     st.switch_page("dashboard_b.py")
 

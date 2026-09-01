@@ -31,7 +31,6 @@ from dashboard.rocky.projects import (
 )
 from dashboard.rocky.text_utils import ensure_list
 
-
 SKILL_CATEGORIES = ["technical", "business", "soft"]
 SKILL_LEVELS = ["", "débutant", "intermédiaire", "avancé", "expert"]
 RECALCULATE_LABEL = "Recalculer tous les scores"

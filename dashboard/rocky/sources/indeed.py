@@ -14,7 +14,6 @@ from ..text_utils import normalize_text
 from ..theirstack import TheirStackClient
 from .common import deduplicate_offers
 
-
 INDEED_DOMAIN = "indeed.com"
 
 

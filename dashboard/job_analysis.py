@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from typing import Any
+
 #################################################################################################
 # Module de détection des compétences dans les annonces d'emploi.
 # Intègre des dictionnaires de compétences déterminées.

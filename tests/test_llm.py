@@ -1,12 +1,12 @@
 import json
-import pytest
 from types import SimpleNamespace
+
+import pytest
 
 from dashboard.rocky.config import Settings
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.llm import RockyLLM
-from dashboard.rocky.models import CandidateProfile
-from dashboard.rocky.models import JobOffer, ProfileProject
+from dashboard.rocky.models import CandidateProfile, JobOffer, ProfileProject
 
 
 def test_current_mistral_sdk_client_can_be_created_without_calling_api():
@@ -22,11 +22,11 @@ def test_mistral_errors_never_expose_credentials(monkeypatch):
             raise RuntimeError("request failed with api_key=SUPER_SECRET")
 
     class FailingClient:
-        class chat:
+        class chat:  # noqa: N801 - imite l'attribut `client.chat` du SDK Mistral
             complete = FailingCompletions.complete
 
     rocky = RockyLLM(Settings(mistral_api_key="SUPER_SECRET"))
-    monkeypatch.setattr(rocky, "_client", lambda: FailingClient())
+    monkeypatch.setattr(rocky, "_client", FailingClient)
 
     with pytest.raises(RockyError) as captured:
         rocky.complete_text("système", "utilisateur")

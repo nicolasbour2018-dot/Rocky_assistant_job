@@ -10,13 +10,13 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
-from streamlit.testing.v1 import AppTest
 from sqlalchemy import text
+from streamlit.testing.v1 import AppTest
+
 from dashboard import dashboard_common
 
 

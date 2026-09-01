@@ -98,11 +98,15 @@ def render_letter(settings: Settings, variables: LetterVariables) -> str:
         return render_letter_from_body(
             variables,
             (
-                f"I am applying for the {variables.job_title.strip()} position "
-                f"at {variables.company_name.strip()}.",
+                (
+                    f"I am applying for the {variables.job_title.strip()} "
+                    f"position at {variables.company_name.strip()}."
+                ),
                 variables.company_paragraph.strip(),
-                "My attached resume presents the experience, skills and projects "
-                "supporting this application.",
+                (
+                    "My attached resume presents the experience, skills and "
+                    "projects supporting this application."
+                ),
                 "I would welcome the opportunity to discuss the role and my application.",
             ),
         )

@@ -14,7 +14,6 @@ from dashboard.rocky.models import JobOffer, ProfileProject
 from dashboard.rocky.projects import load_profile_projects
 from dashboard.rocky.repository import RockyRepository
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 
 

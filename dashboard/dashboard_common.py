@@ -11,11 +11,12 @@ from __future__ import annotations
 import json
 import sys
 from dataclasses import replace
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from html import unescape
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
@@ -41,15 +42,14 @@ from dashboard.rocky.database import (
 from dashboard.rocky.enrichment import reenrich_saved_job
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.llm import RockyLLM
-from dashboard.rocky.matching import calculate_match
 from dashboard.rocky.mascot import mascot_data_uri
+from dashboard.rocky.matching import calculate_match
 from dashboard.rocky.models import CandidateProfile, MatchResult
 from dashboard.rocky.repository import RockyRepository
 from dashboard.rocky.sources import build_watch_sources
 from dashboard.rocky.statuses import INCOMPLETE_STATUS, JOB_STATUS_OPTIONS
 from dashboard.rocky.text_utils import ensure_list, normalize_text
 from dashboard.rocky.watch import WatchService
-
 
 HIDDEN_JOB_STATUSES = {"ÉCARTÉE"}
 
@@ -586,7 +586,10 @@ def metric_counts(jobs: pd.DataFrame, recent_days: int = 1) -> dict[str, int]:
     # « 1 jour » désigne aujourd'hui uniquement, donc N jours couvrent N dates
     # calendaires et non aujourd'hui plus N jours révolus.
     boundary = pd.Timestamp(
-        (date.today() - timedelta(days=max(1, int(recent_days)) - 1)).isoformat()
+        (
+            datetime.now(ZoneInfo("Europe/Paris")).date()
+            - timedelta(days=max(1, int(recent_days)) - 1)
+        ).isoformat()
     )
     return {
         "total": len(jobs),

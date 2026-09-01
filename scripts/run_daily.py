@@ -9,6 +9,7 @@ import logging
 import sys
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
@@ -159,12 +160,10 @@ def main() -> int:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            logging.info("Une exécution quotidienne est déjà en cours.")
+            logger.info("Une exécution quotidienne est déjà en cours.")
             return 0
         summary = run(arguments.dry_run)
-        logging.info(
-            "Résumé : %s", json.dumps(summary, ensure_ascii=False, default=str)
-        )
+        logger.info("Résumé : %s", json.dumps(summary, ensure_ascii=False, default=str))
     statuses = {
         str(dict(value).get("status"))
         for value in dict(summary.get("accounts") or {}).values()

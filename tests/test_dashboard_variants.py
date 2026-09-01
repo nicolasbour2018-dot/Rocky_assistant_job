@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from streamlit.testing.v1 import AppTest
 from sqlalchemy import text
+from streamlit.testing.v1 import AppTest
 
 from dashboard import dashboard_common
 from dashboard.rocky.config import Settings
@@ -12,7 +12,6 @@ from dashboard.rocky.database import (
 )
 from dashboard.rocky.models import ApplicationPackage, JobOffer, MatchResult
 from dashboard.rocky.repository import RockyRepository
-
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 
@@ -55,8 +54,9 @@ def test_enrichment_queue_contains_only_incomplete_status():
 
 
 def test_recent_metric_uses_the_selected_duration():
-    import pandas as pd
     from datetime import date, timedelta
+
+    import pandas as pd
 
     jobs = pd.DataFrame(
         [
