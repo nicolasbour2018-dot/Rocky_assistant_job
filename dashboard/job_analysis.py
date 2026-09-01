@@ -396,13 +396,6 @@ SKILL_ALIASES = {
     "Autonomie": ["autonomie", "autonome"],
     "Rigueur": ["rigueur", "rigoureux", "rigoureuse"],
     "Curiosité": ["curiosité", "curiosite", "curieux", "curieuse"],
-    "Esprit analytique": [
-        "esprit analytique",
-        "capacité d'analyse",
-        "capacite d analyse",
-        "capacités d'analyse",
-        "capacites d analyse",
-    ],
     "Résolution de problèmes": [
         "résolution de problèmes",
         "resolution de problemes",

@@ -11,7 +11,7 @@ from sqlalchemy import text
 from dashboard.rocky.auth import AuthService
 from dashboard.rocky.config import Settings
 from dashboard.rocky.database import create_db_engine, initialize_database
-from dashboard.rocky.errors import ConfigurationError, DocumentError
+from dashboard.rocky.errors import ConfigurationError, DocumentError, RockyError
 from dashboard.rocky.language import detect_language, effective_language
 from dashboard.rocky.models import JobOffer
 from dashboard.rocky.profile_documents import ROCKY_MARKER, validate_letter_template
@@ -69,12 +69,12 @@ def test_full_account_lifecycle_uses_one_time_tokens(tmp_path):
     reset_token = _token_from_last_mail(mailer, "reset")
     service.reset_password(reset_token, "une nouvelle phrase très sûre")
     assert service.user_from_session(raw_session) is None
-    with pytest.raises(Exception):
+    with pytest.raises(RockyError):
         service.reset_password(reset_token, "encore une phrase très sûre")
     for _ in range(5):
-        with pytest.raises(Exception):
+        with pytest.raises(RockyError):
             service.authenticate("user@example.test", "mot de passe incorrect")
-    with pytest.raises(Exception, match="Adresse ou mot de passe incorrect"):
+    with pytest.raises(RockyError, match="Adresse ou mot de passe incorrect"):
         service.authenticate("user@example.test", "une nouvelle phrase très sûre")
     with engine.connect() as connection:
         assert (
