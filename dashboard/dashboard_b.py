@@ -9,6 +9,7 @@ actions métier restent déléguées aux services Rocky dédiés.
 # Importation des librairies standardes
 from __future__ import annotations
 
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -74,7 +75,7 @@ def _exploitable_jobs(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def _jobs_from_watch_run(
-    frame: pd.DataFrame, watch_run: dict[str, object] | None
+    frame: pd.DataFrame, watch_run: dict[str, Any] | None
 ) -> pd.DataFrame:
     """Isole les annonces découvertes lors de la dernière veille terminée."""
     if not watch_run:

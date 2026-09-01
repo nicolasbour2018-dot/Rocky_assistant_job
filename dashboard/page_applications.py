@@ -8,6 +8,7 @@ envoyer de candidature ni modifier la boîte Gmail distante.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 from urllib.parse import quote, urlsplit
 
 import pandas as pd
@@ -54,7 +55,7 @@ EMAIL_PROCESSING_LABELS = {
 CAROUSEL_CARDS_PER_VIEW = 3
 
 
-def _display_date(value: object) -> str:
+def _display_date(value: Any) -> str:
     """Affiche une date courte et stable, sans erreur sur les valeurs vides."""
     parsed = pd.to_datetime(value, errors="coerce")
     return parsed.strftime("%d/%m/%Y") if pd.notna(parsed) else "—"

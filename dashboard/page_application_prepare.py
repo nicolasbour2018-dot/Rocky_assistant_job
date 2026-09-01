@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import replace
 from html import escape
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
 import streamlit as st
@@ -173,7 +174,7 @@ def _preparation_progress(
 
 
 def _package_from_saved_application(
-    application: dict[str, object] | None, project_dir: Path
+    application: dict[str, Any] | None, project_dir: Path
 ) -> ApplicationPackage | None:
     """Rouvre un dossier PDF versionné après un redémarrage Streamlit."""
     if not application:
