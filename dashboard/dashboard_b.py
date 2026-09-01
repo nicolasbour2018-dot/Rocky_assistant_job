@@ -247,6 +247,7 @@ try:
 except Exception:
     pending_email_count = 0
 enrichment_count = len(jobs_to_enrich(jobs))
+next_action_page: str | None
 if pending_email_count:
     next_action_title = f"📬 {pending_email_count} réponse(s) à vérifier"
     next_action_hint = "Valide les retours Gmail pour garder tes candidatures à jour."

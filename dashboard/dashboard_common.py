@@ -489,15 +489,15 @@ def run_watch(
         summary["match_threshold"] = int(selected_threshold)
         st.session_state[f"watch_summary_{key}"] = summary
         st.rerun()
-    summary = st.session_state.get(f"watch_summary_{key}")
-    if summary:
+    last_summary = st.session_state.get(f"watch_summary_{key}")
+    if last_summary:
         st.caption(
-            f"Dernière veille : {summary['inserted_count']} ajout(s), "
-            f"{summary['duplicate_count']} déjà connue(s), "
-            f"{summary.get('incomplete_description_count', 0)} incomplète(s), "
-            f"{summary.get('ancient_count', 0)} ancienne(s), "
-            f"{summary.get('discarded_count', 0)} écartée(s) automatiquement · "
-            f"seuil {summary.get('match_threshold', selected_threshold)} %."
+            f"Dernière veille : {last_summary['inserted_count']} ajout(s), "
+            f"{last_summary['duplicate_count']} déjà connue(s), "
+            f"{last_summary.get('incomplete_description_count', 0)} incomplète(s), "
+            f"{last_summary.get('ancient_count', 0)} ancienne(s), "
+            f"{last_summary.get('discarded_count', 0)} écartée(s) automatiquement · "
+            f"seuil {last_summary.get('match_threshold', selected_threshold)} %."
         )
 
 

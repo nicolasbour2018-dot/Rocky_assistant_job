@@ -373,12 +373,12 @@ def render_matching_detail(
             if not hydration.is_complete:
                 st.error(hydration.warning or "Description complète indisponible.")
                 return
-            result = calculate_match(
+            recalculated = calculate_match(
                 hydration.offer, profile, repository.fetch_skills(profile.id)
             )
             repository.update_job(job_id, hydration.offer)
-            repository.save_match(job_id, profile.id, result)
-        st.success(f"Score recalculé : {result.score:.1f} %.")
+            repository.save_match(job_id, profile.id, recalculated)
+        st.success(f"Score recalculé : {recalculated.score:.1f} %.")
         st.rerun()
 
     summary = matching_category_summary(row)
@@ -456,10 +456,10 @@ def render_matching_detail(
                     None,
                     False,
                 )
-                result = calculate_match(
+                rescored = calculate_match(
                     offer, profile, repository.fetch_skills(profile.id)
                 )
-                repository.save_match(job_id, profile.id, result)
+                repository.save_match(job_id, profile.id, rescored)
                 st.session_state[added_skill_key] = skill
                 st.rerun()
 

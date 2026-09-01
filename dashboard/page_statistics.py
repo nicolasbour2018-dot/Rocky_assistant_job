@@ -201,7 +201,11 @@ with charts[0]:
     )
 with charts[1]:
     st.subheader("Distribution du matching")
-    scores = pd.to_numeric(jobs.get("match_score"), errors="coerce").dropna()
+    scores = (
+        pd.to_numeric(jobs["match_score"], errors="coerce").dropna()
+        if "match_score" in jobs
+        else pd.Series(dtype="float64")
+    )
     if scores.empty:
         st.info("Aucun score disponible.")
     else:

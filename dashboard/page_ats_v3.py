@@ -518,21 +518,24 @@ cv_data, file_name, description, job_title, selected_job_id = _source_controls(
 )
 
 actions = st.columns([2, 1])
-if actions[0].button(
-    "Lancer le banc de test V3",
-    type="primary",
-    width="stretch",
-    disabled=not cv_data or len(description.strip()) < 80,
+if (
+    actions[0].button(
+        "Lancer le banc de test V3",
+        type="primary",
+        width="stretch",
+        disabled=not cv_data or len(description.strip()) < 80,
+    )
+    and cv_data is not None
 ):
     try:
         with st.spinner("Exécution indépendante de chaque parseur…"):
-            report = analyze_ats_v3(
+            fresh_report = analyze_ats_v3(
                 cv_data,
                 file_name,
                 description,
                 job_title=job_title,
             )
-        st.session_state[REPORT_KEY] = report
+        st.session_state[REPORT_KEY] = fresh_report
         st.session_state[CV_BYTES_KEY] = cv_data
         st.session_state[CV_NAME_KEY] = file_name
         st.session_state[JOB_ID_KEY] = selected_job_id

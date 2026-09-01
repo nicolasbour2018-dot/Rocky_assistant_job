@@ -68,14 +68,16 @@ heading[1].metric(
 
 language = st.columns([2, 1])
 current_language = offer.language_override or "auto"
+language_options = ["auto", "fr", "en"]
+detected_label = (offer.detected_language or "fr").upper()
 language_choice = language[0].selectbox(
     "Langue de l'annonce et du profil",
-    ["auto", "fr", "en"],
-    index=["auto", "fr", "en"].index(
+    language_options,
+    index=language_options.index(
         current_language if current_language in {"fr", "en"} else "auto"
     ),
     format_func=lambda value: {
-        "auto": f"Automatique · {(offer.detected_language or 'fr').upper()}",
+        "auto": f"Automatique · {detected_label}",
         "fr": "Français",
         "en": "English",
     }[value],

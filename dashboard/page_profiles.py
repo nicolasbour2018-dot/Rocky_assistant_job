@@ -175,11 +175,14 @@ def _upload_card(
         ),
     )
     actions = st.columns(2)
-    if actions[0].button(
-        "Enregistrer le CV" if locale == "fr" else "Save CV",
-        key=f"save_cv_{profile_id}_{locale}",
-        disabled=cv is None,
-        use_container_width=True,
+    if (
+        actions[0].button(
+            "Enregistrer le CV" if locale == "fr" else "Save CV",
+            key=f"save_cv_{profile_id}_{locale}",
+            disabled=cv is None,
+            use_container_width=True,
+        )
+        and cv is not None
     ):
         try:
             save_uploaded_profile_document(
@@ -190,11 +193,14 @@ def _upload_card(
         else:
             st.success("CV validé et enregistré." if locale == "fr" else "CV saved.")
             st.rerun()
-    if actions[1].button(
-        "Enregistrer la lettre" if locale == "fr" else "Save cover letter",
-        key=f"save_letter_{profile_id}_{locale}",
-        disabled=letter is None,
-        use_container_width=True,
+    if (
+        actions[1].button(
+            "Enregistrer la lettre" if locale == "fr" else "Save cover letter",
+            key=f"save_letter_{profile_id}_{locale}",
+            disabled=letter is None,
+            use_container_width=True,
+        )
+        and letter is not None
     ):
         try:
             save_uploaded_profile_document(
@@ -570,10 +576,13 @@ def _skills_editor(repository, profile_id: int, locale: str = "fr") -> None:
             ),
             key=f"delete_skill_select_{profile_id}",
         )
-        if st.button(
-            "Remove" if locale == "en" else "Retirer",
-            disabled=selected is None,
-            key=f"delete_skill_{profile_id}",
+        if (
+            st.button(
+                "Remove" if locale == "en" else "Retirer",
+                disabled=selected is None,
+                key=f"delete_skill_{profile_id}",
+            )
+            and selected is not None
         ):
             repository.delete_skill(int(selected))
             st.rerun()

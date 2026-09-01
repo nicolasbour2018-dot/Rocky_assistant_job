@@ -101,7 +101,7 @@ if prompt:
             try:
                 with st.chat_message("assistant"):
                     st.session_state["rocky_expression"] = "thinking"
-                    answer = st.write_stream(
+                    streamed = st.write_stream(
                         llm.stream_chat(
                             prompt,
                             profile,
@@ -112,6 +112,13 @@ if prompt:
                             skills=repository.fetch_skills(profile.id),
                             history=messages[:-1],
                         )
+                    )
+                    # `write_stream` rend une liste dès qu'un fragment n'est pas
+                    # une chaîne ; l'historique n'accepte que du texte.
+                    answer = (
+                        streamed
+                        if isinstance(streamed, str)
+                        else "".join(str(part) for part in streamed)
                     )
             except Exception as error:
                 st.session_state["rocky_expression"] = "compassionate"

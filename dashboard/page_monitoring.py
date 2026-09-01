@@ -210,17 +210,21 @@ if profile:
         type=["json"],
         help="Le fichier reste uniquement dans ce dossier local ignoré par Git.",
     )
-    if st.button(
-        "Installer les identifiants Gmail",
-        disabled=uploaded_credentials is None,
+    if (
+        st.button(
+            "Installer les identifiants Gmail",
+            disabled=uploaded_credentials is None,
+        )
+        and uploaded_credentials is not None
     ):
         try:
-            payload = json.loads(uploaded_credentials.getvalue().decode("utf-8"))
+            content = uploaded_credentials.getvalue()
+            payload = json.loads(content.decode("utf-8"))
             if not isinstance(payload, dict) or "installed" not in payload:
                 raise ValueError(
                     "Choisis le JSON d'un client OAuth de type Desktop app."
                 )
-            settings.gmail_credentials_path.write_bytes(uploaded_credentials.getvalue())
+            settings.gmail_credentials_path.write_bytes(content)
             st.success("Identifiants Gmail enregistrés localement.")
             st.rerun()
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:

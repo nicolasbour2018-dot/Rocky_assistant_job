@@ -207,7 +207,7 @@ class ApplicationPackage:
     directory: str
     cv_pdf_path: str
     letter_pdf_path: str
-    application_id: int | None = None
+    application_id: int
     locale: Locale = "fr"
 
 

@@ -219,6 +219,7 @@ if offer is None:
 
 language_options = ["auto", "fr", "en"]
 current_language = offer.language_override or "auto"
+detected_label = (offer.detected_language or "fr").upper()
 selected_language = st.selectbox(
     "Langue du dossier",
     language_options,
@@ -226,7 +227,7 @@ selected_language = st.selectbox(
         current_language if current_language in language_options else "auto"
     ),
     format_func=lambda value: {
-        "auto": f"Automatique · {(offer.detected_language or 'fr').upper()}",
+        "auto": f"Automatique · {detected_label}",
         "fr": "Français",
         "en": "English",
     }[value],

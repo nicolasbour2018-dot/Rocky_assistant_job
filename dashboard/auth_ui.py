@@ -8,6 +8,7 @@ seul le jeton de session opaque est conservé côté navigateur.
 from __future__ import annotations
 
 import contextlib
+from typing import NoReturn
 
 import streamlit as st
 
@@ -88,7 +89,7 @@ def _password_link(service: AuthService, token: str, purpose: str) -> None:
     st.stop()
 
 
-def _access_screen(service: AuthService, controller) -> None:
+def _access_screen(service: AuthService, controller) -> NoReturn:
     """Présente connexion, inscription et récupération sans révéler les comptes."""
     st.markdown(
         """
