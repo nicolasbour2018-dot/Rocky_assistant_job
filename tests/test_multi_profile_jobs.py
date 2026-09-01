@@ -174,7 +174,8 @@ def test_existing_schema_validation_does_not_create_profile_links(tmp_path):
             source_name="Test",
             source_url="https://jobs.example/legacy-preview",
             status="INCOMPLÈTE",
-        )
+        ),
+        watch_profile,
     )
     repository.finish_watch_run(
         run_id,
