@@ -33,6 +33,41 @@ requires-python = ">=3.11"
 
 
 # -----------------------------------------------------------------------------
+# [project.optional-dependencies] : les outils qui servent à travailler sur
+# Rocky, mais dont l'application n'a pas besoin pour tourner.
+#
+# Pourquoi ils ne sont PAS dans `requirements.txt` : ce fichier-là est envoyé
+# tel quel sur le Space Hugging Face par `scripts/deploy_hf.py`. Tout ce qu'on
+# y ajoute est installé sur le serveur au démarrage. Un vérificateur de types
+# n'a rien à y faire : il ralentirait le démarrage sans servir une seule fois.
+#
+# Installation, depuis la racine du projet :
+#   .venv/bin/python -m pip install -e ".[dev]"
+#
+# Le `-e` installe Rocky lui-même en mode « lien » : le code reste à sa place et
+# n'est pas recopié. Le `[dev]` désigne la liste ci-dessous.
+# -----------------------------------------------------------------------------
+[project.optional-dependencies]
+dev = [
+    # Les deux outils d'analyse. Voir leurs réglages plus bas dans ce fichier.
+    "mypy>=1.18,<3",
+    "ruff>=0.14,<1",
+
+    # Les paquets `-stubs` et `types-*` ne contiennent aucun code exécutable.
+    # Ce sont des fiches de description : pour chaque fonction d'une
+    # bibliothèque, elles disent quels types d'arguments elle accepte et ce
+    # qu'elle renvoie. Sans elles, mypy voit `pandas` comme une boîte noire et
+    # ne vérifie aucun appel.
+    #
+    # `pandas-stubs` suit la numérotation de pandas. La borne est calquée sur
+    # celle de `requirements.txt` pour décrire la version réellement installée.
+    "pandas-stubs>=2.3,<3",
+    "types-reportlab>=4.4,<5",
+    "types-psycopg2>=2.9,<3",
+]
+
+
+# -----------------------------------------------------------------------------
 # [tool.pytest.ini_options] : réglages de pytest, l'outil qui lance les tests.
 #
 # Ces trois lignes expliquent pourquoi `python -m pytest`, sans aucun argument,
@@ -258,6 +293,101 @@ max-line-length = 120
 "dashboard/dashboard_v2.py" = ["E501"]
 "dashboard/page_application_prepare.py" = ["E501"]
 "dashboard/rocky/mascot.py" = ["E501"]
+
+
+# =============================================================================
+# [tool.mypy] : réglages de mypy, le vérificateur de types.
+#
+# Ruff lit la FORME du code. Mypy lit ce qui CIRCULE dedans.
+#
+# Python n'oblige pas à dire de quel genre est une donnée. Une fonction peut
+# recevoir un nombre là où le code attendait un texte : Python l'accepte, et
+# plante seulement au moment où le calcul devient impossible, c'est-à-dire en
+# production, devant l'utilisateur.
+#
+# Le projet écrit déjà ce genre partout, avec la syntaxe `: type` :
+#
+#     def fetch_profile(self, profile_id: int) -> CandidateProfile | None:
+#
+# Cette ligne annonce deux choses : `profile_id` est un entier, et la fonction
+# renvoie soit un profil, soit rien du tout. Mypy relit tout le projet, suit
+# chaque valeur de fonction en fonction, et signale les endroits où ces
+# promesses ne tiennent pas. C'est le cas le plus fréquent :
+#
+#     profile = repository.fetch_profile(3)   # peut être None
+#     print(profile.full_name)                # plante si c'est None
+#
+# Mypy ne lance rien et ne modifie rien. Il lit.
+#
+# Commandes utiles :
+#   .venv/bin/python -m mypy                  # tout le périmètre réglé ici
+#   .venv/bin/python -m mypy --pretty         # avec la ligne de code fautive
+#   .venv/bin/python -m mypy dashboard/rocky  # un seul dossier
+# =============================================================================
+[tool.mypy]
+
+# Version de Python selon laquelle interpréter le code.
+# Doit rester alignée sur `requires-python` en haut du fichier.
+python_version = "3.11"
+
+# Périmètre analysé quand on lance `mypy` sans argument.
+#
+# `tests` en est absent pour une raison précise, pas par choix : `scripts/` et
+# `tests/` contiennent tous deux un fichier nommé `test_ats.py`. Mypy identifie
+# les fichiers par leur nom de module et refuse d'en voir deux identiques.
+# TODO: renommer `scripts/test_ats.py`, qui n'est pas un test mais un
+# lanceur en ligne de commande, puis ajouter "tests" ici.
+files = ["dashboard", "scripts"]
+
+# Vérifier aussi l'intérieur des fonctions dont les arguments ne sont pas
+# annotés. Sans cette ligne, mypy saute entièrement leur corps : une fonction
+# sans annotation n'est pas seulement non vérifiée à ses bords, elle devient
+# invisible. Rocky en compte encore beaucoup, surtout dans `dashboard/`.
+# Coût mesuré sur le projet : 8 signalements de plus, pour la moitié du code.
+check_untyped_defs = true
+
+# Signaler les `# type: ignore` devenus inutiles.
+#
+# C'est la ligne qui empêche le fichier de pourrir. Quand une bibliothèque
+# corrige une de ses fiches de description, l'annotation qu'on avait posée pour
+# contourner son erreur n'a plus lieu d'être. Sans ce réglage elle resterait là
+# pour toujours, à masquer un vrai problème apparu depuis. Avec, mypy réclame
+# sa suppression.
+warn_unused_ignores = true
+
+# Même idée pour les conversions de type explicites devenues superflues.
+warn_redundant_casts = true
+
+
+# -----------------------------------------------------------------------------
+# [[tool.mypy.overrides]] : exceptions par bibliothèque.
+#
+# La double paire de crochets n'est pas une faute de frappe. En TOML, elle
+# ouvre une liste : on peut répéter ce bloc autant de fois qu'on a de règles
+# différentes à poser.
+# -----------------------------------------------------------------------------
+[[tool.mypy.overrides]]
+
+# Ces cinq bibliothèques ne publient aucune fiche de description, ni dans le
+# paquet lui-même, ni sous forme de paquet `types-*` séparé. Mypy les signale
+# une fois par import, soit 6 signalements qui ne désignent aucun défaut de
+# Rocky et qu'aucune correction ici ne peut faire disparaître.
+#
+# La conséquence est limitée et connue : ce qui vient de ces bibliothèques est
+# traité comme « genre inconnu », et mypy laisse passer ces valeurs sans les
+# vérifier. Le reste du projet reste contrôlé normalement.
+#
+# À revoir si l'une d'elles se met à en publier. Pour Google en particulier, un
+# paquet communautaire existe (`google-api-python-client-stubs`) ; il n'est pas
+# retenu ici faute d'avoir mesuré ce qu'il apporte.
+module = [
+    "apscheduler.*",
+    "google_auth_oauthlib.*",
+    "googleapiclient.*",
+    "pypdfium2",
+    "streamlit_cookies_controller",
+]
+ignore_missing_imports = true
 
 
 # =============================================================================
