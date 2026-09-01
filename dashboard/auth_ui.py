@@ -14,6 +14,7 @@ from dashboard.rocky.auth import AuthService
 from dashboard.rocky.config import Settings
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.models import AuthenticatedUser
+import contextlib
 
 
 COOKIE_NAME = "rocky_session"
@@ -55,10 +56,8 @@ def _clear_session(controller) -> None:
     st.session_state.pop(COOKIE_NAME, None)
     st.session_state.pop("rocky_authenticated_user_id", None)
     if controller is not None:
-        try:
+        with contextlib.suppress(Exception):
             controller.remove(COOKIE_NAME)
-        except Exception:
-            pass
 
 
 def _password_link(service: AuthService, token: str, purpose: str) -> None:

@@ -207,7 +207,7 @@ my_jobs = _jobs_above_threshold(
 )
 flow_jobs = _jobs_above_threshold(
     exploitable[
-        _status_series(exploitable).isin(("NOUVELLE", "ANCIENNE") + my_statuses)
+        _status_series(exploitable).isin(("NOUVELLE", "ANCIENNE", *my_statuses))
     ],
     cockpit_threshold,
 )

@@ -163,7 +163,7 @@ def _group_skills(
         if groups:
             # Un bloc de compétences du CV ne peut accueillir que six badges.
             # Cette borne s'applique aussi aux compétences hors taxonomie.
-            groups[0] = (label, tuple((*groups[0][1], *additions))[:6])
+            groups[0] = (label, (*groups[0][1], *additions)[:6])
         else:
             groups.append((label, additions))
     return tuple(groups[:3])

@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import zipfile
 from dataclasses import asdict, dataclass
-from itertools import combinations
+from itertools import combinations, pairwise
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
@@ -19,6 +19,7 @@ from dashboard.job_analysis import SKILL_ALIASES, analyze_job
 
 from .errors import DocumentError
 from .text_utils import normalize_text
+import contextlib
 
 
 ATS_SCREENER_SOURCE = "https://github.com/sunnypatell/ats-screener"
@@ -539,16 +540,11 @@ def _pypdf_extract(data: bytes) -> tuple[str, dict[str, Any]]:
                 x_positions.append(float(tm[4]))
 
         texts.append(page.extract_text(visitor_text=visitor) or "")
-        try:
+        with contextlib.suppress(Exception):
             images += len(page.images)
-        except Exception:
-            pass
     clusters = sorted({round(value / 40) * 40 for value in x_positions})
     has_columns = (
-        any(
-            right - left > 180
-            for left, right in zip(clusters, clusters[1:], strict=False)
-        )
+        any(right - left > 180 for left, right in pairwise(clusters))
         and len(x_positions) > 30
     )
     return "\n".join(texts).strip(), {

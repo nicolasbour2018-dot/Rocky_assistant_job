@@ -122,8 +122,19 @@ select = ["E", "F", "W", "B", "C4", "PERF", "PIE", "RET", "RUF", "SIM", "UP"]
 # docstrings, les textes d'interface et les valeurs de statut en base.
 # Ces trois règles produisaient 176 signalements, tous faux.
 #
-# Une famille entière n'est jamais désactivée : seulement ces trois règles.
-ignore = ["RUF001", "RUF002", "RUF003"]
+# Une famille entière n'est jamais désactivée : seulement ces règles.
+#
+# SIM108 réclame un opérateur ternaire à la place d'un `if`/`else`. Sur les
+# 2 sites du projet, le ternaire produit soit une ligne de 110 caractères,
+# soit un ternaire imbriqué. Les deux se lisent moins bien que le `if`/`else`.
+#
+# PERF401 réclame une compréhension de liste à la place d'une boucle. Sur les
+# 2 sites du projet, l'un casse le parallélisme d'une suite de `append`
+# successifs, l'autre masque des appels à `next()` sur un itérateur partagé.
+#
+# Ces deux règles ont donc échoué sur 4 sites sur 4. Elles restent utiles sur
+# d'autres bases de code, pas sur celle-ci.
+ignore = ["RUF001", "RUF002", "RUF003", "SIM108", "PERF401"]
 
 
 # -----------------------------------------------------------------------------

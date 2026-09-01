@@ -471,7 +471,7 @@ def test_cockpit_metrics_filter_corresponding_cards(tmp_path, monkeypatch):
         profile_id,
     )
     repository.save_match(full_id, profile_id, MatchResult(82, {}))
-    incomplete_id, _ = repository.insert_job(
+    _incomplete_id, _ = repository.insert_job(
         JobOffer(
             "BI Analyst",
             "Incomplet",

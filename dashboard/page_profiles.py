@@ -911,7 +911,9 @@ else:
         else "Cette version n'a pas encore ses deux documents PDF prêts."
     )
 
-if profile.onboarding_status != "COMPLETE":
+# Le garde et le clic sont deux decisions distinctes : fusionner
+# mettrait un appel de rendu Streamlit dans une chaine booleenne.
+if profile.onboarding_status != "COMPLETE":  # noqa: SIM102
     if st.button(
         "Validate and activate this profile"
         if locale == "en"

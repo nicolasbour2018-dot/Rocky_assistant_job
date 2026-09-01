@@ -313,10 +313,12 @@ def _near_skill_match(
     best_confidence = 0
     for evidence, confidence in RELATED_SKILLS.get(required_key, ()):
         evidence_key = normalize_text(evidence)
-        if _keyword_present(evidence, set(cv_skills), normalized_cv):
-            if confidence > best_confidence:
-                best_evidence = cv_skills.get(evidence_key, evidence)
-                best_confidence = confidence
+        if (
+            _keyword_present(evidence, set(cv_skills), normalized_cv)
+            and confidence > best_confidence
+        ):
+            best_evidence = cv_skills.get(evidence_key, evidence)
+            best_confidence = confidence
     if len(required_key) >= 3:
         for skill_key, skill_name in cv_skills.items():
             ratio = round(100 * SequenceMatcher(None, required_key, skill_key).ratio())

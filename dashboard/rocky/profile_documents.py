@@ -52,8 +52,7 @@ def file_sha256(path: Path) -> str:
 
 def _iter_cell_blocks(cell) -> Iterable:
     """Parcourt récursivement les cellules DOCX pour préserver tous les blocs de lettre."""
-    for paragraph in cell.paragraphs:
-        yield paragraph
+    yield from cell.paragraphs
     for table in cell.tables:
         for row in table.rows:
             for nested_cell in row.cells:

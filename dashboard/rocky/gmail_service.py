@@ -29,6 +29,7 @@ from .matching import calculate_match
 from .models import CandidateProfile, EmailDecision
 from .repository import RockyRepository
 from .text_utils import normalize_text
+import contextlib
 
 
 GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
@@ -265,14 +266,12 @@ def _decode_body(payload: dict[str, object]) -> str:
         mime = str(part.get("mimeType") or "")
         data = dict(part.get("body") or {}).get("data")
         if data and mime in {"text/plain", "text/html"}:
-            try:
+            with contextlib.suppress(ValueError, UnicodeError):
                 chunks.append(
                     base64.urlsafe_b64decode(str(data) + "===").decode(
                         "utf-8", errors="replace"
                     )
                 )
-            except (ValueError, UnicodeError):
-                pass
         for child in part.get("parts") or []:
             if isinstance(child, dict):
                 visit(child)

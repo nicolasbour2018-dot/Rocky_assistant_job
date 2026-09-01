@@ -342,7 +342,9 @@ def _render_application_detail(application, settings, repository) -> None:
                     f"{event.get('old_status') or '—'} → "
                     f"{event.get('new_status') or event['event_type']}{reverted}"
                 )
-                if (
+                # Le garde et le clic sont deux decisions distinctes : fusionner
+                # mettrait un appel de rendu Streamlit dans une chaine booleenne.
+                if (  # noqa: SIM102
                     index == events.index[0]
                     and event["event_type"] == "STATUS_CHANGED"
                     and pd.isna(event.get("reverted_at"))
@@ -471,7 +473,7 @@ def _render_email_detail(email, applications, repository) -> None:
             st.warning("Aucune candidature ne correspond à cette recherche.")
         selected_label = st.selectbox(
             "Associer à une candidature avant validation",
-            ["— Choisir une candidature —"] + list(filtered_application_options),
+            ["— Choisir une candidature —", *filtered_application_options],
             key=f"email_application_{email_id}",
         )
         selected_application = filtered_application_options.get(selected_label)
@@ -479,12 +481,14 @@ def _render_email_detail(email, applications, repository) -> None:
     if proposed is None and str(email.get("classification")) == "APPLICATION_UPDATE":
         manual_status = st.selectbox(
             "Décision à enregistrer (optionnel)",
-            ["— Ne pas changer le statut —"] + list(APPLICATION_STATUS_OPTIONS[2:]),
+            ["— Ne pas changer le statut —", *APPLICATION_STATUS_OPTIONS[2:]],
             key=f"email_status_{email_id}",
         )
         manual_status = None if manual_status.startswith("—") else manual_status
     effective_status = proposed or manual_status
-    if effective_status and selected_application is not None:
+    # Le garde et le clic sont deux decisions distinctes : fusionner
+    # mettrait un appel de rendu Streamlit dans une chaine booleenne.
+    if effective_status and selected_application is not None:  # noqa: SIM102
         if st.button(
             f"Valider → {effective_status}",
             key=f"approve_email_{email_id}",
@@ -529,7 +533,9 @@ def _render_history_email_detail(email, repository) -> None:
     gmail_url = _gmail_message_url(email)
     if gmail_url:
         st.link_button("Ouvrir dans Gmail", gmail_url)
-    if str(email.get("processing_state")) == "AUTO_IGNORED":
+    # Le garde et le clic sont deux decisions distinctes : fusionner
+    # mettrait un appel de rendu Streamlit dans une chaine booleenne.
+    if str(email.get("processing_state")) == "AUTO_IGNORED":  # noqa: SIM102
         if st.button(
             "Requalifier ce mail",
             key=f"reopen_auto_ignored_email_{email_id}",
@@ -799,7 +805,7 @@ elif active_section == "emails":
         )
         selected_class = email_filters[0].selectbox(
             "Type",
-            ["Tous"] + pending_classes,
+            ["Tous", *pending_classes],
             format_func=lambda value: (
                 "Tous les types" if value == "Tous" else EMAIL_LABELS.get(value, value)
             ),
@@ -810,7 +816,7 @@ elif active_section == "emails":
         )
         selected_account = email_filters[1].selectbox(
             "Boîte",
-            ["Toutes"] + pending_accounts,
+            ["Toutes", *pending_accounts],
             key="pending_email_account_filter",
         )
         email_query = email_filters[2].text_input(
@@ -866,7 +872,7 @@ elif active_section == "emails":
             )
             history_class = history_filters[0].selectbox(
                 "Type",
-                ["Tous"] + history_classes,
+                ["Tous", *history_classes],
                 format_func=lambda value: (
                     "Tous les types"
                     if value == "Tous"
@@ -879,7 +885,7 @@ elif active_section == "emails":
             )
             history_account = history_filters[1].selectbox(
                 "Boîte",
-                ["Toutes"] + history_accounts,
+                ["Toutes", *history_accounts],
                 key="gmail_history_account_filter",
             )
             history_states = sorted(
@@ -887,7 +893,7 @@ elif active_section == "emails":
             )
             history_state = history_filters[2].selectbox(
                 "Traitement",
-                ["Tous"] + history_states,
+                ["Tous", *history_states],
                 format_func=lambda value: (
                     "Tous les traitements"
                     if value == "Tous"
