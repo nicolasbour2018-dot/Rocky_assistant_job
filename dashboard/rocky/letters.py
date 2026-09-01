@@ -328,7 +328,7 @@ def create_docx(path: Path, variables: LetterVariables, letter_text: str) -> Non
         f"Candidature - {values['job_title']} - {values['company_name']}"
     )
     document.core_properties.author = values["sender_name"]
-    document.save(path)
+    document.save(str(path))
 
 
 def create_pdf(path: Path, variables: LetterVariables, letter_text: str) -> None:

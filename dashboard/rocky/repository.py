@@ -7,6 +7,7 @@ Toutes les requêtes SQL sont regroupées ici. Les modules métier peuvent ainsi
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import asdict
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -15,6 +16,7 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 from sqlalchemy import Engine, text
+from sqlalchemy.sql.elements import TextClause
 
 from .application_statuses import (
     APPLICATION_TO_JOB_STATUS,
@@ -61,6 +63,20 @@ class RockyRepository:
     def for_user(self, user_id: int) -> RockyRepository:
         """Crée une façade dont toutes les racines métier sont bornées au compte."""
         return RockyRepository(self.engine, user_id)
+
+    def _read_sql(
+        self, statement: TextClause, *, params: Mapping[str, str | int | None]
+    ) -> pd.DataFrame:
+        """Lit une requête tabulaire en autorisant des paramètres NULL.
+
+        `pandas-stubs` décrit `params` comme un `Mapping[str, Scalar]`, et son
+        `Scalar` exclut `None`. Rocky lie volontairement NULL : toute requête
+        bornée à un compte s'écrit `WHERE :user_id IS NULL OR user_id =
+        :user_id`, et un moteur sans compte y passe `None`. pandas et
+        SQLAlchemy acceptent ce liage ; seule la fiche de description l'interdit.
+        Cette méthode est le seul endroit du projet qui contourne ce point.
+        """
+        return pd.read_sql(statement, self.engine, params=params)  # type: ignore[arg-type]
 
     def fetch_active_user_ids(self) -> list[int]:
         """Retourne les comptes actifs pour une routine planifiée locale."""
@@ -175,9 +191,8 @@ class RockyRepository:
             ))
             ORDER BY j.publication_date DESC NULLS LAST, j.created_at DESC
         """
-        return pd.read_sql(
+        return self._read_sql(
             text(query),
-            self.engine,
             params={"profile_id": profile_id, "user_id": self.user_id},
         )
 
@@ -291,7 +306,7 @@ class RockyRepository:
 
     def fetch_profiles(self) -> pd.DataFrame:
         """Liste les profils accessibles afin de permettre leur sélection dans l'interface."""
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 """
                 SELECT * FROM candidate_profiles
@@ -299,7 +314,6 @@ class RockyRepository:
                 ORDER BY is_active DESC, id
                 """
             ),
-            self.engine,
             params={"user_id": self.user_id},
         )
 
@@ -1134,7 +1148,7 @@ class RockyRepository:
         score actif ne doit pas être utilisé à la place de ses recalculs.
         """
         self._require_profile(profile_id)
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 """
                 SELECT * FROM job_match_history
@@ -1142,7 +1156,6 @@ class RockyRepository:
                 ORDER BY analyzed_at ASC, id ASC
                 """
             ),
-            self.engine,
             params={"job_id": job_id, "profile_id": profile_id},
         )
 
@@ -1554,7 +1567,7 @@ class RockyRepository:
         toutefois un ancien dossier, ou une annonce écartée depuis sa fiche,
         de réapparaître dans le carrousel « Mes candidatures ».
         """
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 """
                 SELECT a.*, j.job_title, j.company_name, j.application_url,
@@ -1570,7 +1583,6 @@ class RockyRepository:
                 ORDER BY a.prepared_at DESC
                 """
             ),
-            self.engine,
             params={"profile_id": profile_id, "user_id": self.user_id},
         )
 
@@ -1739,7 +1751,7 @@ class RockyRepository:
     def fetch_application_events(self, application_id: int) -> pd.DataFrame:
         """Retourne la chronologie complète, y compris les événements annulés."""
         self._require_application(application_id)
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 """
                 SELECT * FROM application_events
@@ -1747,7 +1759,6 @@ class RockyRepository:
                 ORDER BY created_at DESC, id DESC
                 """
             ),
-            self.engine,
             params={"application_id": application_id},
         )
 
@@ -1957,7 +1968,7 @@ class RockyRepository:
     def fetch_application_documents(self, application_id: int) -> pd.DataFrame:
         """Liste les versions de documents d'un dossier pour son historique téléchargeable."""
         self._require_application(application_id)
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 """
                 SELECT * FROM application_documents
@@ -1965,7 +1976,6 @@ class RockyRepository:
                 ORDER BY created_at DESC, id DESC
                 """
             ),
-            self.engine,
             params={"application_id": application_id},
         )
 
@@ -2044,7 +2054,7 @@ class RockyRepository:
         account_clause = (
             "" if gmail_account is None else "AND e.gmail_account = :gmail_account"
         )
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 f"""
                 SELECT e.*, a.status AS application_status,
@@ -2058,7 +2068,6 @@ class RockyRepository:
                 ORDER BY e.received_at DESC NULLS LAST, e.id DESC
                 """
             ),
-            self.engine,
             params={"gmail_account": gmail_account, "user_id": self.user_id},
         )
 
@@ -2069,7 +2078,7 @@ class RockyRepository:
         state_clause = (
             "" if processing_state is None else "AND e.processing_state = :state"
         )
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 f"""
                 SELECT e.*, a.status AS application_status,
@@ -2082,7 +2091,6 @@ class RockyRepository:
                 LIMIT :limit
                 """
             ),
-            self.engine,
             params={
                 "state": processing_state,
                 "user_id": self.user_id,
@@ -2418,7 +2426,7 @@ class RockyRepository:
 
     def fetch_browser_sessions(self, application_id: int) -> pd.DataFrame:
         """Restitue les ouvertures ou préremplissages tracés, sans prétendre à un envoi."""
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 """
                 SELECT * FROM application_browser_sessions
@@ -2432,7 +2440,6 @@ class RockyRepository:
                 ORDER BY started_at DESC, id DESC
                 """
             ),
-            self.engine,
             params={"application_id": application_id, "user_id": self.user_id},
         )
 
@@ -2489,7 +2496,7 @@ class RockyRepository:
         self, profile_id: int | None = None, limit: int = 40
     ) -> pd.DataFrame:
         """Retourne les pense-bêtes récents pour le carrousel Monitoring."""
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 """
                 SELECT id, profile_id, content, created_at, updated_at
@@ -2500,7 +2507,6 @@ class RockyRepository:
                 LIMIT :limit
                 """
             ),
-            self.engine,
             params={
                 "profile_id": profile_id,
                 "user_id": self.user_id,
@@ -2593,7 +2599,7 @@ class RockyRepository:
 
     def fetch_watch_runs(self, limit: int = 20) -> pd.DataFrame:
         """Retourne l'historique récent utilisé par le monitoring V2."""
-        return pd.read_sql(
+        return self._read_sql(
             text(
                 """
                 SELECT wr.*, cp.profile_name
@@ -2604,7 +2610,6 @@ class RockyRepository:
                 LIMIT :limit
                 """
             ),
-            self.engine,
             params={"limit": max(1, int(limit)), "user_id": self.user_id},
         )
 

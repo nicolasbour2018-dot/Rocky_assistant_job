@@ -38,7 +38,7 @@ def _create_letter(path: Path, title: str, introduction: str, conclusion: str) -
     document.add_paragraph(introduction)
     document.add_paragraph(ROCKY_MARKER)
     document.add_paragraph(conclusion)
-    document.save(path)
+    document.save(str(path))
 
 
 def main() -> int:

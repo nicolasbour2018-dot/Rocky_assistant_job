@@ -138,7 +138,7 @@ def _existing_letter_text(
 
             text = "\n".join(
                 paragraph.text.strip()
-                for paragraph in Document(docx_path).paragraphs
+                for paragraph in Document(str(docx_path)).paragraphs
                 if paragraph.text.strip()
             )
         except (ImportError, OSError, ValueError):

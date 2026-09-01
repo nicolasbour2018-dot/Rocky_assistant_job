@@ -341,11 +341,12 @@ def fill_letter_template(source: Path, target: Path, rocky_paragraph: str) -> No
 def render_english_cv(source: Path, target: Path, llm: RockyLLM) -> None:
     """Recompose un CV anglais lisible dans le gabarit sobre Rocky."""
     try:
+        from reportlab.lib.colors import HexColor
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import cm
+        from reportlab.platypus import Flowable, SimpleDocTemplate, Spacer
         from reportlab.platypus import Paragraph as PdfParagraph
-        from reportlab.platypus import SimpleDocTemplate, Spacer
     except ImportError as error:
         raise DocumentError("Installe reportlab pour générer le CV anglais.") from error
     raw_text, _, _ = extract_pdf_text(source)
@@ -370,7 +371,7 @@ def render_english_cv(source: Path, target: Path, llm: RockyLLM) -> None:
         "RockyCvHeading",
         parent=styles["Heading2"],
         fontName="Helvetica-Bold",
-        textColor="#087f96",
+        textColor=HexColor("#087f96"),
         fontSize=11,
         leading=13,
         spaceBefore=7,
@@ -385,7 +386,7 @@ def render_english_cv(source: Path, target: Path, llm: RockyLLM) -> None:
         bottomMargin=1.1 * cm,
         title="Rocky English CV",
     )
-    story = []
+    story: list[Flowable] = []
     for index, line in enumerate(translated):
         is_heading = index == 0 or (len(line) < 55 and line.upper() == line)
         story.append(PdfParagraph(escape(line), heading if is_heading else body))

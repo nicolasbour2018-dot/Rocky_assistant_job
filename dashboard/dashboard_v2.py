@@ -10,6 +10,10 @@ from __future__ import annotations
 
 import streamlit as st
 
+# `st.Page` est la fabrique ; le type de ce qu'elle rend n'est pas réexporté
+# sur `st`, il faut donc aller le chercher dans son module.
+from streamlit.navigation.page import StreamlitPage
+
 # importation des modules internes
 from dashboard.auth_ui import render_account_sidebar, require_authenticated_user
 from dashboard.dashboard_common import (
@@ -22,7 +26,7 @@ from dashboard.rocky.gmail_service import GmailService
 from dashboard.rocky.scheduler import ensure_local_scheduler
 
 
-def _complete_gmail_oauth_callback(monitoring_page: st.Page) -> None:
+def _complete_gmail_oauth_callback(monitoring_page: StreamlitPage) -> None:
     """Finalise le retour Google reçu par Streamlit sur le port du Mac.
 
     Le callback arrive à la racine car les clients OAuth Desktop autorisent le

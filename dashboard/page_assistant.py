@@ -12,7 +12,7 @@ from dataclasses import asdict
 import pandas as pd
 import streamlit as st
 
-from dashboard.dashboard_common import load_data
+from dashboard.dashboard_common import load_data, records
 from dashboard.rocky.assistant_agent import plan_rocky_action
 from dashboard.rocky.llm import RockyLLM
 from dashboard.rocky.mascot import mascot_data_uri
@@ -105,10 +105,10 @@ if prompt:
                         llm.stream_chat(
                             prompt,
                             profile,
-                            jobs=jobs.to_dict("records"),
-                            applications=repository.fetch_applications(
-                                profile.id
-                            ).to_dict("records"),
+                            jobs=records(jobs),
+                            applications=records(
+                                repository.fetch_applications(profile.id)
+                            ),
                             skills=repository.fetch_skills(profile.id),
                             history=messages[:-1],
                         )

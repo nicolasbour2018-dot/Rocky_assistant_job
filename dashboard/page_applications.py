@@ -984,7 +984,7 @@ elif active_section == "emails":
                 on_select="rerun",
                 selection_mode="single-row",
             )
-            selected_history_rows = list(history_selection.selection.rows)
+            selected_history_rows = list(history_selection["selection"]["rows"])
             if selected_history_rows:
                 st.session_state["selected_history_email_id"] = int(
                     filtered_history.iloc[selected_history_rows[0]]["id"]

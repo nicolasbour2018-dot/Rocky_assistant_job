@@ -213,7 +213,7 @@ if not filtered.empty:
     selected_positions = (
         list(range(len(selection_frame)))
         if select_all
-        else list(selection.selection.rows)
+        else list(selection["selection"]["rows"])
     )
     selected_ids = selected_row_ids(selection_frame, selected_positions)
     bulk = st.columns([1.5, 1, 2])

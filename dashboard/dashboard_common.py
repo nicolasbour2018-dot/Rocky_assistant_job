@@ -386,6 +386,19 @@ def display_salary(row: Any) -> str:
     return "Salaire non précisé"
 
 
+def records(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    """Convertit un tableau en lignes nommées pour les services Rocky.
+
+    Une colonne pandas accepte n'importe quelle clé hachable, donc
+    `to_dict("records")` rend des clés `Hashable`. Les tableaux de Rocky
+    viennent tous d'un SELECT : leurs colonnes portent des noms.
+    """
+    return [
+        {str(column): value for column, value in row.items()}
+        for row in frame.to_dict("records")
+    ]
+
+
 def plain_description(value: Any) -> str:
     """Nettoie les descriptions HTML pour l’affichage dans Streamlit,
     en supprimant les balises et en décodant les entités HTML."""
@@ -723,8 +736,8 @@ def render_floating_chatbot() -> None:
                             profile,
                             selected_offer,
                             selected_match,
-                            jobs=jobs.to_dict("records"),
-                            applications=application_rows.to_dict("records"),
+                            jobs=records(jobs),
+                            applications=records(application_rows),
                             skills=repository.fetch_skills(profile.id),
                             history=messages[:-1],
                         )

@@ -140,7 +140,7 @@ selection = st.dataframe(
         "status": "Statut",
     },
 )
-selected_ids = selected_row_ids(selection_frame, list(selection.selection.rows))
+selected_ids = selected_row_ids(selection_frame, list(selection["selection"]["rows"]))
 actions = st.columns([2, 1, 2])
 next_status = actions[0].selectbox("Changer le statut sélectionné", JOB_STATUS_OPTIONS)
 if actions[1].button(
