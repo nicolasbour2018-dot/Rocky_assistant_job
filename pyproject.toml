@@ -53,6 +53,32 @@ dev = [
     "mypy>=1.18,<3",
     "ruff>=0.14,<1",
 
+    # bandit est l'analyseur de sécurité d'origine. Ruff en réimplémente la plus
+    # grande part sous le préfixe `S`, réglé plus bas, mais pas ses règles
+    # d'import. bandit garde donc 8 constats que ruff ne voit pas :
+    #
+    #   B404 ×6  « import subprocess ». Rocky lance LibreOffice, Playwright,
+    #            Streamlit et le planificateur. Les 6 appels correspondants
+    #            portent leur justification sur la ligne, sous le code `S603`.
+    #   B406     `letters.py` importe `from xml.sax.saxutils import escape`.
+    #            C'est l'échappeur, pas un analyseur : il protège le balisage
+    #            des `Paragraph()` de reportlab sur 11 appels.
+    #   B310     `start_local.py` ouvre `HEALTH_URL`, une constante de module
+    #            valant `http://127.0.0.1:8501/_stcore/health`. Ruff ne le
+    #            signale pas : il vérifie que le schéma est littéral.
+    #
+    # bandit ne sait pas porter une raison sur la ligne. Son `# nosec` n'accepte
+    # que la forme `# nosec B404`, seule sur la ligne ; tout texte qui suit est
+    # relu comme un nom de règle et la suppression échoue. Les 37 constats
+    # connus vivent donc dans un fichier de référence, et bandit ne signale
+    # ensuite que ce qui est nouveau :
+    #
+    #   uvx bandit -r dashboard scripts -f json -o .bandit-baseline.json -q
+    #   uvx bandit -r dashboard scripts -b .bandit-baseline.json -q
+    #
+    # La première ligne engendre le fichier, la seconde est le contrôle.
+    "bandit>=1.9,<2",
+
     # Les paquets `-stubs` et `types-*` ne contiennent aucun code exécutable.
     # Ce sont des fiches de description : pour chaque fonction d'une
     # bibliothèque, elles disent quels types d'arguments elle accepte et ce
@@ -197,15 +223,28 @@ target-version = "py311"
 #                                                 `usedforsecurity=False`
 #   S603   `subprocess` sans shell                6 sites, tous en liste d'arguments
 #   S607   binaire appelé par son nom court       2 sites, outils externes optionnels
+#   S608   SQL assemblé par f-string             19 sites, tous dans `repository.py`
 #
 # `S314` et `S324` ne signalent rien : elles gardent la place, comme les neuf
-# familles ci-dessus. Les 10 sites restants portent chacun leur raison sur la
+# familles ci-dessus. Les 29 sites restants portent chacun leur raison sur la
 # ligne, au format `# noqa: CODE - raison`.
+#
+# Les 19 sites de `S608` se ramènent à sept motifs, et aucun fragment interpolé
+# ne peut porter une donnée utilisateur. Toutes les valeurs voyagent en
+# paramètre lié de `text()` :
+#
+#   9 sites  cast JSON choisi entre deux littéraux, selon `is_sqlite`
+#   4 sites  clause `WHERE` littérale, la variable n'étant que testée en vérité
+#   2 sites  `scope`, un littéral assigné trois lignes plus haut
+#   1 site   prédicats littéraux joints, dans `find_duplicate`
+#   1 site   affectation choisie entre deux littéraux
+#   1 site   nom de colonne filtré par une liste blanche stricte
+#   1 site   marqueurs `:slug_0, :slug_1` engendrés par `range()`
 select = [
     "A", "ASYNC", "B", "C4", "DTZ", "E", "EXE", "F", "FLY", "FURB", "G", "I",
     "INT", "ISC", "LOG", "N", "PERF", "PGH", "PIE", "PLW", "PTH", "PYI", "RET",
-    "RUF", "S101", "S105", "S112", "S314", "S324", "S603", "S607", "SIM",
-    "SLOT", "T20", "TID", "UP", "W", "YTT",
+    "RUF", "S101", "S105", "S112", "S314", "S324", "S603", "S607", "S608",
+    "SIM", "SLOT", "T20", "TID", "UP", "W", "YTT",
 ]
 
 # Règles désactivées pour tout le projet.

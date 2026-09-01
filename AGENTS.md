@@ -17,6 +17,17 @@ python scripts/smoke_dashboard.py             # dashboard check against real DB,
 python scripts/check_connections.py [--only apec]   # probe external APIs, keys never printed
 ```
 
+Quality tools, declared in `[project.optional-dependencies] dev`:
+
+```bash
+python -m pip install -e ".[dev]"             # install them
+ruff check .                                  # lint, security rules included
+ruff format --check .                         # formatting
+mypy                                          # types, config in pyproject.toml
+bandit -r dashboard scripts -b .bandit-baseline.json   # only new findings
+bandit -r dashboard scripts -f json -o .bandit-baseline.json   # accept a new one
+```
+
 ## Layout and invariants
 
 - UI in `dashboard/` (`dashboard_v2.py` is the single entry point); UI-free business layer in `dashboard/rocky/`.

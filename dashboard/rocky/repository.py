@@ -615,7 +615,7 @@ class RockyRepository:
                         analysis_data = EXCLUDED.analysis_data,
                         status = EXCLUDED.status,
                         updated_at = CURRENT_TIMESTAMP
-                    """
+                    """  # noqa: S608 - fragment choisi par is_sqlite entre deux littéraux
                 ),
                 {"profile_id": profile_id, "payload": payload, "status": status},
             )
@@ -768,8 +768,8 @@ class RockyRepository:
             rows = (
                 connection.execute(
                     text(
-                        f"SELECT * FROM profile_documents WHERE profile_id = :profile_id "
-                        f"AND is_current = TRUE "
+                        f"SELECT * FROM profile_documents "  # noqa: S608 - clause littérale, la valeur reste liée
+                        f"WHERE profile_id = :profile_id AND is_current = TRUE "
                         f"{condition} ORDER BY locale, kind"
                     ),
                     {"profile_id": profile_id, "locale": locale},
@@ -977,7 +977,7 @@ class RockyRepository:
         with self.engine.connect() as connection:
             row = connection.execute(
                 text(
-                    "SELECT id FROM job_offers WHERE "
+                    "SELECT id FROM job_offers WHERE "  # noqa: S608 - prédicats littéraux joints, valeurs liées
                     "(:user_id IS NULL OR user_id = :user_id) AND ("
                     + " OR ".join(conditions)
                     + ")"
@@ -1102,7 +1102,7 @@ class RockyRepository:
                 gaps = EXCLUDED.gaps,
                 profile_locale = EXCLUDED.profile_locale,
                 analyzed_at = CURRENT_TIMESTAMP
-        """
+        """  # noqa: S608 - fragment choisi par is_sqlite entre deux littéraux
         with self.engine.begin() as connection:
             connection.execute(
                 text(
@@ -1114,7 +1114,7 @@ class RockyRepository:
                         :job_id, :profile_id, :score, {breakdown_parameter},
                         :strengths, :gaps, :profile_locale, :scoring_version
                     )
-                    """
+                    """  # noqa: S608 - fragment choisi par is_sqlite entre deux littéraux
                 ),
                 values,
             )
@@ -1263,7 +1263,7 @@ class RockyRepository:
                       AND publication_date IS NOT NULL
                       AND publication_date <= :discarded_before
                       AND {scope}
-                    """
+                    """  # noqa: S608 - {scope} est un littéral local
                 ),
                 {
                     "discarded_before": discarded_before,
@@ -1278,7 +1278,7 @@ class RockyRepository:
                     WHERE status = 'NOUVELLE'
                       AND publication_date BETWEEN :ancient_start AND :ancient_end
                       AND {scope}
-                    """
+                    """  # noqa: S608 - {scope} est un littéral local
                 ),
                 {
                     "ancient_start": ancient_start,
@@ -1310,7 +1310,7 @@ class RockyRepository:
         with self.engine.begin() as connection:
             result = connection.execute(
                 text(
-                    f"UPDATE job_offers SET {field} = :value, "
+                    f"UPDATE job_offers SET {field} = :value, "  # noqa: S608 - {field} filtré par liste blanche
                     "updated_at = CURRENT_TIMESTAMP WHERE id = :id "
                     "AND (:user_id IS NULL OR user_id = :user_id)"
                 ),
@@ -1550,7 +1550,7 @@ class RockyRepository:
                         :application_id, 'CREATED', 'DOSSIER PRÉPARÉ',
                         'USER', {details_parameter}
                     )
-                    """
+                    """  # noqa: S608 - fragment choisi par is_sqlite entre deux littéraux
                 ),
                 {
                     "application_id": application_id,
@@ -1721,7 +1721,7 @@ class RockyRepository:
                         :application_id, 'STATUS_CHANGED', :old_status,
                         :new_status, :source, :confidence, {details_parameter}
                     ) RETURNING id
-                    """
+                    """  # noqa: S608 - fragment choisi par is_sqlite entre deux littéraux
                 ),
                 {
                     "application_id": application_id,
@@ -1837,7 +1837,7 @@ class RockyRepository:
                 )
                 connection.execute(
                     text(
-                        "UPDATE profile_projects SET is_active = FALSE "
+                        "UPDATE profile_projects SET is_active = FALSE "  # noqa: S608 - marqueurs engendrés par range()
                         f"WHERE profile_id = :profile_id AND locale = :locale "
                         f"AND slug NOT IN ({placeholders})"
                     ),
@@ -1908,7 +1908,7 @@ class RockyRepository:
                     SELECT * FROM profile_projects
                     WHERE profile_id = :profile_id AND locale = :locale {condition}
                     ORDER BY sort_order, id
-                    """
+                    """  # noqa: S608 - clause littérale, la valeur reste liée
                 ),
                 {"profile_id": profile_id, "locale": locale},
             ).mappings()
@@ -2037,7 +2037,7 @@ class RockyRepository:
                     )
                     ON CONFLICT (user_id, gmail_account, gmail_message_id) DO NOTHING
                     RETURNING id
-                    """
+                    """  # noqa: S608 - fragment choisi par is_sqlite entre deux littéraux
                 ),
                 values,
             ).scalar_one_or_none()
@@ -2066,7 +2066,7 @@ class RockyRepository:
                   AND (:user_id IS NULL OR e.user_id = :user_id)
                 {account_clause}
                 ORDER BY e.received_at DESC NULLS LAST, e.id DESC
-                """
+                """  # noqa: S608 - clause littérale, la valeur reste liée
             ),
             params={"gmail_account": gmail_account, "user_id": self.user_id},
         )
@@ -2089,7 +2089,7 @@ class RockyRepository:
                 WHERE (:user_id IS NULL OR e.user_id = :user_id) {state_clause}
                 ORDER BY e.received_at DESC NULLS LAST, e.id DESC
                 LIMIT :limit
-                """
+                """  # noqa: S608 - clause littérale, la valeur reste liée
             ),
             params={
                 "state": processing_state,
@@ -2273,7 +2273,7 @@ class RockyRepository:
                         reason = :reason,
                         matched_application_id = {application_assignment}
                     WHERE id = :id
-                    """
+                    """  # noqa: S608 - affectation choisie entre deux littéraux
                 ),
                 {
                     "id": email_id,
@@ -2387,7 +2387,7 @@ class RockyRepository:
                         WHERE a.id = application_browser_sessions.application_id
                           AND (:user_id IS NULL OR p.user_id = :user_id)
                     )
-                    """
+                    """  # noqa: S608 - fragment choisi par is_sqlite entre deux littéraux
                 ),
                 {
                     "id": session_id,
@@ -2459,7 +2459,7 @@ class RockyRepository:
                 text(
                     """
                     INSERT INTO watch_runs (user_id, profile_id, searched_job_titles)
-                    VALUES (:user_id, :profile_id, """
+                    VALUES (:user_id, :profile_id, """  # noqa: S608 - fragment choisi par is_sqlite entre deux littéraux
                     + titles_parameter
                     + ") RETURNING id"
                 ),
@@ -2542,7 +2542,7 @@ class RockyRepository:
                 errors = {errors_parameter},
                 source_results = {sources_parameter}
             WHERE id = :id AND (:user_id IS NULL OR user_id = :user_id)
-        """
+        """  # noqa: S608 - fragment choisi par is_sqlite entre deux littéraux
         with self.engine.begin() as connection:
             connection.execute(
                 text(query),
