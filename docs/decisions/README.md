@@ -21,6 +21,7 @@ Format : Contexte, Décision, Conséquences. Dix lignes suffisent souvent.
 | 0011 | Frontières : pydantic-settings et httpx | Acceptée |
 | 0012 | Exploitation : CLI typer, launchd, fin du déploiement HF | Acceptée |
 | 0013 | Ordre de migration et stratégie de tests | Acceptée |
+| 0014 | Séparer la fraîcheur, la complétude, la décision et la candidature | Acceptée |
 
 ## Questions ouvertes pour Nicolas
 
@@ -28,3 +29,5 @@ Format : Contexte, Décision, Conséquences. Dix lignes suffisent souvent.
   intention produit à confirmer, ou réduction à deux (0013).
 - Le CV Canva : à reproduire à l'identique en typst, ou à redessiner (0009).
 - FileVault est-il activé sur le Mac de production (0005) ?
+- Où vivent les données actuelles, PostgreSQL ou SQLite ? Un export unique
+  vers SQLite est à prévoir si c'est PostgreSQL (0007).
