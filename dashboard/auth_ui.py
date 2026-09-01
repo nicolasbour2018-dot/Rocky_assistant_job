@@ -7,6 +7,9 @@ seul le jeton de session opaque est conservé côté navigateur.
 
 from __future__ import annotations
 
+import contextlib
+from typing import NoReturn
+
 import streamlit as st
 
 from dashboard.dashboard_common import load_repository
@@ -14,7 +17,6 @@ from dashboard.rocky.auth import AuthService
 from dashboard.rocky.config import Settings
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.models import AuthenticatedUser
-
 
 COOKIE_NAME = "rocky_session"
 
@@ -55,10 +57,8 @@ def _clear_session(controller) -> None:
     st.session_state.pop(COOKIE_NAME, None)
     st.session_state.pop("rocky_authenticated_user_id", None)
     if controller is not None:
-        try:
+        with contextlib.suppress(Exception):
             controller.remove(COOKIE_NAME)
-        except Exception:
-            pass
 
 
 def _password_link(service: AuthService, token: str, purpose: str) -> None:
@@ -89,7 +89,7 @@ def _password_link(service: AuthService, token: str, purpose: str) -> None:
     st.stop()
 
 
-def _access_screen(service: AuthService, controller) -> None:
+def _access_screen(service: AuthService, controller) -> NoReturn:
     """Présente connexion, inscription et récupération sans révéler les comptes."""
     st.markdown(
         """
@@ -107,7 +107,9 @@ def _access_screen(service: AuthService, controller) -> None:
     with login_tab:
         with st.form("rocky_login"):
             email = st.text_input("E-mail", key="login_email")
-            password = st.text_input("Mot de passe", type="password", key="login_password")
+            password = st.text_input(
+                "Mot de passe", type="password", key="login_password"
+            )
             submitted = st.form_submit_button("Se connecter", type="primary")
         if submitted:
             try:
@@ -180,6 +182,8 @@ def render_account_sidebar(user: AuthenticatedUser) -> None:
         st.caption(f"Connecté · {user.email}")
         if st.button("Se déconnecter", use_container_width=True):
             raw_session = _read_session(controller)
-            AuthService(load_repository().engine, Settings()).revoke_session(raw_session)
+            AuthService(load_repository().engine, Settings()).revoke_session(
+                raw_session
+            )
             _clear_session(controller)
             st.rerun()

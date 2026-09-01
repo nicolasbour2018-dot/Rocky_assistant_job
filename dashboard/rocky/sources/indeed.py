@@ -6,14 +6,14 @@ from datetime import date
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from ..config import Settings
-from ..errors import ConfigurationError
-from ..job_importer import description_is_probably_truncated
-from ..models import CandidateProfile, JobOffer
-from ..text_utils import normalize_text
-from ..theirstack import TheirStackClient
-from .common import deduplicate_offers
+from dashboard.rocky.config import Settings
+from dashboard.rocky.errors import ConfigurationError
+from dashboard.rocky.job_importer import description_is_probably_truncated
+from dashboard.rocky.models import CandidateProfile, JobOffer
+from dashboard.rocky.text_utils import normalize_text
+from dashboard.rocky.theirstack import TheirStackClient
 
+from .common import deduplicate_offers
 
 INDEED_DOMAIN = "indeed.com"
 
@@ -82,9 +82,7 @@ def _remote_policy(item: dict[str, Any]) -> str:
     return ""
 
 
-def _filter_values(
-    values: list[str], mapping: dict[str, tuple[str, ...]]
-) -> list[str]:
+def _filter_values(values: list[str], mapping: dict[str, tuple[str, ...]]) -> list[str]:
     """Prépare les filtres d'intitulés pour l'API sans transmettre de valeurs vides."""
     selected: list[str] = []
     for value in values:
@@ -99,6 +97,7 @@ def _filter_values(
 
 class IndeedSource:
     """Source Indeed via TheirStack, sans scraping direct ni contournement de portail."""
+
     """Source fonctionnelle Indeed, collectée techniquement par TheirStack."""
 
     name = "Indeed"
@@ -178,9 +177,7 @@ class IndeedSource:
             "job_title_or": titles,
             "job_country_code_or": ["FR"],
             "url_domain_or": [INDEED_DOMAIN],
-            "posted_at_max_age_days": (
-                self.settings.theirstack_indeed_max_age_days
-            ),
+            "posted_at_max_age_days": (self.settings.theirstack_indeed_max_age_days),
             "is_closed": False,
             "limit": max(1, int(results_per_query)),
             "offset": 0,
@@ -240,6 +237,4 @@ class IndeedSource:
             self._payload(profile, results_per_query, location_ids)
         )
         offers = [self._offer(item) for item in items]
-        return deduplicate_offers(
-            [offer for offer in offers if offer is not None]
-        )
+        return deduplicate_offers([offer for offer in offers if offer is not None])

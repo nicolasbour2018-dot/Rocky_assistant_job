@@ -1,10 +1,551 @@
+# =============================================================================
+# pyproject.toml : le fichier de configuration central du projet Rocky.
+#
+# C'est le fichier standard de l'écosystème Python. Il sert à deux choses :
+#   1. décrire le projet (nom, version, version de Python exigée) ;
+#   2. régler les outils de développement, pour que tout le monde et la machine
+#      utilisent exactement les mêmes réglages.
+#
+# Rien ici ne s'exécute au démarrage de l'application. Ce fichier est lu par les
+# outils quand on les lance à la main : pytest, ruff, pip.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# [project] : la carte d'identité du projet.
+# -----------------------------------------------------------------------------
 [project]
+
+# Nom technique du projet. Il sert d'identifiant aux outils d'empaquetage.
+# Ce n'est pas le nom affiché dans l'interface.
 name = "rocky-job-assistant"
+
+# Numéro de version. À incrémenter à la main quand on livre un lot de changements.
 version = "0.1.0"
+
+# Description courte, reprise par les outils qui listent le projet.
 description = "Assistant personnel et modulaire de recherche d'emploi"
+
+# Version minimale de Python. Rocky utilise des écritures introduites en 3.11
+# (par exemple `int | None` au lieu de `Optional[int]`).
+# Un pip lancé sur une version plus ancienne refusera d'installer le projet.
 requires-python = ">=3.11"
 
+
+# -----------------------------------------------------------------------------
+# [dependency-groups] : les outils qui servent à travailler sur Rocky, mais dont
+# l'application n'a pas besoin pour tourner.
+#
+# Pourquoi ils ne sont PAS dans `requirements.txt` : ce fichier-là est envoyé
+# tel quel sur le Space Hugging Face par `scripts/deploy_hf.py`. Tout ce qu'on
+# y ajoute est installé sur le serveur au démarrage. Un vérificateur de types
+# n'a rien à y faire : il ralentirait le démarrage sans servir une seule fois.
+#
+# `[dependency-groups]` est la table standard de la PEP 735. Elle remplace
+# `[project.optional-dependencies]`, qui décrit des « extras » : des variantes
+# installables par un utilisateur du paquet. Personne n'installe Rocky comme
+# paquet, et personne ne veut ses linters. Ce ne sont pas des extras.
+#
+# Installation, depuis la racine du projet :
+#   uv sync --group dev
+#
+# La liste est verrouillée dans `uv.lock`, versionné à côté de ce fichier. Ce
+# verrou ne couvre QUE cette liste : `requirements.txt` reste hors du projet uv,
+# donc les versions d'exécution gardent leurs bornes, comme sur le Space. Il
+# fixe ce qui décide si la CI est verte : une version de ruff ou de mypy.
+# -----------------------------------------------------------------------------
+[dependency-groups]
+dev = [
+    # Les deux outils d'analyse. Voir leurs réglages plus bas dans ce fichier.
+    "mypy>=1.18,<3",
+    "ruff>=0.14,<1",
+
+    # bandit est l'analyseur de sécurité d'origine. Ruff en réimplémente la plus
+    # grande part sous le préfixe `S`, réglé plus bas, mais pas ses règles
+    # d'import. bandit garde donc 8 constats que ruff ne voit pas :
+    #
+    #   B404 ×6  « import subprocess ». Rocky lance LibreOffice, Playwright,
+    #            Streamlit et le planificateur. Les 6 appels correspondants
+    #            portent leur justification sur la ligne, sous le code `S603`.
+    #   B406     `letters.py` importe `from xml.sax.saxutils import escape`.
+    #            C'est l'échappeur, pas un analyseur : il protège le balisage
+    #            des `Paragraph()` de reportlab sur 11 appels.
+    #   B310     `start_local.py` ouvre `HEALTH_URL`, une constante de module
+    #            valant `http://127.0.0.1:8501/_stcore/health`. Ruff ne le
+    #            signale pas : il vérifie que le schéma est littéral.
+    #
+    # bandit ne sait pas porter une raison sur la ligne. Son `# nosec` n'accepte
+    # que la forme `# nosec B404`, seule sur la ligne ; tout texte qui suit est
+    # relu comme un nom de règle et la suppression échoue. Les 37 constats
+    # connus vivent donc dans un fichier de référence, et bandit ne signale
+    # ensuite que ce qui est nouveau :
+    #
+    #   bandit -r dashboard scripts -f json -o .bandit-baseline.json -q
+    #   bandit -r dashboard scripts -b .bandit-baseline.json -q
+    #
+    # La première ligne engendre le fichier, la seconde est le contrôle.
+    "bandit>=1.9,<2",
+
+    # vulture cherche le code que plus rien n'appelle : fonction morte, variable
+    # jamais lue, import inutile qu'aucun linter ne voit parce qu'il traverse
+    # plusieurs fichiers.
+    #
+    # Il ne prouve rien : il devine, et annonce sa confiance en pourcentage.
+    # Mesure sur ce dépôt :
+    #
+    #   --min-confidence 100    0 signalement
+    #   --min-confidence  80    0 signalement
+    #   --min-confidence  60   52 signalements
+    #
+    # Le seuil retenu est 80, réglé plus bas dans `[tool.vulture]`. À 60, les
+    # 52 constats sont des méthodes de `repository.py` appelées depuis les
+    # pages Streamlit par des chemins que vulture ne suit pas. Les trier est un
+    # travail en soi, pas une porte.
+    "vulture>=2.14,<3",
+
+    # radon mesure la complexité cyclomatique : le nombre de chemins
+    # d'exécution indépendants dans une fonction. Chaque `if`, `for`, `and` ou
+    # `except` en ajoute un. La note va de A à F.
+    #
+    # xenon est sa porte : il rend un code d'erreur quand un seuil est dépassé.
+    # Les seuils vivent dans `.github/workflows/ci.yml`, radon ne lisant aucune
+    # configuration depuis ce fichier.
+    #
+    # Voir `docs/decisions/0004-portes-radon-vulture.md` : les seuils sont
+    # calés sur l'état d'aujourd'hui, pour bloquer une aggravation sans forcer
+    # un seul refactor.
+    "radon>=6,<7",
+    "xenon>=0.9,<1",
+
+    # Les paquets `-stubs` et `types-*` ne contiennent aucun code exécutable.
+    # Ce sont des fiches de description : pour chaque fonction d'une
+    # bibliothèque, elles disent quels types d'arguments elle accepte et ce
+    # qu'elle renvoie. Sans elles, mypy voit `pandas` comme une boîte noire et
+    # ne vérifie aucun appel.
+    #
+    # `pandas-stubs` suit la numérotation de pandas. La borne est calquée sur
+    # celle de `requirements.txt` pour décrire la version réellement installée.
+    "pandas-stubs>=2.3,<3",
+    "types-reportlab>=4.4,<5",
+    "types-psycopg2>=2.9,<3",
+    "types-defusedxml>=0.7,<1",
+]
+
+
+# -----------------------------------------------------------------------------
+# [tool.pytest.ini_options] : réglages de pytest, l'outil qui lance les tests.
+#
+# Ces trois lignes expliquent pourquoi `python -m pytest`, sans aucun argument,
+# suffit à lancer toute la suite depuis la racine du projet.
+# -----------------------------------------------------------------------------
 [tool.pytest.ini_options]
+
+# Où chercher les tests. Sans cette ligne, pytest fouillerait tout le dépôt et
+# ramasserait au passage des fichiers qui ne sont pas des tests.
 testpaths = ["tests"]
+
+# Ajoute la racine du projet au chemin d'import de Python.
+# C'est ce qui permet aux tests d'écrire `from dashboard.rocky...` directement,
+# sans installer Rocky comme une bibliothèque au préalable.
 pythonpath = ["."]
+
+# Options passées automatiquement à chaque lancement.
+# `-q` signifie "quiet" : une ligne de résumé au lieu du détail de chaque test.
 addopts = "-q"
+
+
+# -----------------------------------------------------------------------------
+# [tool.vulture] : le seuil de confiance du chercheur de code mort.
+# -----------------------------------------------------------------------------
+[tool.vulture]
+
+# vulture devine, il ne prouve pas. Chaque constat porte un pourcentage de
+# confiance : 100 % pour un import inutile, que Python lui-même peut vérifier,
+# et 60 % pour une méthode qu'il ne voit appelée nulle part — ce qui, dans une
+# application Streamlit, arrive dès qu'un appel traverse un `st.button`.
+#
+# Le seuil est haut parce qu'en dessous les constats deviennent une liste à
+# trier, pas une porte. Les 52 constats à 60 % sont réels mais demandent une
+# lecture par site.
+min_confidence = 80
+
+# Le même périmètre que mypy : le code de l'application, pas les tests.
+paths = ["dashboard", "scripts"]
+
+
+# =============================================================================
+# [tool.ruff] : réglages de ruff.
+#
+# Ruff est l'outil de qualité de code du projet. Il fait deux métiers distincts,
+# et la différence compte pour comprendre la suite :
+#
+#   - `ruff check`  = le LINTER. Il lit le code et signale les problèmes :
+#                     import inutilisé, variable jamais lue, motif connu pour
+#                     provoquer des bugs. Il ne réécrit rien de lui-même,
+#                     sauf si on lui passe `--fix`.
+#
+#   - `ruff format` = le FORMATEUR. Il réécrit la mise en page du code :
+#                     indentation, retours à la ligne, guillemets. Il ne change
+#                     jamais ce que le code fait, seulement son apparence.
+#
+# Ces réglages ne bloquent rien aujourd'hui. Ruff ne tourne que si on le lance.
+# Commandes utiles :
+#   uvx ruff check dashboard scripts tests       # lister les problèmes
+#   uvx ruff check --statistics dashboard        # les compter par type
+#   uvx ruff format dashboard scripts tests      # réécrire la mise en page
+# =============================================================================
+[tool.ruff]
+
+# Longueur de ligne visée, en caractères.
+#
+# 88 est le défaut de ruff et de Black, l'ancien formateur de référence.
+# Ce n'est pas un choix arbitraire : sur 17 dépôts Python majeurs vérifiés,
+# pandas, scikit-learn, Django, Poetry et Streamlit utilisent tous 88.
+# Streamlit étant la brique centrale de Rocky, on s'aligne dessus.
+line-length = 88
+
+# Version de Python ciblée par les règles de modernisation.
+# Grâce à cette ligne, ruff sait qu'il peut proposer les écritures modernes
+# de la 3.11, et qu'il ne doit pas proposer celles de la 3.12 ou plus.
+target-version = "py311"
+
+
+# -----------------------------------------------------------------------------
+# [tool.ruff.lint] : quelles familles de règles sont actives.
+# -----------------------------------------------------------------------------
+[tool.ruff.lint]
+
+# Ruff regroupe ses règles en familles, désignées par un préfixe de code.
+# Chaque famille vient d'un outil historique que ruff a réimplémenté.
+#
+#   E, W   pycodestyle           respect de PEP 8, la norme de style Python
+#   F      Pyflakes              vrais défauts : nom non défini, import mort
+#   B      flake8-bugbear        motifs qui provoquent des bugs en production
+#   C4     flake8-comprehensions constructions de listes inutilement coûteuses
+#   PERF   Perflint              boucles remplaçables par une écriture rapide
+#   PIE    flake8-pie            code superflu, à supprimer sans rien changer
+#   RET    flake8-return         `return` inutiles ou mal placés
+#   RUF    règles propres à ruff signalements que les autres outils n'ont pas
+#   SIM    flake8-simplify       code juste, mais exprimable plus simplement
+#   UP     pyupgrade             écritures dépréciées, à moderniser
+#
+# Familles ajoutées après comparaison avec 10 dépôts Python majeurs. `I` est la
+# plus adoptée de toutes celles qui manquaient : 8 dépôts sur 10 l'activent,
+# autant que `F`.
+#
+#   A      flake8-builtins       nom qui masque une fonction interne de Python
+#   ASYNC  flake8-async          appel bloquant dans du code asynchrone
+#   DTZ    flake8-datetimez      date ou heure construite sans fuseau horaire
+#   EXE    flake8-executable     ligne shebang et bit d'exécution incohérents
+#   FLY    flynt                 concaténation remplaçable par une f-string
+#   FURB   refurb                écritures verbeuses ayant une forme directe
+#   G      flake8-logging-format appel de log mal formé
+#   I      isort                 ordre et groupement des imports
+#   INT    flake8-gettext        pièges de traduction gettext
+#   ISC    flake8-implicit-str-concat  chaînes collées par accident
+#   LOG    flake8-logging        usage incorrect du module logging
+#   N      pep8-naming           conventions de nommage PEP 8
+#   PGH    pygrep-hooks          `# noqa` et `# type: ignore` sans code précis
+#   PLW    Pylint, avertissements  pièges réels : variable de boucle réassignée
+#   PTH    flake8-use-pathlib    appel `os.path` remplaçable par `pathlib`
+#   PYI    flake8-pyi            fichiers de stubs
+#   SLOT   flake8-slots          `__slots__` manquant sur une sous-classe
+#   T20    flake8-print          `print` oublié dans du code d'application
+#   TID    flake8-tidy-imports   import qui remonte d'un dossier, voir plus bas
+#   YTT    flake8-2020           comparaison fragile sur `sys.version`
+#
+# Neuf d'entre elles ne signalent rien aujourd'hui. Elles sont activées pour
+# empêcher l'apparition, pas pour corriger l'existant.
+#
+# `S` (flake8-bandit) signale les motifs de sécurité connus. C'est la seule
+# famille dont les règles sont choisies une par une. Deux mesures l'imposent.
+#
+# La première : `S101` signale `assert`. Il y en a 531 dans `tests/` et aucun
+# dans `dashboard` ni `scripts`. C'est l'écriture normale de pytest, traitée
+# plus bas par une exception ciblée.
+#
+# La seconde : bandit rend 43 signalements sur `dashboard scripts`, ruff en
+# retrouve 34. Les 9 écarts sont les règles d'import de bandit (`import
+# subprocess`, `import xml.etree`), que ruff ne publie qu'en mode `--preview`.
+# Activer `preview` pour elles allumerait 57 signalements dans les familles
+# déjà choisies. Ces 9 constats restent donc suivis par bandit seul, dont le
+# fichier de référence vit à la racine du projet.
+#
+#   S101   `assert` hors tests                    0 site
+#   S105   chaîne qui ressemble à un identifiant  1 site, une URL OAuth publique
+#   S112   `try`/`except`/`continue` muet         1 site, justifié sur place
+#   S314   XML analysé sans protection            0 site, `ats_v3.py` passe par
+#                                                 `defusedxml`
+#   S324   empreinte cryptographique faible       0 site, les deux appels portent
+#                                                 `usedforsecurity=False`
+#   S603   `subprocess` sans shell                6 sites, tous en liste d'arguments
+#   S607   binaire appelé par son nom court       2 sites, outils externes optionnels
+#   S608   SQL assemblé par f-string             19 sites, tous dans `repository.py`
+#
+# `S314` et `S324` ne signalent rien : elles gardent la place, comme les neuf
+# familles ci-dessus. Les 29 sites restants portent chacun leur raison sur la
+# ligne, au format `# noqa: CODE - raison`.
+#
+# Les 19 sites de `S608` se ramènent à sept motifs, et aucun fragment interpolé
+# ne peut porter une donnée utilisateur. Toutes les valeurs voyagent en
+# paramètre lié de `text()` :
+#
+#   9 sites  cast JSON choisi entre deux littéraux, selon `is_sqlite`
+#   4 sites  clause `WHERE` littérale, la variable n'étant que testée en vérité
+#   2 sites  `scope`, un littéral assigné trois lignes plus haut
+#   1 site   prédicats littéraux joints, dans `find_duplicate`
+#   1 site   affectation choisie entre deux littéraux
+#   1 site   nom de colonne filtré par une liste blanche stricte
+#   1 site   marqueurs `:slug_0, :slug_1` engendrés par `range()`
+select = [
+    "A", "ASYNC", "B", "C4", "DTZ", "E", "EXE", "F", "FLY", "FURB", "G", "I",
+    "INT", "ISC", "LOG", "N", "PERF", "PGH", "PIE", "PLW", "PTH", "PYI", "RET",
+    "RUF", "S101", "S105", "S112", "S314", "S324", "S603", "S607", "S608",
+    "SIM", "SLOT", "T20", "TID", "UP", "W", "YTT",
+]
+
+# Règles désactivées pour tout le projet.
+#
+# RUF001, RUF002 et RUF003 signalent les caractères Unicode "ambigus" :
+# l'apostrophe typographique ’ ressemble à l'apostrophe droite ', les guillemets
+# « » ressemblent à d'autres signes. Sur un projet anglophone, c'est utile :
+# ces caractères s'y glissent par erreur, copiés depuis un traitement de texte.
+#
+# Ici, ils sont voulus. La convention de Rocky impose le français pour les
+# docstrings, les textes d'interface et les valeurs de statut en base.
+# Ces trois règles produisaient 176 signalements, tous faux.
+#
+# Une famille entière n'est jamais désactivée : seulement ces règles.
+#
+# SIM108 réclame un opérateur ternaire à la place d'un `if`/`else`. Sur les
+# 2 sites du projet, le ternaire produit soit une ligne de 110 caractères,
+# soit un ternaire imbriqué. Les deux se lisent moins bien que le `if`/`else`.
+#
+# PERF401 réclame une compréhension de liste à la place d'une boucle. Sur les
+# 2 sites du projet, l'un casse le parallélisme d'une suite de `append`
+# successifs, l'autre masque des appels à `next()` sur un itérateur partagé.
+#
+# Ces deux règles ont donc échoué sur 4 sites sur 4. Elles restent utiles sur
+# d'autres bases de code, pas sur celle-ci.
+ignore = ["RUF001", "RUF002", "RUF003", "SIM108", "PERF401"]
+
+
+# -----------------------------------------------------------------------------
+# [tool.ruff.lint.flake8-tidy-imports] : la convention d'imports.
+# -----------------------------------------------------------------------------
+
+# Un point veut dire « à côté », tout le reste s'écrit en entier :
+#
+#   from dashboard.rocky.errors import SourceError   # remonte : chemin complet
+#   from .common import iso_date                     # voisin : chemin relatif
+#
+# Un import qui sort du dossier courant se voit donc sans compter les points.
+# `parents` est le réglage par défaut de ruff : il interdit `..` et au-delà,
+# et laisse `.` tranquille.
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+
+# -----------------------------------------------------------------------------
+# [tool.ruff.lint.pycodestyle] : le seuil d'alerte sur les lignes trop longues.
+# -----------------------------------------------------------------------------
+[tool.ruff.lint.pycodestyle]
+
+# Deux longueurs cohabitent volontairement, et c'est le réglage le moins évident
+# du fichier :
+#
+#   - `line-length = 88` plus haut est la CIBLE DU FORMATEUR. Quand `ruff format`
+#     réécrit un fichier, il essaie de tenir dans 88 caractères.
+#
+#   - `max-line-length = 120` ici est le SEUIL D'ALERTE DU LINTER. La règle E501
+#     ("ligne trop longue") ne se déclenche qu'au-delà de 120.
+#
+# Pourquoi les séparer ? Parce qu'un formateur ne sait pas tout couper.
+# Il découpe le code, mais jamais le contenu d'un texte ni d'un commentaire.
+# Mesure faite sur le projet : même après formatage, 247 lignes dépassent encore
+# 88 caractères, et 78 % d'entre elles sont des chaînes de texte, pas du code.
+# Ce sont les listes de synonymes de `job_analysis.py`, les messages affichés à
+# l'écran et les prompts envoyés au modèle de langage.
+#
+# Les signaler serait du bruit permanent que personne ne traiterait.
+# Avec ce réglage, le formateur range le code, et le linter n'ouvre la bouche
+# que sur ce que le formateur ne sait pas traiter.
+max-line-length = 120
+
+
+# -----------------------------------------------------------------------------
+# [tool.ruff.lint.per-file-ignores] : exceptions ciblées, fichier par fichier.
+#
+# Préférer toujours une exception ciblée à une désactivation globale : ailleurs
+# dans le projet, la règle continue de protéger.
+# -----------------------------------------------------------------------------
+[tool.ruff.lint.per-file-ignores]
+
+# E402 signale un import placé après du code, au lieu d'être en tête de fichier.
+# La règle est bonne : un import qui traîne au milieu d'un fichier est en général
+# un oubli, et il rend l'ordre d'exécution difficile à suivre.
+#
+# Ces fichiers font exception pour une raison technique. Ils commencent par
+# ajouter la racine du projet au chemin d'import de Python :
+#
+#     PROJECT_DIR = Path(__file__).resolve().parents[1]
+#     if str(PROJECT_DIR) not in sys.path:
+#         sys.path.insert(0, str(PROJECT_DIR))
+#
+# Sans ces trois lignes, `from dashboard.rocky...` échoue quand on lance le
+# script directement. Les imports internes doivent donc venir après, sinon
+# Python ne les trouve pas. Remonter ces imports en tête casserait les scripts.
+#
+# 56 signalements, tous dus à ce seul motif.
+# T20 interdit `print`. Dans `scripts/`, la sortie console est l'interface :
+# ces scripts sont lancés à la main ou par cron, et leur `print` est le
+# résultat attendu. La règle reste active sur `dashboard/`, où un `print`
+# oublié n'irait nulle part.
+"scripts/*.py" = ["E402", "T20"]
+"dashboard/dashboard_common.py" = ["E402"]
+
+# Même raison pour ce fichier : c'est un hook d'outillage lancé par Codex, et
+# ses deux `print` écrivent sur la sortie d'erreur pour signaler à l'opérateur
+# qu'un binaire manque sur la machine. C'est tout ce que fait le fichier.
+".codex/hooks/*.py" = ["T20"]
+
+# DTZ011 interdit `date.today()`, qui suit le fuseau du serveur. La règle vaut
+# pour le code applicatif : sur le Space Hugging Face le serveur est en UTC, et
+# la date bascule deux heures après Paris. Dans les tests, « aujourd'hui » est
+# la date locale de la machine qui les exécute, et c'est bien ce qu'on veut
+# comparer.
+#
+# S101 interdit `assert`. C'est la façon dont pytest écrit ses vérifications :
+# 531 des 532 signalements `S` du dossier `tests/` sont des `assert`.
+#
+# S105 signale une chaîne qui ressemble à un identifiant. Le seul site est
+# `tests/test_enrichment.py:191`, où `secret = "TOP_SECRET_THEIRSTACK"` est le
+# leurre du test qui vérifie qu'aucun identifiant ne fuit dans un message
+# d'erreur. Écrire ce leurre est l'objet même du test.
+"tests/*.py" = ["DTZ011", "S101", "S105"]
+
+# E501 signale les lignes trop longues. Ces trois fichiers embarquent du CSS et
+# du SVG dans des chaînes triple-quotées, avec des règles allant jusqu'à
+# 334 caractères. Un `# noqa` est impossible sur ces lignes : il s'écrirait
+# à l'intérieur de la feuille de style, et le navigateur le recevrait.
+# Découper ces règles à la main les rendrait illisibles sans rien gagner.
+"dashboard/dashboard_v2.py" = ["E501"]
+"dashboard/page_application_prepare.py" = ["E501"]
+"dashboard/rocky/mascot.py" = ["E501"]
+
+
+# =============================================================================
+# [tool.mypy] : réglages de mypy, le vérificateur de types.
+#
+# Ruff lit la FORME du code. Mypy lit ce qui CIRCULE dedans.
+#
+# Python n'oblige pas à dire de quel genre est une donnée. Une fonction peut
+# recevoir un nombre là où le code attendait un texte : Python l'accepte, et
+# plante seulement au moment où le calcul devient impossible, c'est-à-dire en
+# production, devant l'utilisateur.
+#
+# Le projet écrit déjà ce genre partout, avec la syntaxe `: type` :
+#
+#     def fetch_profile(self, profile_id: int) -> CandidateProfile | None:
+#
+# Cette ligne annonce deux choses : `profile_id` est un entier, et la fonction
+# renvoie soit un profil, soit rien du tout. Mypy relit tout le projet, suit
+# chaque valeur de fonction en fonction, et signale les endroits où ces
+# promesses ne tiennent pas. C'est le cas le plus fréquent :
+#
+#     profile = repository.fetch_profile(3)   # peut être None
+#     print(profile.full_name)                # plante si c'est None
+#
+# Mypy ne lance rien et ne modifie rien. Il lit.
+#
+# Commandes utiles :
+#   .venv/bin/python -m mypy                  # tout le périmètre réglé ici
+#   .venv/bin/python -m mypy --pretty         # avec la ligne de code fautive
+#   .venv/bin/python -m mypy dashboard/rocky  # un seul dossier
+# =============================================================================
+[tool.mypy]
+
+# Version de Python selon laquelle interpréter le code.
+# Doit rester alignée sur `requires-python` en haut du fichier.
+python_version = "3.11"
+
+# Périmètre analysé quand on lance `mypy` sans argument.
+#
+# `tests` en est absent pour une raison précise, pas par choix : `scripts/` et
+# `tests/` contiennent tous deux un fichier nommé `test_ats.py`. Mypy identifie
+# les fichiers par leur nom de module et refuse d'en voir deux identiques.
+# TODO: renommer `scripts/test_ats.py`, qui n'est pas un test mais un
+# lanceur en ligne de commande, puis ajouter "tests" ici.
+files = ["dashboard", "scripts"]
+
+# Vérifier aussi l'intérieur des fonctions dont les arguments ne sont pas
+# annotés. Sans cette ligne, mypy saute entièrement leur corps : une fonction
+# sans annotation n'est pas seulement non vérifiée à ses bords, elle devient
+# invisible. Rocky en compte encore beaucoup, surtout dans `dashboard/`.
+# Coût mesuré sur le projet : 8 signalements de plus, pour la moitié du code.
+check_untyped_defs = true
+
+# Signaler les `# type: ignore` devenus inutiles.
+#
+# C'est la ligne qui empêche le fichier de pourrir. Quand une bibliothèque
+# corrige une de ses fiches de description, l'annotation qu'on avait posée pour
+# contourner son erreur n'a plus lieu d'être. Sans ce réglage elle resterait là
+# pour toujours, à masquer un vrai problème apparu depuis. Avec, mypy réclame
+# sa suppression.
+warn_unused_ignores = true
+
+# Même idée pour les conversions de type explicites devenues superflues.
+warn_redundant_casts = true
+
+
+# -----------------------------------------------------------------------------
+# [[tool.mypy.overrides]] : exceptions par bibliothèque.
+#
+# La double paire de crochets n'est pas une faute de frappe. En TOML, elle
+# ouvre une liste : on peut répéter ce bloc autant de fois qu'on a de règles
+# différentes à poser.
+# -----------------------------------------------------------------------------
+[[tool.mypy.overrides]]
+
+# Ces cinq bibliothèques ne publient aucune fiche de description, ni dans le
+# paquet lui-même, ni sous forme de paquet `types-*` séparé. Mypy les signale
+# une fois par import, soit 6 signalements qui ne désignent aucun défaut de
+# Rocky et qu'aucune correction ici ne peut faire disparaître.
+#
+# La conséquence est limitée et connue : ce qui vient de ces bibliothèques est
+# traité comme « genre inconnu », et mypy laisse passer ces valeurs sans les
+# vérifier. Le reste du projet reste contrôlé normalement.
+#
+# À revoir si l'une d'elles se met à en publier. Pour Google en particulier, un
+# paquet communautaire existe (`google-api-python-client-stubs`) ; il n'est pas
+# retenu ici faute d'avoir mesuré ce qu'il apporte.
+module = [
+    "apscheduler.*",
+    "google_auth_oauthlib.*",
+    "googleapiclient.*",
+    "pypdfium2",
+    "streamlit_cookies_controller",
+]
+ignore_missing_imports = true
+
+
+# =============================================================================
+# TODO : refactor à ouvrir une fois toute la CI verte, ruff et les autres outils.
+#
+# Les réglages ci-dessus rendent le code existant conforme. Ils ne corrigent pas
+# ce qui l'a rendu non conforme.
+#
+# Le signe le plus visible est juste au-dessus : trois fichiers ont besoin d'une
+# exception sur E501 parce qu'ils embarquent du CSS, du HTML et du SVG dans des
+# chaînes Python. Aucun outil ne relit ce contenu, ni pour la syntaxe, ni pour la
+# mise en forme, ni pour les tests. Un vrai système de templating le sortirait du
+# code Python et le rendrait vérifiable, ce qui supprimerait ces trois exceptions
+# au lieu de les gérer.
+#
+# Le même raisonnement s'applique ailleurs : plusieurs traitements sont écrits à
+# la main là où une bibliothèque établie ferait le travail, mieux testée et déjà
+# couverte par des outils d'analyse.
+#
+# Ordre voulu : d'abord la CI verte, qui donne le filet ; ensuite le refactor,
+# qui s'appuie dessus. Refactoriser sans le filet ne se relit pas.
+# =============================================================================

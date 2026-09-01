@@ -153,7 +153,9 @@ def test_watch_accepts_ephemeral_query_without_persisting_profile():
         id=1, profile_name="Data", target_job_titles=["Profil historique"]
     )
     source = CapturingSource()
-    override = CandidateProfile(id=1, profile_name="Data", target_job_titles=["Data Product"])
+    override = CandidateProfile(
+        id=1, profile_name="Data", target_job_titles=["Data Product"]
+    )
     WatchService(Settings(), repository, [source]).run(profile_override=override)
     assert source.queries == ["Data Product"]
     assert repository.searched_job_titles == ["Data Product"]

@@ -11,17 +11,18 @@ from __future__ import annotations
 import json
 import sys
 from dataclasses import replace
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from html import unescape
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
 
-#Ajoute la racine du projet au sys.path afin de rendre les modules internes de Rocky importables depuis ce script.
+# Ajoute la racine du projet au sys.path afin de rendre les modules internes de Rocky importables depuis ce script.
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
@@ -41,8 +42,8 @@ from dashboard.rocky.database import (
 from dashboard.rocky.enrichment import reenrich_saved_job
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.llm import RockyLLM
-from dashboard.rocky.matching import calculate_match
 from dashboard.rocky.mascot import mascot_data_uri
+from dashboard.rocky.matching import calculate_match
 from dashboard.rocky.models import CandidateProfile, MatchResult
 from dashboard.rocky.repository import RockyRepository
 from dashboard.rocky.sources import build_watch_sources
@@ -50,21 +51,23 @@ from dashboard.rocky.statuses import INCOMPLETE_STATUS, JOB_STATUS_OPTIONS
 from dashboard.rocky.text_utils import ensure_list, normalize_text
 from dashboard.rocky.watch import WatchService
 
-
 HIDDEN_JOB_STATUSES = {"ÉCARTÉE"}
-
 
 
 ###################################################################################################################################################
 # Bloc de récupération et de filtrage des annonces pour le cockpit Rocky
 ###################################################################################################################################################
 
+
 def selected_row_ids(
     frame: pd.DataFrame,
     positions: list[int] | tuple[int, ...],
     id_column: str = "id",
 ) -> list[int]:
-    """Convertit une sélection Streamlit en ignorant les positions périmées. Évite l'erreur d'index lorsque le DataFrame est filtré ou trié."""
+    """Convertit une sélection Streamlit en ignorant les positions périmées.
+
+    Évite l'erreur d'index lorsque le DataFrame est filtré ou trié.
+    """
     if frame.empty or id_column not in frame:
         return []
     selected: list[int] = []
@@ -76,7 +79,7 @@ def selected_row_ids(
 
 
 def _optional_number(value: Any) -> float | None:
-    """ Fonction utilitaire pour convertir une valeur en nombre décimal ou retourner None si la conversion échoue. """
+    """Fonction utilitaire pour convertir une valeur en nombre décimal ou retourner None si la conversion échoue."""
     try:
         if value in (None, "") or pd.isna(value):
             return None
@@ -114,7 +117,7 @@ def match_from_row(row: Any) -> MatchResult | None:
 def _coverage(
     detected: list[str], matched_keys: set[str], category_keys: set[str]
 ) -> dict[str, Any]:
-    """ Calcule le taux de couverture des compétences détectées pour une catégorie donnée :(technical ou transversal). """
+    """Calcule le taux de couverture des compétences détectées pour une catégorie donnée :(technical ou transversal)."""
     category_skills = [
         skill for skill in detected if normalize_text(skill) in category_keys
     ]
@@ -122,9 +125,7 @@ def _coverage(
         skill for skill in category_skills if normalize_text(skill) in matched_keys
     ]
     score = (
-        round(100 * len(matched) / len(category_skills), 1)
-        if category_skills
-        else None
+        round(100 * len(matched) / len(category_skills), 1) if category_skills else None
     )
     return {
         "score": score,
@@ -140,8 +141,8 @@ def matching_category_summary(row: Any) -> dict[str, Any] | None:
     Les rapprochements « proches » sont uniquement des aides à la vérification
     humaine. Ils ne transforment jamais une compétence en correspondance.
 
-    Construit un dictionnaire de vue détaillée du matching par compétences techniques et transversales, 
-    et propose des rapprochements textuels pour les compétences non reconnues, uniquement 
+    Construit un dictionnaire de vue détaillée du matching par compétences techniques et transversales,
+    et propose des rapprochements textuels pour les compétences non reconnues, uniquement
     à titre d’aide à la vérification.
     """
     result = match_from_row(row)
@@ -157,7 +158,9 @@ def matching_category_summary(row: Any) -> dict[str, Any] | None:
     profile_skills = ensure_list(details.get("profile_skills"))
     matched_keys = {normalize_text(skill) for skill in matched}
     profile_by_key = {
-        normalize_text(skill): skill for skill in profile_skills if normalize_text(skill)
+        normalize_text(skill): skill
+        for skill in profile_skills
+        if normalize_text(skill)
     }
     technical_keys = {normalize_text(skill) for skill in TECHNICAL_SKILLS}
     transversal_keys = {
@@ -192,12 +195,14 @@ def matching_category_summary(row: Any) -> dict[str, Any] | None:
         "result": result,
     }
 
+
 ###################################################################################################################################################
 # Bloc d'orchestration de l'affichage des détails d'une annonce.
 ###################################################################################################################################################
 
+
 def render_matching_category_summary(row: Any) -> None:
-    """ Affiche dans le cockpit le détail des compétences techniques, transversales et à vérifier."""
+    """Affiche dans le cockpit le détail des compétences techniques, transversales et à vérifier."""
     if not bool(row.get("description_is_full")):
         st.warning("Description incomplète : le matching complet est suspendu.")
         return
@@ -250,9 +255,11 @@ def jobs_to_enrich(jobs: pd.DataFrame) -> pd.DataFrame:
         selected &= ~jobs["description_is_full"].fillna(False).astype(bool)
     return jobs[selected].copy()
 
+
 ###################################################################################################################################################
 # Bloc de chargement des données et de nettoyage pour le cockpit Rocky
 ####################################################################################################################################################
+
 
 @st.cache_resource
 def load_repository() -> RockyRepository:
@@ -272,7 +279,9 @@ def load_data() -> tuple[
     base_repository = load_repository()
     user_id = st.session_state.get("rocky_authenticated_user_id")
     repository = (
-        base_repository.for_user(int(user_id)) if user_id is not None else base_repository
+        base_repository.for_user(int(user_id))
+        if user_id is not None
+        else base_repository
     )
     profile = repository.fetch_active_profile()
     jobs = visible_jobs(
@@ -306,7 +315,7 @@ def filter_jobs(
     incomplete_only: bool = False,
     minimum_score: int = 0,
 ) -> pd.DataFrame:
-    """ Filtre pour les annonces selon les critères de recherche et retourne un DataFrame filtré."""
+    """Filtre pour les annonces selon les critères de recherche et retourne un DataFrame filtré."""
     filtered = jobs.copy()
     if query.strip():
         needle = normalize_text(query)
@@ -322,9 +331,7 @@ def filter_jobs(
         ("city", locations or []),
     ):
         if selected:
-            filtered = filtered[
-                filtered[column].fillna("").astype(str).isin(selected)
-            ]
+            filtered = filtered[filtered[column].fillna("").astype(str).isin(selected)]
     if remote_only:
         remote = filtered["remote_policy"].fillna("").astype(str)
         filtered = filtered[remote.str.strip().ne("")]
@@ -337,7 +344,7 @@ def filter_jobs(
 
 
 def display_score(value: Any) -> str:
-    """ Formatte le score de matching en pourcentage."""
+    """Formatte le score de matching en pourcentage."""
     try:
         if pd.isna(value):
             return "—"
@@ -358,7 +365,7 @@ def display_date(value: Any) -> str:
 
 
 def display_salary(row: Any) -> str:
-    """ Formatte le salaire avec la devise. """
+    """Formatte le salaire avec la devise."""
     minimum = row.get("salary_min")
     maximum = row.get("salary_max")
     currency = str(row.get("salary_currency") or "EUR")
@@ -379,17 +386,32 @@ def display_salary(row: Any) -> str:
     return "Salaire non précisé"
 
 
+def records(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    """Convertit un tableau en lignes nommées pour les services Rocky.
+
+    Une colonne pandas accepte n'importe quelle clé hachable, donc
+    `to_dict("records")` rend des clés `Hashable`. Les tableaux de Rocky
+    viennent tous d'un SELECT : leurs colonnes portent des noms.
+    """
+    return [
+        {str(column): value for column, value in row.items()}
+        for row in frame.to_dict("records")
+    ]
+
+
 def plain_description(value: Any) -> str:
-    """ Nettoie les descriptions HTML pour l’affichage dans Streamlit, 
-    en supprimant les balises et en décodant les entités HTML. """
+    """Nettoie les descriptions HTML pour l’affichage dans Streamlit,
+    en supprimant les balises et en décodant les entités HTML."""
     soup = BeautifulSoup(str(value or ""), "html.parser")
     for element in soup(["script", "style", "noscript"]):
         element.decompose()
     return unescape(soup.get_text(" ", strip=True))
 
+
 ###################################################################################################################################################
 # Bloc d'orchestration de la veille (Watchservices).
 ###################################################################################################################################################
+
 
 def run_watch(
     settings: Settings,
@@ -437,26 +459,28 @@ def run_watch(
         key=f"watch_{key}",
         use_container_width=True,
     )
-    with controls[1]:
-        with st.popover(
+    with (
+        controls[1],
+        st.popover(
             f"Seuil · {int(st.session_state[threshold_key])} %",
             use_container_width=True,
-        ):
-            selected_threshold = st.slider(
-                "Seuil minimal de matching",
-                min_value=0,
-                max_value=100,
-                step=5,
-                key=threshold_key,
-                help=(
-                    "Les annonces complètes sous ce score ne seront pas "
-                    "enregistrées pendant cette veille."
-                ),
-            )
-            st.caption(
-                "Ce réglage s’applique aux veilles lancées dans cette session. "
-                "Le seuil par défaut du .env n’est pas modifié."
-            )
+        ),
+    ):
+        selected_threshold = st.slider(
+            "Seuil minimal de matching",
+            min_value=0,
+            max_value=100,
+            step=5,
+            key=threshold_key,
+            help=(
+                "Les annonces complètes sous ce score ne seront pas "
+                "enregistrées pendant cette veille."
+            ),
+        )
+        st.caption(
+            "Ce réglage s’applique aux veilles lancées dans cette session. "
+            "Le seuil par défaut du .env n’est pas modifié."
+        )
     # Orchestration de la veille (WatchService).
     if launch:
         watch_settings = replace(
@@ -478,20 +502,22 @@ def run_watch(
         summary["match_threshold"] = int(selected_threshold)
         st.session_state[f"watch_summary_{key}"] = summary
         st.rerun()
-    summary = st.session_state.get(f"watch_summary_{key}")
-    if summary:
+    last_summary = st.session_state.get(f"watch_summary_{key}")
+    if last_summary:
         st.caption(
-            f"Dernière veille : {summary['inserted_count']} ajout(s), "
-            f"{summary['duplicate_count']} déjà connue(s), "
-            f"{summary.get('incomplete_description_count', 0)} incomplète(s), "
-            f"{summary.get('ancient_count', 0)} ancienne(s), "
-            f"{summary.get('discarded_count', 0)} écartée(s) automatiquement · "
-            f"seuil {summary.get('match_threshold', selected_threshold)} %."
+            f"Dernière veille : {last_summary['inserted_count']} ajout(s), "
+            f"{last_summary['duplicate_count']} déjà connue(s), "
+            f"{last_summary.get('incomplete_description_count', 0)} incomplète(s), "
+            f"{last_summary.get('ancient_count', 0)} ancienne(s), "
+            f"{last_summary.get('discarded_count', 0)} écartée(s) automatiquement · "
+            f"seuil {last_summary.get('match_threshold', selected_threshold)} %."
         )
+
 
 ###################################################################################################################################################
 # Bloc d'affichage des détails d'une annonce dans le cockpit Rocky.
 ###################################################################################################################################################
+
 
 def render_job_detail(
     row: Any,
@@ -500,20 +526,15 @@ def render_job_detail(
     profile: CandidateProfile | None,
     key: str,
 ) -> None:
-
     """Affiche les détails d’une annonce dans le cockpit, avec les actions disponibles pour l’utilisateur."""
     job_id = int(row["id"])
     full = bool(row.get("description_is_full"))
     status = str(row.get("status") or "NOUVELLE")
     metadata = st.columns(4)
     metadata[0].write(f"**Lieu**  \n{row.get('city') or 'Non précisé'}")
-    metadata[1].write(
-        f"**Télétravail**  \n{row.get('remote_policy') or 'Non précisé'}"
-    )
+    metadata[1].write(f"**Télétravail**  \n{row.get('remote_policy') or 'Non précisé'}")
     metadata[2].write(f"**Salaire**  \n{display_salary(row)}")
-    metadata[3].write(
-        f"**Publication**  \n{display_date(row.get('publication_date'))}"
-    )
+    metadata[3].write(f"**Publication**  \n{display_date(row.get('publication_date'))}")
     if full:
         st.success("Description complète — matching disponible")
     else:
@@ -531,9 +552,7 @@ def render_job_detail(
 
     actions = st.columns([1.4, 1, 1.4])
     status_index = (
-        list(JOB_STATUS_OPTIONS).index(status)
-        if status in JOB_STATUS_OPTIONS
-        else 0
+        list(JOB_STATUS_OPTIONS).index(status) if status in JOB_STATUS_OPTIONS else 0
     )
     next_status = actions[0].selectbox(
         "Statut",
@@ -573,7 +592,7 @@ def render_job_detail(
 
 
 def metric_counts(jobs: pd.DataFrame, recent_days: int = 1) -> dict[str, int]:
-    """ Extrait les métadonnées de temps des annonces et retourne un dictionnaire de comptage. """
+    """Extrait les métadonnées de temps des annonces et retourne un dictionnaire de comptage."""
     if jobs.empty:
         return {"total": 0, "complete": 0, "incomplete": 0, "recent": 0}
     dates = pd.to_datetime(jobs["publication_date"], errors="coerce")
@@ -581,7 +600,7 @@ def metric_counts(jobs: pd.DataFrame, recent_days: int = 1) -> dict[str, int]:
     # calendaires et non aujourd'hui plus N jours révolus.
     boundary = pd.Timestamp(
         (
-            date.today()
+            datetime.now(ZoneInfo("Europe/Paris")).date()
             - timedelta(days=max(1, int(recent_days)) - 1)
         ).isoformat()
     )
@@ -596,6 +615,7 @@ def metric_counts(jobs: pd.DataFrame, recent_days: int = 1) -> dict[str, int]:
 ###################################################################################################################################################
 # Bloc d'orchestration du popover de chat avec Rocky.
 ###################################################################################################################################################
+
 
 def render_floating_chatbot() -> None:
     """Expose le chat avec un avatar Rocky expressif et persistant."""
@@ -695,9 +715,7 @@ def render_floating_chatbot() -> None:
             selected_offer = None
             selected_match = None
             if selected_job_id:
-                selected_offer = repository.fetch_job_offer(
-                    int(selected_job_id)
-                )
+                selected_offer = repository.fetch_job_offer(int(selected_job_id))
                 if selected_offer and selected_offer.description_is_full:
                     localized_profile = (
                         repository.profile_for_offer(profile.id, selected_offer)
@@ -718,8 +736,8 @@ def render_floating_chatbot() -> None:
                             profile,
                             selected_offer,
                             selected_match,
-                            jobs=jobs.to_dict("records"),
-                            applications=application_rows.to_dict("records"),
+                            jobs=records(jobs),
+                            applications=records(application_rows),
                             skills=repository.fetch_skills(profile.id),
                             history=messages[:-1],
                         )

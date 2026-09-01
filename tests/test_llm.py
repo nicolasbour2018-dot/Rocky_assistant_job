@@ -1,12 +1,12 @@
 import json
-import pytest
 from types import SimpleNamespace
+
+import pytest
 
 from dashboard.rocky.config import Settings
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.llm import RockyLLM
-from dashboard.rocky.models import CandidateProfile
-from dashboard.rocky.models import JobOffer, ProfileProject
+from dashboard.rocky.models import CandidateProfile, JobOffer, ProfileProject
 
 
 def test_current_mistral_sdk_client_can_be_created_without_calling_api():
@@ -22,11 +22,11 @@ def test_mistral_errors_never_expose_credentials(monkeypatch):
             raise RuntimeError("request failed with api_key=SUPER_SECRET")
 
     class FailingClient:
-        class chat:
+        class chat:  # noqa: N801 - imite l'attribut `client.chat` du SDK Mistral
             complete = FailingCompletions.complete
 
     rocky = RockyLLM(Settings(mistral_api_key="SUPER_SECRET"))
-    monkeypatch.setattr(rocky, "_client", lambda: FailingClient())
+    monkeypatch.setattr(rocky, "_client", FailingClient)
 
     with pytest.raises(RockyError) as captured:
         rocky.complete_text("système", "utilisateur")
@@ -47,7 +47,14 @@ def test_chat_receives_bounded_job_and_application_context(monkeypatch):
     answer = rocky.chat(
         "Quelles offres sont les plus pertinentes ?",
         profile,
-        jobs=[{"id": 42, "job_title": "Data Analyst", "company_name": "Acme", "match_score": 88}],
+        jobs=[
+            {
+                "id": 42,
+                "job_title": "Data Analyst",
+                "company_name": "Acme",
+                "match_score": 88,
+            }
+        ],
         applications=[{"id": 9, "status": "CANDIDATURE ENVOYÉE"}],
         skills=[{"skill_name": "Python", "skill_category": "technical"}],
     )
@@ -61,8 +68,16 @@ def test_stream_chat_yields_mistral_fragments(monkeypatch):
     profile = CandidateProfile(id=1, profile_name="Nico")
     rocky = RockyLLM(Settings(mistral_api_key="test-only"))
     events = [
-        SimpleNamespace(data=SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Bonjour "))])),
-        SimpleNamespace(data=SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Nicolas"))])),
+        SimpleNamespace(
+            data=SimpleNamespace(
+                choices=[SimpleNamespace(delta=SimpleNamespace(content="Bonjour "))]
+            )
+        ),
+        SimpleNamespace(
+            data=SimpleNamespace(
+                choices=[SimpleNamespace(delta=SimpleNamespace(content="Nicolas"))]
+            )
+        ),
     ]
 
     class FakeChat:

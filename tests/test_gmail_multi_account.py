@@ -5,14 +5,13 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine
 
 from dashboard.rocky.config import Settings
 from dashboard.rocky.database import initialize_database
 from dashboard.rocky.errors import ConfigurationError
 from dashboard.rocky.gmail_service import GmailService
 from dashboard.rocky.repository import RockyRepository
-
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 FIRST_ACCOUNT = "first@example.test"
@@ -43,6 +42,7 @@ def test_each_account_has_an_independent_token(tmp_path):
         project_dir=tmp_path,
         gmail_accounts=(FIRST_ACCOUNT, SECOND_ACCOUNT),
     )
+
     class Repository:
         user_id = 7
 
@@ -84,6 +84,7 @@ def test_browser_authorization_persists_state_for_streamlit_callback(tmp_path):
         ),
         encoding="utf-8",
     )
+
     class Repository:
         user_id = 7
 
@@ -189,9 +190,9 @@ def test_manual_email_classification_keeps_only_candidate_returns_in_review(tmp_
         processing_state="AUTO_IGNORED",
         reason="Ne doit pas remplacer la décision humaine",
     )
-    returned = repository.fetch_email_messages().query(
-        "gmail_message_id == 'return'"
-    ).iloc[0]
+    returned = (
+        repository.fetch_email_messages().query("gmail_message_id == 'return'").iloc[0]
+    )
     assert returned["classification"] == "APPLICATION_UPDATE"
     assert bool(returned["classification_manual"]) is True
 
@@ -240,7 +241,9 @@ def test_incompatible_existing_schema_is_rejected(tmp_path):
     database_path = tmp_path / "incompatible.db"
     engine = create_engine(f"sqlite:///{database_path}")
     with engine.begin() as connection:
-        connection.exec_driver_sql("CREATE TABLE email_messages (id INTEGER PRIMARY KEY)")
+        connection.exec_driver_sql(
+            "CREATE TABLE email_messages (id INTEGER PRIMARY KEY)"
+        )
     settings = Settings(
         project_dir=PROJECT_DIR,
         database_url_override=f"sqlite:///{database_path}",

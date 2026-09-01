@@ -7,13 +7,14 @@ from typing import Any
 
 import requests
 
-from ..config import Settings
-from ..errors import ConfigurationError, SourceError
-from ..models import CandidateProfile, JobOffer
+from dashboard.rocky.config import Settings
+from dashboard.rocky.errors import ConfigurationError, SourceError
+from dashboard.rocky.models import CandidateProfile, JobOffer
 
 
 class AdzunaSource:
     """Adaptateur Adzuna qui convertit les résultats API en annonces Rocky auditables."""
+
     name = "Adzuna"
     base_url = "https://api.adzuna.com/v1/api/jobs"
 
@@ -31,9 +32,7 @@ class AdzunaSource:
         publication_date = None
         if created:
             try:
-                publication_date = datetime.fromisoformat(
-                    str(created).replace("Z", "+00:00")
-                ).date()
+                publication_date = datetime.fromisoformat(str(created)).date()
             except ValueError:
                 publication_date = None
         return JobOffer(
@@ -66,7 +65,7 @@ class AdzunaSource:
         location = profile.preferred_locations[0] if profile.preferred_locations else ""
         collected: list[JobOffer] = []
         for query in queries:
-            params = {
+            params: dict[str, str | int] = {
                 "app_id": self.settings.adzuna_app_id,
                 "app_key": self.settings.adzuna_app_key,
                 "results_per_page": results_per_query,

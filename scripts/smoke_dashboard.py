@@ -10,13 +10,13 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
-from streamlit.testing.v1 import AppTest
 from sqlalchemy import text
+from streamlit.testing.v1 import AppTest
+
 from dashboard import dashboard_common
 
 
@@ -47,9 +47,7 @@ def main() -> int:
             app.session_state["rocky_authenticated_user_id"] = user_ids[0]
         app.run(timeout=30)
         if app.exception or app.error:
-            print(
-                f"ERREUR {filename} : une erreur Streamlit a été détectée."
-            )
+            print(f"ERREUR {filename} : une erreur Streamlit a été détectée.")
             for exception in app.exception:
                 print(f"- {exception.message}")
             for error in app.error:
@@ -70,9 +68,7 @@ def main() -> int:
             launch.click()
             app.run(timeout=60)
             if app.exception or app.error or not app.metric:
-                print(
-                    "ERREUR page_ats_v3.py : l'analyse réelle ou son rendu a échoué."
-                )
+                print("ERREUR page_ats_v3.py : l'analyse réelle ou son rendu a échoué.")
                 for exception in app.exception:
                     print(f"- {exception.message}")
                 for error in app.error:

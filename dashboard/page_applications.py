@@ -8,6 +8,7 @@ envoyer de candidature ni modifier la boîte Gmail distante.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 from urllib.parse import quote, urlsplit
 
 import pandas as pd
@@ -22,7 +23,6 @@ from dashboard.rocky.browser_apply import (
 )
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.gmail_service import GmailService
-
 
 EMAIL_STATUS = {
     "REFUSAL": "REFUS",
@@ -55,7 +55,7 @@ EMAIL_PROCESSING_LABELS = {
 CAROUSEL_CARDS_PER_VIEW = 3
 
 
-def _display_date(value: object) -> str:
+def _display_date(value: Any) -> str:
     """Affiche une date courte et stable, sans erreur sur les valeurs vides."""
     parsed = pd.to_datetime(value, errors="coerce")
     return parsed.strftime("%d/%m/%Y") if pd.notna(parsed) else "—"
@@ -84,9 +84,7 @@ def _carousel_page(items: pd.DataFrame, *, state_key: str, label: str) -> pd.Dat
     """
     total = len(items)
     maximum_start = max(0, total - CAROUSEL_CARDS_PER_VIEW)
-    current_start = min(
-        max(0, int(st.session_state.get(state_key, 0))), maximum_start
-    )
+    current_start = min(max(0, int(st.session_state.get(state_key, 0))), maximum_start)
     controls = st.columns([1, 4, 1])
     if controls[0].button(
         "←", key=f"{state_key}_previous", disabled=current_start == 0
@@ -114,17 +112,14 @@ def _render_application_carousel(applications: pd.DataFrame) -> None:
         label="Candidatures",
     )
     columns = st.columns(CAROUSEL_CARDS_PER_VIEW, gap="small")
-    for column, (_, application) in zip(columns, page.iterrows()):
+    for column, (_, application) in zip(columns, page.iterrows(), strict=False):
         application_id = int(application["id"])
         is_selected = application_id == int(selected_application_id or -1)
         with column.container(border=True, height=240):
             st.caption(
-                f"#{application_id} · "
-                f"{_display_date(application.get('prepared_at'))}"
+                f"#{application_id} · {_display_date(application.get('prepared_at'))}"
             )
-            st.markdown(
-                f"**{_short_label(application.get('company_name'), 34)}**"
-            )
+            st.markdown(f"**{_short_label(application.get('company_name'), 34)}**")
             st.write(_short_label(application.get("job_title"), 58))
             score = application.get("match_score")
             score_label = f"{float(score):.0f} %" if pd.notna(score) else "—"
@@ -148,7 +143,7 @@ def _render_pending_email_carousel(emails: pd.DataFrame) -> None:
         label="E-mails",
     )
     columns = st.columns(CAROUSEL_CARDS_PER_VIEW, gap="small")
-    for column, (_, email) in zip(columns, page.iterrows()):
+    for column, (_, email) in zip(columns, page.iterrows(), strict=False):
         email_id = int(email["id"])
         is_selected = email_id == int(selected_email_id or -1)
         with column.container(border=True, height=240):
@@ -213,9 +208,7 @@ def _render_application_detail(application, settings, repository) -> None:
     """Rend un seul dossier actif dans trois sous-vues courtes."""
     application_id = int(application["id"])
     heading, close_column = st.columns([6, 1])
-    heading.markdown(
-        f"### {application['company_name']} — {application['job_title']}"
-    )
+    heading.markdown(f"### {application['company_name']} — {application['job_title']}")
     if close_column.button(
         "Fermer", key=f"close_application_{application_id}", use_container_width=True
     ):
@@ -283,7 +276,9 @@ def _render_application_detail(application, settings, repository) -> None:
                 for _, row in documents[documents["is_current"].astype(bool)].iterrows()
             ]
         download_columns = st.columns(max(1, len(current_documents)))
-        for column, (kind, value) in zip(download_columns, current_documents):
+        for column, (kind, value) in zip(
+            download_columns, current_documents, strict=False
+        ):
             path = _path(value, settings.project_dir)
             if path.is_file():
                 column.download_button(
@@ -347,7 +342,9 @@ def _render_application_detail(application, settings, repository) -> None:
                     f"{event.get('old_status') or '—'} → "
                     f"{event.get('new_status') or event['event_type']}{reverted}"
                 )
-                if (
+                # Le garde et le clic sont deux decisions distinctes : fusionner
+                # mettrait un appel de rendu Streamlit dans une chaine booleenne.
+                if (  # noqa: SIM102
                     index == events.index[0]
                     and event["event_type"] == "STATUS_CHANGED"
                     and pd.isna(event.get("reverted_at"))
@@ -454,13 +451,19 @@ def _render_email_detail(email, applications, repository) -> None:
         else None
     )
     if (
-        proposed or str(email.get("classification")) == "APPLICATION_UPDATE"
-    ) and selected_application is None and application_options:
-        application_query = st.text_input(
-            "Rechercher une candidature",
-            placeholder="Entreprise, poste ou #dossier",
-            key=f"email_application_query_{email_id}",
-        ).strip().lower()
+        (proposed or str(email.get("classification")) == "APPLICATION_UPDATE")
+        and selected_application is None
+        and application_options
+    ):
+        application_query = (
+            st.text_input(
+                "Rechercher une candidature",
+                placeholder="Entreprise, poste ou #dossier",
+                key=f"email_application_query_{email_id}",
+            )
+            .strip()
+            .lower()
+        )
         filtered_application_options = {
             label: application_id
             for label, application_id in application_options.items()
@@ -470,8 +473,7 @@ def _render_email_detail(email, applications, repository) -> None:
             st.warning("Aucune candidature ne correspond à cette recherche.")
         selected_label = st.selectbox(
             "Associer à une candidature avant validation",
-            ["— Choisir une candidature —"]
-            + list(filtered_application_options),
+            ["— Choisir une candidature —", *filtered_application_options],
             key=f"email_application_{email_id}",
         )
         selected_application = filtered_application_options.get(selected_label)
@@ -479,12 +481,14 @@ def _render_email_detail(email, applications, repository) -> None:
     if proposed is None and str(email.get("classification")) == "APPLICATION_UPDATE":
         manual_status = st.selectbox(
             "Décision à enregistrer (optionnel)",
-            ["— Ne pas changer le statut —"] + list(APPLICATION_STATUS_OPTIONS[2:]),
+            ["— Ne pas changer le statut —", *APPLICATION_STATUS_OPTIONS[2:]],
             key=f"email_status_{email_id}",
         )
         manual_status = None if manual_status.startswith("—") else manual_status
     effective_status = proposed or manual_status
-    if effective_status and selected_application is not None:
+    # Le garde et le clic sont deux decisions distinctes : fusionner
+    # mettrait un appel de rendu Streamlit dans une chaine booleenne.
+    if effective_status and selected_application is not None:  # noqa: SIM102
         if st.button(
             f"Valider → {effective_status}",
             key=f"approve_email_{email_id}",
@@ -529,7 +533,9 @@ def _render_history_email_detail(email, repository) -> None:
     gmail_url = _gmail_message_url(email)
     if gmail_url:
         st.link_button("Ouvrir dans Gmail", gmail_url)
-    if str(email.get("processing_state")) == "AUTO_IGNORED":
+    # Le garde et le clic sont deux decisions distinctes : fusionner
+    # mettrait un appel de rendu Streamlit dans une chaine booleenne.
+    if str(email.get("processing_state")) == "AUTO_IGNORED":  # noqa: SIM102
         if st.button(
             "Requalifier ce mail",
             key=f"reopen_auto_ignored_email_{email_id}",
@@ -551,9 +557,7 @@ def _render_history_email_detail(email, repository) -> None:
 
 def _gmail_message_url(email) -> str:
     """Construit un lien Gmail sans exposer de données si l'identifiant manque."""
-    thread_id = str(
-        email.get("gmail_thread_id") or email.get("gmail_message_id") or ""
-    )
+    thread_id = str(email.get("gmail_thread_id") or email.get("gmail_message_id") or "")
     account = str(email.get("gmail_account") or "")
     if not thread_id or not account:
         return ""
@@ -649,8 +653,7 @@ def _render_gmail_sync_action(settings, repository, profile) -> None:
         state.caption("Autorise au moins une boîte Gmail depuis Monitoring.")
     if unauthorized_accounts:
         state.caption(
-            "Non autorisée(s) et ignorée(s) : "
-            + ", ".join(unauthorized_accounts)
+            "Non autorisée(s) et ignorée(s) : " + ", ".join(unauthorized_accounts)
         )
 
 
@@ -678,12 +681,14 @@ metrics[0].metric("Dossiers", len(applications))
 metrics[1].metric(
     "Envoyées",
     int(applications["status"].isin(APPLICATION_STATUS_OPTIONS[2:]).sum())
-    if not applications.empty else 0,
+    if not applications.empty
+    else 0,
 )
 metrics[2].metric(
     "Entretiens",
     int(applications["status"].isin(["ENTRETIEN", "TEST TECHNIQUE"]).sum())
-    if not applications.empty else 0,
+    if not applications.empty
+    else 0,
 )
 metrics[3].metric(
     "Offres",
@@ -800,11 +805,9 @@ elif active_section == "emails":
         )
         selected_class = email_filters[0].selectbox(
             "Type",
-            ["Tous"] + pending_classes,
+            ["Tous", *pending_classes],
             format_func=lambda value: (
-                "Tous les types"
-                if value == "Tous"
-                else EMAIL_LABELS.get(value, value)
+                "Tous les types" if value == "Tous" else EMAIL_LABELS.get(value, value)
             ),
             key="pending_email_class_filter",
         )
@@ -813,7 +816,7 @@ elif active_section == "emails":
         )
         selected_account = email_filters[1].selectbox(
             "Boîte",
-            ["Toutes"] + pending_accounts,
+            ["Toutes", *pending_accounts],
             key="pending_email_account_filter",
         )
         email_query = email_filters[2].text_input(
@@ -853,9 +856,7 @@ elif active_section == "emails":
         ]
         if not selected_email.empty:
             with st.container(border=True):
-                _render_email_detail(
-                    selected_email.iloc[0], applications, repository
-                )
+                _render_email_detail(selected_email.iloc[0], applications, repository)
         else:
             st.info("Sélectionne une carte pour ouvrir l'e-mail à vérifier.")
 
@@ -871,7 +872,7 @@ elif active_section == "emails":
             )
             history_class = history_filters[0].selectbox(
                 "Type",
-                ["Tous"] + history_classes,
+                ["Tous", *history_classes],
                 format_func=lambda value: (
                     "Tous les types"
                     if value == "Tous"
@@ -884,7 +885,7 @@ elif active_section == "emails":
             )
             history_account = history_filters[1].selectbox(
                 "Boîte",
-                ["Toutes"] + history_accounts,
+                ["Toutes", *history_accounts],
                 key="gmail_history_account_filter",
             )
             history_states = sorted(
@@ -892,7 +893,7 @@ elif active_section == "emails":
             )
             history_state = history_filters[2].selectbox(
                 "Traitement",
-                ["Tous"] + history_states,
+                ["Tous", *history_states],
                 format_func=lambda value: (
                     "Tous les traitements"
                     if value == "Tous"
@@ -946,9 +947,7 @@ elif active_section == "emails":
                     "job_title",
                 ]
             ].copy()
-            history_view["received_at"] = history_view["received_at"].map(
-                _display_date
-            )
+            history_view["received_at"] = history_view["received_at"].map(_display_date)
             history_view["classification"] = history_view["classification"].map(
                 lambda value: EMAIL_LABELS.get(str(value), value)
             )
@@ -985,18 +984,15 @@ elif active_section == "emails":
                 on_select="rerun",
                 selection_mode="single-row",
             )
-            selected_history_rows = list(history_selection.selection.rows)
+            selected_history_rows = list(history_selection["selection"]["rows"])
             if selected_history_rows:
                 st.session_state["selected_history_email_id"] = int(
                     filtered_history.iloc[selected_history_rows[0]]["id"]
                 )
             selected_history_id = st.session_state.get("selected_history_email_id")
             selected_history = filtered_history[
-                filtered_history["id"].astype(int)
-                == int(selected_history_id or -1)
+                filtered_history["id"].astype(int) == int(selected_history_id or -1)
             ]
             if not selected_history.empty:
                 with st.container(border=True):
-                    _render_history_email_detail(
-                        selected_history.iloc[0], repository
-                    )
+                    _render_history_email_detail(selected_history.iloc[0], repository)

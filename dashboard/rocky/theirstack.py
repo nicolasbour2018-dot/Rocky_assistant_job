@@ -18,11 +18,8 @@ from .job_importer import (
 from .models import JobOffer
 from .text_utils import canonical_url, normalize_text
 
-
 THEIRSTACK_JOB_SEARCH_URL = "https://api.theirstack.com/v1/jobs/search"
-THEIRSTACK_LOCATION_CATALOG_URL = (
-    "https://api.theirstack.com/v0/catalog/locations"
-)
+THEIRSTACK_LOCATION_CATALOG_URL = "https://api.theirstack.com/v0/catalog/locations"
 THEIRSTACK_RESULT_LIMIT = 3
 
 
@@ -106,9 +103,7 @@ def _identity_score(offer: JobOffer, item: dict[str, Any]) -> float:
 
     city = _identity_text(offer.city)
     location = _identity_text(
-        item.get("location")
-        or item.get("short_location")
-        or item.get("long_location")
+        item.get("location") or item.get("short_location") or item.get("long_location")
     )
     if city and location and city in location:
         score += 0.05
@@ -118,6 +113,7 @@ def _identity_score(offer: JobOffer, item: dict[str, Any]) -> float:
 
 class TheirStackClient:
     """Client HTTP borné pour recherche Indeed et enrichissement descriptif via TheirStack."""
+
     """Client HTTP commun, sans logique métier propre à une source Rocky."""
 
     def __init__(self, api_key: str, timeout: int = 20):
@@ -163,13 +159,9 @@ class TheirStackClient:
         except requests.RequestException as error:
             raise self._request_error(error) from error
         except ValueError as error:
-            raise SourceError(
-                "TheirStack a renvoyé une réponse illisible."
-            ) from error
+            raise SourceError("TheirStack a renvoyé une réponse illisible.") from error
 
-        if not isinstance(decoded, dict) or not isinstance(
-            decoded.get("data"), list
-        ):
+        if not isinstance(decoded, dict) or not isinstance(decoded.get("data"), list):
             raise SourceError("TheirStack a renvoyé une réponse invalide.")
         return [item for item in decoded["data"] if isinstance(item, dict)]
 
@@ -186,14 +178,15 @@ class TheirStackClient:
             cache_key = (normalize_text(location), country_code.upper())
             if cache_key not in self._location_cache:
                 try:
+                    catalog_params: dict[str, str | int] = {
+                        "name": location,
+                        "country_code": country_code.upper(),
+                        "limit": 5,
+                    }
                     response = requests.get(
                         THEIRSTACK_LOCATION_CATALOG_URL,
                         headers=self._headers(),
-                        params={
-                            "name": location,
-                            "country_code": country_code.upper(),
-                            "limit": 5,
-                        },
+                        params=catalog_params,
                         timeout=self.timeout,
                     )
                     response.raise_for_status()
@@ -205,9 +198,7 @@ class TheirStackClient:
                         "TheirStack a renvoyé un catalogue de lieux illisible."
                     ) from error
                 candidates = (
-                    decoded.get("data", [])
-                    if isinstance(decoded, dict)
-                    else decoded
+                    decoded.get("data", []) if isinstance(decoded, dict) else decoded
                 )
                 if not isinstance(candidates, list):
                     raise SourceError(
@@ -269,10 +260,9 @@ class TheirStackClient:
                 len(offer.responsibilities.strip()),
                 len(offer.short_description.strip()),
             )
-            if (
-                len(description) < max(300, current_length + 80)
-                or description_is_probably_truncated(description)
-            ):
+            if len(description) < max(
+                300, current_length + 80
+            ) or description_is_probably_truncated(description):
                 continue
             theirstack_id = str(item.get("id") or "")
             enriched = replace(

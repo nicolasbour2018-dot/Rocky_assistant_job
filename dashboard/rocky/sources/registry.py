@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from ..config import Settings
+from dashboard.rocky.config import Settings
+
 from .adzuna import AdzunaSource
 from .apec import ApecSource
 from .base import JobSource

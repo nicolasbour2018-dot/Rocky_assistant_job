@@ -1,2 +1,1 @@
 """Interface Streamlit de Rocky."""
-

@@ -17,7 +17,7 @@ _scheduler: Any | None = None
 
 def _launch_daily(project_dir: Path) -> None:
     """Lance la routine quotidienne hors du processus Streamlit pour ne pas le bloquer."""
-    subprocess.Popen(
+    subprocess.Popen(  # noqa: S603 - argv statique, binaire sys.executable
         [sys.executable, str(project_dir / "scripts" / "run_daily.py")],
         cwd=project_dir,
         start_new_session=True,
@@ -26,11 +26,12 @@ def _launch_daily(project_dir: Path) -> None:
 
 def ensure_local_scheduler(project_dir: Path):
     """Démarre une seule tâche quotidienne à midi, heure de Paris."""
-    global _scheduler
+    global _scheduler  # noqa: PLW0603 - singleton APScheduler du processus
     if _scheduler and _scheduler.running:
         return _scheduler
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
+
     scheduler = BackgroundScheduler(timezone="Europe/Paris")
     scheduler.add_job(
         _launch_daily,

@@ -14,7 +14,6 @@ from dashboard.rocky.models import JobOffer, ProfileProject
 from dashboard.rocky.projects import load_profile_projects
 from dashboard.rocky.repository import RockyRepository
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 
 
@@ -45,7 +44,10 @@ def test_mounted_storage_uses_profiles_without_a_second_data_folder(tmp_path):
         storage_dir_override=str(mounted),
     )
     assert settings.profiles_dir == mounted / "profiles"
-    assert settings.user_browser_profile_dir(7) == mounted / "users" / "7" / "browser_profile"
+    assert (
+        settings.user_browser_profile_dir(7)
+        == mounted / "users" / "7" / "browser_profile"
+    )
 
     local = Settings(project_dir=tmp_path, storage_dir_override="")
     assert local.profiles_dir == tmp_path / "data" / "profiles"
@@ -82,18 +84,30 @@ def test_projects_are_isolated_between_french_and_english_versions(tmp_path):
     repository = _repository(tmp_path)
     profile_id = repository.create_profile("Profil bilingue")
     french = ProfileProject(
-        slug="portfolio", name="Portfolio français", problem="Besoin client",
-        deliverable="Site", sort_order=0,
+        slug="portfolio",
+        name="Portfolio français",
+        problem="Besoin client",
+        deliverable="Site",
+        sort_order=0,
     )
     english = ProfileProject(
-        slug="portfolio", name="English portfolio", problem="Client need",
-        deliverable="Website", sort_order=0,
+        slug="portfolio",
+        name="English portfolio",
+        problem="Client need",
+        deliverable="Website",
+        sort_order=0,
     )
     repository.replace_profile_projects(profile_id, [french], "fr")
     repository.replace_profile_projects(profile_id, [english], "en")
 
-    assert repository.fetch_profile_projects(profile_id, locale="fr")[0].name == "Portfolio français"
-    assert repository.fetch_profile_projects(profile_id, locale="en")[0].name == "English portfolio"
+    assert (
+        repository.fetch_profile_projects(profile_id, locale="fr")[0].name
+        == "Portfolio français"
+    )
+    assert (
+        repository.fetch_profile_projects(profile_id, locale="en")[0].name
+        == "English portfolio"
+    )
 
 
 def test_profile_match_recalculation_explains_incomplete_jobs(tmp_path):
@@ -122,9 +136,7 @@ def test_profile_match_recalculation_explains_incomplete_jobs(tmp_path):
 
 def test_recalculation_button_is_rendered_before_the_profile_form():
     """Le bouton global doit rester dans la barre d'actions haute."""
-    page = (PROJECT_DIR / "dashboard" / "page_profiles.py").read_text(
-        encoding="utf-8"
-    )
+    page = (PROJECT_DIR / "dashboard" / "page_profiles.py").read_text(encoding="utf-8")
     assert page.count('"Recalculer tous les scores"') == 1
     assert page.index('"Recalculer tous les scores"') < page.index(
         'with st.form(f"v2_edit_profile_{locale}")'

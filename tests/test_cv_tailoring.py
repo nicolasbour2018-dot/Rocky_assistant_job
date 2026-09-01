@@ -26,22 +26,21 @@ def test_cv_plan_uses_only_profile_evidence(tmp_path, monkeypatch):
             fontsize=8,
         )
         document.save(source)
-    template = {
-        "version": 1,
-        "source_sha256": cv_tailoring.file_sha256(source),
-        "page_count": 1,
-        "background_rgb": [255, 255, 255],
-        "zones": {
-            "technical": [10, 382, 176, 512],
-            "transversal": [8, 657, 178, 750],
-            "project_1_title": [188, 236, 312, 259],
-            "project_1_body": [192, 263, 311, 423],
-            "project_2_title": [320, 257, 450, 281],
-            "project_2_body": [326, 286, 446, 446],
-            "project_3_title": [454, 281, 590, 307],
-            "project_3_body": [462, 310, 581, 466],
+    template = cv_tailoring._CvTemplate(
+        source_sha256=cv_tailoring.file_sha256(source),
+        page_count=1,
+        background_rgb=(255, 255, 255),
+        zones={
+            "technical": (10, 382, 176, 512),
+            "transversal": (8, 657, 178, 750),
+            "project_1_title": (188, 236, 312, 259),
+            "project_1_body": (192, 263, 311, 423),
+            "project_2_title": (320, 257, 450, 281),
+            "project_2_body": (326, 286, 446, 446),
+            "project_3_title": (454, 281, 590, 307),
+            "project_3_body": (462, 310, 581, 466),
         },
-    }
+    )
     monkeypatch.setattr(cv_tailoring, "_template", lambda _settings: template)
     offer = JobOffer(
         "Data Scientist",
@@ -86,16 +85,14 @@ def test_cv_plan_uses_only_profile_evidence(tmp_path, monkeypatch):
             pixmap = document[0].get_pixmap(
                 matrix=pymupdf.Matrix(zoom, zoom), alpha=False
             )
-            return Image.frombytes(
-                "RGB", [pixmap.width, pixmap.height], pixmap.samples
-            )
+            return Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
 
     source_image = render(source)
     target_image = render(target)
     difference = ImageChops.difference(source_image, target_image)
     allowed = Image.new("L", source_image.size, 0)
     allowed_draw = ImageDraw.Draw(allowed)
-    for rectangle in template["zones"].values():
+    for rectangle in template.zones.values():
         x0, y0, x1, y1 = rectangle
         allowed_draw.rectangle(
             (x0 * zoom - 2, y0 * zoom - 2, x1 * zoom + 2, y1 * zoom + 2),

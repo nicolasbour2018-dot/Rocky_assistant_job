@@ -9,10 +9,8 @@ from dashboard.rocky.sources.apec_detail import (
     html_to_text,
 )
 
-
 URL = (
-    "https://www.apec.fr/candidat/recherche-emploi.html/emploi/"
-    "detail-offre/179302541W"
+    "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179302541W"
 )
 
 

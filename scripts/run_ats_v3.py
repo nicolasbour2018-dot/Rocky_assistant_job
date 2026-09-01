@@ -7,7 +7,6 @@ import json
 import sys
 from pathlib import Path
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
@@ -39,9 +38,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     description = (
-        args.job_file.read_text(encoding="utf-8")
-        if args.job_file
-        else args.description
+        args.job_file.read_text(encoding="utf-8") if args.job_file else args.description
     )
     report = analyze_ats_v3(
         args.cv.read_bytes(),

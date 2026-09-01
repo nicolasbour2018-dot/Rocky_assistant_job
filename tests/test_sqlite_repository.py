@@ -34,24 +34,30 @@ def test_sqlite_repository_supports_huggingface_workflow(tmp_path):
     assert skills
     skill_id = int(skills[0]["id"])
     original_name = str(skills[0]["skill_name"])
-    assert repository.update_skill(
-        skill_id,
-        profile.id + 999,
-        "Ne doit pas changer",
-        "soft",
-        "débutant",
-        1,
-        False,
-    ) is False
-    assert repository.update_skill(
-        skill_id,
-        profile.id,
-        original_name,
-        "technical",
-        "avancé",
-        3.5,
-        True,
-    ) is True
+    assert (
+        repository.update_skill(
+            skill_id,
+            profile.id + 999,
+            "Ne doit pas changer",
+            "soft",
+            "débutant",
+            1,
+            False,
+        )
+        is False
+    )
+    assert (
+        repository.update_skill(
+            skill_id,
+            profile.id,
+            original_name,
+            "technical",
+            "avancé",
+            3.5,
+            True,
+        )
+        is True
+    )
     edited_skill = next(
         item for item in repository.fetch_skills(profile.id) if item["id"] == skill_id
     )

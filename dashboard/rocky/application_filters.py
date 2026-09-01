@@ -6,7 +6,6 @@ import pandas as pd
 
 from dashboard.rocky.application_statuses import APPLICATION_STATUS_OPTIONS
 
-
 # Les segments décrivent les phases consultables du parcours sans exposer les
 # annonces écartées dans la page dédiée aux candidatures.
 PIPELINE_SEGMENTS = {
@@ -45,13 +44,10 @@ def filter_applications(
         visible = visible[visible["status"].isin(statuses)]
     cleaned_query = query.strip()
     if cleaned_query and not visible.empty:
-        mask = (
-            visible["company_name"].fillna("").str.contains(
-                cleaned_query, case=False, regex=False
-            )
-            | visible["job_title"].fillna("").str.contains(
-                cleaned_query, case=False, regex=False
-            )
+        mask = visible["company_name"].fillna("").str.contains(
+            cleaned_query, case=False, regex=False
+        ) | visible["job_title"].fillna("").str.contains(
+            cleaned_query, case=False, regex=False
         )
         visible = visible[mask]
     if minimum_score > 0 and not visible.empty:
@@ -60,9 +56,13 @@ def filter_applications(
     if sort_order == "Entreprise":
         visible = visible.sort_values(["company_name", "job_title"])
     elif sort_order == "Meilleur score":
-        visible = visible.sort_values("match_score", ascending=False, na_position="last")
+        visible = visible.sort_values(
+            "match_score", ascending=False, na_position="last"
+        )
     elif sort_order == "Étape du parcours":
-        rank = {status: index for index, status in enumerate(APPLICATION_STATUS_OPTIONS)}
+        rank = {
+            status: index for index, status in enumerate(APPLICATION_STATUS_OPTIONS)
+        }
         visible = visible.assign(
             _status_rank=visible["status"].map(rank).fillna(-1)
         ).sort_values(["_status_rank", "prepared_at"], ascending=[False, False])

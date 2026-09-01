@@ -11,7 +11,7 @@ from sqlalchemy import text
 from dashboard.rocky.auth import AuthService
 from dashboard.rocky.config import Settings
 from dashboard.rocky.database import create_db_engine, initialize_database
-from dashboard.rocky.errors import ConfigurationError, DocumentError
+from dashboard.rocky.errors import ConfigurationError, DocumentError, RockyError
 from dashboard.rocky.language import detect_language, effective_language
 from dashboard.rocky.models import JobOffer
 from dashboard.rocky.profile_documents import ROCKY_MARKER, validate_letter_template
@@ -69,18 +69,21 @@ def test_full_account_lifecycle_uses_one_time_tokens(tmp_path):
     reset_token = _token_from_last_mail(mailer, "reset")
     service.reset_password(reset_token, "une nouvelle phrase très sûre")
     assert service.user_from_session(raw_session) is None
-    with pytest.raises(Exception):
+    with pytest.raises(RockyError):
         service.reset_password(reset_token, "encore une phrase très sûre")
     for _ in range(5):
-        with pytest.raises(Exception):
+        with pytest.raises(RockyError):
             service.authenticate("user@example.test", "mot de passe incorrect")
-    with pytest.raises(Exception, match="Adresse ou mot de passe incorrect"):
+    with pytest.raises(RockyError, match="Adresse ou mot de passe incorrect"):
         service.authenticate("user@example.test", "une nouvelle phrase très sûre")
     with engine.connect() as connection:
-        assert connection.execute(
-            text("SELECT locked_until FROM users WHERE id = :id"),
-            {"id": user.id},
-        ).scalar_one() is not None
+        assert (
+            connection.execute(
+                text("SELECT locked_until FROM users WHERE id = :id"),
+                {"id": user.id},
+            ).scalar_one()
+            is not None
+        )
 
 
 def test_repository_never_crosses_account_boundaries(tmp_path):
@@ -117,15 +120,27 @@ def test_repository_never_crosses_account_boundaries(tmp_path):
         second_repository.fetch_application_documents(application_id)
 
     first_repository.save_profile_document(
-        first_profile, "en", "cv", "manual-en.pdf", "manual-v1",
+        first_profile,
+        "en",
+        "cv",
+        "manual-en.pdf",
+        "manual-v1",
         origin="uploaded",
     )
     first_repository.save_profile_document(
-        first_profile, "en", "letter", "manual-en.docx", "manual-v1",
+        first_profile,
+        "en",
+        "letter",
+        "manual-en.docx",
+        "manual-v1",
         origin="uploaded",
     )
     first_repository.save_profile_document(
-        first_profile, "fr", "cv", "french-v1.pdf", "french-v1",
+        first_profile,
+        "fr",
+        "cv",
+        "french-v1.pdf",
+        "french-v1",
         origin="uploaded",
     )
     english_documents = {
@@ -135,7 +150,11 @@ def test_repository_never_crosses_account_boundaries(tmp_path):
     assert english_documents["cv"].status == "ready"
     assert english_documents["letter"].status == "ready"
     first_repository.save_profile_document(
-        first_profile, "fr", "cv", "french-v2.pdf", "french-v2",
+        first_profile,
+        "fr",
+        "cv",
+        "french-v2.pdf",
+        "french-v2",
         origin="uploaded",
     )
     english_documents = {
@@ -145,13 +164,16 @@ def test_repository_never_crosses_account_boundaries(tmp_path):
     assert english_documents["cv"].status == "ready"
     assert english_documents["letter"].status == "ready"
     with engine.connect() as connection:
-        assert connection.execute(
-            text(
-                "SELECT COUNT(*) FROM profile_documents "
-                "WHERE profile_id = :profile_id AND locale = 'fr' AND kind = 'cv'"
-            ),
-            {"profile_id": first_profile},
-        ).scalar_one() == 2
+        assert (
+            connection.execute(
+                text(
+                    "SELECT COUNT(*) FROM profile_documents "
+                    "WHERE profile_id = :profile_id AND locale = 'fr' AND kind = 'cv'"
+                ),
+                {"profile_id": first_profile},
+            ).scalar_one()
+            == 2
+        )
 
 
 def test_existing_incompatible_schema_fails_clearly(tmp_path):
@@ -168,7 +190,7 @@ def test_existing_incompatible_schema_fails_clearly(tmp_path):
 
 
 def test_docx_marker_is_found_even_when_split_between_runs(tmp_path):
-    Document = pytest.importorskip("docx").Document
+    Document = pytest.importorskip("docx").Document  # noqa: N806 - classe, pas variable
     valid = tmp_path / "valid.docx"
     document = Document()
     paragraph = document.add_paragraph("Mon introduction. ")

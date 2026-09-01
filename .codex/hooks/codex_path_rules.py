@@ -1,10 +1,7 @@
-#!/usr/bin/env python3
-
 import json
 import os
 import shutil
 import sys
-
 
 INSTALL_INSTRUCTION = (
     "codex-path-rules is required by this repository but is missing from PATH. "
@@ -20,7 +17,10 @@ def report_missing_binary() -> int:
     try:
         hook_input = json.load(sys.stdin)
     except (json.JSONDecodeError, OSError) as error:
-        print(f"codex-path-rules setup check could not read hook input: {error}", file=sys.stderr)
+        print(
+            f"codex-path-rules setup check could not read hook input: {error}",
+            file=sys.stderr,
+        )
         return 0
 
     event_name = hook_input.get("hook_event_name")

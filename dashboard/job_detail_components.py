@@ -1,7 +1,7 @@
-                    ##############################################################################################################
-                        # Module de fonctions pour la modification d'une annonce, recalcul du matching
-                        # Intègre les blocs d'affichage des rapports de compatibilité ATS et d'affichage des résultats.
-                    #############################################################################################################
+##############################################################################################################
+# Module de fonctions pour la modification d'une annonce, recalcul du matching
+# Intègre les blocs d'affichage des rapports de compatibilité ATS et d'affichage des résultats.
+#############################################################################################################
 
 """Composants de la fiche détaillée d'une annonce Rocky.
 
@@ -13,11 +13,11 @@ services métier sans décider seules d'un statut ou d'une soumission.
 # Importation des librairies standard
 from __future__ import annotations
 
+import tempfile
 from dataclasses import replace
 from datetime import date
 from html import escape
 from pathlib import Path
-import tempfile
 from typing import Any
 
 import pandas as pd
@@ -26,14 +26,8 @@ import streamlit as st
 
 # Importation des modules internes
 from dashboard.dashboard_common import matching_category_summary
-from dashboard.rocky.applications import generate_application
-from dashboard.rocky.cv_tailoring import (
-    TECHNICAL_GROUPS,
-    build_tailored_cv_plan,
-    build_tailored_cv_plan_from_selection,
-    create_tailored_cv,
-)
 from dashboard.job_analysis import SOFT_SKILLS, TECHNICAL_SKILLS
+from dashboard.rocky.applications import generate_application
 from dashboard.rocky.ats import (
     AtsReport,
     AtsV2Report,
@@ -41,6 +35,12 @@ from dashboard.rocky.ats import (
 )
 from dashboard.rocky.config import Settings
 from dashboard.rocky.contracts import CONTRACT_TYPES, WORK_SCHEDULES
+from dashboard.rocky.cv_tailoring import (
+    TECHNICAL_GROUPS,
+    build_tailored_cv_plan,
+    build_tailored_cv_plan_from_selection,
+    create_tailored_cv,
+)
 from dashboard.rocky.errors import DocumentError, RockyError
 from dashboard.rocky.job_importer import (
     description_is_probably_truncated,
@@ -69,6 +69,7 @@ from dashboard.rocky.text_utils import ensure_list, normalize_text
 # Bloc de fonctions utilitaires pour l'affichage des composants de la fiche annonce complète de Rocky.
 #################################################################################################
 
+
 def _letter_editor_height(_text: str) -> int:
     """Conserve un éditeur de lettre compact, avec défilement si nécessaire."""
     return 460
@@ -95,7 +96,7 @@ def _optional_date(value: Any) -> date | None:
 
 
 def _badges(skills: list[str], kind: str) -> None:
-    """ Fonction de paramétrage des badges de compétences dans les catégories de matching. """
+    """Fonction de paramétrage des badges de compétences dans les catégories de matching."""
     palettes = {
         "matched": ("#dcfce7", "#166534", "#86efac"),
         "missing": ("#fff7ed", "#9a3412", "#fdba74"),
@@ -109,7 +110,7 @@ def _badges(skills: list[str], kind: str) -> None:
     badges = " ".join(
         (
             '<span style="display:inline-block; padding:0.25rem 0.55rem; '
-            f'margin:0.15rem; border-radius:999px; background:{background}; '
+            f"margin:0.15rem; border-radius:999px; background:{background}; "
             f'color:{color}; border:1px solid {border}; font-size:0.85rem;">'
             f"{escape(skill)}</span>"
         )
@@ -125,15 +126,15 @@ def _profile_skill_category(skill: str) -> str:
         normalize_text(candidate) for candidate in TECHNICAL_SKILLS
     }:
         return "technical"
-    if normalized_skill in {
-        normalize_text(candidate) for candidate in SOFT_SKILLS
-    }:
+    if normalized_skill in {normalize_text(candidate) for candidate in SOFT_SKILLS}:
         return "soft"
     return "business"
+
 
 #################################################################################################
 # Bloc de modification des informations de l'annonce.
 #################################################################################################
+
 
 def render_edit_form(
     job_id: int,
@@ -142,11 +143,9 @@ def render_edit_form(
     profile: CandidateProfile | None,
     expander_label: str | None = "Modifier les informations de l’annonce",
 ) -> None:
-    """ Fonction de modification des informations de l'annonce. ( !  Modifie la base de donnée) """
+    """Fonction de modification des informations de l'annonce. ( !  Modifie la base de donnée)"""
     edit_container = (
-        st.expander(expander_label)
-        if expander_label is not None
-        else st.container()
+        st.expander(expander_label) if expander_label is not None else st.container()
     )
     with edit_container:
         st.caption(
@@ -204,9 +203,7 @@ def render_edit_form(
                 value=float(offer.salary_max or 0),
                 step=1_000.0,
             )
-            currency = salary[2].text_input(
-                "Devise", offer.salary_currency or "EUR"
-            )
+            currency = salary[2].text_input("Devise", offer.salary_currency or "EUR")
 
             dates = st.columns(2)
             publication_date = dates[0].date_input(
@@ -220,9 +217,7 @@ def render_edit_form(
                 format="DD/MM/YYYY",
             )
 
-            education = st.text_input(
-                "Formation demandée", offer.required_education
-            )
+            education = st.text_input("Formation demandée", offer.required_education)
             minimum_experience = st.number_input(
                 "Expérience minimum en années",
                 min_value=0.0,
@@ -247,9 +242,7 @@ def render_edit_form(
                 disabled=True,
                 help="L’URL source originale est conservée pour la déduplication.",
             )
-            application_url = st.text_input(
-                "URL de candidature", offer.application_url
-            )
+            application_url = st.text_input("URL de candidature", offer.application_url)
             short_description = st.text_area(
                 "Résumé", offer.short_description, height=100
             )
@@ -326,14 +319,14 @@ def render_edit_form(
         st.success("Annonce mise à jour et matching recalculé.")
         st.rerun()
 
+
 #################################################################################################
 # Bloc de recalcul du matching.
 ##################################################################################################
 
-def _render_category(
-    label: str, category: dict[str, Any], icon: str
-) -> None:
-    """ Fonction d'affichage des catégories de matching avec le score et les badges de compétences. """
+
+def _render_category(label: str, category: dict[str, Any], icon: str) -> None:
+    """Fonction d'affichage des catégories de matching avec le score et les badges de compétences."""
     score = category["score"]
     st.markdown(f"#### {icon} {label}")
     metric = f"{score:.0f} %" if score is not None else "Non calculé"
@@ -350,7 +343,10 @@ def render_matching_detail(
     repository: RockyRepository,
     profile: CandidateProfile | None,
 ) -> None:
-    """ Orchestre le recalcul du matching (après modification) et affiche les résultats : catégories et détail auditable du score Rocky. """
+    """Orchestre le recalcul du matching et affiche les résultats.
+
+    Rend les catégories et le détail auditable du score Rocky.
+    """
     job_id = int(row["id"])
     st.subheader("Analyse du matching")
     if profile is None:
@@ -360,8 +356,7 @@ def render_matching_detail(
     added_skill = st.session_state.pop(added_skill_key, None)
     if added_skill:
         st.success(
-            f"« {added_skill} » a été ajoutée au profil et le matching "
-            "a été recalculé."
+            f"« {added_skill} » a été ajoutée au profil et le matching a été recalculé."
         )
     if st.button(
         "Recalculer le matching",
@@ -378,12 +373,12 @@ def render_matching_detail(
             if not hydration.is_complete:
                 st.error(hydration.warning or "Description complète indisponible.")
                 return
-            result = calculate_match(
+            recalculated = calculate_match(
                 hydration.offer, profile, repository.fetch_skills(profile.id)
             )
             repository.update_job(job_id, hydration.offer)
-            repository.save_match(job_id, profile.id, result)
-        st.success(f"Score recalculé : {result.score:.1f} %.")
+            repository.save_match(job_id, profile.id, recalculated)
+        st.success(f"Score recalculé : {recalculated.score:.1f} %.")
         st.rerun()
 
     summary = matching_category_summary(row)
@@ -408,9 +403,7 @@ def render_matching_detail(
     with categories[0].container(border=True):
         _render_category("Compétences techniques", summary["technical"], "🧰")
     with categories[1].container(border=True):
-        _render_category(
-            "Compétences transversales", summary["transversal"], "🤝"
-        )
+        _render_category("Compétences transversales", summary["transversal"], "🤝")
 
     with st.container(border=True):
         st.markdown("#### 🔎 Compétences à vérifier")
@@ -463,10 +456,10 @@ def render_matching_detail(
                     None,
                     False,
                 )
-                result = calculate_match(
+                rescored = calculate_match(
                     offer, profile, repository.fetch_skills(profile.id)
                 )
-                repository.save_match(job_id, profile.id, result)
+                repository.save_match(job_id, profile.id, rescored)
                 st.session_state[added_skill_key] = skill
                 st.rerun()
 
@@ -478,11 +471,7 @@ def render_matching_detail(
             if isinstance(item, dict)
         )
         criteria = sorted(
-            (
-                item
-                for item in result.breakdown.values()
-                if isinstance(item, dict)
-            ),
+            (item for item in result.breakdown.values() if isinstance(item, dict)),
             key=lambda item: float(item.get("weight", 0)),
             reverse=True,
         )
@@ -492,18 +481,18 @@ def render_matching_detail(
             weight = float(item.get("weight", 0))
             contribution = raw_score * weight / active_weight if active_weight else 0
             with columns[index % 2].container(border=True):
-                st.markdown(
-                    f"**{item.get('label', 'Critère')} — {raw_score:.1f} %**"
-                )
+                st.markdown(f"**{item.get('label', 'Critère')} — {raw_score:.1f} %**")
                 st.progress(min(1.0, max(0.0, raw_score / 100)))
                 st.caption(
                     f"{item.get('detail', '')} · contribution : "
                     f"{contribution:.1f} point(s)"
                 )
 
+
 #################################################################################################
 # Bloc d'affichage des rapports de compatibilité ATS.
 #################################################################################################
+
 
 def render_ats_report(report: AtsReport) -> None:
     """Affiche le diagnostic ATS historique comme repère, sans modifier le matching."""
@@ -764,12 +753,15 @@ def _render_cv_review(
                 recommended_transversal if is_transversal else recommended_technical
             )
             defaults = [
-                option
-                for option in options
-                if normalize_text(option) in recommended
+                option for option in options if normalize_text(option) in recommended
             ][:6]
+            selected_count = (
+                len(defaults)
+                if widget_key not in st.session_state
+                else len(st.session_state[widget_key])
+            )
             selected = st.pills(
-                f"{label} · {len(defaults) if widget_key not in st.session_state else len(st.session_state[widget_key])}/6",
+                f"{label} · {selected_count}/6",
                 options,
                 selection_mode="multi",
                 default=defaults,
@@ -788,8 +780,13 @@ def _render_cv_review(
         active_projects = [project for project in projects if project.is_active]
         projects_by_slug = {project.slug: project for project in active_projects}
         project_widget_key = f"v2_cv_projects_{job_id}_{profile.id}"
+        selected_project_count = (
+            len(initial_plan.projects)
+            if project_widget_key not in st.session_state
+            else len(st.session_state[project_widget_key])
+        )
         selected_project_slugs = st.pills(
-            f"Projets retenus · {len(initial_plan.projects) if project_widget_key not in st.session_state else len(st.session_state[project_widget_key])}/3",
+            f"Projets retenus · {selected_project_count}/3",
             options=list(projects_by_slug),
             selection_mode="multi",
             default=[project.slug for project in initial_plan.projects],
@@ -824,12 +821,16 @@ def _render_cv_review(
                     preview_path = Path(folder) / "cv_preview.pdf"
                     create_tailored_cv(source, preview_path, plan, settings)
                     with pymupdf.open(preview_path) as document:
-                        pixmap = document[0].get_pixmap(matrix=pymupdf.Matrix(1.25, 1.25), alpha=False)
+                        pixmap = document[0].get_pixmap(
+                            matrix=pymupdf.Matrix(1.25, 1.25), alpha=False
+                        )
                         st.image(pixmap.tobytes("png"), width="stretch")
             except (DocumentError, OSError) as error:
                 st.error(f"Aperçu CV indisponible : {error}")
         else:
-            st.warning("Ajoute un CV source et au moins un projet pour afficher l'aperçu.")
+            st.warning(
+                "Ajoute un CV source et au moins un projet pour afficher l'aperçu."
+            )
     with check_col:
         st.markdown("##### Contrôle")
         st.info(
@@ -876,12 +877,9 @@ def render_letter_workshop(
         # stocké dans le profil partagé. L'atelier doit néanmoins travailler sur
         # le PDF anglais importé dès que l'annonce a sélectionné cette locale.
         profile = replace(profile, cv_path=profile_documents["cv"].source_path)
-    english_kit_ready = (
-        profile.locale != "en"
-        or (
-            {"cv", "letter"} <= set(profile_documents)
-            and all(document.status == "ready" for document in profile_documents.values())
-        )
+    english_kit_ready = profile.locale != "en" or (
+        {"cv", "letter"} <= set(profile_documents)
+        and all(document.status == "ready" for document in profile_documents.values())
     )
     if not english_kit_ready:
         st.warning(
@@ -914,7 +912,9 @@ def render_letter_workshop(
     if show_cv:
         with st.container(border=True):
             st.markdown("#### 01 · Ton CV ciblé")
-            st.caption("Choisis les éléments que Rocky peut modifier, puis relis l’aperçu avant génération.")
+            st.caption(
+                "Choisis les éléments que Rocky peut modifier, puis relis l’aperçu avant génération."
+            )
             cv_plan, cv_confirm = _render_cv_review(
                 job_id,
                 offer,
@@ -930,11 +930,7 @@ def render_letter_workshop(
             cv_confirm
             and (
                 (profile.locale == "en" and english_kit_ready)
-                or (
-                    cv_plan
-                    and cv_plan.technical_groups
-                    and cv_plan.projects
-                )
+                or (cv_plan and cv_plan.technical_groups and cv_plan.projects)
             )
             and profile.cv_path
         )
@@ -972,7 +968,9 @@ def render_letter_workshop(
     recipient_key = f"v2_recipient_{job_id}"
     address_key = f"v2_address_{job_id}"
     recipient = str(
-        st.session_state.get(recipient_key, "À l’attention du Service des Ressources Humaines")
+        st.session_state.get(
+            recipient_key, "À l’attention du Service des Ressources Humaines"
+        )
     )
     address = str(st.session_state.get(address_key, ""))
 
@@ -980,7 +978,9 @@ def render_letter_workshop(
         # Le message est volontairement replié à l'ouverture : il est utile,
         # mais ne doit pas repousser la lettre complète hors de l'écran.
         with st.expander("02 · Ton message d’accompagnement", expanded=False):
-            st.caption("À coller dans le champ libre du site de candidature ; il n'est pas ajouté au PDF.")
+            st.caption(
+                "À coller dans le champ libre du site de candidature ; il n'est pas ajouté au PDF."
+            )
             if st.button(
                 "Rocky : générer le message",
                 key=f"v2_llm_application_message_{job_id}",
@@ -988,12 +988,14 @@ def render_letter_workshop(
                 use_container_width=True,
             ):
                 try:
-                    st.session_state[message_key] = llm.application_accompanying_message(
-                        offer,
-                        profile,
-                        repository.fetch_skills(profile.id),
-                        profile_projects,
-                        profile.locale,
+                    st.session_state[message_key] = (
+                        llm.application_accompanying_message(
+                            offer,
+                            profile,
+                            repository.fetch_skills(profile.id),
+                            profile_projects,
+                            profile.locale,
+                        )
                     )
                     st.rerun()
                 except RockyError as error:
@@ -1007,7 +1009,9 @@ def render_letter_workshop(
 
         with st.container(border=True):
             st.markdown("#### 03 · Ta lettre de motivation")
-            st.caption("Le paragraphe Rocky y est intégré ; adapte ensuite la lettre complète si tu le souhaites.")
+            st.caption(
+                "Le paragraphe Rocky y est intégré ; adapte ensuite la lettre complète si tu le souhaites."
+            )
             if st.button(
                 "Rocky : générer le paragraphe pour la lettre",
                 key=f"v2_llm_paragraph_{job_id}",
@@ -1097,7 +1101,9 @@ def render_letter_workshop(
                         except RockyError as error:
                             st.error(str(error))
                     if st.button(
-                        "Recharger depuis le modèle", key=f"v2_reset_letter_{job_id}", use_container_width=True
+                        "Recharger depuis le modèle",
+                        key=f"v2_reset_letter_{job_id}",
+                        use_container_width=True,
                     ):
                         st.session_state[editor_key] = generated
                         st.rerun()
@@ -1179,7 +1185,9 @@ def render_letter_workshop(
                     missing.append("CV ciblé")
                 if not letter_is_saved:
                     missing.append("messages et lettre")
-                st.warning("À enregistrer avant la génération : " + " et ".join(missing) + ".")
+                st.warning(
+                    "À enregistrer avant la génération : " + " et ".join(missing) + "."
+                )
             if st.button(
                 "Créer le CV ciblé + la lettre PDF",
                 key=f"v2_prepare_{job_id}",
@@ -1202,7 +1210,9 @@ def render_letter_workshop(
                     # Le bouton fusée est rendu par la page parente, après cet
                     # atelier. Un rerun applicatif complet le rend visible dès
                     # la fin de la génération, sans attendre un téléchargement.
-                    st.session_state[f"v2_prepare_active_section_{job_id}"] = "postulate"
+                    st.session_state[f"v2_prepare_active_section_{job_id}"] = (
+                        "postulate"
+                    )
                     st.rerun()
                 except (RockyError, OSError) as error:
                     st.error(str(error))
@@ -1213,11 +1223,11 @@ def render_letter_workshop(
             (downloads[0], "CV ciblé", files.cv_pdf_path),
             (downloads[1], "Lettre PDF", files.letter_pdf_path),
         ):
-            path = Path(path)
+            pdf_path = Path(path)
             column.download_button(
                 f"Télécharger {label}",
-                path.read_bytes(),
-                file_name=path.name,
+                pdf_path.read_bytes(),
+                file_name=pdf_path.name,
                 key=f"v2_download_{job_id}_{label}",
                 use_container_width=True,
             )

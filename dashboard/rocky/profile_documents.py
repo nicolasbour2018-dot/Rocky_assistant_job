@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-from html import escape
 import re
 import shutil
 import subprocess
 import tempfile
-from pathlib import Path
 from collections.abc import Iterable
+from html import escape
+from pathlib import Path
 
 from pypdf import PdfReader
 
@@ -17,11 +17,10 @@ from .ats import extract_pdf_text, repair_spaced_pdf_text
 from .config import Settings
 from .errors import DocumentError, RockyError
 from .llm import RockyLLM
-from .models import ProfileAnalysis
+from .models import DocumentKind, ProfileAnalysis
 from .profile_skills import infer_profile_skills_from_cv
 from .repository import RockyRepository
 from .text_utils import project_relative
-
 
 ROCKY_MARKER = "[paragraphe Rocky]"
 PROTECTED_MARKER = "__ROCKY_PARAGRAPH__"
@@ -35,7 +34,9 @@ def _load_docx(path: Path):
     try:
         from docx import Document
     except ImportError as error:
-        raise DocumentError("Installe python-docx pour lire les lettres DOCX.") from error
+        raise DocumentError(
+            "Installe python-docx pour lire les lettres DOCX."
+        ) from error
     return Document(str(path))
 
 
@@ -50,8 +51,7 @@ def file_sha256(path: Path) -> str:
 
 def _iter_cell_blocks(cell) -> Iterable:
     """Parcourt récursivement les cellules DOCX pour préserver tous les blocs de lettre."""
-    for paragraph in cell.paragraphs:
-        yield paragraph
+    yield from cell.paragraphs
     for table in cell.tables:
         for row in table.rows:
             for nested_cell in row.cells:
@@ -132,7 +132,7 @@ def convert_docx_to_pdf(source: Path, target: Path) -> None:
         work_source = work_dir / "letter.docx"
         shutil.copy2(source, work_source)
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 - binaire résolu par shutil.which
                 [
                     executable,
                     "--headless",
@@ -178,11 +178,11 @@ def save_uploaded_profile_document(
     user_id: int,
     profile_id: int,
     locale: str,
-    kind: str,
+    kind: DocumentKind,
     content: bytes,
 ) -> Path:
     """Valide puis publie atomiquement le document courant du profil."""
-    if locale not in {"fr", "en"} or kind not in {"cv", "letter"}:
+    if locale not in {"fr", "en"}:
         raise ValueError("Document de profil non pris en charge.")
     directory = _profile_dir(settings, user_id, profile_id, locale)
     suffix = ".pdf" if kind == "cv" else ".docx"
@@ -214,7 +214,7 @@ def save_uploaded_profile_document(
     stored_source = project_relative(target, settings.project_dir)
     stored_preview = (
         stored_source
-        if kind == "cv"
+        if preview is None
         else project_relative(preview, settings.project_dir)
     )
     repository.save_profile_document(
@@ -283,7 +283,9 @@ def _replace_paragraph_text(paragraph, text: str) -> None:
         total_weight = sum(original_lengths)
         start = 0
         cumulative = 0
-        for index, (run, weight) in enumerate(zip(paragraph.runs, original_lengths)):
+        for index, (run, weight) in enumerate(
+            zip(paragraph.runs, original_lengths, strict=True)
+        ):
             cumulative += weight
             end = (
                 len(text)
@@ -309,7 +311,7 @@ def translate_letter_docx(source: Path, target: Path, llm: RockyLLM) -> None:
         for paragraph in paragraphs
     ]
     translated = llm.translate_blocks(protected)
-    for paragraph, value in zip(paragraphs, translated):
+    for paragraph, value in zip(paragraphs, translated, strict=True):
         _replace_paragraph_text(
             paragraph, value.replace(PROTECTED_MARKER, ROCKY_MARKER)
         )
@@ -339,11 +341,12 @@ def fill_letter_template(source: Path, target: Path, rocky_paragraph: str) -> No
 def render_english_cv(source: Path, target: Path, llm: RockyLLM) -> None:
     """Recompose un CV anglais lisible dans le gabarit sobre Rocky."""
     try:
+        from reportlab.lib.colors import HexColor
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import cm
+        from reportlab.platypus import Flowable, SimpleDocTemplate, Spacer
         from reportlab.platypus import Paragraph as PdfParagraph
-        from reportlab.platypus import SimpleDocTemplate, Spacer
     except ImportError as error:
         raise DocumentError("Installe reportlab pour générer le CV anglais.") from error
     raw_text, _, _ = extract_pdf_text(source)
@@ -352,24 +355,38 @@ def render_english_cv(source: Path, target: Path, llm: RockyLLM) -> None:
     translated: list[str] = []
     for start in range(0, len(blocks), CV_TRANSLATION_BATCH_SIZE):
         translated.extend(
-            llm.translate_blocks(blocks[start:start + CV_TRANSLATION_BATCH_SIZE])
+            llm.translate_blocks(blocks[start : start + CV_TRANSLATION_BATCH_SIZE])
         )
 
     styles = getSampleStyleSheet()
     body = ParagraphStyle(
-        "RockyCvBody", parent=styles["BodyText"], fontName="Helvetica",
-        fontSize=8.4, leading=10.2, spaceAfter=3,
+        "RockyCvBody",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=8.4,
+        leading=10.2,
+        spaceAfter=3,
     )
     heading = ParagraphStyle(
-        "RockyCvHeading", parent=styles["Heading2"], fontName="Helvetica-Bold",
-        textColor="#087f96", fontSize=11, leading=13, spaceBefore=7, spaceAfter=3,
+        "RockyCvHeading",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        textColor=HexColor("#087f96"),
+        fontSize=11,
+        leading=13,
+        spaceBefore=7,
+        spaceAfter=3,
     )
     document = SimpleDocTemplate(
-        str(target), pagesize=A4, rightMargin=1.25 * cm, leftMargin=1.25 * cm,
-        topMargin=1.1 * cm, bottomMargin=1.1 * cm,
+        str(target),
+        pagesize=A4,
+        rightMargin=1.25 * cm,
+        leftMargin=1.25 * cm,
+        topMargin=1.1 * cm,
+        bottomMargin=1.1 * cm,
         title="Rocky English CV",
     )
-    story = []
+    story: list[Flowable] = []
     for index, line in enumerate(translated):
         is_heading = index == 0 or (len(line) < 55 and line.upper() == line)
         story.append(PdfParagraph(escape(line), heading if is_heading else body))
@@ -393,9 +410,15 @@ def generate_english_documents(
     """
     llm = llm or RockyLLM(settings)
     if not llm.is_configured:
-        raise RockyError("Mistral doit être configuré pour générer la version anglaise.")
-    french = {doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "fr")}
-    english = {doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "en")}
+        raise RockyError(
+            "Mistral doit être configuré pour générer la version anglaise."
+        )
+    french = {
+        doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "fr")
+    }
+    english = {
+        doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "en")
+    }
     if "cv" not in french or "letter" not in french:
         raise DocumentError("Ajoute d'abord le CV et la lettre français.")
     source_hash = hashlib.sha256(
@@ -416,8 +439,14 @@ def generate_english_documents(
         temporary_cv.replace(target_cv)
         stored = project_relative(target_cv, settings.project_dir)
         repository.save_profile_document(
-            profile_id, "en", "cv", stored, cv_digest,
-            preview_pdf_path=stored, origin="generated", status="ready",
+            profile_id,
+            "en",
+            "cv",
+            stored,
+            cv_digest,
+            preview_pdf_path=stored,
+            origin="generated",
+            status="ready",
             source_hash=source_hash,
         )
     if "letter" not in english or english["letter"].origin == "generated":
@@ -431,9 +460,13 @@ def generate_english_documents(
         convert_docx_to_pdf(temporary_letter, target_preview)
         temporary_letter.replace(target_letter)
         repository.save_profile_document(
-            profile_id, "en", "letter",
+            profile_id,
+            "en",
+            "letter",
             project_relative(target_letter, settings.project_dir),
             letter_digest,
             preview_pdf_path=project_relative(target_preview, settings.project_dir),
-            origin="generated", status="ready", source_hash=source_hash,
+            origin="generated",
+            status="ready",
+            source_hash=source_hash,
         )

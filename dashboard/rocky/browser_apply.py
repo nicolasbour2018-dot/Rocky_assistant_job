@@ -12,9 +12,7 @@ from .models import BrowserPrefillReport
 from .repository import RockyRepository
 
 
-def application_target_url(
-    application_id: int, repository: RockyRepository
-) -> str:
+def application_target_url(application_id: int, repository: RockyRepository) -> str:
     """Retourne une URL HTTP(S) validée pour le lien de candidature client."""
     application = repository.fetch_application(application_id)
     if not application:
@@ -64,7 +62,7 @@ def start_prefill(
     logs_dir.mkdir(parents=True, exist_ok=True)
     log_path = logs_dir / f"prefill_{session_id}.log"
     with log_path.open("ab") as log_stream:
-        subprocess.Popen(
+        subprocess.Popen(  # noqa: S603 - argv statique, binaire sys.executable
             [
                 sys.executable,
                 "-m",

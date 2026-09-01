@@ -13,7 +13,6 @@ from pathlib import Path
 from huggingface_hub import CommitOperationAdd, HfApi, Volume
 from huggingface_hub.errors import HfHubHTTPError
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_REPO = "Neomac21/rocky-job-assistant"
 
@@ -52,9 +51,7 @@ def main() -> int:
     except HfHubHTTPError as error:
         status = getattr(error.response, "status_code", None)
         if status == 402:
-            print(
-                "BLOQUÉ : Hugging Face exige un plan PRO pour le runtime Docker."
-            )
+            print("BLOQUÉ : Hugging Face exige un plan PRO pour le runtime Docker.")
             return 2
         print(f"ERREUR Hugging Face (HTTP {status or 'inconnu'}).")
         return 1

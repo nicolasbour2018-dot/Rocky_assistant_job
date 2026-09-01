@@ -8,16 +8,17 @@ from typing import Any
 
 import requests
 
-from ..config import Settings
-from ..errors import ConfigurationError, SourceError
-from ..models import CandidateProfile, JobOffer
+from dashboard.rocky.config import Settings
+from dashboard.rocky.errors import ConfigurationError, SourceError
+from dashboard.rocky.models import CandidateProfile, JobOffer
 
 
 class FranceTravailSource:
     """Adaptateur OAuth France Travail pour enrichir la veille locale par API officielle."""
+
     name = "France Travail"
     token_url = (
-        "https://entreprise.francetravail.fr/connexion/oauth2/access_token"
+        "https://entreprise.francetravail.fr/connexion/oauth2/access_token"  # noqa: S105 - URL OAuth publique
         "?realm=/partenaire"
     )
     search_url = (
@@ -61,9 +62,7 @@ class FranceTravailSource:
             not self.settings.france_travail_client_id
             or not self.settings.france_travail_client_secret
         ):
-            raise ConfigurationError(
-                "Les credentials France Travail sont absents."
-            )
+            raise ConfigurationError("Les credentials France Travail sont absents.")
         try:
             response = requests.post(
                 self.token_url,
@@ -79,9 +78,7 @@ class FranceTravailSource:
             return str(response.json()["access_token"])
         except requests.HTTPError as error:
             status = (
-                error.response.status_code
-                if error.response is not None
-                else "inconnu"
+                error.response.status_code if error.response is not None else "inconnu"
             )
             oauth_code = self._oauth_error_code(error.response)
             if oauth_code == "invalid_client":
@@ -127,9 +124,7 @@ class FranceTravailSource:
         publication_date = None
         if published:
             try:
-                publication_date = datetime.fromisoformat(
-                    str(published).replace("Z", "+00:00")
-                ).date()
+                publication_date = datetime.fromisoformat(str(published)).date()
             except ValueError:
                 publication_date = None
         source_url = str(

@@ -9,13 +9,13 @@ interprétés.
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 import json
-import os
 import re
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.utils import parseaddr
 from html import unescape
 from pathlib import Path
@@ -29,7 +29,6 @@ from .matching import calculate_match
 from .models import CandidateProfile, EmailDecision
 from .repository import RockyRepository
 from .text_utils import normalize_text
-
 
 GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 # Les deux seuils gardent les décisions Gmail prudentes : l'absence de lien
@@ -91,21 +90,47 @@ JOB_ALERT_MARKERS = (
 # Les formes juridiques n'identifient pas l'employeur. Les retirer permet par
 # exemple de rapprocher « FIRST FINANCE SAS » de ``jobs@first-finance.com``.
 EMPLOYER_LEGAL_SUFFIXES = {
-    "ag", "bv", "corp", "corporation", "gmbh", "group", "groupe", "inc",
-    "limited", "ltd", "sa", "sarl", "sas", "sasu", "se", "societe", "spa",
+    "ag",
+    "bv",
+    "corp",
+    "corporation",
+    "gmbh",
+    "group",
+    "groupe",
+    "inc",
+    "limited",
+    "ltd",
+    "sa",
+    "sarl",
+    "sas",
+    "sasu",
+    "se",
+    "societe",
+    "spa",
 }
 
 # Ces qualificatifs décrivent l'activité ou la structure, pas la marque. Ils
 # ne suffisent pas seuls à rapprocher un expéditeur (« consulting », « group »).
 EMPLOYER_GENERIC_WORDS = {
-    "company", "conseil", "consulting", "digital", "france", "international",
-    "partners", "services", "solutions", "technology", "technologies", "work",
+    "company",
+    "conseil",
+    "consulting",
+    "digital",
+    "france",
+    "international",
+    "partners",
+    "services",
+    "solutions",
+    "technology",
+    "technologies",
+    "work",
 }
 
 
 @dataclass(frozen=True)
 class GmailSyncSummary:
     """Bilan immuable d'une synchronisation Gmail locale, pour monitoring et audit."""
+
     fetched: int = 0
     inserted: int = 0
     auto_applied: int = 0
@@ -129,7 +154,11 @@ def classify_email(subject: str, snippet: str) -> EmailDecision:
             "OFFER",
             "OFFRE",
             0.99,
-            ("proposition d embauche", "offre d embauche", "nous souhaitons vous recruter"),
+            (
+                "proposition d embauche",
+                "offre d embauche",
+                "nous souhaitons vous recruter",
+            ),
         ),
         (
             "REFUSAL",
@@ -187,13 +216,19 @@ def classify_email(subject: str, snippet: str) -> EmailDecision:
             "IN_PROGRESS",
             "EN COURS",
             0.92,
-            ("candidature est en cours", "etude de votre candidature", "profil en cours d examen"),
+            (
+                "candidature est en cours",
+                "etude de votre candidature",
+                "profil en cours d examen",
+            ),
         ),
     )
     for classification, status, confidence, markers in rules:
         marker = next((value for value in markers if value in text), None)
         if marker:
-            return EmailDecision(classification, confidence, status, f"Motif explicite : {marker}")
+            return EmailDecision(
+                classification, confidence, status, f"Motif explicite : {marker}"
+            )
     if any(marker in text for marker in JOB_ALERT_MARKERS):
         return EmailDecision(
             "JOB_ALERT", 0.96, None, "Alerte emploi reconnue par motif explicite"
@@ -227,17 +262,17 @@ def _decode_body(payload: dict[str, object]) -> str:
     def visit(part: dict[str, object]) -> None:
         """Parcourt récursivement les parties MIME textuelles d'un message Gmail."""
         mime = str(part.get("mimeType") or "")
-        data = dict(part.get("body") or {}).get("data")
+        body = part.get("body")
+        data = body.get("data") if isinstance(body, dict) else None
         if data and mime in {"text/plain", "text/html"}:
-            try:
+            with contextlib.suppress(ValueError, UnicodeError):
                 chunks.append(
                     base64.urlsafe_b64decode(str(data) + "===").decode(
                         "utf-8", errors="replace"
                     )
                 )
-            except (ValueError, UnicodeError):
-                pass
-        for child in part.get("parts") or []:
+        children = part.get("parts")
+        for child in children if isinstance(children, list) else []:
             if isinstance(child, dict):
                 visit(child)
 
@@ -283,18 +318,14 @@ def match_application(
             continue
         company_compact = "".join(company_tokens)
         brand_tokens = tuple(
-            token
-            for token in company_tokens
-            if token not in EMPLOYER_GENERIC_WORDS
+            token for token in company_tokens if token not in EMPLOYER_GENERIC_WORDS
         )
         sender_brand_match = any(
-            token in sender_tokens
-            or (len(token) >= 4 and token in sender_compact)
+            token in sender_tokens or (len(token) >= 4 and token in sender_compact)
             for token in brand_tokens
         )
         message_brand_match = any(
-            token in message_tokens
-            or (len(token) >= 4 and token in message_compact)
+            token in message_tokens or (len(token) >= 4 and token in message_compact)
             for token in brand_tokens
         )
         sender_match = (
@@ -374,20 +405,17 @@ class GmailService:
             )
         self.settings = settings
         self.repository = repository
+        self.user_id: int = repository.user_id
         self.profile = profile
         selected_account = account_email or next(iter(settings.gmail_accounts), "")
         self.account_email = selected_account.strip().lower()
         if not self.account_email:
-            raise ConfigurationError(
-                "Ajoute au moins une adresse dans GMAIL_ACCOUNTS."
-            )
+            raise ConfigurationError("Ajoute au moins une adresse dans GMAIL_ACCOUNTS.")
 
     @property
     def token_path(self) -> Path:
         """Retourne le jeton propre à la boîte, sans partager de session OAuth."""
-        return self.settings.gmail_token_path_for(
-            self.account_email, self.repository.user_id
-        )
+        return self.settings.gmail_token_path_for(self.account_email, self.user_id)
 
     @property
     def is_authorized(self) -> bool:
@@ -450,7 +478,9 @@ class GmailService:
         try:
             from google_auth_oauthlib.flow import InstalledAppFlow
         except ImportError as error:
-            raise ConfigurationError("Installe les dépendances Google de Rocky.") from error
+            raise ConfigurationError(
+                "Installe les dépendances Google de Rocky."
+            ) from error
         client_secret_path = self._client_secret_path
         if client_secret_path is None or self.oauth_client_type != "installed":
             raise ConfigurationError(
@@ -465,7 +495,7 @@ class GmailService:
             prompt="select_account consent",
             login_hint=self.account_email,
         )
-        user_id = self.repository.user_id
+        user_id = self.user_id
         pending_path = self._pending_path(self.settings, state, user_id)
         pending_path.parent.mkdir(parents=True, exist_ok=True)
         pending_path.write_text(
@@ -481,7 +511,7 @@ class GmailService:
             ),
             encoding="utf-8",
         )
-        os.chmod(pending_path, 0o600)
+        pending_path.chmod(0o600)
         return authorization_url
 
     def complete_browser_authorization(
@@ -491,8 +521,10 @@ class GmailService:
         try:
             from google_auth_oauthlib.flow import InstalledAppFlow
         except ImportError as error:
-            raise ConfigurationError("Installe les dépendances Google de Rocky.") from error
-        user_id = self.repository.user_id
+            raise ConfigurationError(
+                "Installe les dépendances Google de Rocky."
+            ) from error
+        user_id = self.user_id
         payload = self._pending_authorization(self.settings, state, user_id)
         if (
             payload.get("account_email") != self.account_email
@@ -568,7 +600,9 @@ class GmailService:
             from google.oauth2.credentials import Credentials
             from google_auth_oauthlib.flow import InstalledAppFlow
         except ImportError as error:
-            raise ConfigurationError("Installe les dépendances Google de Rocky.") from error
+            raise ConfigurationError(
+                "Installe les dépendances Google de Rocky."
+            ) from error
         token_path = self.token_path
         source_path = token_path if token_path.is_file() and not force_new else None
         credentials = None
@@ -585,9 +619,7 @@ class GmailService:
                 )
             client_secret_path = self._client_secret_path
             if client_secret_path is None:
-                raise ConfigurationError(
-                    "Place credentials.json dans .secrets/gmail/."
-                )
+                raise ConfigurationError("Place credentials.json dans .secrets/gmail/.")
             if self.oauth_client_type != "installed":
                 raise ConfigurationError(
                     "Le fichier Gmail doit être un client OAuth « Application de bureau » "
@@ -618,9 +650,7 @@ class GmailService:
         """Vérifie l'adresse distante avant toute persistance du jeton OAuth."""
         from googleapiclient.discovery import build
 
-        client = build(
-            "gmail", "v1", credentials=credentials, cache_discovery=False
-        )
+        client = build("gmail", "v1", credentials=credentials, cache_discovery=False)
         profile = client.users().getProfile(userId="me").execute()
         authenticated_email = str(profile.get("emailAddress") or "").strip().lower()
         if authenticated_email != self.account_email:
@@ -631,7 +661,7 @@ class GmailService:
         # L'écriture n'arrive qu'après le contrôle de l'identité.
         self.token_path.parent.mkdir(parents=True, exist_ok=True)
         self.token_path.write_text(credentials.to_json(), encoding="utf-8")
-        os.chmod(self.token_path, 0o600)
+        self.token_path.chmod(0o600)
         return client
 
     def _import_links(self, links: list[str]) -> int:
@@ -641,7 +671,11 @@ class GmailService:
             try:
                 preview = import_job_url(url)
                 offer = preview.offer
-                if not offer.job_title or not offer.company_name or not offer.responsibilities:
+                if (
+                    not offer.job_title
+                    or not offer.company_name
+                    or not offer.responsibilities
+                ):
                     continue
                 result = calculate_match(
                     offer,
@@ -653,7 +687,7 @@ class GmailService:
                 job_id, inserted = self.repository.insert_job(offer, self.profile.id)
                 self.repository.save_match(job_id, self.profile.id, result)
                 imported += int(inserted)
-            except Exception:
+            except Exception:  # noqa: S112 - résilience par élément de la boucle
                 # Un lien cassé ne doit ni arrêter Gmail ni déclencher un LLM.
                 continue
         return imported
@@ -668,7 +702,9 @@ class GmailService:
                 return []
         if not isinstance(value, (list, tuple)):
             return []
-        return [str(item) for item in value if str(item).startswith(("http://", "https://"))]
+        return [
+            str(item) for item in value if str(item).startswith(("http://", "https://"))
+        ]
 
     def _triage_decision(
         self,
@@ -692,7 +728,11 @@ class GmailService:
             # est explicite ET qu'un lien emploi autorisé a été extrait.
             # Sans lien exploitable, elle reste visible dans la file au lieu
             # d'être silencieusement jetée comme une newsletter ordinaire.
-            if decision.confidence > AUTO_APPLICATION_CONFIDENCE and links and import_links:
+            if (
+                decision.confidence > AUTO_APPLICATION_CONFIDENCE
+                and links
+                and import_links
+            ):
                 imported = self._import_links(links)
                 state = "IMPORTED" if imported else "REVIEW"
                 if not imported:
@@ -785,9 +825,12 @@ class GmailService:
         """Lit, classe et applique seulement les décisions à haute confiance."""
         client = self._client(interactive=False)
         query = f"newer_than:{self.settings.gmail_lookback_days}d"
-        listing = client.users().messages().list(
-            userId="me", q=query, maxResults=self.settings.gmail_max_messages
-        ).execute()
+        listing = (
+            client.users()
+            .messages()
+            .list(userId="me", q=query, maxResults=self.settings.gmail_max_messages)
+            .execute()
+        )
         applications = self.repository.fetch_applications(self.profile.id)
         counters = {
             "inserted": 0,
@@ -812,11 +855,16 @@ class GmailService:
             ):
                 continue
             try:
-                message = client.users().messages().get(
-                    userId="me", id=gmail_id, format="full"
-                ).execute()
+                message = (
+                    client.users()
+                    .messages()
+                    .get(userId="me", id=gmail_id, format="full")
+                    .execute()
+                )
                 headers = {
-                    str(header.get("name") or "").lower(): str(header.get("value") or "")
+                    str(header.get("name") or "").lower(): str(
+                        header.get("value") or ""
+                    )
                     for header in message.get("payload", {}).get("headers", [])
                 }
                 sender = headers.get("from", "")
@@ -825,9 +873,7 @@ class GmailService:
                 body = _decode_body(message.get("payload", {}))
                 links = extract_job_links(body)
                 decision, application_id, link_confidence, match_reason = (
-                    classify_and_match_email(
-                        applications, sender, subject, snippet
-                    )
+                    classify_and_match_email(applications, sender, subject, snippet)
                 )
                 state, imported = self._triage_decision(
                     email_id=None,
@@ -852,7 +898,7 @@ class GmailService:
                         "subject": subject,
                         "received_at": datetime.fromtimestamp(
                             int(message.get("internalDate", "0")) / 1000,
-                            tz=timezone.utc,
+                            tz=UTC,
                         ),
                         "snippet": snippet,
                         "classification": decision.classification,

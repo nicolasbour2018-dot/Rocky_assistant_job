@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import zipfile
 from io import BytesIO
 
 import pytest
 
 import dashboard.rocky.ats_v3 as ats_v3
 from dashboard.rocky.ats_v3 import analyze_ats_v3
+from dashboard.rocky.errors import DocumentError
 
 
 def _pdf(lines: list[str], *, two_columns: bool = False) -> bytes:
@@ -99,7 +101,9 @@ def test_v3_flags_a_multi_column_pdf_as_a_parsing_risk():
         "Data Analyst",
     )
 
-    pypdf = next(item for item in report.parser_extractions if item.parser_id == "pypdf")
+    pypdf = next(
+        item for item in report.parser_extractions if item.parser_id == "pypdf"
+    )
     assert pypdf.metadata["has_multiple_columns"] is True
     assert "Disposition multi-colonnes probable." in pypdf.warnings
     assert len({item.raw_text for item in report.parser_extractions}) >= 2
@@ -107,9 +111,7 @@ def test_v3_flags_a_multi_column_pdf_as_a_parsing_risk():
 
 def test_v3_works_on_an_external_fictitious_cv_without_profile_enrichment():
     cv = _pdf(
-        _standard_cv(
-            "Excel, gestion des stocks, planification logistique et achats"
-        )
+        _standard_cv("Excel, gestion des stocks, planification logistique et achats")
     )
     distant_job = (
         "Nous recrutons un ingénieur plateforme. Python, Kubernetes, Docker, "
@@ -140,12 +142,25 @@ def test_v3_compares_pdf_and_docx_built_from_the_same_content():
     assert docx_report.file_type == "docx"
 
 
-def test_v3_keeps_semantic_evidence_separate_from_lexical_presence():
-    cv = _pdf(
-        _standard_cv(
-            "Python, requetage relationnel et production de rapports"
-        )
+def test_v3_refuses_a_docx_whose_xml_declares_entities():
+    namespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    document = (
+        '<?xml version="1.0"?>'
+        '<!DOCTYPE w:document [ <!ENTITY bomb "aaaaaaaaaa"> ]>'
+        f'<w:document xmlns:w="{namespace}">'
+        "<w:p><w:r><w:t>&bomb;</w:t></w:r></w:p>"
+        "</w:document>"
     )
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("word/document.xml", document)
+
+    with pytest.raises(DocumentError, match="illisible"):
+        ats_v3._docx_xml_extract(buffer.getvalue())
+
+
+def test_v3_keeps_semantic_evidence_separate_from_lexical_presence():
+    cv = _pdf(_standard_cv("Python, requetage relationnel et production de rapports"))
     report = analyze_ats_v3(cv, "amina_semantic.pdf", DATA_JOB)
     sql = _skill(report, "SQL")
 

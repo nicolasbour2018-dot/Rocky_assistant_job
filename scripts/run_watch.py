@@ -7,6 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
@@ -52,14 +53,12 @@ def main() -> int:
         )
         summary = service.run()
     except (RockyError, OSError) as error:
-        logging.error("%s", error)
+        logger.error("%s", error)
         return 1
     except Exception:
-        logging.exception("Erreur inattendue pendant la veille")
+        logger.exception("Erreur inattendue pendant la veille")
         return 1
-    logging.info(
-        "Résumé : %s", json.dumps(summary, ensure_ascii=False, default=str)
-    )
+    logger.info("Résumé : %s", json.dumps(summary, ensure_ascii=False, default=str))
     return 0 if summary["status"] in {"SUCCESS", "PARTIAL"} else 1
 
 

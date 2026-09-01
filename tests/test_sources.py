@@ -73,14 +73,10 @@ def test_france_travail_oauth_diagnostic_uses_allowlist():
 
 def test_adzuna_errors_never_expose_credentials(monkeypatch):
     def fail(*args, **kwargs):
-        raise requests.ConnectionError(
-            "https://api.adzuna.com/?app_key=SUPER_SECRET"
-        )
+        raise requests.ConnectionError("https://api.adzuna.com/?app_key=SUPER_SECRET")
 
     monkeypatch.setattr("dashboard.rocky.sources.adzuna.requests.get", fail)
-    source = AdzunaSource(
-        Settings(adzuna_app_id="id", adzuna_app_key="SUPER_SECRET")
-    )
+    source = AdzunaSource(Settings(adzuna_app_id="id", adzuna_app_key="SUPER_SECRET"))
     with pytest.raises(SourceError) as captured:
         source.search(
             CandidateProfile(id=1, profile_name="Data"),
@@ -108,9 +104,7 @@ def test_linkedin_public_cards_mapping():
 
 
 def test_indeed_theirstack_collection_uses_profile_and_normalizes():
-    description = " ".join(
-        ["Analyse de données avec Python, SQL et Power BI."] * 20
-    )
+    description = " ".join(["Analyse de données avec Python, SQL et Power BI."] * 20)
 
     class Client:
         def __init__(self):
@@ -212,9 +206,7 @@ def test_indeed_theirstack_error_is_readable_and_does_not_expose_key():
             raise SourceError("TheirStack n’a pas pu répondre (HTTP 503).")
 
     with pytest.raises(SourceError, match="HTTP 503"):
-        IndeedSource(
-            Settings(theirstack_api_key="secret"), Client()
-        ).search(
+        IndeedSource(Settings(theirstack_api_key="secret"), Client()).search(
             CandidateProfile(id=1, profile_name="Data"),
             results_per_query=1,
         )
@@ -280,9 +272,7 @@ def test_wellfound_next_data_mapping():
                         "ROOT_QUERY": {
                             "talent": {
                                 'seoLandingPageJobSearchResults({"page":1})': {
-                                    "startups": [
-                                        {"__ref": "StartupResult:1"}
-                                    ]
+                                    "startups": [{"__ref": "StartupResult:1"}]
                                 }
                             }
                         },

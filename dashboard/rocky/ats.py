@@ -215,10 +215,13 @@ def _keyword_present(
         return True
     if not key:
         return False
-    return re.search(
-        r"(?<![a-z0-9])" + re.escape(key) + r"(?![a-z0-9])",
-        normalized_document,
-    ) is not None
+    return (
+        re.search(
+            r"(?<![a-z0-9])" + re.escape(key) + r"(?![a-z0-9])",
+            normalized_document,
+        )
+        is not None
+    )
 
 
 def _rating(score: int) -> str:
@@ -235,12 +238,8 @@ def _rating(score: int) -> str:
 def _contact_and_structure_scores(text: str) -> tuple[int, int, list[str]]:
     """Évalue les signaux de lisibilité de contact et structure, sans simuler un ATS réel."""
     normalized = normalize_text(text)
-    email_found = bool(
-        re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", text, re.IGNORECASE)
-    )
-    phone_found = bool(
-        re.search(r"(?:\+33|0)[1-9](?:[ .-]?\d{2}){4}", text)
-    )
+    email_found = bool(re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", text, re.IGNORECASE))
+    phone_found = bool(re.search(r"(?:\+33|0)[1-9](?:[ .-]?\d{2}){4}", text))
     contact_score = 50 * int(email_found) + 50 * int(phone_found)
     sections = (
         ("experience", "parcours"),
@@ -249,7 +248,10 @@ def _contact_and_structure_scores(text: str) -> tuple[int, int, list[str]]:
     )
     structure_score = round(
         100
-        * sum(any(term in normalized for term in alternatives) for alternatives in sections)
+        * sum(
+            any(term in normalized for term in alternatives)
+            for alternatives in sections
+        )
         / len(sections)
     )
     missing_contacts = []
@@ -282,9 +284,7 @@ def _letter_score(
     )
     desired_keywords = min(4, len(required_keywords))
     keyword_score = (
-        min(100.0, 100 * keyword_count / desired_keywords)
-        if desired_keywords
-        else None
+        min(100.0, 100 * keyword_count / desired_keywords) if desired_keywords else None
     )
     structure_signals = (
         "objet" in normalized,
@@ -313,10 +313,12 @@ def _near_skill_match(
     best_confidence = 0
     for evidence, confidence in RELATED_SKILLS.get(required_key, ()):
         evidence_key = normalize_text(evidence)
-        if _keyword_present(evidence, set(cv_skills), normalized_cv):
-            if confidence > best_confidence:
-                best_evidence = cv_skills.get(evidence_key, evidence)
-                best_confidence = confidence
+        if (
+            _keyword_present(evidence, set(cv_skills), normalized_cv)
+            and confidence > best_confidence
+        ):
+            best_evidence = cv_skills.get(evidence_key, evidence)
+            best_confidence = confidence
     if len(required_key) >= 3:
         for skill_key, skill_name in cv_skills.items():
             ratio = round(100 * SequenceMatcher(None, required_key, skill_key).ratio())
@@ -350,9 +352,7 @@ def analyze_application_ats_v2(
         [*offer.detected_skills, *analysis["all_skills"]]
     )
     detected_cv_skills = analyze_job("", cv_text)["all_skills"]
-    cv_skills = {
-        normalize_text(skill): skill for skill in detected_cv_skills
-    }
+    cv_skills = {normalize_text(skill): skill for skill in detected_cv_skills}
     normalized_cv = normalize_text(cv_text)
     exact: list[str] = []
     related: list[AtsSkillMatch] = []
@@ -368,9 +368,7 @@ def analyze_application_ats_v2(
             missing.append(requirement)
 
     exact_coverage = (
-        round(100 * len(exact) / len(required_keywords))
-        if required_keywords
-        else None
+        round(100 * len(exact) / len(required_keywords)) if required_keywords else None
     )
     related_credit = sum(0.65 * match.confidence / 100 for match in related)
     adjusted_coverage = (
@@ -387,8 +385,8 @@ def analyze_application_ats_v2(
         parsing_score = min(parsing_score, 72)
     elif spacing_ratio >= 0.15:
         parsing_score = min(parsing_score, 85)
-    contact_score, structure_score, missing_contacts = (
-        _contact_and_structure_scores(cv_text)
+    contact_score, structure_score, missing_contacts = _contact_and_structure_scores(
+        cv_text
     )
     title_tokens = set(normalize_text(offer.job_title).split())
     cv_title_tokens = set(normalized_cv[:500].split())
@@ -400,9 +398,7 @@ def analyze_application_ats_v2(
     cv_score = _weighted_score(
         [
             (
-                float(adjusted_coverage)
-                if adjusted_coverage is not None
-                else None,
+                float(adjusted_coverage) if adjusted_coverage is not None else None,
                 50,
             ),
             (float(parsing_score), 15),
@@ -430,7 +426,9 @@ def analyze_application_ats_v2(
     if not missing_contacts:
         strengths.append("L’e-mail et le téléphone sont détectés après normalisation.")
     else:
-        alerts.append("Coordonnée non détectée : " + " et ".join(missing_contacts) + ".")
+        alerts.append(
+            "Coordonnée non détectée : " + " et ".join(missing_contacts) + "."
+        )
     if spacing_ratio >= 0.15:
         alerts.append(
             "Le PDF expose de nombreux caractères séparés. Rocky les réassemble, "
@@ -508,9 +506,7 @@ def analyze_application_ats(
     )
 
     characters_score = min(100.0, len(cv_text) / 10)
-    page_readability = (
-        100 * readable_pages / cv_pages if cv_pages else 0.0
-    )
+    page_readability = 100 * readable_pages / cv_pages if cv_pages else 0.0
     readability_score = round(0.55 * page_readability + 0.45 * characters_score)
 
     section_terms = (
@@ -526,9 +522,7 @@ def analyze_application_ats(
     email_found = bool(
         re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", cv_text, re.IGNORECASE)
     )
-    phone_found = bool(
-        re.search(r"(?:\+33|0)[1-9](?:[ .-]?\d{2}){4}", cv_text)
-    )
+    phone_found = bool(re.search(r"(?:\+33|0)[1-9](?:[ .-]?\d{2}){4}", cv_text))
     contact_score = 50 * int(email_found) + 50 * int(phone_found)
     cv_score = _weighted_score(
         [
@@ -605,13 +599,17 @@ def analyze_application_ats(
             missing_contacts.append("adresse e-mail")
         if not phone_found:
             missing_contacts.append("numéro de téléphone")
-        alerts.append("Coordonnée non détectée : " + " et ".join(missing_contacts) + ".")
+        alerts.append(
+            "Coordonnée non détectée : " + " et ".join(missing_contacts) + "."
+        )
     if title_present and company_present:
         strengths.append("La lettre cite clairement le poste et l’entreprise.")
     else:
         alerts.append("La lettre doit citer explicitement le poste et l’entreprise.")
     if letter_words < 180:
-        alerts.append("La lettre est courte ; vérifier qu’elle démontre assez le ciblage.")
+        alerts.append(
+            "La lettre est courte ; vérifier qu’elle démontre assez le ciblage."
+        )
     elif letter_words > 600:
         alerts.append("La lettre dépasse 600 mots et gagnerait à être resserrée.")
     if missing_keywords:

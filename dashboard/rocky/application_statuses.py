@@ -6,7 +6,6 @@ entretien ou un refus.
 
 from __future__ import annotations
 
-
 APPLICATION_STATUS_OPTIONS = (
     "DOSSIER PRÉPARÉ",
     "PRÊTE À ENVOYER",
@@ -20,9 +19,7 @@ APPLICATION_STATUS_OPTIONS = (
     "ÉCARTÉE",
 )
 
-STATUS_RANK = {
-    status: rank for rank, status in enumerate(APPLICATION_STATUS_OPTIONS)
-}
+STATUS_RANK = {status: rank for rank, status in enumerate(APPLICATION_STATUS_OPTIONS)}
 
 APPLICATION_TO_JOB_STATUS = {
     "DOSSIER PRÉPARÉ": "RETENUE",
@@ -52,6 +49,7 @@ RESPONSE_STATUSES = frozenset(
         "REFUS",
     }
 )
+
 
 def normalize_application_status(value: str) -> str:
     """Normalise la casse puis valide un statut public."""

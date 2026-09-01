@@ -7,7 +7,6 @@ import json
 import sys
 from pathlib import Path
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
@@ -31,9 +30,7 @@ def main() -> int:
         responsibilities=arguments.description.read_text(encoding="utf-8"),
     )
     cv_text = (
-        arguments.cv_text.read_text(encoding="utf-8")
-        if arguments.cv_text
-        else None
+        arguments.cv_text.read_text(encoding="utf-8") if arguments.cv_text else None
     )
     report = analyze_application_ats_v2(
         arguments.cv,

@@ -7,7 +7,6 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
@@ -69,9 +68,7 @@ def main() -> int:
     unavailable = 0
     skills = repository.fetch_skills(profile.id) if profile else []
     with ThreadPoolExecutor(max_workers=max(1, arguments.workers)) as executor:
-        futures = [
-            executor.submit(_hydrate, item, settings) for item in pending
-        ]
+        futures = [executor.submit(_hydrate, item, settings) for item in pending]
         for index, future in enumerate(as_completed(futures), start=1):
             job_id, hydration = future.result()
             if not hydration.is_complete:
@@ -97,8 +94,7 @@ def main() -> int:
             )
 
     print(
-        f"Terminé : {refreshed} mise(s) à jour, "
-        f"{unavailable} page(s) indisponible(s)."
+        f"Terminé : {refreshed} mise(s) à jour, {unavailable} page(s) indisponible(s)."
     )
     return 0
 

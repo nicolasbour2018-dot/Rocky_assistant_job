@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import replace
 from html import escape
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
 import streamlit as st
@@ -88,17 +89,39 @@ def _journey_selector(
         active = "postulate"
         st.session_state[section_key] = active
     cards = (
-        ("cv", "01", "Cibler ton CV", "Compétences, projets et aperçu du PDF.", cv_ready),
-        ("letter", "02", "Écrire tes messages", "Message court et lettre de motivation.", letter_ready),
-        ("postulate", "03", "Postuler", "Génération des PDF et préremplissage contrôlé.", files_ready),
+        (
+            "cv",
+            "01",
+            "Cibler ton CV",
+            "Compétences, projets et aperçu du PDF.",
+            cv_ready,
+        ),
+        (
+            "letter",
+            "02",
+            "Écrire tes messages",
+            "Message court et lettre de motivation.",
+            letter_ready,
+        ),
+        (
+            "postulate",
+            "03",
+            "Postuler",
+            "Génération des PDF et préremplissage contrôlé.",
+            files_ready,
+        ),
     )
     columns = st.columns(3, gap="large")
-    for column, (section, number, title, detail, done) in zip(columns, cards):
+    for column, (section, number, title, detail, done) in zip(
+        columns, cards, strict=True
+    ):
         with column, st.container(border=True):
             state = (
                 "✓ PDF prêts"
                 if done and section == "postulate"
-                else "✓ enregistré" if done else "à préparer"
+                else "✓ enregistré"
+                if done
+                else "à préparer"
             )
             st.caption(f"{number} · {state}")
             st.markdown(f"**{title}**")
@@ -118,7 +141,7 @@ def _section_heading(number: str, title: str, detail: str) -> None:
     """Affiche un jalon cohérent dans l'atelier partagé CV/lettre."""
     st.markdown(
         f'<div class="preparation-section"><span class="preparation-section__badge">{escape(number)}</span>'
-        f'<div><h3>{escape(title)}</h3><p>{escape(detail)}</p></div></div>',
+        f"<div><h3>{escape(title)}</h3><p>{escape(detail)}</p></div></div>",
         unsafe_allow_html=True,
     )
 
@@ -151,7 +174,7 @@ def _preparation_progress(
 
 
 def _package_from_saved_application(
-    application: dict[str, object] | None, project_dir: Path
+    application: dict[str, Any] | None, project_dir: Path
 ) -> ApplicationPackage | None:
     """Rouvre un dossier PDF versionné après un redémarrage Streamlit."""
     if not application:
@@ -197,12 +220,15 @@ if offer is None:
 
 language_options = ["auto", "fr", "en"]
 current_language = offer.language_override or "auto"
+detected_label = (offer.detected_language or "fr").upper()
 selected_language = st.selectbox(
     "Langue du dossier",
     language_options,
-    index=language_options.index(current_language if current_language in language_options else "auto"),
+    index=language_options.index(
+        current_language if current_language in language_options else "auto"
+    ),
     format_func=lambda value: {
-        "auto": f"Automatique · {(offer.detected_language or 'fr').upper()}",
+        "auto": f"Automatique · {detected_label}",
         "fr": "Français",
         "en": "English",
     }[value],
@@ -263,10 +289,13 @@ st.markdown(
     f'<h1 class="application-title">{escape(offer.job_title or "Poste sans titre")}</h1>'
     f'<p class="application-company">{escape(offer.company_name or "Entreprise inconnue")} · publiée {escape(display_date(offer.publication_date))}</p>'
     '<div class="application-tags">'
-    + "".join(f'<span class="application-tag">{escape(str(value))}</span>' for value in metadata)
-    + '</div>'
+    + "".join(
+        f'<span class="application-tag">{escape(str(value))}</span>'
+        for value in metadata
+    )
+    + "</div>"
     f'<div class="application-score"><strong>{escape(score_label)}</strong><span>score Rocky</span></div>'
-    '</section>',
+    "</section>",
     unsafe_allow_html=True,
 )
 
@@ -286,14 +315,24 @@ profile_card.caption(
 
 _preparation_progress(cv_ready, letter_ready, files_ready, sent_ready)
 
-active_section = _journey_selector(
-    int(job_id), cv_ready, letter_ready, files_ready
-)
+active_section = _journey_selector(int(job_id), cv_ready, letter_ready, files_ready)
 
 section_details = {
-    "cv": ("01", "Ton CV ciblé", "Ajuste les compétences et projets autorisés, puis valide l’aperçu."),
-    "letter": ("02", "Tes messages", "Prépare le message d’accompagnement et la lettre de motivation."),
-    "postulate": ("03", "Postuler", "Génère les PDF à partir des étapes enregistrées, puis ouvre le formulaire sans soumettre."),
+    "cv": (
+        "01",
+        "Ton CV ciblé",
+        "Ajuste les compétences et projets autorisés, puis valide l’aperçu.",
+    ),
+    "letter": (
+        "02",
+        "Tes messages",
+        "Prépare le message d’accompagnement et la lettre de motivation.",
+    ),
+    "postulate": (
+        "03",
+        "Postuler",
+        "Génère les PDF à partir des étapes enregistrées, puis ouvre le formulaire sans soumettre.",
+    ),
 }
 _section_heading(*section_details[active_section])
 
@@ -308,13 +347,11 @@ if package and active_section == "postulate":
     st.divider()
     st.markdown(
         '<div class="preparation-ready"><h3>✨ Les deux PDF sont prêts</h3>'
-        '<p>Dernière étape : préremplir le formulaire, le relire puis envoyer toi-même la candidature.</p></div>',
+        "<p>Dernière étape : préremplir le formulaire, le relire puis envoyer toi-même la candidature.</p></div>",
         unsafe_allow_html=True,
     )
     try:
-        target_url = application_target_url(
-            int(package.application_id), repository
-        )
+        target_url = application_target_url(int(package.application_id), repository)
     except RockyError as error:
         target_url = ""
         st.error(str(error))

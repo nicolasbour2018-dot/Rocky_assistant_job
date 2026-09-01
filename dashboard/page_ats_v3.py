@@ -1,8 +1,8 @@
-                    ##############################################################################################################
-                        # Module d'affichage et d'orchestration du banc de test ATS V3.
-                        # Test ATS V3 : robustesse multi-parseurs, couverture lexicale et sémantique.
-                        # Test effectué à partir du dictionnaire de compétences déterministe, sans texte corrigé ni LLM.
-                    #############################################################################################################
+##############################################################################################################
+# Module d'affichage et d'orchestration du banc de test ATS V3.
+# Test ATS V3 : robustesse multi-parseurs, couverture lexicale et sémantique.
+# Test effectué à partir du dictionnaire de compétences déterministe, sans texte corrigé ni LLM.
+#############################################################################################################
 
 """Banc de test ATS V3 sur le CV réellement transmis.
 
@@ -29,7 +29,6 @@ from dashboard.rocky.ats_v3 import (
     render_pdf_first_page,
 )
 from dashboard.rocky.errors import DocumentError, RockyError
-
 
 REPORT_KEY = "ats_v3_report"
 CV_BYTES_KEY = "ats_v3_cv_bytes"
@@ -82,7 +81,9 @@ def _job_label(row: pd.Series) -> str:
 def _selected_job(jobs: pd.DataFrame) -> tuple[int | None, pd.Series | None]:
     """Laisse choisir l'annonce qui fournit le texte de comparaison ATS."""
     if jobs.empty:
-        st.info("Aucune annonce de « Mes annonces » n’est disponible. Utilise le texte manuel.")
+        st.info(
+            "Aucune annonce de « Mes annonces » n’est disponible. Utilise le texte manuel."
+        )
         return None, None
     rows = [row for _, row in jobs.iterrows()]
     requested = st.session_state.get("ats_v3_job_id") or st.session_state.get(
@@ -121,8 +122,7 @@ def _existing_letter_text(
     if applications.empty:
         return "", ""
     matching = applications[
-        (applications["job_id"] == job_id)
-        & (applications["profile_id"] == profile_id)
+        (applications["job_id"] == job_id) & (applications["profile_id"] == profile_id)
     ]
     for _, application in matching.iterrows():
         stored_path = application.get("letter_docx_path")
@@ -138,7 +138,7 @@ def _existing_letter_text(
 
             text = "\n".join(
                 paragraph.text.strip()
-                for paragraph in Document(docx_path).paragraphs
+                for paragraph in Document(str(docx_path)).paragraphs
                 if paragraph.text.strip()
             )
         except (ImportError, OSError, ValueError):
@@ -320,7 +320,7 @@ def _parser_comparison(report: AtsV3Report) -> None:
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
 
     columns = st.columns(len(report.parser_extractions))
-    for column, extraction in zip(columns, report.parser_extractions):
+    for column, extraction in zip(columns, report.parser_extractions, strict=True):
         with column:
             st.markdown(f"**{extraction.label}**")
             st.caption(f"{extraction.engine} · {extraction.license}")
@@ -352,7 +352,9 @@ def _matching(report: AtsV3Report) -> None:
     for item in report.skill_comparisons:
         exact = set(item.exact_parsers)
         variants = set(item.variant_parsers)
-        semantic = {evidence.parser_id: evidence.evidence for evidence in item.semantic_evidence}
+        semantic = {
+            evidence.parser_id: evidence.evidence for evidence in item.semantic_evidence
+        }
         row: dict[str, Any] = {
             "Compétence": item.skill,
             "Importance": item.importance,
@@ -477,7 +479,7 @@ def _raw_view(report: AtsV3Report, cv_data: bytes, file_name: str) -> None:
 def _raw_parser_tabs(report: AtsV3Report) -> None:
     """Organise les textes bruts et structures produits par chaque parseur."""
     tabs = st.tabs([item.label for item in report.parser_extractions])
-    for tab, extraction in zip(tabs, report.parser_extractions):
+    for tab, extraction in zip(tabs, report.parser_extractions, strict=True):
         with tab:
             mode = st.radio(
                 "Vue",
@@ -516,21 +518,24 @@ cv_data, file_name, description, job_title, selected_job_id = _source_controls(
 )
 
 actions = st.columns([2, 1])
-if actions[0].button(
-    "Lancer le banc de test V3",
-    type="primary",
-    width="stretch",
-    disabled=not cv_data or len(description.strip()) < 80,
+if (
+    actions[0].button(
+        "Lancer le banc de test V3",
+        type="primary",
+        width="stretch",
+        disabled=not cv_data or len(description.strip()) < 80,
+    )
+    and cv_data is not None
 ):
     try:
         with st.spinner("Exécution indépendante de chaque parseur…"):
-            report = analyze_ats_v3(
+            fresh_report = analyze_ats_v3(
                 cv_data,
                 file_name,
                 description,
                 job_title=job_title,
             )
-        st.session_state[REPORT_KEY] = report
+        st.session_state[REPORT_KEY] = fresh_report
         st.session_state[CV_BYTES_KEY] = cv_data
         st.session_state[CV_NAME_KEY] = file_name
         st.session_state[JOB_ID_KEY] = selected_job_id
@@ -553,8 +558,22 @@ if report:
             "pour actualiser les résultats."
         )
     with st.expander("Rapport ATS V3", expanded=False):
-        summary_tab, parsing_tab, matching_tab, benchmark_tab, diagnostic_tab, raw_tab = st.tabs(
-            ("Résumé", "Parsing", "Matching annonce", "Benchmarks ATS", "Diagnostic", "Vue brute")
+        (
+            summary_tab,
+            parsing_tab,
+            matching_tab,
+            benchmark_tab,
+            diagnostic_tab,
+            raw_tab,
+        ) = st.tabs(
+            (
+                "Résumé",
+                "Parsing",
+                "Matching annonce",
+                "Benchmarks ATS",
+                "Diagnostic",
+                "Vue brute",
+            )
         )
         with summary_tab:
             _summary(report, st.session_state.get(JOB_ID_KEY))

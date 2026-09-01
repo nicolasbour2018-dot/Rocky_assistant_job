@@ -41,9 +41,7 @@ def test_one_central_job_can_be_linked_to_two_profiles_without_duplication(tmp_p
     profile_b = repository.create_profile("Enseignement / EdTech")
     repository.set_active_profile(profile_a)
 
-    data_id, _ = repository.insert_job(
-        _offer("Data Scientist", "data"), profile_a
-    )
+    data_id, _ = repository.insert_job(_offer("Data Scientist", "data"), profile_a)
     teaching_id, _ = repository.insert_job(
         _offer("Responsable pédagogique", "teaching"), profile_b
     )
@@ -54,9 +52,7 @@ def test_one_central_job_can_be_linked_to_two_profiles_without_duplication(tmp_p
         _offer("Learning Data Analyst", "shared"), profile_b
     )
 
-    repository.save_match(
-        shared_id, profile_a, MatchResult(84, {"profile": "data"})
-    )
+    repository.save_match(shared_id, profile_a, MatchResult(84, {"profile": "data"}))
     repository.save_match(
         shared_id, profile_b, MatchResult(67, {"profile": "teaching"})
     )
@@ -119,27 +115,22 @@ def test_stable_application_url_deduplicates_across_sources(tmp_path):
     assert len(repository.get_jobs_for_profile(profile_a)) == 1
     assert len(repository.get_jobs_for_profile(profile_b)) == 1
     with engine.connect() as connection:
-        assert connection.execute(
-            text("SELECT COUNT(*) FROM job_offers")
-        ).scalar_one() == 1
+        assert (
+            connection.execute(text("SELECT COUNT(*) FROM job_offers")).scalar_one()
+            == 1
+        )
     engine.dispose()
 
 
-def test_switching_active_profile_changes_the_existing_cockpit(
-    tmp_path, monkeypatch
-):
+def test_switching_active_profile_changes_the_existing_cockpit(tmp_path, monkeypatch):
     settings, engine, repository = _repository(tmp_path)
     profile_a = repository.create_profile("Data Scientist")
     profile_b = repository.create_profile("Enseignement / EdTech")
-    data_id, _ = repository.insert_job(
-        _offer("Offre Data uniquement", "a"), profile_a
-    )
+    data_id, _ = repository.insert_job(_offer("Offre Data uniquement", "a"), profile_a)
     edtech_id, _ = repository.insert_job(
         _offer("Offre EdTech uniquement", "b"), profile_b
     )
-    shared_id, _ = repository.insert_job(
-        _offer("Offre commune", "shared"), profile_a
-    )
+    shared_id, _ = repository.insert_job(_offer("Offre commune", "shared"), profile_a)
     repository.link_job_to_profile(shared_id, profile_b)
     repository.save_match(data_id, profile_a, MatchResult(75, {}))
     repository.save_match(edtech_id, profile_b, MatchResult(75, {}))
@@ -149,9 +140,7 @@ def test_switching_active_profile_changes_the_existing_cockpit(
 
     monkeypatch.setattr(dashboard_common, "Settings", lambda: settings)
     dashboard_common.load_repository.clear()
-    app = AppTest.from_file(
-        settings.project_dir / "dashboard" / "dashboard_b.py"
-    )
+    app = AppTest.from_file(settings.project_dir / "dashboard" / "dashboard_b.py")
     app.session_state["cockpit_view"] = "flow"
     app.run(timeout=30)
     titles_a = {item.value for item in app.subheader}
@@ -185,7 +174,8 @@ def test_existing_schema_validation_does_not_create_profile_links(tmp_path):
             source_name="Test",
             source_url="https://jobs.example/legacy-preview",
             status="INCOMPLÈTE",
-        )
+        ),
+        watch_profile,
     )
     repository.finish_watch_run(
         run_id,
@@ -209,6 +199,30 @@ def test_existing_schema_validation_does_not_create_profile_links(tmp_path):
             {"job_id": job_id},
         ).scalar_one()
     assert links == 1
+    engine.dispose()
+
+
+def test_url_import_stops_before_inserting_without_active_profile(
+    tmp_path, monkeypatch
+):
+    """L'import d'URL refuse d'insérer une annonce que plus rien ne rattacherait."""
+    settings, engine, repository = _repository(tmp_path)
+    assert repository.fetch_active_profile() is None
+
+    monkeypatch.setattr(dashboard_common, "Settings", lambda: settings)
+    dashboard_common.load_repository.clear()
+    app = AppTest.from_file(settings.project_dir / "dashboard" / "page_import_url.py")
+    app.run(timeout=30)
+
+    assert not app.exception
+    assert any("Crée d'abord un profil" in item.value for item in app.info)
+    assert not app.text_input
+    with engine.connect() as connection:
+        assert (
+            connection.execute(text("SELECT COUNT(*) FROM job_offers")).scalar_one()
+            == 0
+        )
+    dashboard_common.load_repository.clear()
     engine.dispose()
 
 

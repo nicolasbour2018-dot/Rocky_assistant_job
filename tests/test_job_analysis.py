@@ -19,4 +19,3 @@ def test_analysis_classifies_known_skills():
     assert {"Python", "SQL", "Power BI"} <= set(result["technical_skills"])
     assert "Reporting" in result["business_skills"]
     assert {"Rigueur", "Travail en équipe"} <= set(result["soft_skills"])
-

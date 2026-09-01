@@ -12,16 +12,17 @@ from collections.abc import Iterable
 
 from bs4 import BeautifulSoup
 
-from ..models import CandidateProfile, JobOffer
+from dashboard.rocky.models import CandidateProfile, JobOffer
+
 from .common import deduplicate_offers, iso_date, public_get
 
 
 class LinkedInSource:
     """Source HTML LinkedIn de lecture seule, sans action sur le portail tiers."""
+
     name = "LinkedIn"
     search_url = (
-        "https://www.linkedin.com/jobs-guest/jobs/api/"
-        "seeMoreJobPostings/search"
+        "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
     )
 
     @classmethod
@@ -45,9 +46,7 @@ class LinkedInSource:
                 external_id = match.group(1) if match else url
             title_text = title.get_text(" ", strip=True)
             company_text = (
-                company.get_text(" ", strip=True)
-                if company
-                else "Non précisée"
+                company.get_text(" ", strip=True) if company else "Non précisée"
             )
             city = location.get_text(" ", strip=True) if location else ""
             context = f"{title_text}. {company_text}. {city}."
@@ -77,7 +76,9 @@ class LinkedInSource:
     ) -> list[JobOffer]:
         """Construit les recherches LinkedIn du profil et retourne les offres collectées."""
         queries: Iterable[str] = profile.target_job_titles or [profile.profile_name]
-        location = profile.preferred_locations[0] if profile.preferred_locations else "France"
+        location = (
+            profile.preferred_locations[0] if profile.preferred_locations else "France"
+        )
         collected: list[JobOffer] = []
         for query in queries:
             response = public_get(

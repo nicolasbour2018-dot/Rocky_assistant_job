@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING
-from collections.abc import Callable
 
 from .config import Settings
 from .errors import RockyError
@@ -33,8 +33,7 @@ def reenrich_job_offer(
             is_complete=False,
             method=primary.method,
             warning=(
-                primary.warning
-                + " TheirStack n’est pas configuré pour le fallback."
+                primary.warning + " TheirStack n’est pas configuré pour le fallback."
             ).strip(),
         )
     client = theirstack_client or TheirStackClient(settings.theirstack_api_key)
@@ -45,9 +44,7 @@ def reenrich_job_offer(
             offer=offer,
             is_complete=False,
             method=primary.method,
-            warning=" ".join(
-                value for value in (primary.warning, str(error)) if value
-            ),
+            warning=" ".join(value for value in (primary.warning, str(error)) if value),
         )
     if secondary.is_complete:
         return secondary
@@ -78,9 +75,7 @@ def reenrich_saved_job(
             repository.update_job_status(job_id, INCOMPLETE_STATUS)
         return hydration
 
-    next_status = (
-        "NOUVELLE" if offer.status == INCOMPLETE_STATUS else offer.status
-    )
+    next_status = "NOUVELLE" if offer.status == INCOMPLETE_STATUS else offer.status
     enriched = replace(hydration.offer, status=next_status)
     repository.update_job(job_id, enriched)
     if next_status != offer.status:
