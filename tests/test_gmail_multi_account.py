@@ -5,7 +5,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine
 
 from dashboard.rocky.config import Settings
 from dashboard.rocky.database import initialize_database

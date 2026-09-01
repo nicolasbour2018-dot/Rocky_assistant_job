@@ -15,7 +15,7 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from email.utils import parseaddr
 from html import unescape
 from pathlib import Path
@@ -900,7 +900,7 @@ class GmailService:
                         "subject": subject,
                         "received_at": datetime.fromtimestamp(
                             int(message.get("internalDate", "0")) / 1000,
-                            tz=timezone.utc,
+                            tz=UTC,
                         ),
                         "snippet": snippet,
                         "classification": decision.classification,

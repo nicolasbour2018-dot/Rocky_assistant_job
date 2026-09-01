@@ -11,7 +11,7 @@ import hashlib
 import re
 import secrets
 import smtplib
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from email.message import EmailMessage
 from typing import Any
 
@@ -51,7 +51,7 @@ def validate_password(value: str) -> None:
 
 def _now() -> datetime:
     """Fournit une horloge UTC unique pour les jetons et sessions de sécurité."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _hash_token(value: str) -> str:
@@ -70,7 +70,7 @@ def _as_datetime(value: Any) -> datetime | None:
             result = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
         except ValueError:
             return None
-    return result.replace(tzinfo=result.tzinfo or timezone.utc)
+    return result.replace(tzinfo=result.tzinfo or UTC)
 
 
 class TransactionalMailer:

@@ -20,7 +20,7 @@ from dashboard.rocky.gmail_service import (
     extract_job_links,
     match_application,
 )
-from dashboard.rocky.models import JobOffer, ProfileProject
+from dashboard.rocky.models import JobOffer
 from dashboard.rocky.projects import parse_projects_markdown
 from dashboard.rocky.repository import RockyRepository
 

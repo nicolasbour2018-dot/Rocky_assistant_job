@@ -443,26 +443,28 @@ def run_watch(
         key=f"watch_{key}",
         use_container_width=True,
     )
-    with controls[1]:
-        with st.popover(
+    with (
+        controls[1],
+        st.popover(
             f"Seuil · {int(st.session_state[threshold_key])} %",
             use_container_width=True,
-        ):
-            selected_threshold = st.slider(
-                "Seuil minimal de matching",
-                min_value=0,
-                max_value=100,
-                step=5,
-                key=threshold_key,
-                help=(
-                    "Les annonces complètes sous ce score ne seront pas "
-                    "enregistrées pendant cette veille."
-                ),
-            )
-            st.caption(
-                "Ce réglage s’applique aux veilles lancées dans cette session. "
-                "Le seuil par défaut du .env n’est pas modifié."
-            )
+        ),
+    ):
+        selected_threshold = st.slider(
+            "Seuil minimal de matching",
+            min_value=0,
+            max_value=100,
+            step=5,
+            key=threshold_key,
+            help=(
+                "Les annonces complètes sous ce score ne seront pas "
+                "enregistrées pendant cette veille."
+            ),
+        )
+        st.caption(
+            "Ce réglage s’applique aux veilles lancées dans cette session. "
+            "Le seuil par défaut du .env n’est pas modifié."
+        )
     # Orchestration de la veille (WatchService).
     if launch:
         watch_settings = replace(

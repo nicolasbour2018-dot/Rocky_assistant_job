@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, UTC
 from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -57,7 +57,7 @@ class RockyRepository:
         self.engine = engine
         self.user_id = int(user_id) if user_id is not None else None
 
-    def for_user(self, user_id: int) -> "RockyRepository":
+    def for_user(self, user_id: int) -> RockyRepository:
         """Crée une façade dont toutes les racines métier sont bornées au compte."""
         return RockyRepository(self.engine, user_id)
 
@@ -2579,7 +2579,7 @@ class RockyRepository:
             if started_at.tzinfo is None:
                 # CURRENT_TIMESTAMP SQLite et les timestamps PostgreSQL
                 # historiques sont UTC lorsqu'ils ne portent pas de fuseau.
-                started_at = started_at.replace(tzinfo=timezone.utc)
+                started_at = started_at.replace(tzinfo=UTC)
             if started_at.astimezone(paris).date() == day:
                 return True
         return False
