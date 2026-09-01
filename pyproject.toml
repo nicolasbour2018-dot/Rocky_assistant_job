@@ -64,6 +64,7 @@ dev = [
     "pandas-stubs>=2.3,<3",
     "types-reportlab>=4.4,<5",
     "types-psycopg2>=2.9,<3",
+    "types-defusedxml>=0.7,<1",
 ]
 
 

@@ -119,7 +119,8 @@ management_columns = [
 ]
 selection_frame = filtered[management_columns].reset_index(drop=True)
 selection_signature = hashlib.sha1(
-    ",".join(str(job_id) for job_id in selection_frame["id"]).encode("utf-8")
+    ",".join(str(job_id) for job_id in selection_frame["id"]).encode("utf-8"),
+    usedforsecurity=False,
 ).hexdigest()[:12]
 selection = st.dataframe(
     selection_frame,

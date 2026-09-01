@@ -168,7 +168,8 @@ if not filtered.empty:
         ]
     ].reset_index(drop=True)
     selection_signature = hashlib.sha1(
-        ",".join(str(job_id) for job_id in selection_frame["id"]).encode("utf-8")
+        ",".join(str(job_id) for job_id in selection_frame["id"]).encode("utf-8"),
+        usedforsecurity=False,
     ).hexdigest()[:12]
     select_all_label = (
         "Sélectionner la ligne affichée"

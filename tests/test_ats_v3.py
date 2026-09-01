@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import zipfile
 from io import BytesIO
 
 import pytest
 
 import dashboard.rocky.ats_v3 as ats_v3
 from dashboard.rocky.ats_v3 import analyze_ats_v3
+from dashboard.rocky.errors import DocumentError
 
 
 def _pdf(lines: list[str], *, two_columns: bool = False) -> bytes:
@@ -138,6 +140,23 @@ def test_v3_compares_pdf_and_docx_built_from_the_same_content():
     assert len(_skill(docx_report, "Python").exact_parsers) == 2
     assert pdf_report.file_type == "pdf"
     assert docx_report.file_type == "docx"
+
+
+def test_v3_refuses_a_docx_whose_xml_declares_entities():
+    namespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    document = (
+        '<?xml version="1.0"?>'
+        '<!DOCTYPE w:document [ <!ENTITY bomb "aaaaaaaaaa"> ]>'
+        f'<w:document xmlns:w="{namespace}">'
+        "<w:p><w:r><w:t>&bomb;</w:t></w:r></w:p>"
+        "</w:document>"
+    )
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("word/document.xml", document)
+
+    with pytest.raises(DocumentError, match="illisible"):
+        ats_v3._docx_xml_extract(buffer.getvalue())
 
 
 def test_v3_keeps_semantic_evidence_separate_from_lexical_presence():

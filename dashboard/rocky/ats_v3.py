@@ -15,7 +15,9 @@ from dataclasses import asdict, dataclass
 from itertools import combinations, pairwise
 from pathlib import Path
 from typing import Any
-from xml.etree import ElementTree
+
+from defusedxml import ElementTree
+from defusedxml.common import DefusedXmlException
 
 from dashboard.job_analysis import SKILL_ALIASES, analyze_job
 
@@ -625,7 +627,12 @@ def _docx_xml_extract(data: bytes) -> tuple[str, dict[str, Any]]:
             image_count = len(
                 [name for name in archive.namelist() if name.startswith("word/media/")]
             )
-    except (zipfile.BadZipFile, KeyError, ElementTree.ParseError) as error:
+    except (
+        zipfile.BadZipFile,
+        KeyError,
+        ElementTree.ParseError,
+        DefusedXmlException,
+    ) as error:
         raise DocumentError("Le fichier DOCX est illisible.") from error
     return "\n".join(paragraphs), {
         "page_count": None,

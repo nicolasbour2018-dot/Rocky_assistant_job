@@ -11,6 +11,7 @@ import argparse
 import time
 from pathlib import Path
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Locator, Page, sync_playwright
 
 from dashboard.rocky.config import Settings
@@ -78,7 +79,7 @@ def _fill_first(page: Page, selectors: tuple[str, ...], value: str) -> bool:
                 if candidate.is_visible() and candidate.is_editable():
                     candidate.fill(value)
                     return True
-            except Exception:
+            except PlaywrightError:
                 continue
     return False
 
@@ -118,7 +119,7 @@ def _upload_documents(
                 filled.append(label)
                 if label in missing:
                     missing.remove(label)
-            except Exception:
+            except PlaywrightError:
                 continue
     return filled, missing
 
