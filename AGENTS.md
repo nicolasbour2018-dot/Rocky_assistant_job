@@ -2,7 +2,7 @@
 
 Personal, explainable job-search assistant with authenticated accounts and bilingual (FR/EN) profiles. Python 3.11+ / Streamlit monolith, SQLAlchemy; PostgreSQL locally, SQLite for isolated tests. Docstrings, UI text, DB status values, and docs are in French — keep that convention.
 
-Detail lives in path-scoped `.claude/rules/`; each rule loads when you read a matching file. Structural choices and their trade-offs live in `docs/decisions/` (short ADRs, in French).
+Detail lives in path-scoped `.claude/rules/`; each rule loads when you read a matching file. Structural choices and their trade-offs live in `docs/decisions/` (short ADRs, in French). The target architecture and its diagrams live in `docs/architecture.md`; the layout below describes today's code, valid until `dashboard/` is removed.
 
 ## Commands
 
