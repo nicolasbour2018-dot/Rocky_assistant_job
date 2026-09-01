@@ -202,6 +202,30 @@ def test_existing_schema_validation_does_not_create_profile_links(tmp_path):
     engine.dispose()
 
 
+def test_url_import_stops_before_inserting_without_active_profile(
+    tmp_path, monkeypatch
+):
+    """L'import d'URL refuse d'insérer une annonce que plus rien ne rattacherait."""
+    settings, engine, repository = _repository(tmp_path)
+    assert repository.fetch_active_profile() is None
+
+    monkeypatch.setattr(dashboard_common, "Settings", lambda: settings)
+    dashboard_common.load_repository.clear()
+    app = AppTest.from_file(settings.project_dir / "dashboard" / "page_import_url.py")
+    app.run(timeout=30)
+
+    assert not app.exception
+    assert any("Crée d'abord un profil" in item.value for item in app.info)
+    assert not app.text_input
+    with engine.connect() as connection:
+        assert (
+            connection.execute(text("SELECT COUNT(*) FROM job_offers")).scalar_one()
+            == 0
+        )
+    dashboard_common.load_repository.clear()
+    engine.dispose()
+
+
 def test_bulk_status_update_changes_only_the_selected_jobs(tmp_path):
     _, engine, repository = _repository(tmp_path)
     profile_id = repository.create_profile("Profil test")

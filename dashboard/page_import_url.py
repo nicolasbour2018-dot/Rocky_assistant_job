@@ -41,6 +41,21 @@ except Exception as error:
     st.error("Connexion à la base Rocky impossible.")
     st.code(type(error).__name__)
     st.stop()
+
+# Sans profil actif, l'annonce serait insérée sans ligne dans `profile_jobs`.
+# Elle reste visible tant que le compte n'a aucun profil, puis disparaît de
+# toutes les vues dès la création du premier, sans moyen de la rattacher :
+# les INSERT de reprise ont été retirés des schémas.
+# TODO: rendre `profile_id` obligatoire dans `insert_job` et supprimer la
+# branche `None` de sa signature. Cela demande de migrer les appels de tests,
+# et rendrait cet état inexprimable au lieu de le garder sous condition.
+if profile is None:
+    st.info(
+        "Crée d'abord un profil dans « Profil & CV ». Une annonce importée "
+        "doit être rattachée à un profil pour rester visible."
+    )
+    st.stop()
+
 llm = RockyLLM(settings)
 
 url = st.text_input(
@@ -140,15 +155,12 @@ if preview:
                 description_is_full=True,
                 description_enrichment_source="Import URL",
             )
-            job_id, inserted = repository.insert_job(
-                offer, profile.id if profile else None
+            job_id, inserted = repository.insert_job(offer, profile.id)
+            localized = repository.profile_for_offer(profile.id, offer) or profile
+            result = calculate_match(
+                offer, localized, repository.fetch_skills(profile.id)
             )
-            if profile:
-                localized = repository.profile_for_offer(profile.id, offer) or profile
-                result = calculate_match(
-                    offer, localized, repository.fetch_skills(profile.id)
-                )
-                repository.save_match(job_id, profile.id, result)
+            repository.save_match(job_id, profile.id, result)
             if inserted:
                 st.success("Annonce enregistrée.")
                 del st.session_state.v2_import_preview
