@@ -687,7 +687,7 @@ class GmailService:
                 job_id, inserted = self.repository.insert_job(offer, self.profile.id)
                 self.repository.save_match(job_id, self.profile.id, result)
                 imported += int(inserted)
-            except Exception:
+            except Exception:  # noqa: S112 - résilience par élément de la boucle
                 # Un lien cassé ne doit ni arrêter Gmail ni déclencher un LLM.
                 continue
         return imported

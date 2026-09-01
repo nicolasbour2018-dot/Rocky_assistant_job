@@ -37,8 +37,8 @@ class WellfoundSource:
         n'ouvre jamais de shell.
         """
         try:
-            result = subprocess.run(
-                [
+            result = subprocess.run(  # noqa: S603 - même GET public, jamais de shell
+                [  # noqa: S607 - curl optionnel, repli transport sur le PATH
                     "curl",
                     "--fail",
                     "--location",

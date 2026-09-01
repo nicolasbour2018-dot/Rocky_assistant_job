@@ -68,7 +68,7 @@ def main() -> int:
         "--browser.gatherUsageStats=false",
     ]
     with LOG_PATH.open("a", encoding="utf-8") as log_file:
-        process = subprocess.Popen(
+        process = subprocess.Popen(  # noqa: S603 - argv entièrement littéral
             command,
             cwd=PROJECT_DIR,
             stdin=subprocess.DEVNULL,

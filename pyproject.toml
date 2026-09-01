@@ -173,10 +173,39 @@ target-version = "py311"
 #
 # Neuf d'entre elles ne signalent rien aujourd'hui. Elles sont activées pour
 # empêcher l'apparition, pas pour corriger l'existant.
+#
+# `S` (flake8-bandit) signale les motifs de sécurité connus. C'est la seule
+# famille dont les règles sont choisies une par une. Deux mesures l'imposent.
+#
+# La première : `S101` signale `assert`. Il y en a 531 dans `tests/` et aucun
+# dans `dashboard` ni `scripts`. C'est l'écriture normale de pytest, traitée
+# plus bas par une exception ciblée.
+#
+# La seconde : bandit rend 43 signalements sur `dashboard scripts`, ruff en
+# retrouve 34. Les 9 écarts sont les règles d'import de bandit (`import
+# subprocess`, `import xml.etree`), que ruff ne publie qu'en mode `--preview`.
+# Activer `preview` pour elles allumerait 57 signalements dans les familles
+# déjà choisies. Ces 9 constats restent donc suivis par bandit seul, dont le
+# fichier de référence vit à la racine du projet.
+#
+#   S101   `assert` hors tests                    0 site
+#   S105   chaîne qui ressemble à un identifiant  1 site, une URL OAuth publique
+#   S112   `try`/`except`/`continue` muet         1 site, justifié sur place
+#   S314   XML analysé sans protection            0 site, `ats_v3.py` passe par
+#                                                 `defusedxml`
+#   S324   empreinte cryptographique faible       0 site, les deux appels portent
+#                                                 `usedforsecurity=False`
+#   S603   `subprocess` sans shell                6 sites, tous en liste d'arguments
+#   S607   binaire appelé par son nom court       2 sites, outils externes optionnels
+#
+# `S314` et `S324` ne signalent rien : elles gardent la place, comme les neuf
+# familles ci-dessus. Les 10 sites restants portent chacun leur raison sur la
+# ligne, au format `# noqa: CODE - raison`.
 select = [
     "A", "ASYNC", "B", "C4", "DTZ", "E", "EXE", "F", "FLY", "FURB", "G", "I",
     "INT", "ISC", "LOG", "N", "PERF", "PGH", "PIE", "PLW", "PTH", "PYI", "RET",
-    "RUF", "SIM", "SLOT", "T20", "TID", "UP", "W", "YTT",
+    "RUF", "S101", "S105", "S112", "S314", "S324", "S603", "S607", "SIM",
+    "SLOT", "T20", "TID", "UP", "W", "YTT",
 ]
 
 # Règles désactivées pour tout le projet.
@@ -289,7 +318,15 @@ max-line-length = 120
 # la date bascule deux heures après Paris. Dans les tests, « aujourd'hui » est
 # la date locale de la machine qui les exécute, et c'est bien ce qu'on veut
 # comparer.
-"tests/*.py" = ["DTZ011"]
+#
+# S101 interdit `assert`. C'est la façon dont pytest écrit ses vérifications :
+# 531 des 532 signalements `S` du dossier `tests/` sont des `assert`.
+#
+# S105 signale une chaîne qui ressemble à un identifiant. Le seul site est
+# `tests/test_enrichment.py:191`, où `secret = "TOP_SECRET_THEIRSTACK"` est le
+# leurre du test qui vérifie qu'aucun identifiant ne fuit dans un message
+# d'erreur. Écrire ce leurre est l'objet même du test.
+"tests/*.py" = ["DTZ011", "S101", "S105"]
 
 # E501 signale les lignes trop longues. Ces trois fichiers embarquent du CSS et
 # du SVG dans des chaînes triple-quotées, avec des règles allant jusqu'à

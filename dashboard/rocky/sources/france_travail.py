@@ -18,7 +18,7 @@ class FranceTravailSource:
 
     name = "France Travail"
     token_url = (
-        "https://entreprise.francetravail.fr/connexion/oauth2/access_token"
+        "https://entreprise.francetravail.fr/connexion/oauth2/access_token"  # noqa: S105 - URL OAuth publique
         "?realm=/partenaire"
     )
     search_url = (

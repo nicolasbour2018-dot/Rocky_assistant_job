@@ -62,7 +62,7 @@ def start_prefill(
     logs_dir.mkdir(parents=True, exist_ok=True)
     log_path = logs_dir / f"prefill_{session_id}.log"
     with log_path.open("ab") as log_stream:
-        subprocess.Popen(
+        subprocess.Popen(  # noqa: S603 - argv statique, binaire sys.executable
             [
                 sys.executable,
                 "-m",

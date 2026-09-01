@@ -132,7 +132,7 @@ def convert_docx_to_pdf(source: Path, target: Path) -> None:
         work_source = work_dir / "letter.docx"
         shutil.copy2(source, work_source)
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 - binaire résolu par shutil.which
                 [
                     executable,
                     "--headless",

@@ -1241,8 +1241,8 @@ def poppler_diagnostic(cv_data: bytes) -> str | None:
             source = Path(directory) / "cv.pdf"
             output = Path(directory) / "cv.txt"
             source.write_bytes(cv_data)
-            subprocess.run(
-                ["pdftotext", "-layout", str(source), str(output)],
+            subprocess.run(  # noqa: S603 - liste d'arguments fixe, jamais de shell
+                ["pdftotext", "-layout", str(source), str(output)],  # noqa: S607 - Poppler optionnel, absence gérée
                 check=True,
                 capture_output=True,
                 timeout=15,

@@ -17,7 +17,7 @@ _scheduler: Any | None = None
 
 def _launch_daily(project_dir: Path) -> None:
     """Lance la routine quotidienne hors du processus Streamlit pour ne pas le bloquer."""
-    subprocess.Popen(
+    subprocess.Popen(  # noqa: S603 - argv statique, binaire sys.executable
         [sys.executable, str(project_dir / "scripts" / "run_daily.py")],
         cwd=project_dir,
         start_new_session=True,
