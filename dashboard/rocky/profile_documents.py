@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Iterable
+from collections.abc import Iterable
 
 from pypdf import PdfReader
 
@@ -17,7 +17,7 @@ from .ats import extract_pdf_text, repair_spaced_pdf_text
 from .config import Settings
 from .errors import DocumentError, RockyError
 from .llm import RockyLLM
-from .models import ProfileAnalysis, ProfileLocalization
+from .models import ProfileAnalysis
 from .profile_skills import infer_profile_skills_from_cv
 from .repository import RockyRepository
 from .text_utils import project_relative

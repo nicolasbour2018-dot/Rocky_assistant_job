@@ -22,11 +22,6 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.dashboard_common import load_data, plain_description
-from dashboard.job_detail_components import render_ats_report, render_ats_v2_report
-from dashboard.rocky.ats import (
-    analyze_application_ats,
-    analyze_application_ats_v2,
-)
 from dashboard.rocky.ats_v3 import (
     AtsV3Report,
     analyze_ats_v3,

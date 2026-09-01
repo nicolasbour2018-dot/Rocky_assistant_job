@@ -11,7 +11,7 @@ import hashlib
 import html
 import json
 from pathlib import Path
-from typing import Iterable
+from collections.abc import Iterable
 
 import pymupdf
 

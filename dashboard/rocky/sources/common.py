@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, date, datetime
-from typing import Any, Iterable
+from typing import Any
+from collections.abc import Iterable
 
 import requests
 
