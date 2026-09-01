@@ -65,14 +65,6 @@ def generate_application(
         source = settings.project_dir / source
     if not source.is_file():
         raise DocumentError("Le CV source immuable du profil est introuvable.")
-    if profile.locale == "fr":
-        # Seul le gabarit français historique possède des zones de ciblage.
-        # Une version anglaise importée ou générée est recopiée telle quelle.
-        projects = load_profile_projects(
-            profile.id, settings, repository, profile.locale
-        )
-        skills = repository.fetch_skills(profile.id)
-        plan = plan or build_tailored_cv_plan(offer, skills, projects)
     if profile.user_id is None:
         raise PermissionError(
             "Un compte authentifié est requis pour générer une candidature."
@@ -104,7 +96,18 @@ def generate_application(
             raise DocumentError("La version anglaise du CV doit être actualisée.")
         shutil.copy2(source, cv_path)
     else:
-        create_tailored_cv(source, cv_path, plan, settings)
+        # Seul le gabarit français historique possède des zones de ciblage.
+        # Une version anglaise importée ou générée est recopiée telle quelle.
+        projects = load_profile_projects(
+            profile.id, settings, repository, profile.locale
+        )
+        skills = repository.fetch_skills(profile.id)
+        create_tailored_cv(
+            source,
+            cv_path,
+            plan or build_tailored_cv_plan(offer, skills, projects),
+            settings,
+        )
     variables = LetterVariables(
         job_title=offer.job_title,
         company_name=offer.company_name,

@@ -133,8 +133,8 @@ def calculate_match(
     matched_skills = []
     missing_skills = []
     for skill_name in detected:
-        skill = candidate_by_name.get(normalize_text(skill_name))
-        if skill:
+        matched = candidate_by_name.get(normalize_text(skill_name))
+        if matched:
             matched_skills.append(skill_name)
         else:
             missing_skills.append(skill_name)

@@ -162,13 +162,14 @@ def _group_skills(payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     for skill in payload.get("competences") or []:
         if not isinstance(skill, dict):
             continue
+        skill_type = str(skill.get("type") or "").strip()
         item = {
             "label": str(skill.get("libelle") or "").strip(),
-            "type": str(skill.get("type") or "").strip(),
+            "type": skill_type,
             "level_id": skill.get("idNomNiveau"),
             "skill_id": skill.get("idNomCompetence"),
         }
-        grouped[names.get(item["type"], "other")].append(item)
+        grouped[names.get(skill_type, "other")].append(item)
     return grouped
 
 

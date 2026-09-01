@@ -7,6 +7,7 @@ from datetime import date, datetime
 from typing import Any, Literal
 
 Locale = Literal["fr", "en"]
+DocumentKind = Literal["cv", "letter"]
 
 
 @dataclass(frozen=True)
@@ -39,7 +40,7 @@ class ProfileDocument:
     id: int
     profile_id: int
     locale: Locale
-    kind: str
+    kind: DocumentKind
     source_path: str
     preview_pdf_path: str = ""
     origin: str = "uploaded"

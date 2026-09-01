@@ -403,6 +403,7 @@ class GmailService:
             )
         self.settings = settings
         self.repository = repository
+        self.user_id: int = repository.user_id
         self.profile = profile
         selected_account = account_email or next(iter(settings.gmail_accounts), "")
         self.account_email = selected_account.strip().lower()
@@ -412,9 +413,7 @@ class GmailService:
     @property
     def token_path(self) -> Path:
         """Retourne le jeton propre à la boîte, sans partager de session OAuth."""
-        return self.settings.gmail_token_path_for(
-            self.account_email, self.repository.user_id
-        )
+        return self.settings.gmail_token_path_for(self.account_email, self.user_id)
 
     @property
     def is_authorized(self) -> bool:
@@ -494,7 +493,7 @@ class GmailService:
             prompt="select_account consent",
             login_hint=self.account_email,
         )
-        user_id = self.repository.user_id
+        user_id = self.user_id
         pending_path = self._pending_path(self.settings, state, user_id)
         pending_path.parent.mkdir(parents=True, exist_ok=True)
         pending_path.write_text(
@@ -523,7 +522,7 @@ class GmailService:
             raise ConfigurationError(
                 "Installe les dépendances Google de Rocky."
             ) from error
-        user_id = self.repository.user_id
+        user_id = self.user_id
         payload = self._pending_authorization(self.settings, state, user_id)
         if (
             payload.get("account_email") != self.account_email

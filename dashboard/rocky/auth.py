@@ -300,8 +300,11 @@ class AuthService:
                 .mappings()
                 .first()
             )
-        locked_until = _as_datetime(row.get("locked_until")) if row else None
-        valid = bool(row and row.get("password_hash") and row.get("status") == "ACTIVE")
+        if row is None:
+            # Le message ne doit pas confirmer qu'une adresse possède un compte.
+            raise RockyError("Adresse ou mot de passe incorrect.")
+        locked_until = _as_datetime(row.get("locked_until"))
+        valid = bool(row.get("password_hash") and row.get("status") == "ACTIVE")
         if valid and locked_until and locked_until > _now():
             # Le verrou ne doit pas confirmer qu'une adresse possède un compte.
             raise RockyError("Adresse ou mot de passe incorrect.")
@@ -311,23 +314,20 @@ class AuthService:
             except VerifyMismatchError:
                 valid = False
         if not valid:
-            if row:
-                failures = int(row.get("failed_login_count") or 0) + 1
-                lock = (
-                    _now() + LOCK_DURATION if failures >= MAX_LOGIN_FAILURES else None
+            failures = int(row.get("failed_login_count") or 0) + 1
+            lock = _now() + LOCK_DURATION if failures >= MAX_LOGIN_FAILURES else None
+            with self.engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "UPDATE users SET failed_login_count = :failures, "
+                        "locked_until = :locked_until WHERE id = :id"
+                    ),
+                    {
+                        "failures": failures,
+                        "locked_until": lock,
+                        "id": int(row["id"]),
+                    },
                 )
-                with self.engine.begin() as connection:
-                    connection.execute(
-                        text(
-                            "UPDATE users SET failed_login_count = :failures, "
-                            "locked_until = :locked_until WHERE id = :id"
-                        ),
-                        {
-                            "failures": failures,
-                            "locked_until": lock,
-                            "id": int(row["id"]),
-                        },
-                    )
             raise RockyError("Adresse ou mot de passe incorrect.")
 
         user_id = int(row["id"])

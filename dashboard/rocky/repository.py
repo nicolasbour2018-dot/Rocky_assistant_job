@@ -23,6 +23,7 @@ from .application_statuses import (
 from .language import detect_language
 from .models import (
     CandidateProfile,
+    DocumentKind,
     JobOffer,
     MatchResult,
     ProfileAnalysis,
@@ -680,7 +681,7 @@ class RockyRepository:
         self,
         profile_id: int,
         locale: str,
-        kind: str,
+        kind: DocumentKind,
         source_path: str,
         sha256: str,
         *,
@@ -767,7 +768,7 @@ class RockyRepository:
                 id=int(row["id"]),
                 profile_id=profile_id,
                 locale="en" if row["locale"] == "en" else "fr",
-                kind=str(row["kind"]),
+                kind="letter" if row["kind"] == "letter" else "cv",
                 source_path=str(row["source_path"]),
                 preview_pdf_path=str(row.get("preview_pdf_path") or ""),
                 origin=str(row["origin"]),
@@ -1195,8 +1196,11 @@ class RockyRepository:
         from .matching import calculate_match
 
         self._require_profile(profile_id)
+        row = self.fetch_job(job_id)
+        if row is None or not row.get("description_is_full"):
+            return None
         offer = self.fetch_job_offer(job_id)
-        if offer is None or not self.fetch_job(job_id).get("description_is_full"):
+        if offer is None:
             return None
         locale = offer.language_override or offer.detected_language or "fr"
         profile = self.fetch_profile(profile_id, locale)

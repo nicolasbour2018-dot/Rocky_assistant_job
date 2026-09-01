@@ -17,7 +17,7 @@ from .ats import extract_pdf_text, repair_spaced_pdf_text
 from .config import Settings
 from .errors import DocumentError, RockyError
 from .llm import RockyLLM
-from .models import ProfileAnalysis
+from .models import DocumentKind, ProfileAnalysis
 from .profile_skills import infer_profile_skills_from_cv
 from .repository import RockyRepository
 from .text_utils import project_relative
@@ -178,11 +178,11 @@ def save_uploaded_profile_document(
     user_id: int,
     profile_id: int,
     locale: str,
-    kind: str,
+    kind: DocumentKind,
     content: bytes,
 ) -> Path:
     """Valide puis publie atomiquement le document courant du profil."""
-    if locale not in {"fr", "en"} or kind not in {"cv", "letter"}:
+    if locale not in {"fr", "en"}:
         raise ValueError("Document de profil non pris en charge.")
     directory = _profile_dir(settings, user_id, profile_id, locale)
     suffix = ".pdf" if kind == "cv" else ".docx"
@@ -214,7 +214,7 @@ def save_uploaded_profile_document(
     stored_source = project_relative(target, settings.project_dir)
     stored_preview = (
         stored_source
-        if kind == "cv"
+        if preview is None
         else project_relative(preview, settings.project_dir)
     )
     repository.save_profile_document(
