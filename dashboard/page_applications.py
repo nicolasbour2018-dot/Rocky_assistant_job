@@ -508,8 +508,11 @@ def _render_email_detail(email, applications, repository) -> None:
             )
             st.session_state.pop("selected_email_id", None)
             st.rerun()
-def _render_history_email_detail(email) -> None:
-    """Affiche un historique en lecture seule et son lien Gmail d'origine."""
+
+
+def _render_history_email_detail(email, repository) -> None:
+    """Affiche le détail d'audit et permet de rouvrir un rejet automatique."""
+    email_id = int(email["id"])
     st.markdown(f"#### {email.get('subject') or '(sans objet)'}")
     st.caption(
         f"{email.get('sender') or 'Expéditeur inconnu'} · "
@@ -527,6 +530,24 @@ def _render_history_email_detail(email) -> None:
     gmail_url = _gmail_message_url(email)
     if gmail_url:
         st.link_button("Ouvrir dans Gmail", gmail_url)
+    if str(email.get("processing_state")) == "AUTO_IGNORED":
+        if st.button(
+            "Requalifier ce mail",
+            key=f"reopen_auto_ignored_email_{email_id}",
+            on_click=_keep_pending_email_queue_open,
+            help=(
+                "Remet ce message dans la file des e-mails à vérifier "
+                "sans modifier Gmail."
+            ),
+            type="primary",
+        ):
+            repository.reopen_auto_ignored_email(
+                email_id,
+                "Réouverture manuelle : message à requalifier",
+            )
+            st.session_state["selected_email_id"] = email_id
+            st.session_state.pop("selected_history_email_id", None)
+            st.rerun()
 
 
 def _gmail_message_url(email) -> str:
@@ -977,4 +998,6 @@ elif active_section == "emails":
             ]
             if not selected_history.empty:
                 with st.container(border=True):
-                    _render_history_email_detail(selected_history.iloc[0])
+                    _render_history_email_detail(
+                        selected_history.iloc[0], repository
+                    )

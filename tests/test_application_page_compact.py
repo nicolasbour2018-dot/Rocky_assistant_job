@@ -101,6 +101,69 @@ def test_applications_use_horizontal_cards_and_counted_tabs(tmp_path, monkeypatc
     dashboard_common.load_repository.clear()
 
 
+def test_auto_ignored_email_can_be_reopened_from_diagnostic(tmp_path, monkeypatch):
+    """Le détail diagnostic remet un rejet automatique dans la file de revue."""
+    settings = Settings(
+        project_dir=PROJECT_DIR,
+        database_url_override=f"sqlite:///{tmp_path / 'email-diagnostic.db'}",
+    )
+    engine = create_db_engine(settings)
+    initialize_database(engine, settings)
+    with engine.begin() as connection:
+        user_id = connection.execute(
+            text(
+                "INSERT INTO users (email, status) "
+                "VALUES ('diagnostic@example.test', 'ACTIVE') RETURNING id"
+            )
+        ).scalar_one()
+    repository = RockyRepository(engine).for_user(user_id)
+    profile_id = repository.create_profile("Profil diagnostic")
+    repository.set_active_profile(profile_id)
+    email_id = repository.save_email_message(
+        {
+            "gmail_account": "diagnostic@example.test",
+            "gmail_message_id": "auto-ignored-email",
+            "gmail_thread_id": None,
+            "sender": "notification@example.test",
+            "subject": "Message écarté automatiquement",
+            "received_at": None,
+            "snippet": "Contenu à requalifier.",
+            "classification": "NOISE",
+            "confidence": 0.96,
+            "matched_application_id": None,
+            "processing_state": "AUTO_IGNORED",
+            "reason": "Notification sans lien emploi",
+            "extracted_links": [],
+        }
+    )
+    assert email_id is not None
+
+    monkeypatch.setattr(dashboard_common, "Settings", lambda: settings)
+    dashboard_common.load_repository.clear()
+    app = AppTest.from_file(PROJECT_DIR / "dashboard" / "page_applications.py")
+    app.session_state["rocky_authenticated_user_id"] = user_id
+    app.run(timeout=30)
+    app.session_state["selected_history_email_id"] = int(email_id)
+    app.button_group[0].set_value(["emails"]).run(timeout=30)
+
+    assert not app.exception
+    reopen_button = next(
+        button for button in app.button if button.label == "Requalifier ce mail"
+    )
+    app.button_group("applications_active_section").set_value(["emails"])
+    reopen_button.click().run(timeout=30)
+
+    assert not app.exception
+    reopened = repository.fetch_pending_email_messages().iloc[0]
+    assert int(reopened["id"]) == int(email_id)
+    assert reopened["processing_state"] == "REVIEW"
+    assert bool(reopened["classification_manual"]) is True
+    assert not any(
+        button.label == "Requalifier ce mail" for button in app.button
+    )
+    dashboard_common.load_repository.clear()
+
+
 def test_application_score_threshold_keeps_unscored_dossiers_at_zero():
     """Un seuil positif filtre le score, tandis que zéro reste non restrictif."""
     applications = pd.DataFrame(

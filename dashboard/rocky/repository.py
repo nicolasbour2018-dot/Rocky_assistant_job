@@ -2114,6 +2114,30 @@ class RockyRepository:
                 },
             )
 
+    def reopen_auto_ignored_email(self, email_id: int, reason: str) -> None:
+        """Remet en revue un e-mail écarté automatiquement, sans toucher Gmail."""
+        self._require_email(email_id)
+        with self.engine.begin() as connection:
+            result = connection.execute(
+                text(
+                    """
+                    UPDATE email_messages
+                    SET classification_manual = TRUE,
+                        processing_state = 'REVIEW',
+                        reason = :reason
+                    WHERE id = :id AND processing_state = 'AUTO_IGNORED'
+                    """
+                ),
+                {
+                    "id": email_id,
+                    "reason": reason.strip() or "Réouverture manuelle",
+                },
+            )
+        if result.rowcount != 1:
+            raise ValueError(
+                "Seul un e-mail écarté par Rocky peut être requalifié."
+            )
+
     def reclassify_email_as_job_alert(self, email_id: int, reason: str) -> None:
         """Classe définitivement un message comme alerte emploi locale.
 

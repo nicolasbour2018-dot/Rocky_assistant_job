@@ -196,6 +196,46 @@ def test_manual_email_classification_keeps_only_candidate_returns_in_review(tmp_
     assert bool(returned["classification_manual"]) is True
 
 
+def test_reopening_auto_ignored_email_returns_it_to_review(tmp_path):
+    """Une correction humaine restaure la revue et résiste au triage suivant."""
+    settings = Settings(
+        project_dir=PROJECT_DIR,
+        database_url_override=f"sqlite:///{tmp_path / 'reopened-email.db'}",
+        gmail_accounts=(FIRST_ACCOUNT,),
+    )
+    engine = create_engine(settings.database_url)
+    initialize_database(engine, settings)
+    repository = RockyRepository(engine)
+    email_id = repository.save_email_message(_message(FIRST_ACCOUNT, "reopened"))
+    assert email_id is not None
+    repository.update_email_triage(
+        int(email_id),
+        classification="NOISE",
+        confidence=0.96,
+        processing_state="AUTO_IGNORED",
+        reason="Facture reconnue",
+    )
+
+    repository.reopen_auto_ignored_email(
+        int(email_id), "Réouverture manuelle : message à requalifier"
+    )
+
+    pending = repository.fetch_pending_email_messages()
+    assert list(pending["gmail_message_id"]) == ["reopened"]
+    reopened = pending.iloc[0]
+    assert reopened["processing_state"] == "REVIEW"
+    assert bool(reopened["classification_manual"]) is True
+    repository.update_email_triage(
+        int(email_id),
+        classification="NOISE",
+        confidence=0.99,
+        processing_state="AUTO_IGNORED",
+        reason="Nouveau triage automatique",
+    )
+    updated = repository.fetch_pending_email_messages().iloc[0]
+    assert updated["processing_state"] == "REVIEW"
+
+
 def test_incompatible_existing_schema_is_rejected(tmp_path):
     database_path = tmp_path / "incompatible.db"
     engine = create_engine(f"sqlite:///{database_path}")
