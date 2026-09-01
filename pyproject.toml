@@ -199,3 +199,25 @@ max-line-length = 120
 "dashboard/dashboard_v2.py" = ["E501"]
 "dashboard/page_application_prepare.py" = ["E501"]
 "dashboard/rocky/mascot.py" = ["E501"]
+
+
+# =============================================================================
+# TODO : refactor à ouvrir une fois toute la CI verte, ruff et les autres outils.
+#
+# Les réglages ci-dessus rendent le code existant conforme. Ils ne corrigent pas
+# ce qui l'a rendu non conforme.
+#
+# Le signe le plus visible est juste au-dessus : trois fichiers ont besoin d'une
+# exception sur E501 parce qu'ils embarquent du CSS, du HTML et du SVG dans des
+# chaînes Python. Aucun outil ne relit ce contenu, ni pour la syntaxe, ni pour la
+# mise en forme, ni pour les tests. Un vrai système de templating le sortirait du
+# code Python et le rendrait vérifiable, ce qui supprimerait ces trois exceptions
+# au lieu de les gérer.
+#
+# Le même raisonnement s'applique ailleurs : plusieurs traitements sont écrits à
+# la main là où une bibliothèque établie ferait le travail, mieux testée et déjà
+# couverte par des outils d'analyse.
+#
+# Ordre voulu : d'abord la CI verte, qui donne le filet ; ensuite le refactor,
+# qui s'appuie dessus. Refactoriser sans le filet ne se relit pas.
+# =============================================================================
