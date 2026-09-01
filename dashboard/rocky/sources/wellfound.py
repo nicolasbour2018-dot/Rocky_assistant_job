@@ -9,8 +9,9 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
-from ..errors import SourceError
-from ..models import CandidateProfile, JobOffer
+from dashboard.rocky.errors import SourceError
+from dashboard.rocky.models import CandidateProfile, JobOffer
+
 from .common import (
     BROWSER_HEADERS,
     deduplicate_offers,

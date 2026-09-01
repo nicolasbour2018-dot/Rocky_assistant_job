@@ -6,8 +6,9 @@ import uuid
 from collections.abc import Iterable
 from typing import Any
 
-from ..errors import SourceError
-from ..models import CandidateProfile, JobOffer
+from dashboard.rocky.errors import SourceError
+from dashboard.rocky.models import CandidateProfile, JobOffer
+
 from .common import deduplicate_offers, iso_date, public_get
 
 

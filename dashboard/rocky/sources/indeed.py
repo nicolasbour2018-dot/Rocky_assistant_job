@@ -6,12 +6,13 @@ from datetime import date
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from ..config import Settings
-from ..errors import ConfigurationError
-from ..job_importer import description_is_probably_truncated
-from ..models import CandidateProfile, JobOffer
-from ..text_utils import normalize_text
-from ..theirstack import TheirStackClient
+from dashboard.rocky.config import Settings
+from dashboard.rocky.errors import ConfigurationError
+from dashboard.rocky.job_importer import description_is_probably_truncated
+from dashboard.rocky.models import CandidateProfile, JobOffer
+from dashboard.rocky.text_utils import normalize_text
+from dashboard.rocky.theirstack import TheirStackClient
+
 from .common import deduplicate_offers
 
 INDEED_DOMAIN = "indeed.com"

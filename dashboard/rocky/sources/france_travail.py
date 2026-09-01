@@ -8,9 +8,9 @@ from typing import Any
 
 import requests
 
-from ..config import Settings
-from ..errors import ConfigurationError, SourceError
-from ..models import CandidateProfile, JobOffer
+from dashboard.rocky.config import Settings
+from dashboard.rocky.errors import ConfigurationError, SourceError
+from dashboard.rocky.models import CandidateProfile, JobOffer
 
 
 class FranceTravailSource:

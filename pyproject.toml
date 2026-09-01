@@ -132,6 +132,7 @@ target-version = "py311"
 #   PYI    flake8-pyi            fichiers de stubs
 #   SLOT   flake8-slots          `__slots__` manquant sur une sous-classe
 #   T20    flake8-print          `print` oublié dans du code d'application
+#   TID    flake8-tidy-imports   import qui remonte d'un dossier, voir plus bas
 #   YTT    flake8-2020           comparaison fragile sur `sys.version`
 #
 # Neuf d'entre elles ne signalent rien aujourd'hui. Elles sont activées pour
@@ -139,7 +140,7 @@ target-version = "py311"
 select = [
     "A", "ASYNC", "B", "C4", "DTZ", "E", "EXE", "F", "FLY", "FURB", "G", "I",
     "INT", "ISC", "LOG", "N", "PERF", "PGH", "PIE", "PLW", "PTH", "PYI", "RET",
-    "RUF", "SIM", "SLOT", "T20", "UP", "W", "YTT",
+    "RUF", "SIM", "SLOT", "T20", "TID", "UP", "W", "YTT",
 ]
 
 # Règles désactivées pour tout le projet.
@@ -166,6 +167,22 @@ select = [
 # Ces deux règles ont donc échoué sur 4 sites sur 4. Elles restent utiles sur
 # d'autres bases de code, pas sur celle-ci.
 ignore = ["RUF001", "RUF002", "RUF003", "SIM108", "PERF401"]
+
+
+# -----------------------------------------------------------------------------
+# [tool.ruff.lint.flake8-tidy-imports] : la convention d'imports.
+# -----------------------------------------------------------------------------
+
+# Un point veut dire « à côté », tout le reste s'écrit en entier :
+#
+#   from dashboard.rocky.errors import SourceError   # remonte : chemin complet
+#   from .common import iso_date                     # voisin : chemin relatif
+#
+# Un import qui sort du dossier courant se voit donc sans compter les points.
+# `parents` est le réglage par défaut de ruff : il interdit `..` et au-delà,
+# et laisse `.` tranquille.
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
 
 
 # -----------------------------------------------------------------------------

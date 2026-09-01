@@ -14,8 +14,8 @@ from typing import Any
 
 import requests
 
-from ..errors import SourceError
-from ..models import JobOffer
+from dashboard.rocky.errors import SourceError
+from dashboard.rocky.models import JobOffer
 
 BROWSER_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
@@ -158,6 +158,6 @@ def deduplicate_offers(offers: Iterable[JobOffer]) -> list[JobOffer]:
 
 def web_slug(value: str) -> str:
     """Crée un segment d'URL ASCII prévisible pour les pages de rôle."""
-    from ..text_utils import normalize_text
+    from dashboard.rocky.text_utils import normalize_text
 
     return re.sub(r"[^a-z0-9]+", "-", normalize_text(value)).strip("-")

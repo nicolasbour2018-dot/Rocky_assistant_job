@@ -12,7 +12,8 @@ from collections.abc import Iterable
 
 from bs4 import BeautifulSoup
 
-from ..models import CandidateProfile, JobOffer
+from dashboard.rocky.models import CandidateProfile, JobOffer
+
 from .common import deduplicate_offers, iso_date, public_get
 
 
