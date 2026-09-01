@@ -42,11 +42,12 @@ st.markdown(
 )
 
 
-######### -------------------------------------- Bloc de chargement des données et d'affichage du profil actif  ------------------------------------- #########
+######### ---------- Bloc de chargement des données et d'affichage du profil actif ---------- #########
 
 
 # Chargement des données depuis la base de données Rocky
-## Utilisation de la fonction load_data() pour charger la configuration, le repository, le profil actif et les annonces visibles associées. ##
+## Utilisation de la fonction load_data() pour charger la configuration,
+## le repository, le profil actif et les annonces visibles associées. ##
 try:
     settings, repository, profile, jobs = load_data()
 except Exception as error:
@@ -185,7 +186,7 @@ if (
     )
 
 
-######### -------------------------------------- Bloc d'affichage des outils de veille et de filtrage des annonces ------------------------------------- #########
+######### ---------- Bloc d'affichage des outils de veille et de filtrage des annonces ---------- #########
 
 ## Organise le containeur avec les boutons de récupération de la veille manuelle et le filtrage des resultats. ##
 with st.container(border=True):
@@ -279,7 +280,7 @@ with st.container(border=True):
             st.session_state.cockpit_view = "suggestions"
             st.rerun()
 
-######### -------------------------------------- Bloc de filtrage des annonces  ------------------------------------- #########
+######### ---------- Bloc de filtrage des annonces ---------- #########
 
 query = ""
 statuses: list[str] = []
@@ -385,7 +386,7 @@ if active_view in {"mine", "flow"}:
     if active_filters:
         st.caption("Filtres actifs : " + ", ".join(active_filters))
 
-######## -------------------------------------- Bloc d'affichage des annonces filtrées  ------------------------------------- #########
+######## ---------- Bloc d'affichage des annonces filtrées ---------- #########
 
 # Affichage du nombre d'annonces filtrées.
 st.subheader(f"{active_metric_label} · {len(filtered)} résultat(s)")
@@ -474,7 +475,8 @@ for start in range(0, len(filtered), 2):
                     index=status_index,
                     key=f"card_status_select_{int(row['id'])}",
                 )
-                # Bouton d'enregistrement du nouveau statut de l'annonce et actualisation du statut dans la base de données.
+                # Bouton d'enregistrement du nouveau statut de l'annonce
+                # et actualisation du statut dans la base de données.
                 if st.button(
                     "Enregistrer",
                     key=f"card_status_save_{int(row['id'])}",

@@ -373,10 +373,14 @@ def create_tailored_cv(
         0.78,
     )
     transversal = "<br>".join(html.escape(value) for value in plan.transversal_skills)
+    transversal_style = (
+        "font-family:Questrial;text-align:center;color:#666;"
+        "font-size:10.5px;line-height:1.35"
+    )
     _insert(
         page,
         zones["transversal"],
-        f"<div style='font-family:Questrial;text-align:center;color:#666;font-size:10.5px;line-height:1.35'>{transversal}</div>",
+        f"<div style='{transversal_style}'>{transversal}</div>",
         css,
         0.82,
     )

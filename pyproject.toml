@@ -190,3 +190,12 @@ max-line-length = 120
 # 56 signalements, tous dus à ce seul motif.
 "scripts/*.py" = ["E402"]
 "dashboard/dashboard_common.py" = ["E402"]
+
+# E501 signale les lignes trop longues. Ces trois fichiers embarquent du CSS et
+# du SVG dans des chaînes triple-quotées, avec des règles allant jusqu'à
+# 334 caractères. Un `# noqa` est impossible sur ces lignes : il s'écrirait
+# à l'intérieur de la feuille de style, et le navigateur le recevrait.
+# Découper ces règles à la main les rendrait illisibles sans rien gagner.
+"dashboard/dashboard_v2.py" = ["E501"]
+"dashboard/page_application_prepare.py" = ["E501"]
+"dashboard/rocky/mascot.py" = ["E501"]

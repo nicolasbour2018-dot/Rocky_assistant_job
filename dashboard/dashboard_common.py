@@ -64,7 +64,10 @@ def selected_row_ids(
     positions: list[int] | tuple[int, ...],
     id_column: str = "id",
 ) -> list[int]:
-    """Convertit une sélection Streamlit en ignorant les positions périmées. Évite l'erreur d'index lorsque le DataFrame est filtré ou trié."""
+    """Convertit une sélection Streamlit en ignorant les positions périmées.
+
+    Évite l'erreur d'index lorsque le DataFrame est filtré ou trié.
+    """
     if frame.empty or id_column not in frame:
         return []
     selected: list[int] = []

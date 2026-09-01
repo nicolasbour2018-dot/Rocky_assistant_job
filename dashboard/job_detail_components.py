@@ -343,7 +343,10 @@ def render_matching_detail(
     repository: RockyRepository,
     profile: CandidateProfile | None,
 ) -> None:
-    """Orchestre le recalcul du matching (après modification) et affiche les résultats : catégories et détail auditable du score Rocky."""
+    """Orchestre le recalcul du matching et affiche les résultats.
+
+    Rend les catégories et le détail auditable du score Rocky.
+    """
     job_id = int(row["id"])
     st.subheader("Analyse du matching")
     if profile is None:
@@ -752,8 +755,13 @@ def _render_cv_review(
             defaults = [
                 option for option in options if normalize_text(option) in recommended
             ][:6]
+            selected_count = (
+                len(defaults)
+                if widget_key not in st.session_state
+                else len(st.session_state[widget_key])
+            )
             selected = st.pills(
-                f"{label} · {len(defaults) if widget_key not in st.session_state else len(st.session_state[widget_key])}/6",
+                f"{label} · {selected_count}/6",
                 options,
                 selection_mode="multi",
                 default=defaults,
@@ -772,8 +780,13 @@ def _render_cv_review(
         active_projects = [project for project in projects if project.is_active]
         projects_by_slug = {project.slug: project for project in active_projects}
         project_widget_key = f"v2_cv_projects_{job_id}_{profile.id}"
+        selected_project_count = (
+            len(initial_plan.projects)
+            if project_widget_key not in st.session_state
+            else len(st.session_state[project_widget_key])
+        )
         selected_project_slugs = st.pills(
-            f"Projets retenus · {len(initial_plan.projects) if project_widget_key not in st.session_state else len(st.session_state[project_widget_key])}/3",
+            f"Projets retenus · {selected_project_count}/3",
             options=list(projects_by_slug),
             selection_mode="multi",
             default=[project.slug for project in initial_plan.projects],
