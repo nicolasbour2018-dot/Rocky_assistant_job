@@ -94,6 +94,21 @@ def test_sqlite_repository_supports_huggingface_workflow(tmp_path):
     assert jobs.iloc[0]["collector_name"] == "TheirStack"
     assert json.loads(jobs.iloc[0]["required_skills"]) == ["Python", "SQL"]
     assert json.loads(jobs.iloc[0]["match_breakdown"])["skills"]
+    first_history = repository.fetch_match_history(job_id, profile.id)
+    assert len(first_history) == 1
+    assert float(first_history.iloc[0]["score"]) == 91.5
+    assert first_history.iloc[0]["scoring_version"] == "matching-v1"
+
+    # Le score courant est remplacé, mais son état précédent reste une ligne
+    # distincte et exportable pour comparer les évolutions de matching.
+    repository.save_match(
+        job_id,
+        profile.id,
+        MatchResult(score=76, breakdown={"skills": {"raw_score": 76}}),
+    )
+    score_history = repository.fetch_match_history(job_id, profile.id)
+    assert list(score_history["score"].astype(float)) == [91.5, 76.0]
+    assert repository.fetch_jobs(profile.id).iloc[0]["match_score"] == 76
 
     edited_offer = replace(
         offer,
@@ -115,7 +130,9 @@ def test_sqlite_repository_supports_huggingface_workflow(tmp_path):
         "Tableau",
     ]
 
-    run_id = repository.start_watch_run(profile.id)
+    run_id = repository.start_watch_run(
+        profile.id, ("Data Analyst", "Business Intelligence Analyst")
+    )
     repository.finish_watch_run(
         run_id,
         {
@@ -134,6 +151,10 @@ def test_sqlite_repository_supports_huggingface_workflow(tmp_path):
     assert repository.has_watch_run_on(date.today()) is True
     runs = repository.fetch_watch_runs()
     source_results = json.loads(runs.iloc[0]["source_results"])
+    assert json.loads(runs.iloc[0]["searched_job_titles"]) == [
+        "Data Analyst",
+        "Business Intelligence Analyst",
+    ]
     assert source_results[0] == {
         "source": "Adzuna",
         "status": "OK",

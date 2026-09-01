@@ -1,3 +1,10 @@
+"""Détection déterministe des compétences dans les annonces.
+
+Ce module fournit le vocabulaire et les règles locales utilisés pendant
+l'import, l'enrichissement et le matching. Il ne fait appel ni à un LLM ni à
+une API : le résultat est explicable et réutilisable dans les analyses.
+"""
+
 from __future__ import annotations
 
 import re

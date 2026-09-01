@@ -3,7 +3,12 @@
                         # Orchestration de la lecture de la page, de l'extraction des informations et de l'enregistrement dans la base.
                     #############################################################################################################
 
-"""Import manuel d'une URL, repris de Rocky V1.1."""
+"""Import manuel et contrôlé d'une annonce depuis son URL.
+
+La page télécharge, extrait et présente un aperçu avant insertion dans Rocky.
+Elle permet de compléter une veille sans contourner la déduplication, le
+matching ni la validation humaine de l'offre.
+"""
 
 # Importations standard
 from __future__ import annotations
@@ -149,8 +154,9 @@ if preview:
                 offer, profile.id if profile else None
             )
             if profile:
+                localized = repository.profile_for_offer(profile.id, offer) or profile
                 result = calculate_match(
-                    offer, profile, repository.fetch_skills(profile.id)
+                    offer, localized, repository.fetch_skills(profile.id)
                 )
                 repository.save_match(job_id, profile.id, result)
             if inserted:

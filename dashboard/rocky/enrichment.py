@@ -86,7 +86,10 @@ def reenrich_saved_job(
         repository.update_job_status(job_id, next_status)
     if profile is not None:
         skills = repository.fetch_skills(profile.id)
-        result = calculate_match(enriched, profile, skills)
+        selector = getattr(repository, "profile_for_offer", None)
+        localized = selector(profile.id, enriched) if callable(selector) else profile
+        localized = localized or profile
+        result = calculate_match(enriched, localized, skills)
         repository.save_match(job_id, profile.id, result)
     return replace(hydration, offer=enriched)
 

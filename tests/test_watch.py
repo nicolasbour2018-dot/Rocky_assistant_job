@@ -14,6 +14,17 @@ class FakeSource:
         ]
 
 
+class CapturingSource:
+    name = "Capture"
+
+    def __init__(self):
+        self.queries = None
+
+    def search(self, profile, results_per_query):
+        self.queries = list(profile.target_job_titles)
+        return []
+
+
 class BrokenSource:
     name = "Cassée"
 
@@ -68,7 +79,8 @@ class FakeRepository:
     def fetch_skills(self, profile_id):
         return []
 
-    def start_watch_run(self, profile_id):
+    def start_watch_run(self, profile_id, searched_job_titles=()):
+        self.searched_job_titles = list(searched_job_titles)
         return 7
 
     def find_duplicate(self, offer):
@@ -129,8 +141,22 @@ def test_watch_inserts_score_equal_to_70(monkeypatch):
             "inserted_count": 1,
             "duplicate_count": 0,
             "updated_count": 0,
+            "rejected_count": 1,
+            "incomplete_count": 0,
         }
     ]
+
+
+def test_watch_accepts_ephemeral_query_without_persisting_profile():
+    repository = FakeRepository()
+    repository.fetch_active_profile = lambda: CandidateProfile(
+        id=1, profile_name="Data", target_job_titles=["Profil historique"]
+    )
+    source = CapturingSource()
+    override = CandidateProfile(id=1, profile_name="Data", target_job_titles=["Data Product"])
+    WatchService(Settings(), repository, [source]).run(profile_override=override)
+    assert source.queries == ["Data Product"]
+    assert repository.searched_job_titles == ["Data Product"]
 
 
 def test_watch_isolates_an_unexpected_source_failure(monkeypatch):

@@ -27,6 +27,7 @@ USER_AGENT = (
 
 @dataclass
 class ImportPreview:
+    """Aperçu contrôlable d'une annonce importée avant son ajout au flux Rocky."""
     offer: JobOffer
     extraction_method: str
     warnings: list[str]
@@ -55,6 +56,7 @@ DETAIL_DESCRIPTION_SELECTORS = (
 
 
 def _validate_url(url: str) -> str:
+    """Valide une URL HTTP(S) avant toute lecture distante d'annonce."""
     parts = urlsplit(url.strip())
     if parts.scheme not in {"http", "https"} or not parts.netloc:
         raise ImportError("L'URL doit commencer par http:// ou https://.")
@@ -62,6 +64,7 @@ def _validate_url(url: str) -> str:
 
 
 def fetch_html(url: str, timeout: int = 15) -> tuple[str, str]:
+    """Télécharge le HTML d'une offre avec délai borné pour l'import manuel."""
     safe_url = _validate_url(url)
     try:
         response = requests.get(
@@ -88,6 +91,7 @@ def fetch_html(url: str, timeout: int = 15) -> tuple[str, str]:
 
 
 def _json_ld_objects(value: Any):
+    """Extrait récursivement les objets JSON-LD utiles aux annonces structurées."""
     if isinstance(value, dict):
         if value.get("@type") == "JobPosting" or (
             isinstance(value.get("@type"), list)
@@ -102,6 +106,7 @@ def _json_ld_objects(value: Any):
 
 
 def _plain_html(value: Any) -> str:
+    """Transforme du HTML source en texte lisible pour l'aperçu et le matching."""
     if value is None:
         return ""
     return BeautifulSoup(str(value), "html.parser").get_text(" ", strip=True)
@@ -133,6 +138,7 @@ def _targeted_description(soup: BeautifulSoup) -> str:
 
 
 def _number(value: Any) -> float | None:
+    """Convertit une valeur salariale hétérogène sans inventer de montant."""
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, dict):
@@ -153,6 +159,7 @@ def _number(value: Any) -> float | None:
 
 
 def _address(data: dict[str, Any]) -> tuple[str, str]:
+    """Déduit ville et pays depuis l'adresse structurée publiée par l'employeur."""
     location = data.get("jobLocation")
     if isinstance(location, list):
         location = location[0] if location else {}
@@ -168,6 +175,7 @@ def _address(data: dict[str, Any]) -> tuple[str, str]:
 
 
 def _salary(data: dict[str, Any]) -> tuple[float | None, float | None, str]:
+    """Normalise la fourchette et la devise de salaire trouvées dans une annonce."""
     salary = data.get("baseSalary", {})
     if not isinstance(salary, dict):
         return None, None, "EUR"
@@ -185,6 +193,7 @@ def _salary(data: dict[str, Any]) -> tuple[float | None, float | None, str]:
 
 
 def _source_name(url: str) -> str:
+    """Identifie la source visible de l'annonce pour l'audit et la déduplication."""
     host = urlsplit(url).netloc.lower()
     known = {
         "linkedin": "LinkedIn",
@@ -202,6 +211,7 @@ def _source_name(url: str) -> str:
 
 
 def parse_html(html: str, url: str) -> ImportPreview:
+    """Construit un aperçu d'annonce depuis HTML et JSON-LD, sans persister l'offre."""
     soup = BeautifulSoup(html, "html.parser")
     warnings: list[str] = []
     job_data: dict[str, Any] = {}
@@ -304,6 +314,7 @@ def parse_html(html: str, url: str) -> ImportPreview:
 
 
 def _coerce_offer_fields(values: dict[str, Any]) -> dict[str, Any]:
+    """Nettoie les champs extraits avant de construire le modèle métier d'annonce."""
     result = dict(values)
     for name in ("salary_min", "salary_max", "minimum_experience_years"):
         result[name] = _number(result.get(name))
@@ -318,6 +329,7 @@ def _coerce_offer_fields(values: dict[str, Any]) -> dict[str, Any]:
 
 
 def import_job_url(url: str, llm: RockyLLM | None = None) -> ImportPreview:
+    """Orchestre l'import manuel et l'enrichissement optionnel avant validation utilisateur."""
     html, final_url = fetch_html(url)
     preview = parse_html(html, final_url)
     if llm and llm.is_configured:

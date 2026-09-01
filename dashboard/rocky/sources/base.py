@@ -8,10 +8,10 @@ from ..models import CandidateProfile, JobOffer
 
 
 class JobSource(Protocol):
+    """Contrat minimal d'une source exploitable par la veille multi-connecteurs."""
     name: str
 
     def search(
         self, profile: CandidateProfile, results_per_query: int
     ) -> list[JobOffer]:
         """Retourne des annonces déjà normalisées."""
-

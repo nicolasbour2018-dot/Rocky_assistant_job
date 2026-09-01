@@ -34,6 +34,7 @@ class AtsReport:
     alerts: tuple[str, ...]
 
     def to_dict(self) -> dict[str, Any]:
+        """Sérialise le diagnostic V1 pour l'interface sans perdre ses alertes."""
         return asdict(self)
 
 
@@ -68,6 +69,7 @@ class AtsV2Report:
     alerts: tuple[str, ...]
 
     def to_dict(self) -> dict[str, Any]:
+        """Sérialise le diagnostic V2 afin de le restituer dans les onglets Rocky."""
         return asdict(self)
 
 
@@ -145,6 +147,7 @@ def repair_spaced_pdf_text(text: str) -> tuple[str, float]:
 
 
 def ats_text_path(profiles_dir: Path, profile_id: int) -> Path:
+    """Construit le chemin du texte ATS éditable associé à un profil."""
     return profiles_dir / str(profile_id) / "cv_ats.txt"
 
 
@@ -175,6 +178,7 @@ def save_ats_cv_text(path: str | Path, text: str) -> Path:
 
 
 def _weighted_score(parts: list[tuple[float | None, float]]) -> int:
+    """Agrège les critères disponibles sans pénaliser ceux absents de l'annonce."""
     available = [(score, weight) for score, weight in parts if score is not None]
     total_weight = sum(weight for _, weight in available)
     if not total_weight:
@@ -184,6 +188,7 @@ def _weighted_score(parts: list[tuple[float | None, float]]) -> int:
 
 
 def _ordered_unique(values: list[str]) -> list[str]:
+    """Déduplique des éléments d'audit tout en gardant leur ordre de lecture."""
     found: dict[str, str] = {}
     for value in values:
         key = normalize_text(value)
@@ -193,6 +198,7 @@ def _ordered_unique(values: list[str]) -> list[str]:
 
 
 def _skills_in_text(text: str) -> set[str]:
+    """Détecte les compétences canoniques visibles dans un texte de CV ou lettre."""
     return {
         normalize_text(skill)
         for skill in analyze_job("", text)["all_skills"]
@@ -203,6 +209,7 @@ def _skills_in_text(text: str) -> set[str]:
 def _keyword_present(
     keyword: str, detected_skills: set[str], normalized_document: str
 ) -> bool:
+    """Teste la présence d'un mot-clé complet sans accepter de faux sous-mots."""
     key = normalize_text(keyword)
     if key in detected_skills:
         return True
@@ -215,6 +222,7 @@ def _keyword_present(
 
 
 def _rating(score: int) -> str:
+    """Traduit un score ATS indicatif en appréciation lisible pour la relecture."""
     if score >= 80:
         return "Compatibilité solide"
     if score >= 65:
@@ -225,6 +233,7 @@ def _rating(score: int) -> str:
 
 
 def _contact_and_structure_scores(text: str) -> tuple[int, int, list[str]]:
+    """Évalue les signaux de lisibilité de contact et structure, sans simuler un ATS réel."""
     normalized = normalize_text(text)
     email_found = bool(
         re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", text, re.IGNORECASE)
@@ -254,6 +263,7 @@ def _contact_and_structure_scores(text: str) -> tuple[int, int, list[str]]:
 def _letter_score(
     letter_text: str, offer: JobOffer, required_keywords: list[str]
 ) -> tuple[int, int, bool, bool]:
+    """Mesure la cohérence factuelle de la lettre avec l'offre et les compétences demandées."""
     normalized = normalize_text(letter_text)
     letter_skills = _skills_in_text(letter_text)
     word_count = len(re.findall(r"\b[\wÀ-ÿ'-]+\b", letter_text))
@@ -297,6 +307,7 @@ def _near_skill_match(
     cv_skills: dict[str, str],
     normalized_cv: str,
 ) -> AtsSkillMatch | None:
+    """Trouve une proximité déclarée entre compétences sans la présenter comme exacte."""
     required_key = normalize_text(required_skill)
     best_evidence = ""
     best_confidence = 0

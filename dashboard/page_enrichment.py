@@ -2,7 +2,12 @@
                         # Page d’enrichissement des annonces incomplètes de Rocky.
                     #############################################################################################################
 
-"""Page dédiée aux annonces incomplètes de Rocky V2."""
+"""File d'enrichissement des annonces dont la description est insuffisante.
+
+Cette page rend visibles les offres à compléter, permet leur sélection groupée
+et déclenche le service d'enrichissement. Aucun score fiable n'est affiché
+avant qu'une description complète ait été confirmée.
+"""
 
 from __future__ import annotations
 
@@ -90,27 +95,32 @@ else:
         "d’origine restent disponibles."
     )
 
+# Le filtre pilote aussi l'action groupée : on peut donc demander uniquement
+# « tout enrichir Adzuna » sans relancer les connecteurs Apec ou autres.
+filtered = filter_jobs(incomplete, query=query, sources=sources)
 enrichment_action = st.columns([1.4, 3])
 if enrichment_action[0].button(
-    f"Tout enrichir ({len(incomplete)})",
+    f"Tout enrichir le filtre ({len(filtered)})",
     type="primary",
-    disabled=incomplete.empty,
+    disabled=filtered.empty,
     width="stretch",
     help=(
-        "Retente toute la file du profil actif. TheirStack peut être utilisé en "
-        "fallback et consommer des crédits lorsque la source d’origine échoue."
+        "Retente seulement les annonces actuellement filtrées. TheirStack peut "
+        "être utilisé en fallback et consommer des crédits lorsque la source "
+        "d’origine échoue."
     ),
 ):
     progress = st.progress(0, text="Préparation de la file…")
 
     def update_progress(current: int, total: int) -> None:
+        """Actualise le retour utilisateur pendant un enrichissement groupé."""
         progress.progress(
             current / max(1, total),
             text=f"Enrichissement {current} / {total}",
         )
 
     result = reenrich_saved_jobs(
-        [int(job_id) for job_id in incomplete["id"].tolist()],
+        [int(job_id) for job_id in filtered["id"].tolist()],
         settings,
         repository,
         profile,
@@ -119,11 +129,10 @@ if enrichment_action[0].button(
     st.session_state[batch_result_key] = result
     st.rerun()
 enrichment_action[1].caption(
-    "Action volontaire sur toutes les annonces incomplètes du profil actif. "
-    "Une annonce non récupérée reste dans la file."
+    "Action volontaire sur le résultat de recherche et de sources ci-dessus. "
+    "Sélectionne par exemple uniquement Adzuna, puis lance l’enrichissement."
 )
 
-filtered = filter_jobs(incomplete, query=query, sources=sources)
 sort_rules = {
     "Dernière mise à jour": ("updated_at", False),
     "Publication récente": ("publication_date", False),
@@ -166,6 +175,22 @@ if not filtered.empty:
             "utf-8"
         )
     ).hexdigest()[:12]
+    select_all_label = (
+        "Sélectionner la ligne affichée"
+        if len(selection_frame) == 1
+        else f"Sélectionner toutes les {len(selection_frame)} lignes affichées"
+    )
+    select_all = st.checkbox(
+        select_all_label,
+        key=(
+            f"enrichment_select_all_{profile.id if profile else 'none'}_"
+            f"{selection_signature}"
+        ),
+        help=(
+            "Inclut toutes les annonces correspondant aux filtres actuels dans "
+            "l’action groupée, sans devoir les sélectionner une à une."
+        ),
+    )
     selection = st.dataframe(
         selection_frame,
         hide_index=True,
@@ -188,8 +213,15 @@ if not filtered.empty:
             "status": "Statut actuel",
         },
     )
+    # La sélection globale est volontairement limitée au résultat filtré et trié
+    # affiché : elle ne doit jamais inclure une annonce masquée par les filtres.
+    selected_positions = (
+        list(range(len(selection_frame)))
+        if select_all
+        else list(selection.selection.rows)
+    )
     selected_ids = selected_row_ids(
-        selection_frame, list(selection.selection.rows)
+        selection_frame, selected_positions
     )
     bulk = st.columns([1.5, 1, 2])
     bulk_status = bulk[0].selectbox(

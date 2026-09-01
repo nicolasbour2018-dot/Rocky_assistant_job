@@ -16,6 +16,8 @@ if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
 from streamlit.testing.v1 import AppTest
+from sqlalchemy import text
+from dashboard import dashboard_common
 
 
 def main() -> int:
@@ -25,13 +27,24 @@ def main() -> int:
         "page_all_jobs.py",
         "page_enrichment.py",
         "page_job_detail.py",
+        "page_application_prepare.py",
         "page_import_url.py",
         "page_profiles.py",
         "page_monitoring.py",
         "page_ats_v3.py",
+        "page_applications.py",
+        "page_statistics.py",
+        "page_assistant.py",
     )
     for filename in dashboards:
         app = AppTest.from_file(PROJECT_DIR / "dashboard" / filename)
+        with dashboard_common.load_repository().engine.connect() as connection:
+            user_ids = [
+                int(row[0])
+                for row in connection.execute(text("SELECT id FROM users ORDER BY id"))
+            ]
+        if user_ids:
+            app.session_state["rocky_authenticated_user_id"] = user_ids[0]
         app.run(timeout=30)
         if app.exception or app.error:
             print(

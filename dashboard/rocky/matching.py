@@ -22,6 +22,7 @@ WEIGHTS = {
 
 
 def _tokens(value: str) -> set[str]:
+    """Prépare les termes utiles à la comparaison des intitulés et préférences."""
     ignored = {"de", "du", "des", "le", "la", "les", "et", "en", "h", "f"}
     return {
         token
@@ -31,6 +32,7 @@ def _tokens(value: str) -> set[str]:
 
 
 def _text_similarity(left: str, right: str) -> float:
+    """Mesure une proximité textuelle bornée pour les critères métier non exacts."""
     left_normalized = normalize_text(left)
     right_normalized = normalize_text(right)
     if not left_normalized or not right_normalized:
@@ -46,10 +48,12 @@ def _text_similarity(left: str, right: str) -> float:
 
 
 def _best_similarity(value: str, preferences: list[str]) -> float:
+    """Retient la préférence du profil la plus proche d'une valeur d'annonce."""
     return max((_text_similarity(value, item) for item in preferences), default=0.0)
 
 
 def _preference_match(value: str, preferences: list[str]) -> float:
+    """Privilégie une correspondance explicite avant le repli de similarité souple."""
     normalized_value = normalize_text(value)
     if not normalized_value:
         return 0.0
@@ -112,13 +116,22 @@ def calculate_match(
     detected = sorted(detected_by_key.values(), key=normalize_text)
     offer.detected_skills = detected
 
-    candidate_by_name = {
-        normalize_text(skill.get("skill_name")): skill for skill in candidate_skills
-    }
+    # Les deux libellés désignent une même compétence canonique : une annonce
+    # anglaise peut ainsi correspondre sans dupliquer ni gonfler la couverture.
+    candidate_by_name: dict[str, dict[str, Any]] = {}
+    for skill in candidate_skills:
+        for label in (skill.get("skill_name"), skill.get("skill_name_en")):
+            key = normalize_text(label)
+            if key:
+                candidate_by_name[key] = skill
     profile_skill_names = [
-        str(skill.get("skill_name") or "").strip()
+        str(
+            skill.get("skill_name_en")
+            if profile.locale == "en" and skill.get("skill_name_en")
+            else skill.get("skill_name") or ""
+        ).strip()
         for skill in candidate_skills
-        if str(skill.get("skill_name") or "").strip()
+        if str(skill.get("skill_name") or skill.get("skill_name_en") or "").strip()
     ]
     matched_skills = []
     missing_skills = []
@@ -153,6 +166,9 @@ def calculate_match(
         title_score = _best_similarity(
             offer.job_title, profile.target_job_titles
         )
+        if profile.target_domains and offer.main_domain:
+            domain_score = _best_similarity(offer.main_domain, profile.target_domains)
+            title_score = 0.75 * title_score + 0.25 * domain_score
         _add_breakdown(
             breakdown,
             "title",
@@ -221,4 +237,5 @@ def calculate_match(
         strengths=strengths,
         gaps=gaps,
         detected_job_skills=detected,
+        profile_locale=profile.locale,
     )

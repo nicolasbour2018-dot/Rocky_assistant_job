@@ -150,6 +150,7 @@ SEMANTIC_EQUIVALENCES: dict[str, tuple[str, ...]] = {
 
 @dataclass(frozen=True)
 class StructuredCV:
+    """Vue structurée minimale d'un CV, commune aux parseurs comparés."""
     name: str
     emails: tuple[str, ...]
     phones: tuple[str, ...]
@@ -168,6 +169,7 @@ class StructuredCV:
 
 @dataclass(frozen=True)
 class ParserExtraction:
+    """Résultat brut et structuré d'un parseur, avec ses limites de qualité."""
     parser_id: str
     label: str
     engine: str
@@ -183,6 +185,7 @@ class ParserExtraction:
 
 @dataclass(frozen=True)
 class SkillRequirement:
+    """Compétence exigée par l'annonce et niveau d'importance déduit localement."""
     skill: str
     job_evidence: str
     importance: str
@@ -190,12 +193,14 @@ class SkillRequirement:
 
 @dataclass(frozen=True)
 class SemanticEvidence:
+    """Équivalence sémantique affichée séparément d'une présence lexicale."""
     parser_id: str
     evidence: str
 
 
 @dataclass(frozen=True)
 class SkillComparison:
+    """Comparaison d'une exigence d'annonce entre les extractions de CV."""
     skill: str
     importance: str
     job_evidence: str
@@ -207,6 +212,7 @@ class SkillComparison:
 
 @dataclass(frozen=True)
 class BenchmarkResult:
+    """Résultat pédagogique d'un benchmark ATS non propriétaire."""
     name: str
     score: int
     interpretation: str
@@ -218,6 +224,7 @@ class BenchmarkResult:
 
 @dataclass(frozen=True)
 class AtsV3Report:
+    """Rapport complet de robustesse ATS V3 pour une annonce et un fichier source."""
     file_name: str
     file_type: str
     job_title: str
@@ -238,14 +245,17 @@ class AtsV3Report:
     limits: tuple[str, ...]
 
     def to_dict(self) -> dict[str, Any]:
+        """Sérialise le rapport pour le conserver temporairement dans l'interface."""
         return asdict(self)
 
 
 def _clean_lines(text: str) -> list[str]:
+    """Normalise les lignes extraites avant toute détection de structure."""
     return [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
 
 
 def _section_type(line: str) -> str | None:
+    """Identifie un en-tête de section de CV parmi les alias connus."""
     cleaned = normalize_text(re.sub(r"[:|_–—-]+$", "", line).strip())
     if not cleaned or len(cleaned.split()) > 6:
         return None
@@ -256,6 +266,7 @@ def _section_type(line: str) -> str | None:
 
 
 def _sections(lines: list[str]) -> tuple[dict[str, list[str]], list[str]]:
+    """Découpe un texte de CV en sections pour comparer leur lecture par parseur."""
     found: dict[str, list[str]] = {}
     order: list[str] = []
     current = "header"
@@ -274,6 +285,7 @@ def _sections(lines: list[str]) -> tuple[dict[str, list[str]], list[str]]:
 
 
 def _extract_name(lines: list[str]) -> str:
+    """Propose le nom en tête de CV sans l'inventer lorsque le texte est ambigu."""
     for line in lines[:12]:
         cleaned = re.sub(r"[^A-Za-zÀ-ÿ'’ -]", "", line).strip()
         words = cleaned.split()
@@ -290,6 +302,7 @@ def _extract_name(lines: list[str]) -> str:
 
 
 def _extract_title(lines: list[str], name: str) -> str:
+    """Propose l'intitulé professionnel visible après le nom du candidat."""
     for line in lines[:20]:
         normalized_words = set(normalize_text(line).split())
         if (
@@ -302,6 +315,7 @@ def _extract_title(lines: list[str], name: str) -> str:
 
 
 def _unique(values: list[str]) -> tuple[str, ...]:
+    """Déduplique des éléments extraits tout en conservant une sortie stable."""
     found: dict[str, str] = {}
     for value in values:
         key = normalize_text(value)
@@ -311,6 +325,7 @@ def _unique(values: list[str]) -> tuple[str, ...]:
 
 
 def _block_candidates(section_lines: list[str]) -> tuple[str, ...]:
+    """Retient les lignes informatives d'une section de CV déjà identifiée."""
     candidates: list[str] = []
     for index, line in enumerate(section_lines):
         if DATE_PATTERN.search(line):
@@ -321,6 +336,7 @@ def _block_candidates(section_lines: list[str]) -> tuple[str, ...]:
 
 
 def _companies(experiences: tuple[str, ...]) -> tuple[str, ...]:
+    """Repère des noms d'entreprise plausibles dans les expériences extraites."""
     found: list[str] = []
     for experience in experiences:
         parts = re.split(r"\s[-–—|]\s|\s+chez\s+|\s+at\s+", experience)
@@ -383,6 +399,7 @@ def structure_cv(text: str) -> StructuredCV:
 
 
 def _spaced_character_ratio(text: str) -> float:
+    """Mesure un espacement anormal, signal fréquent d'un PDF mal parsé."""
     tokens = re.findall(r"\S+", text)
     if not tokens:
         return 1.0
@@ -390,6 +407,7 @@ def _spaced_character_ratio(text: str) -> float:
 
 
 def _garbage_ratio(text: str) -> float:
+    """Mesure la proportion de caractères peu exploitables dans une extraction."""
     if not text:
         return 1.0
     bad = sum(
@@ -402,6 +420,7 @@ def _garbage_ratio(text: str) -> float:
 def _quality(
     text: str, structured: StructuredCV, metadata: dict[str, Any]
 ) -> tuple[int, tuple[str, ...]]:
+    """Évalue la qualité lisible d'une extraction, sans modifier le texte source."""
     words = re.findall(r"\b\w+\b", text)
     warnings: list[str] = []
     extraction_score = min(100.0, len(text) / 12)
@@ -442,6 +461,7 @@ def _quality(
 
 
 def _pypdf_extract(data: bytes) -> tuple[str, dict[str, Any]]:
+    """Extrait le texte PDF via pypdf, premier lecteur indépendant du banc."""
     from pypdf import PdfReader
 
     reader = PdfReader(io.BytesIO(data))
@@ -450,6 +470,7 @@ def _pypdf_extract(data: bytes) -> tuple[str, dict[str, Any]]:
     images = 0
     for page in reader.pages:
         def visitor(text, _cm, tm, _font, _size):
+            """Collecte les positions de texte pour signaler une extraction PDF désordonnée."""
             if str(text).strip():
                 x_positions.append(float(tm[4]))
 
@@ -471,6 +492,7 @@ def _pypdf_extract(data: bytes) -> tuple[str, dict[str, Any]]:
 
 
 def _pdfminer_extract(data: bytes) -> tuple[str, dict[str, Any]]:
+    """Extrait le texte PDF via pdfminer pour comparer les divergences de parsing."""
     from pdfminer.high_level import extract_text
     from pdfminer.layout import LAParams
     from pdfminer.pdfpage import PDFPage
@@ -488,6 +510,7 @@ def _pdfminer_extract(data: bytes) -> tuple[str, dict[str, Any]]:
 
 
 def _pdfium_extract(data: bytes) -> tuple[str, dict[str, Any]]:
+    """Extrait le texte PDF via PDFium lorsque cette dépendance optionnelle existe."""
     import pypdfium2 as pdfium
 
     document = pdfium.PdfDocument(data)
@@ -508,6 +531,7 @@ def _pdfium_extract(data: bytes) -> tuple[str, dict[str, Any]]:
 
 
 def _docx_paragraph_extract(data: bytes) -> tuple[str, dict[str, Any]]:
+    """Lit les paragraphes DOCX avec python-docx comme premier parcours indépendant."""
     from docx import Document
 
     document = Document(io.BytesIO(data))
@@ -522,6 +546,7 @@ def _docx_paragraph_extract(data: bytes) -> tuple[str, dict[str, Any]]:
 
 
 def _docx_xml_extract(data: bytes) -> tuple[str, dict[str, Any]]:
+    """Lit le XML DOCX directement pour comparer une seconde stratégie d'extraction."""
     namespace = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
@@ -554,6 +579,7 @@ def _make_extraction(
     text: str,
     metadata: dict[str, Any],
 ) -> ParserExtraction:
+    """Emballe un texte de parseur en résultat structuré et évalué pour le rapport."""
     structured = structure_cv(text)
     quality, warnings = _quality(text, structured, metadata)
     return ParserExtraction(
@@ -574,6 +600,7 @@ def _make_extraction(
 def extract_with_independent_parsers(
     data: bytes, file_name: str
 ) -> tuple[ParserExtraction, ...]:
+    """Exécute les lecteurs applicables au fichier afin de mesurer leur robustesse croisée."""
     """Exécute les moteurs tels quels, sans réparation spécifique au CV."""
     suffix = Path(file_name).suffix.lower()
     parsers: list[tuple[str, str, str, str, Any]]
@@ -654,6 +681,7 @@ def extract_with_independent_parsers(
 
 
 def _word_set(text: str) -> set[str]:
+    """Réduit un texte à ses mots comparables pour les métriques de cohérence."""
     return {
         token
         for token in re.findall(r"[a-z0-9+#.]{3,}", normalize_text(text))
@@ -662,11 +690,13 @@ def _word_set(text: str) -> set[str]:
 
 
 def _jaccard(left: set[str], right: set[str]) -> float:
+    """Calcule la similarité d'ensembles utilisée pour comparer les parseurs."""
     union = left | right
     return len(left & right) / len(union) if union else 1.0
 
 
 def _parser_consistency(extractions: tuple[ParserExtraction, ...]) -> int:
+    """Mesure l'accord lexical entre les parseurs, plutôt que la qualité d'un seul moteur."""
     text_scores = [
         _jaccard(_word_set(left.raw_text), _word_set(right.raw_text))
         for left, right in combinations(extractions, 2)
@@ -689,10 +719,12 @@ def _parser_consistency(extractions: tuple[ParserExtraction, ...]) -> int:
 
 
 def _skill_forms(skill: str) -> list[str]:
+    """Prépare les variantes lexicales admises pour une compétence demandée."""
     return [skill, *SKILL_ALIASES.get(skill, [])]
 
 
 def _find_phrase(text: str, phrases: list[str]) -> str:
+    """Retourne la première preuve textuelle complète parmi des variantes connues."""
     normalized = normalize_text(text)
     for phrase in sorted(phrases, key=len, reverse=True):
         key = normalize_text(phrase)
@@ -704,6 +736,7 @@ def _find_phrase(text: str, phrases: list[str]) -> str:
 
 
 def _importance(text: str, evidence: str) -> str:
+    """Classe une exigence d'annonce selon le contexte local qui l'entoure."""
     normalized = normalize_text(text)
     key = normalize_text(evidence)
     position = normalized.find(key)
@@ -737,6 +770,7 @@ def _importance(text: str, evidence: str) -> str:
 
 
 def _requirements(job_text: str) -> tuple[SkillRequirement, ...]:
+    """Construit les exigences de compétences de l'annonce avec leur preuve source."""
     skills = analyze_job("", job_text)["all_skills"]
     return tuple(
         SkillRequirement(
@@ -751,6 +785,7 @@ def _requirements(job_text: str) -> tuple[SkillRequirement, ...]:
 
 
 def _semantic_evidence(skill: str, text: str) -> str:
+    """Cherche une équivalence sémantique déclarée, sans la compter comme exacte."""
     return _find_phrase(text, list(SEMANTIC_EQUIVALENCES.get(normalize_text(skill), ())))
 
 
@@ -758,6 +793,7 @@ def _compare_skills(
     requirements: tuple[SkillRequirement, ...],
     extractions: tuple[ParserExtraction, ...],
 ) -> tuple[SkillComparison, ...]:
+    """Compare chaque exigence de l'annonce dans les sorties de tous les parseurs."""
     comparisons = []
     for requirement in requirements:
         exact: list[str] = []
@@ -799,6 +835,7 @@ def _coverage(
     *,
     mandatory_only: bool = False,
 ) -> int | None:
+    """Calcule une couverture pondérée en distinguant les absences de données."""
     selected = [
         item
         for item in comparisons
@@ -828,6 +865,7 @@ def _exact_coverage(
 def _semantic_coverage(
     comparisons: tuple[SkillComparison, ...], parser_count: int
 ) -> int | None:
+    """Mesure séparément les équivalences sémantiques pour conserver leur traçabilité."""
     missing_lexically = [
         item
         for item in comparisons
@@ -841,6 +879,7 @@ def _semantic_coverage(
 
 
 def _important_keywords(job_text: str, limit: int = 18) -> tuple[str, ...]:
+    """Sélectionne les termes d'annonce les plus utiles au diagnostic lexical ATS."""
     tokens = [
         token
         for token in re.findall(r"[a-z0-9+#.]{4,}", normalize_text(job_text))
@@ -858,6 +897,7 @@ def _important_keywords(job_text: str, limit: int = 18) -> tuple[str, ...]:
 def _keyword_coverage(
     keywords: tuple[str, ...], extractions: tuple[ParserExtraction, ...]
 ) -> int | None:
+    """Évalue la présence des mots-clés d'annonce dans l'ensemble des extractions."""
     if not keywords:
         return None
     majority = math.ceil(len(extractions) / 2)
@@ -872,6 +912,7 @@ def _keyword_coverage(
 
 
 def _structure_component(extractions: tuple[ParserExtraction, ...]) -> int:
+    """Agrège les signaux de structure extraits pour les benchmarks pédagogiques."""
     scores = []
     for extraction in extractions:
         structured = extraction.structured
@@ -894,6 +935,7 @@ def _benchmark_results(
     semantic_coverage: int | None,
     structure: int,
 ) -> tuple[BenchmarkResult, ...]:
+    """Produit des repères ATS explicables, distincts de tout moteur propriétaire."""
     exact = float(exact_coverage or 0)
     lexical = float(lexical_coverage or 0)
     semantic = float(semantic_coverage or 0)
@@ -972,6 +1014,7 @@ def _recommendations(
     comparisons: tuple[SkillComparison, ...],
     consistency: int,
 ) -> tuple[str, ...]:
+    """Transforme les métriques en conseils de relecture transparents et actionnables."""
     parser_count = len(extractions)
     recommendations: list[str] = []
     for item in comparisons:

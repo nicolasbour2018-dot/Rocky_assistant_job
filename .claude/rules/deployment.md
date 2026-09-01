@@ -11,7 +11,7 @@ paths:
 
 # Deployment
 
-- The Hugging Face Space stays PRIVATE (it holds the CV and application data). Secrets (Mistral, France Travail, Adzuna) live in Space secrets, never in the image or the repo.
-- Split: `/app` read-only code, `/data` volume `rocky-data` with the SQLite DB and documents. Without the volume, data can vanish on Space restart.
-- `scripts/activate_hf.py` performs the final switch and volume mount without deleting files; `deploy_hf.py` and `check_hf_deployment.py` handle push and verification.
+- Rocky is currently run natively on macOS; GitHub `main` is the delivery target.
+- Keep `.env`, `.secrets/`, `data/`, `logs/`, and `backups/` outside commits.
 - Local detached run: `.venv/bin/python scripts/start_local.py` (PID and logs under `logs/`, no system service).
+- Hugging Face deployment scripts remain historical tooling and are not part of this local release.

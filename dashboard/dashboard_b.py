@@ -1,7 +1,14 @@
-"""Rocky V1.2 — cockpit de veille orienté décision."""
+"""Cockpit opérationnel de Rocky.
+
+Cette page transforme les annonces du profil actif en vues de décision
+("Nouvelles", "Mes annonces" et "Tout le flux"). Elle applique les périodes,
+statuts et seuils de matching sans modifier les données persistées ; les
+actions métier restent déléguées aux services Rocky dédiés.
+"""
 
 # Importation des librairies standardes 
 from __future__ import annotations
+from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
 
@@ -22,8 +29,14 @@ from dashboard.dashboard_common import (
 from dashboard.rocky.statuses import JOB_STATUS_OPTIONS
 
 
-st.title("Rocky Assistant Recherche d'emploi (V1.2)")
-st.caption("Cockpit personnel de recherche d’emploi · métriques interactives")
+st.markdown('<div class="rocky-kicker">Recherche & décisions</div>', unsafe_allow_html=True)
+st.title("Rocky Assistant Recherche d'emploi · V2")
+st.caption("Cockpit personnel · veille, matching et prochaines actions")
+st.markdown(
+    '<div class="rocky-hero"><strong>Ton terrain de jeu pour la prochaine bonne opportunité.</strong><br>'
+    'Explore les suggestions, ajuste ton profil et laisse Rocky te guider vers les annonces qui comptent.</div>',
+    unsafe_allow_html=True,
+)
 
 
 ######### -------------------------------------- Bloc de chargement des données et d'affichage du profil actif  ------------------------------------- #########
@@ -44,10 +57,12 @@ if profile:
 
 
 def _status_series(frame: pd.DataFrame) -> pd.Series:
+    """Normalise le statut pour filtrer le flux, y compris sur données incomplètes."""
     return frame["status"].fillna("NOUVELLE").astype(str).str.strip().str.upper()
 
 
 def _exploitable_jobs(frame: pd.DataFrame) -> pd.DataFrame:
+    """Écarte les annonces techniques du cockpit pour ne garder que les pistes métier."""
     full = frame["description_is_full"].fillna(False).astype(bool)
     scores = pd.to_numeric(frame["match_score"], errors="coerce")
     return frame[full & scores.notna()].copy()
@@ -56,6 +71,7 @@ def _exploitable_jobs(frame: pd.DataFrame) -> pd.DataFrame:
 def _jobs_from_watch_run(
     frame: pd.DataFrame, watch_run: dict[str, object] | None
 ) -> pd.DataFrame:
+    """Isole les annonces découvertes lors de la dernière veille terminée."""
     if not watch_run:
         return frame.iloc[0:0].copy()
     created = pd.to_datetime(frame["created_at"], errors="coerce", utc=True)
@@ -67,6 +83,7 @@ def _jobs_from_watch_run(
 
 
 def _sort_jobs(frame: pd.DataFrame, order: str) -> pd.DataFrame:
+    """Ordonne les pistes selon la priorité de consultation, sans réécrire leur score."""
     sorted_jobs = frame.copy()
     sorted_jobs["_publication"] = pd.to_datetime(
         sorted_jobs["publication_date"].astype(object),
@@ -95,6 +112,7 @@ def _sort_jobs(frame: pd.DataFrame, order: str) -> pd.DataFrame:
 
 
 def _sort_new_jobs(frame: pd.DataFrame) -> pd.DataFrame:
+    """Favorise les annonces nouvellement importées dans la carte Nouvelles."""
     sorted_jobs = frame.copy()
     sorted_jobs["_created"] = pd.to_datetime(
         sorted_jobs["created_at"].astype(object),
@@ -106,6 +124,28 @@ def _sort_new_jobs(frame: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def _published_in_local_period(frame: pd.DataFrame, period: str) -> pd.Series:
+    """Retourne les annonces publiées dans la fenêtre calendaire Europe/Paris.
+
+    Les filtres 1, 3 et 7 jours répondent à la fraîcheur de l'offre côté
+    employeur. « Dernière veille » reste traité à part avec ``created_at`` car
+    il décrit ce que Rocky vient précisément de découvrir.
+    """
+    days = {"1 jour": 1, "3 jours": 3, "7 jours": 7}[period]
+    published = pd.to_datetime(frame["publication_date"], errors="coerce")
+    today = pd.Timestamp.now(tz=ZoneInfo("Europe/Paris")).normalize().tz_localize(
+        None
+    )
+    boundary = today - pd.Timedelta(days - 1, unit="D")
+    return published.ge(boundary) & published.le(today)
+
+
+def _jobs_above_threshold(frame: pd.DataFrame, threshold: int) -> pd.DataFrame:
+    """Garde les annonces dont le score atteint le seuil global du Cockpit."""
+    scores = pd.to_numeric(frame["match_score"], errors="coerce")
+    return frame[scores >= int(threshold)].copy()
+
+
 last_watch_run = (
     repository.fetch_latest_completed_watch_run(profile.id) if profile else None
 )
@@ -113,6 +153,10 @@ last_watch_jobs = _jobs_from_watch_run(jobs, last_watch_run)
 exploitable = _exploitable_jobs(jobs)
 last_watch_exploitable = _exploitable_jobs(last_watch_jobs)
 new_exploitable = exploitable[_status_series(exploitable).eq("NOUVELLE")]
+cockpit_threshold = int(
+    st.session_state.get("watch_threshold_v2", settings.match_threshold)
+)
+new_qualified = _jobs_above_threshold(new_exploitable, cockpit_threshold)
 suggestions = new_exploitable.loc[
     new_exploitable.index.intersection(last_watch_exploitable.index)
 ]
@@ -151,14 +195,23 @@ with st.container(border=True):
 
 period = st.session_state.get("cockpit_new_period", "1 jour")
 if period == "Dernière veille":
-    new_count = len(new_exploitable.loc[new_exploitable.index.intersection(last_watch_jobs.index)])
+    new_count = len(
+        new_qualified.loc[new_qualified.index.intersection(last_watch_jobs.index)]
+    )
 else:
-    boundary = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days={"1 jour": 1, "3 jours": 3, "7 jours": 7}[period])
-    new_count = int((pd.to_datetime(new_exploitable["created_at"], errors="coerce", utc=True) >= boundary).sum())
+    new_count = int(_published_in_local_period(new_qualified, period).sum())
 
 my_statuses = ("À ÉTUDIER", "RETENUE", "CANDIDATURE ENVOYÉE", "ENTRETIEN", "REFUS")
-my_jobs = exploitable[_status_series(exploitable).isin(my_statuses)]
-flow_jobs = exploitable[_status_series(exploitable).isin(("NOUVELLE",) + my_statuses)]
+my_jobs = _jobs_above_threshold(
+    exploitable[_status_series(exploitable).isin(my_statuses)],
+    cockpit_threshold,
+)
+flow_jobs = _jobs_above_threshold(
+    exploitable[
+        _status_series(exploitable).isin(("NOUVELLE", "ANCIENNE") + my_statuses)
+    ],
+    cockpit_threshold,
+)
 active_view = st.session_state.get("cockpit_view", "suggestions")
 view_definitions = (
     ("Suggestions", "suggestions", len(suggestions)),
@@ -181,13 +234,54 @@ for column, (label, view_name, count) in zip(st.columns(5), view_definitions):
 if watch_feedback:
     st.success(watch_feedback)
 
+# Petit raccourci contextuel : Rocky met en avant une action utile sans
+# modifier les données. La priorité est donnée aux réponses Gmail à vérifier,
+# puis aux annonces incomplètes, afin d'éviter que la prochaine étape se perde
+# dans la navigation.
+try:
+    pending_email_count = len(repository.fetch_pending_email_messages())
+except Exception:
+    pending_email_count = 0
+enrichment_count = len(jobs_to_enrich(jobs))
+if pending_email_count:
+    next_action_title = f"📬 {pending_email_count} réponse(s) à vérifier"
+    next_action_hint = "Valide les retours Gmail pour garder tes candidatures à jour."
+    next_action_page = "page_applications.py"
+    next_action_key = "cockpit_next_email"
+elif enrichment_count:
+    next_action_title = f"🧩 {enrichment_count} annonce(s) à enrichir"
+    next_action_hint = "Complète les annonces incomplètes avant de comparer les scores."
+    next_action_page = "page_enrichment.py"
+    next_action_key = "cockpit_next_enrichment"
+else:
+    next_action_title = "✨ Rien ne presse — explore tes suggestions"
+    next_action_hint = "Ton cockpit est à jour. Lance une veille quand tu veux relancer la recherche."
+    next_action_page = None
+    next_action_key = "cockpit_next_suggestions"
+with st.container(border=True):
+    action_col, button_col = st.columns([3, 1], vertical_alignment="center")
+    with action_col:
+        st.caption("PROCHAINE ACTION")
+        st.markdown(f"**{next_action_title}**")
+        st.caption(next_action_hint)
+    with button_col:
+        if st.button(
+            "Ouvrir" if next_action_page else "Voir mes suggestions",
+            key=next_action_key,
+            use_container_width=True,
+        ):
+            if next_action_page:
+                st.switch_page(next_action_page)
+            st.session_state.cockpit_view = "suggestions"
+            st.rerun()
+
 ######### -------------------------------------- Bloc de filtrage des annonces  ------------------------------------- #########
 
 query = ""
+statuses: list[str] = []
 sources: list[str] = []
 locations: list[str] = []
 remote_only = False
-minimum_score = 0
 
 if active_view == "suggestions":
     filtered = _sort_jobs(suggestions, "Meilleur score")
@@ -197,22 +291,39 @@ elif active_view == "new":
         "Période", ("Dernière veille", "1 jour", "3 jours", "7 jours"),
         index=("Dernière veille", "1 jour", "3 jours", "7 jours").index(period),
         key="cockpit_new_period",
+        help=(
+            "Les périodes 1, 3 et 7 jours utilisent la date de publication. "
+            "« Dernière veille » affiche les annonces ajoutées par la dernière "
+            "collecte Rocky."
+        ),
     )
     if period == "Dernière veille":
-        filtered = new_exploitable.loc[new_exploitable.index.intersection(last_watch_jobs.index)]
+        filtered = new_qualified.loc[
+            new_qualified.index.intersection(last_watch_jobs.index)
+        ]
     else:
-        boundary = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days={"1 jour": 1, "3 jours": 3, "7 jours": 7}[period])
-        created = pd.to_datetime(new_exploitable["created_at"], errors="coerce", utc=True)
-        filtered = new_exploitable[created >= boundary]
+        filtered = new_qualified[_published_in_local_period(new_qualified, period)]
     filtered = _sort_new_jobs(filtered)
     active_metric_label = f"Nouvelles · {period}"
+    st.caption(
+        f"Seuil de score appliqué : {cockpit_threshold} %. Ajuste-le depuis "
+        "« Veille manuelle » si nécessaire."
+    )
 elif active_view == "mine":
     selected_status = st.selectbox("Statut", my_statuses, index=my_statuses.index("À ÉTUDIER"), key="cockpit_my_status")
     filtered = my_jobs[_status_series(my_jobs).eq(selected_status)]
     active_metric_label = f"Mes annonces · {selected_status.lower().capitalize()}"
+    st.caption(
+        f"Seuil de score appliqué : {cockpit_threshold} %. Ajuste-le depuis "
+        "« Veille manuelle » si nécessaire."
+    )
 elif active_view == "flow":
     filtered = flow_jobs.copy()
     active_metric_label = "Tout le flux"
+    st.caption(
+        f"Seuil de score appliqué : {cockpit_threshold} %. Ajuste-le depuis "
+        "« Veille manuelle » si nécessaire."
+    )
 else:
     filtered = jobs.iloc[0:0].copy()
     active_metric_label = "Suggestions"
@@ -223,23 +334,36 @@ if active_view in {"mine", "flow"}:
         filter_columns = st.columns(2)
         sources = filter_columns[0].multiselect("Sources", options(filtered, "source_name"), key="cockpit_filter_sources")
         locations = filter_columns[1].multiselect("Lieux", options(filtered, "city"), key="cockpit_filter_locations")
-        filter_options = st.columns([1, 2])
-        remote_only = filter_options[0].toggle("Télétravail", key="cockpit_filter_remote")
-        minimum_score = filter_options[1].slider("Score min.", 0, 100, 0, 5, key="cockpit_filter_score")
-    filtered = filter_jobs(filtered, query=query, sources=sources, locations=locations, remote_only=remote_only, minimum_score=minimum_score)
+        if active_view == "flow":
+            # « Mes annonces » possède déjà son sélecteur de statut dédié ; le
+            # filtre multi-statut est réservé au flux complet du Cockpit.
+            statuses = st.multiselect(
+                "Statuts",
+                options(filtered, "status"),
+                key="cockpit_filter_statuses",
+            )
+        remote_only = st.toggle("Télétravail", key="cockpit_filter_remote")
+    filtered = filter_jobs(
+        filtered,
+        query=query,
+        statuses=statuses,
+        sources=sources,
+        locations=locations,
+        remote_only=remote_only,
+    )
     sort_order = st.selectbox("Tri", ("Plus récentes", "Meilleur score"), key=f"cockpit_sort_{active_view}")
     filtered = _sort_jobs(filtered, sort_order)
     active_filters = []
     if query.strip():
         active_filters.append(f"recherche « {query.strip()} »")
+    if statuses:
+        active_filters.append(f"{len(statuses)} statut(s)")
     if sources:
         active_filters.append(f"{len(sources)} source(s)")
     if locations:
         active_filters.append(f"{len(locations)} lieu(x)")
     if remote_only:
         active_filters.append("télétravail")
-    if minimum_score:
-        active_filters.append(f"score ≥ {minimum_score}")
     if active_filters:
         st.caption("Filtres actifs : " + ", ".join(active_filters))
 
@@ -274,7 +398,9 @@ for start in range(0, len(filtered), 2):
     ):
         # Organise le containeur de chaque carte d'annonce.
         with column.container(border=True):
-            headline = st.columns([4, 1])
+            # Réserver assez d'espace au score pour éviter le tronquage dans
+            # les cartes à deux colonnes, notamment sur les écrans étroits.
+            headline = st.columns([3.25, 1.75])
             headline[0].subheader(str(row.get("job_title") or "Sans titre"))
             headline[1].metric("Score", display_score(row.get("match_score")))
             st.write(f"**{row.get('company_name') or 'Entreprise inconnue'}**")
@@ -305,8 +431,7 @@ for start in range(0, len(filtered), 2):
                 st.switch_page("page_job_detail.py")
             # Bouton de changement des statuts des annonces avec un popover pour sélectionner le nouveau statut.
             with st.popover(
-                "Changer le statut",
-                key=f"card_status_popover_{int(row['id'])}",
+                f"Changer le statut · #{int(row['id'])}",
                 use_container_width=True,
             ):
                 status_index = (

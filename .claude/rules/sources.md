@@ -11,4 +11,4 @@ paths:
 - A platform that refuses an automated request is reported in the `PARTIAL` run summary; never bypass CAPTCHA, login, or anti-bot protection.
 - TheirStack collection requests one page capped by `WATCH_RESULTS_PER_QUERY` to control credits.
 - France Travail uses only the official Offres d'emploi v2 API (`/partenaire/offresdemploi/v2/offres/search`) with application OAuth credentials.
-- `apec_detail.py` + `scripts/extract_apec_offer.py` use Playwright (visible browser by default, `--headless` flag). Playwright is NOT in `requirements.txt`. The script writes only `output/apec/<offer>.json`, never touches the DB, never clicks « Postuler ».
+- `apec_detail.py` + `scripts/extract_apec_offer.py` use Playwright (visible browser by default, `--headless` flag). Playwright is pinned in `requirements.txt`. The script writes only `output/apec/<offer>.json`, never touches the DB, never clicks « Postuler ».

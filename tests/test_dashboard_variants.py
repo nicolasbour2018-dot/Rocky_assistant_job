@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
+from sqlalchemy import text
 
 from dashboard import dashboard_common
 from dashboard.rocky.config import Settings
@@ -9,7 +10,7 @@ from dashboard.rocky.database import (
     ensure_database_exists,
     initialize_database,
 )
-from dashboard.rocky.models import JobOffer, MatchResult
+from dashboard.rocky.models import ApplicationPackage, JobOffer, MatchResult
 from dashboard.rocky.repository import RockyRepository
 
 
@@ -86,6 +87,46 @@ def test_recent_metric_uses_the_selected_duration():
     assert dashboard_common.metric_counts(jobs, recent_days=30)["recent"] == 3
 
 
+def test_cockpit_new_period_uses_publication_calendar_day():
+    """Les annonces nouvelles sont filtrées selon leur date de publication."""
+    from datetime import timedelta
+
+    import pandas as pd
+
+    now_local = pd.Timestamp.now(tz="Europe/Paris")
+    frame = pd.DataFrame(
+        {
+            "publication_date": [
+                now_local.date(),
+                now_local.date() - timedelta(days=2),
+            ],
+            # Une annonce peut avoir été importée il y a longtemps : cela ne
+            # doit pas retirer une publication récente du filtre « 1 jour ».
+            "created_at": [
+                now_local.to_pydatetime() - timedelta(days=10),
+                now_local.to_pydatetime() - timedelta(minutes=5),
+            ],
+        }
+    )
+
+    from dashboard.dashboard_b import _published_in_local_period
+
+    assert _published_in_local_period(frame, "1 jour").tolist() == [True, False]
+
+
+def test_cockpit_cards_use_the_adjustable_score_threshold():
+    """Le seuil de veille filtre Nouvelles, Mes annonces et Tout le flux."""
+    import pandas as pd
+
+    from dashboard.dashboard_b import _jobs_above_threshold
+
+    frame = pd.DataFrame(
+        {"id": [1, 2, 3], "match_score": [69, 70, None]}
+    )
+
+    assert _jobs_above_threshold(frame, 70)["id"].tolist() == [2]
+
+
 def test_stale_dataframe_selection_positions_are_ignored():
     import pandas as pd
 
@@ -142,7 +183,11 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
     ensure_database_exists(settings)
     engine = create_db_engine(settings)
     initialize_database(engine, settings)
-    repository = RockyRepository(engine)
+    with engine.begin() as connection:
+        user_id = connection.execute(
+            text("INSERT INTO users (email, status) VALUES ('variants@example.test', 'ACTIVE') RETURNING id")
+        ).scalar_one()
+    repository = RockyRepository(engine).for_user(user_id)
     profile_id = repository.create_profile("Profil test")
     repository.set_active_profile(profile_id)
     repository.add_skill(
@@ -212,11 +257,13 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
         "page_all_jobs.py",
         "page_enrichment.py",
         "page_job_detail.py",
+        "page_application_prepare.py",
         "page_import_url.py",
         "page_profiles.py",
         "page_monitoring.py",
     ):
         app = AppTest.from_file(PROJECT_DIR / "dashboard" / filename)
+        app.session_state["rocky_authenticated_user_id"] = user_id
         app.run(timeout=30)
         assert not app.exception, filename
         assert not any(
@@ -239,8 +286,15 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
             assert not any(
                 item.value == "BI Analyst" for item in app.subheader
             )
+            app.session_state["cockpit_view"] = "flow"
+            app.run(timeout=30)
+            assert any(
+                multiselect.label == "Statuts" for multiselect in app.multiselect
+            )
         if filename == "page_all_jobs.py":
-            assert app.selectbox[0].label == "Tranche de 50 annonces"
+            assert any(
+                select.label == "Tranche de 50 annonces" for select in app.selectbox
+            )
             assert len(app.dataframe[0].value) == 4
             assert "Annonce archivée" in set(
                 app.dataframe[0].value["job_title"]
@@ -250,10 +304,21 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
                 "Aperçu retenu" in item.value for item in app.subheader
             )
             assert any(
-                button.label == "Tout enrichir (1)" for button in app.button
+                button.label == "Tout enrichir le filtre (1)" for button in app.button
             )
             assert any(
                 button.label == "Appliquer (0)" and button.disabled
+                for button in app.button
+            )
+            select_all = next(
+                checkbox
+                for checkbox in app.checkbox
+                if checkbox.label == "Sélectionner la ligne affichée"
+            )
+            select_all.set_value(True)
+            app.run(timeout=30)
+            assert any(
+                button.label == "Appliquer (1)" and not button.disabled
                 for button in app.button
             )
             assert any(
@@ -261,10 +326,7 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
             )
             assert "city" in app.dataframe[0].value.columns
         if filename == "page_profiles.py":
-            assert any(
-                "3,5 ans d’expérience" in item.value for item in app.markdown
-            )
-            assert app.get("popover")
+            assert any("Compétences" in item.label for item in app.metric)
     dashboard_common.load_repository.clear()
 
 
@@ -286,11 +348,13 @@ def test_manual_watch_uses_the_session_threshold(tmp_path, monkeypatch):
         def __init__(self, watch_settings, _repository, _sources):
             captured_thresholds.append(watch_settings.match_threshold)
 
-        def run(self):
+        def run(self, profile_override=None):
             return {
                 "inserted_count": 0,
                 "duplicate_count": 0,
                 "incomplete_description_count": 0,
+                "ancient_count": 0,
+                "discarded_count": 0,
             }
 
     monkeypatch.setattr(dashboard_common, "Settings", lambda: settings)
@@ -323,7 +387,11 @@ def test_job_detail_page_reuses_v11_actions(tmp_path, monkeypatch):
     ensure_database_exists(settings)
     engine = create_db_engine(settings)
     initialize_database(engine, settings)
-    repository = RockyRepository(engine)
+    with engine.begin() as connection:
+        user_id = connection.execute(
+            text("INSERT INTO users (email, status) VALUES ('detail@example.test', 'ACTIVE') RETURNING id")
+        ).scalar_one()
+    repository = RockyRepository(engine).for_user(user_id)
     profile_id = repository.create_profile("Profil test")
     repository.set_active_profile(profile_id)
     job_id, _ = repository.insert_job(
@@ -346,24 +414,58 @@ def test_job_detail_page_reuses_v11_actions(tmp_path, monkeypatch):
         PROJECT_DIR / "dashboard" / "page_job_detail.py"
     )
     app.session_state["selected_job_id"] = job_id
+    app.session_state["rocky_authenticated_user_id"] = user_id
     app.run(timeout=30)
 
     assert not app.exception
-    assert [tab.label for tab in app.tabs] == [
+    assert [tab.label for tab in app.tabs][:3] == [
         "Annonce et modifications",
         "Matching détaillé",
         "Lettre et candidature",
     ]
+    assert {tab.label for tab in app.tabs}.issuperset(
+        {"✍️ Édition", "👁 Aperçu mis en forme"}
+    )
     button_labels = {button.label for button in app.button}
     assert "Recalculer le matching" in button_labels
-    assert "Créer DOCX + PDF + copie du CV" in button_labels
+    assert "✅ Enregistrer ce CV ciblé" in button_labels
+    assert "✅ Enregistrer les messages et la lettre" in button_labels
+    assert "Créer le CV ciblé + la lettre PDF" in button_labels
+    assert "Rocky : générer le message" in button_labels
     assert "Modifier l’annonce" in button_labels
     assert "Lancer l’ATS historique (lecture brute)" not in button_labels
     assert "Lancer l’ATS V2 (recommandé)" not in button_labels
     links = app.get("link_button")
-    assert "Postuler" in button_labels
+    assert "Préparer la candidature" in button_labels
     assert any(
         link.label == "Ouvrir le site de candidature" for link in links
+    )
+    preparation = AppTest.from_file(
+        PROJECT_DIR / "dashboard" / "page_application_prepare.py"
+    )
+    preparation.session_state["selected_job_id"] = job_id
+    preparation.session_state["rocky_authenticated_user_id"] = user_id
+    (tmp_path / "cv.pdf").write_bytes(b"%PDF-1.4 test")
+    (tmp_path / "letter.pdf").write_bytes(b"%PDF-1.4 test")
+    preparation.session_state[f"v2_files_{job_id}"] = ApplicationPackage(
+        directory=str(tmp_path),
+        cv_pdf_path=str(tmp_path / "cv.pdf"),
+        letter_pdf_path=str(tmp_path / "letter.pdf"),
+        application_id=42,
+    )
+    preparation.session_state[f"v2_prepare_active_section_{job_id}"] = "postulate"
+    preparation.run(timeout=30)
+    assert not preparation.exception
+    assert any(
+        "Dossier de candidature" in item.value for item in preparation.markdown
+    )
+    assert any(
+        button.label == "🚀 Préremplir avec Playwright"
+        for button in preparation.button
+    )
+    assert any(
+        button.label == "✅ C’est envoyé · clôturer la préparation"
+        for button in preparation.button
     )
     dashboard_common.load_repository.clear()
 
@@ -406,12 +508,12 @@ def test_cockpit_metrics_filter_corresponding_cards(tmp_path, monkeypatch):
     app = AppTest.from_file(PROJECT_DIR / "dashboard" / "dashboard_b.py")
     app.session_state["cockpit_view"] = "mine"
     app.run(timeout=30)
-    minimum_score = next(
-        slider for slider in app.slider if slider.label == "Score min."
+    cockpit_threshold = next(
+        slider for slider in app.slider if slider.label == "Seuil minimal de matching"
     )
-    assert minimum_score.min == 0
-    assert minimum_score.max == 100
-    assert minimum_score.step == 5
+    assert cockpit_threshold.min == 0
+    assert cockpit_threshold.max == 100
+    assert cockpit_threshold.step == 5
     my_status = next(
         select for select in app.selectbox if select.key == "cockpit_my_status"
     )

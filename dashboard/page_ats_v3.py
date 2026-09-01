@@ -4,7 +4,12 @@
                         # Test effectué à partir du dictionnaire de compétences déterministe, sans texte corrigé ni LLM.
                     #############################################################################################################
 
-"""Page indépendante du banc de test de robustesse ATS V3."""
+"""Banc de test ATS V3 sur le CV réellement transmis.
+
+La page compare plusieurs parseurs, mesure la couverture des compétences et
+présente des simulations explicables. Elle sert à relire la robustesse d'un
+dossier ; elle ne prédit pas une décision d'employeur et ne modifie aucun CV.
+"""
 
 from __future__ import annotations
 
@@ -46,12 +51,14 @@ MY_JOB_STATUSES = {
 
 
 def _percent(value: int | None) -> str:
+    """Formate une mesure ATS optionnelle sans masquer une donnée indisponible."""
     return "—" if value is None else f"{value} %"
 
 
 def _fingerprint(
     cv_data: bytes | None, file_name: str, description: str, job_title: str
 ) -> str:
+    """Identifie les entrées ATS pour éviter de recalculer un diagnostic identique."""
     digest = hashlib.sha256()
     digest.update(cv_data or b"")
     digest.update(file_name.encode("utf-8"))
@@ -61,6 +68,7 @@ def _fingerprint(
 
 
 def _cv_path(settings: Any, profile: Any) -> Path | None:
+    """Résout le CV actif du profil lorsque aucun fichier de test n'est téléversé."""
     if profile is None or not profile.cv_path:
         return None
     path = Path(profile.cv_path).expanduser()
@@ -68,6 +76,7 @@ def _cv_path(settings: Any, profile: Any) -> Path | None:
 
 
 def _job_label(row: pd.Series) -> str:
+    """Construit le libellé de sélection d'une annonce dans le contexte ATS."""
     title = str(row.get("job_title") or "Sans titre")
     company = str(row.get("company_name") or "Entreprise inconnue")
     source = str(row.get("source_name") or "Source inconnue")
@@ -76,6 +85,7 @@ def _job_label(row: pd.Series) -> str:
 
 
 def _selected_job(jobs: pd.DataFrame) -> tuple[int | None, pd.Series | None]:
+    """Laisse choisir l'annonce qui fournit le texte de comparaison ATS."""
     if jobs.empty:
         st.info("Aucune annonce de « Mes annonces » n’est disponible. Utilise le texte manuel.")
         return None, None
@@ -144,6 +154,7 @@ def _existing_letter_text(
 
 
 def _job_text(row: pd.Series | None) -> tuple[str, str]:
+    """Extrait la description et l'intitulé réellement fournis au banc ATS."""
     if row is None:
         return "", ""
     full = plain_description(row.get("responsibilities"))
@@ -155,6 +166,7 @@ def _job_text(row: pd.Series | None) -> tuple[str, str]:
 def _source_controls(
     settings: Any, profile: Any, jobs: pd.DataFrame
 ) -> tuple[bytes | None, str, str, str, int | None]:
+    """Collecte les entrées explicites du test : CV, annonce et éventuel texte manuel."""
     st.subheader("Documents testés")
     left, right = st.columns(2)
     with left:
@@ -217,108 +229,8 @@ def _source_controls(
     return cv_data, file_name, description, job_title, selected_id
 
 
-def _legacy_ats_controls(
-    settings: Any,
-    repository: Any,
-    profile: Any,
-    selected_job_id: int | None,
-) -> None:
-    """Centralise les analyses ATS V1 et V2 liées au CV du profil."""
-    st.divider()
-    st.subheader("ATS V1 et V2")
-    st.caption(
-        "Ces deux analyses utilisent le CV PDF du profil actif, l’annonce Rocky "
-        "sélectionnée et le texte de la lettre de motivation."
-    )
-    if selected_job_id is None:
-        st.info("Sélectionne une annonce Rocky pour lancer ATS V1 ou V2.")
-        return
-    if profile is None or not profile.cv_path:
-        st.warning("Ajoute un CV PDF au profil actif pour lancer ATS V1 ou V2.")
-        return
-
-    cv_path = _cv_path(settings, profile)
-    if cv_path is None or not cv_path.is_file():
-        st.warning("Le CV associé au profil est introuvable.")
-        return
-    if cv_path.suffix.lower() != ".pdf":
-        st.warning("ATS V1 et V2 attendent actuellement le CV du profil en PDF.")
-        return
-    offer = repository.fetch_job_offer(selected_job_id)
-    if offer is None:
-        st.error("Cette annonce Rocky n’existe plus.")
-        return
-
-    letter_key = f"ats_letter_{selected_job_id}"
-    if letter_key not in st.session_state:
-        letter_text, letter_source = _existing_letter_text(
-            settings, repository, profile.id, selected_job_id
-        )
-        if not letter_text:
-            st.info(
-                "Aucune lettre de motivation n’est encore disponible pour cette "
-                "annonce. Génère-la avant de lancer ATS V1 ou V2."
-            )
-            if st.button(
-                "Générer la lettre de motivation",
-                key=f"ats_generate_letter_{selected_job_id}",
-                type="primary",
-            ):
-                st.session_state.selected_job_id = selected_job_id
-                st.session_state["v2_detail_default_tab"] = (
-                    "Lettre et candidature"
-                )
-                st.switch_page("page_job_detail.py")
-            return
-        st.session_state[letter_key] = letter_text
-        st.caption(f"Lettre récupérée : {letter_source}.")
-    letter_text = st.text_area(
-        "Lettre de motivation utilisée par ATS V1 et V2",
-        key=letter_key,
-        height=360,
-        placeholder="Prépare ou colle ici la lettre de motivation à analyser.",
-    )
-
-    actions = st.columns(2)
-    if actions[0].button(
-        "Lancer ATS V1",
-        key=f"ats_v1_run_{selected_job_id}",
-        disabled=not letter_text.strip(),
-        use_container_width=True,
-    ):
-        try:
-            with st.spinner("Lecture brute du CV et contrôle ATS V1…"):
-                report_v1 = analyze_application_ats(cv_path, letter_text, offer)
-            st.session_state[f"v2_ats_report_{selected_job_id}"] = report_v1
-        except (RockyError, OSError) as error:
-            st.error(str(error))
-    if actions[1].button(
-        "Lancer ATS V2",
-        key=f"ats_v2_run_{selected_job_id}",
-        type="primary",
-        disabled=not letter_text.strip(),
-        use_container_width=True,
-    ):
-        try:
-            with st.spinner("Normalisation du CV et rapprochement des compétences…"):
-                report_v2 = analyze_application_ats_v2(
-                    cv_path,
-                    letter_text,
-                    offer,
-                )
-            st.session_state[f"v2_ats_v2_report_{selected_job_id}"] = report_v2
-        except (RockyError, OSError) as error:
-            st.error(str(error))
-
-    report_v1 = st.session_state.get(f"v2_ats_report_{selected_job_id}")
-    if report_v1:
-        render_ats_report(report_v1)
-    report_v2 = st.session_state.get(f"v2_ats_v2_report_{selected_job_id}")
-    if report_v2:
-        render_ats_v2_report(report_v2)
-
-
 def _summary(report: AtsV3Report, job_id: int | None) -> None:
+    """Affiche la synthèse multi-indicateurs sans confondre V1, V2 et V3."""
     st.subheader("Résumé multi-indicateurs")
     st.caption(
         "Aucun profil Rocky, texte ATS corrigé ou LLM n’a complété le contenu du CV. "
@@ -385,6 +297,7 @@ def _summary(report: AtsV3Report, job_id: int | None) -> None:
 
 
 def _parser_comparison(report: AtsV3Report) -> None:
+    """Compare les extractions structurées afin de révéler les fragilités de parsing."""
     st.markdown("##### Champs structurés par moteur")
     rows = []
     for extraction in report.parser_extractions:
@@ -429,6 +342,7 @@ def _parser_comparison(report: AtsV3Report) -> None:
 
 
 def _matching(report: AtsV3Report) -> None:
+    """Restitue la couverture des compétences annonce/CV pour chaque parseur."""
     parser_labels = {
         extraction.parser_id: extraction.label
         for extraction in report.parser_extractions
@@ -486,6 +400,7 @@ def _matching(report: AtsV3Report) -> None:
 
 
 def _benchmarks(report: AtsV3Report) -> None:
+    """Affiche des benchmarks pédagogiques, explicitement distincts d'ATS propriétaires."""
     st.warning(
         "Ces résultats sont des simulations de comportement inspirées de familles "
         "d’ATS. Ils ne reproduisent pas les algorithmes propriétaires ni les réglages "
@@ -511,6 +426,7 @@ def _benchmarks(report: AtsV3Report) -> None:
 
 
 def _diagnostic(report: AtsV3Report) -> None:
+    """Présente les recommandations et limites mesurables du rapport ATS V3."""
     st.markdown("##### Observations mesurables")
     for recommendation in report.recommendations:
         st.write(f"- {recommendation}")
@@ -520,6 +436,7 @@ def _diagnostic(report: AtsV3Report) -> None:
 
 
 def _raw_view(report: AtsV3Report, cv_data: bytes, file_name: str) -> None:
+    """Expose le document source et ses extractions sans les modifier."""
     suffix = Path(file_name).suffix.lower()
     if suffix == ".pdf":
         visual, parsed = st.columns([1, 1])
@@ -563,6 +480,7 @@ def _raw_view(report: AtsV3Report, cv_data: bytes, file_name: str) -> None:
 
 
 def _raw_parser_tabs(report: AtsV3Report) -> None:
+    """Organise les textes bruts et structures produits par chaque parseur."""
     tabs = st.tabs([item.label for item in report.parser_extractions])
     for tab, extraction in zip(tabs, report.parser_extractions):
         with tab:
@@ -629,8 +547,6 @@ if actions[0].button(
 
 if len(description.strip()) < 80:
     actions[1].caption("Description trop courte : 80 caractères minimum.")
-
-_legacy_ats_controls(settings, repository, profile, selected_job_id)
 
 report = st.session_state.get(REPORT_KEY)
 if report:
