@@ -545,7 +545,10 @@ def _pypdf_extract(data: bytes) -> tuple[str, dict[str, Any]]:
             pass
     clusters = sorted({round(value / 40) * 40 for value in x_positions})
     has_columns = (
-        any(right - left > 180 for left, right in zip(clusters, clusters[1:]))
+        any(
+            right - left > 180
+            for left, right in zip(clusters, clusters[1:], strict=False)
+        )
         and len(x_positions) > 30
     )
     return "\n".join(texts).strip(), {

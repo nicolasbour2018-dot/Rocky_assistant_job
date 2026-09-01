@@ -219,7 +219,9 @@ view_definitions = (
     ("Mes annonces", "mine", len(my_jobs)),
     ("Tout le flux", "flow", len(flow_jobs)),
 )
-for column, (label, view_name, count) in zip(st.columns(5), view_definitions):
+for column, (label, view_name, count) in zip(
+    st.columns(5), view_definitions, strict=True
+):
     if column.button(
         f"{label} · {count}",
         key=f"cockpit_view_{view_name}",
@@ -420,7 +422,9 @@ if filtered.empty:
 # Parcourt les annonces filtrées et affichage sous forme de cartes.
 for start in range(0, len(filtered), 2):
     cards = st.columns(2)
-    for column, (_, row) in zip(cards, filtered.iloc[start : start + 2].iterrows()):
+    for column, (_, row) in zip(
+        cards, filtered.iloc[start : start + 2].iterrows(), strict=False
+    ):
         # Organise le containeur de chaque carte d'annonce.
         with column.container(border=True):
             # Réserver assez d'espace au score pour éviter le tronquage dans

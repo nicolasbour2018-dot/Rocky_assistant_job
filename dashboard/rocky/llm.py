@@ -337,7 +337,7 @@ class RockyLLM:
             translated_values = [
                 str(candidate[str(index)]) for index in range(len(values))
             ]
-            for source, translated_value in zip(values, translated_values):
+            for source, translated_value in zip(values, translated_values, strict=True):
                 tokens = re.findall(r"__KEEP_\d{4}__", source)
                 if any(token not in translated_value for token in tokens):
                     return None

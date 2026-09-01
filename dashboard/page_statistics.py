@@ -317,6 +317,7 @@ else:
         performance_columns,
         ("source_name", "Famille de poste", "Tranche de matching"),
         ("Par source", "Par poste", "Par matching"),
+        strict=True,
     ):
         with column:
             st.caption(title)

@@ -111,7 +111,9 @@ def _journey_selector(
         ),
     )
     columns = st.columns(3, gap="large")
-    for column, (section, number, title, detail, done) in zip(columns, cards):
+    for column, (section, number, title, detail, done) in zip(
+        columns, cards, strict=True
+    ):
         with column, st.container(border=True):
             state = (
                 "✓ PDF prêts"

@@ -285,7 +285,9 @@ def _replace_paragraph_text(paragraph, text: str) -> None:
         total_weight = sum(original_lengths)
         start = 0
         cumulative = 0
-        for index, (run, weight) in enumerate(zip(paragraph.runs, original_lengths)):
+        for index, (run, weight) in enumerate(
+            zip(paragraph.runs, original_lengths, strict=True)
+        ):
             cumulative += weight
             end = (
                 len(text)
@@ -311,7 +313,7 @@ def translate_letter_docx(source: Path, target: Path, llm: RockyLLM) -> None:
         for paragraph in paragraphs
     ]
     translated = llm.translate_blocks(protected)
-    for paragraph, value in zip(paragraphs, translated):
+    for paragraph, value in zip(paragraphs, translated, strict=True):
         _replace_paragraph_text(
             paragraph, value.replace(PROTECTED_MARKER, ROCKY_MARKER)
         )

@@ -112,7 +112,7 @@ def _render_application_carousel(applications: pd.DataFrame) -> None:
         label="Candidatures",
     )
     columns = st.columns(CAROUSEL_CARDS_PER_VIEW, gap="small")
-    for column, (_, application) in zip(columns, page.iterrows()):
+    for column, (_, application) in zip(columns, page.iterrows(), strict=False):
         application_id = int(application["id"])
         is_selected = application_id == int(selected_application_id or -1)
         with column.container(border=True, height=240):
@@ -143,7 +143,7 @@ def _render_pending_email_carousel(emails: pd.DataFrame) -> None:
         label="E-mails",
     )
     columns = st.columns(CAROUSEL_CARDS_PER_VIEW, gap="small")
-    for column, (_, email) in zip(columns, page.iterrows()):
+    for column, (_, email) in zip(columns, page.iterrows(), strict=False):
         email_id = int(email["id"])
         is_selected = email_id == int(selected_email_id or -1)
         with column.container(border=True, height=240):
@@ -276,7 +276,9 @@ def _render_application_detail(application, settings, repository) -> None:
                 for _, row in documents[documents["is_current"].astype(bool)].iterrows()
             ]
         download_columns = st.columns(max(1, len(current_documents)))
-        for column, (kind, value) in zip(download_columns, current_documents):
+        for column, (kind, value) in zip(
+            download_columns, current_documents, strict=False
+        ):
             path = _path(value, settings.project_dir)
             if path.is_file():
                 column.download_button(

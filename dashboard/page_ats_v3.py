@@ -321,7 +321,7 @@ def _parser_comparison(report: AtsV3Report) -> None:
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
 
     columns = st.columns(len(report.parser_extractions))
-    for column, extraction in zip(columns, report.parser_extractions):
+    for column, extraction in zip(columns, report.parser_extractions, strict=True):
         with column:
             st.markdown(f"**{extraction.label}**")
             st.caption(f"{extraction.engine} · {extraction.license}")
@@ -480,7 +480,7 @@ def _raw_view(report: AtsV3Report, cv_data: bytes, file_name: str) -> None:
 def _raw_parser_tabs(report: AtsV3Report) -> None:
     """Organise les textes bruts et structures produits par chaque parseur."""
     tabs = st.tabs([item.label for item in report.parser_extractions])
-    for tab, extraction in zip(tabs, report.parser_extractions):
+    for tab, extraction in zip(tabs, report.parser_extractions, strict=True):
         with tab:
             mode = st.radio(
                 "Vue",

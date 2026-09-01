@@ -71,7 +71,9 @@ def _journey(readiness: list[bool], locale: str) -> None:
         )
     )
     columns = st.columns(5)
-    for column, (number, title, detail), ready in zip(columns, labels, readiness):
+    for column, (number, title, detail), ready in zip(
+        columns, labels, readiness, strict=True
+    ):
         with column, st.container(border=True):
             state = "✓ ready" if ready else "to prepare"
             if locale == "fr":
@@ -143,7 +145,7 @@ def _ensure_english_skill_labels(
     translated_labels = llm.translate_blocks(
         [str(skill["skill_name"]) for skill in missing_skills]
     )
-    for skill, label in zip(missing_skills, translated_labels):
+    for skill, label in zip(missing_skills, translated_labels, strict=True):
         repository.set_skill_translation(int(skill["id"]), label)
 
 
