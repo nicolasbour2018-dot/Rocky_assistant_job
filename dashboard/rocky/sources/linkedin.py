@@ -8,7 +8,7 @@ accès est désactivé par LinkedIn, la source passe en erreur isolée.
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from collections.abc import Iterable
 
 from bs4 import BeautifulSoup
 

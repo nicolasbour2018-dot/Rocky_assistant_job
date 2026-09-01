@@ -594,7 +594,7 @@ def metric_counts(jobs: pd.DataFrame, recent_days: int = 1) -> dict[str, int]:
 
 
 ###################################################################################################################################################
-# Bloc d'orchestration du popover de chat avec Rocky. 
+# Bloc d'orchestration du popover de chat avec Rocky.
 ###################################################################################################################################################
 
 def render_floating_chatbot() -> None:

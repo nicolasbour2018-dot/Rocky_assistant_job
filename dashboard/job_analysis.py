@@ -15,7 +15,7 @@ from typing import Any
                                 # Intègre des dictionnaires de compétences déterminées.
                                 # Extrait, normalise et classe les compétences déterminées détectées dans les annonces.
                             #################################################################################################
-                    
+
 
 
 #################################################################################################
@@ -108,7 +108,7 @@ SKILL_ALIASES = {
     "API REST": ["api rest","API REST", "rest api", "api restful", "restful api", "api restfull", "API RESTFULL"],
     "MLOps": ["mlops", "ml ops", "mlo ps", "ml ops", "machine learning operations", "machine learning ops", "opérations de machine learning", "operations de machine learning"],
     "CI/CD": ["ci/cd", "ci cd", "intégration continue", "integration continue", "déploiement continu", "deploiement continu"],
-    
+
     # Développement et organisation
     "Git": ["git"],
     "GitHub": ["github"],
@@ -242,7 +242,7 @@ BUSINESS_SKILLS = {
     "Gestion des données",
     "Structuration des données",
     "Conception de bases de données",
-    "Cartographie des données", 
+    "Cartographie des données",
     "Règles de gestion"
 }
 
@@ -334,7 +334,7 @@ def extract_skills(title: str | None, description: str | None) -> dict[str, list
     }
 
 #################################################################################################
-# Bloc de la fonction d'activation de la recherche de compétences dans les annonces. 
+# Bloc de la fonction d'activation de la recherche de compétences dans les annonces.
 #################################################################################################
 
 def analyze_job(title: str | None, description: str | None) -> dict[str, Any]:

@@ -311,7 +311,7 @@ def _near_skill_match(
     required_key = normalize_text(required_skill)
     best_evidence = ""
     best_confidence = 0
-    for evidence, confidence in RELATED_SKILLS.get(required_key, ()): 
+    for evidence, confidence in RELATED_SKILLS.get(required_key, ()):
         evidence_key = normalize_text(evidence)
         if _keyword_present(evidence, set(cv_skills), normalized_cv):
             if confidence > best_confidence:

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Iterable
+from typing import Any
+from collections.abc import Iterable
 
 from ..errors import SourceError
 from ..models import CandidateProfile, JobOffer

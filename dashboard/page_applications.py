@@ -7,7 +7,6 @@ envoyer de candidature ni modifier la boîte Gmail distante.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 

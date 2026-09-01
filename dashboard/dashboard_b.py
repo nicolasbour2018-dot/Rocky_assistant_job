@@ -6,7 +6,7 @@ statuts et seuils de matching sans modifier les données persistées ; les
 actions métier restent déléguées aux services Rocky dédiés.
 """
 
-# Importation des librairies standardes 
+# Importation des librairies standardes
 from __future__ import annotations
 from zoneinfo import ZoneInfo
 import pandas as pd
@@ -369,7 +369,7 @@ if active_view in {"mine", "flow"}:
 
 ######## -------------------------------------- Bloc d'affichage des annonces filtrées  ------------------------------------- #########
 
-# Affichage du nombre d'annonces filtrées. 
+# Affichage du nombre d'annonces filtrées.
 st.subheader(f"{active_metric_label} · {len(filtered)} résultat(s)")
 if filtered.empty:
     if active_view == "suggestions":

@@ -1,6 +1,6 @@
                     ##############################################################################################################
-                        # Module de fonctions pour la modification d'une annonce, recalcul du matching 
-                        # Intègre les blocs d'affichage des rapports de compatibilité ATS et d'affichage des résultats. 
+                        # Module de fonctions pour la modification d'une annonce, recalcul du matching
+                        # Intègre les blocs d'affichage des rapports de compatibilité ATS et d'affichage des résultats.
                     #############################################################################################################
 
 """Composants de la fiche détaillée d'une annonce Rocky.
@@ -37,11 +37,7 @@ from dashboard.job_analysis import SOFT_SKILLS, TECHNICAL_SKILLS
 from dashboard.rocky.ats import (
     AtsReport,
     AtsV2Report,
-    analyze_application_ats,
-    analyze_application_ats_v2,
-    ats_text_path,
     load_ats_cv_text,
-    save_ats_cv_text,
 )
 from dashboard.rocky.config import Settings
 from dashboard.rocky.contracts import CONTRACT_TYPES, WORK_SCHEDULES
