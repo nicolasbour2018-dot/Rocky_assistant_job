@@ -22,6 +22,7 @@ from .text_utils import normalize_text
 @dataclass(frozen=True)
 class InferredProfileSkill:
     """Compétence déduite localement du CV pour préremplir la revue du profil."""
+
     name: str
     category: str
     level: str
@@ -39,7 +40,9 @@ def _occurrences(text: str, forms: tuple[str, ...]) -> list[tuple[int, int]]:
     found: set[tuple[int, int]] = set()
     for form in forms:
         pattern = r"(?<![a-z0-9])" + re.escape(form) + r"(?![a-z0-9])"
-        found.update((match.start(), match.end()) for match in re.finditer(pattern, text))
+        found.update(
+            (match.start(), match.end()) for match in re.finditer(pattern, text)
+        )
     return sorted(found)
 
 
@@ -47,8 +50,8 @@ def _level(text: str, occurrences: list[tuple[int, int]]) -> str:
     """Infère un niveau indicatif depuis le contexte du CV, à faire valider par la personne."""
     surroundings = [
         (
-            text[max(0, start - 55):start].rstrip(),
-            text[end:min(len(text), end + 30)].lstrip(),
+            text[max(0, start - 55) : start].rstrip(),
+            text[end : min(len(text), end + 30)].lstrip(),
         )
         for start, end in occurrences
     ]
@@ -106,7 +109,9 @@ def _category(skill: str) -> str:
     return "business"
 
 
-def infer_profile_skills_from_cv(cv_path: str | Path) -> tuple[InferredProfileSkill, ...]:
+def infer_profile_skills_from_cv(
+    cv_path: str | Path,
+) -> tuple[InferredProfileSkill, ...]:
     """Lit le PDF réel et applique la taxonomie générique déjà utilisée par Rocky."""
     raw_text, _, _ = extract_pdf_text(cv_path)
     repaired_text, _ = repair_spaced_pdf_text(raw_text)

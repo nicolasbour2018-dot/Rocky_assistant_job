@@ -31,9 +31,7 @@ def main() -> int:
         responsibilities=arguments.description.read_text(encoding="utf-8"),
     )
     cv_text = (
-        arguments.cv_text.read_text(encoding="utf-8")
-        if arguments.cv_text
-        else None
+        arguments.cv_text.read_text(encoding="utf-8") if arguments.cv_text else None
     )
     report = analyze_application_ats_v2(
         arguments.cv,

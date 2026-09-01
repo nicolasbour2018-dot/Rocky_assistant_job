@@ -1,7 +1,7 @@
-                    ##############################################################################################################
-                        # Page d'import manuel d'une URL.
-                        # Orchestration de la lecture de la page, de l'extraction des informations et de l'enregistrement dans la base.
-                    #############################################################################################################
+##############################################################################################################
+# Page d'import manuel d'une URL.
+# Orchestration de la lecture de la page, de l'extraction des informations et de l'enregistrement dans la base.
+#############################################################################################################
 
 """Import manuel et contrôlé d'une annonce depuis son URL.
 
@@ -62,9 +62,7 @@ if st.button("Analyser l’URL", type="primary", disabled=not url.strip()):
                 application_url=url,
             ),
             extraction_method="Saisie manuelle",
-            warnings=[
-                "La page n’a pas pu être lue. Complète les champs manuellement."
-            ],
+            warnings=["La page n’a pas pu être lue. Complète les champs manuellement."],
             raw_text="",
         )
 
@@ -82,15 +80,11 @@ if preview:
             city = st.text_input("Ville", imported.city)
             country = st.text_input("Pays", imported.country)
             contract = st.text_input("Contrat", imported.contract_type)
-            schedule = st.text_input(
-                "Temps de travail", imported.work_schedule
-            )
+            schedule = st.text_input("Temps de travail", imported.work_schedule)
             remote = st.text_input("Télétravail", imported.remote_policy)
         with columns[1]:
             source = st.text_input("Source", imported.source_name)
-            external_id = st.text_input(
-                "Identifiant externe", imported.external_id
-            )
+            external_id = st.text_input("Identifiant externe", imported.external_id)
             application_url = st.text_input(
                 "URL de candidature", imported.application_url
             )
@@ -113,9 +107,7 @@ if preview:
         description = st.text_area(
             "Description complète *", imported.responsibilities, height=320
         )
-        save = st.form_submit_button(
-            "Enregistrer l’annonce", type="primary"
-        )
+        save = st.form_submit_button("Enregistrer l’annonce", type="primary")
 
     if save:
         if not title.strip() or not company.strip():
@@ -123,9 +115,7 @@ if preview:
         elif not description.strip():
             st.error("La description est obligatoire.")
         elif description_is_probably_truncated(description):
-            st.error(
-                "La description se termine par … et semble encore tronquée."
-            )
+            st.error("La description se termine par … et semble encore tronquée.")
         else:
             offer = JobOffer(
                 job_title=title.strip(),

@@ -149,8 +149,7 @@ def test_wttj_hydration_uses_public_detail_api(monkeypatch):
         responsibilities="Aperçu",
         source_name="Welcome to the Jungle",
         source_url=(
-            "https://www.welcometothejungle.com/fr/companies/"
-            "exemple/jobs/data-analyst"
+            "https://www.welcometothejungle.com/fr/companies/exemple/jobs/data-analyst"
         ),
         external_id="reference-42",
     )

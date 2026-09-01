@@ -61,12 +61,8 @@ class Settings:
     db_port: str = os.getenv("DB_PORT", "5432").strip()
     db_name: str = os.getenv("DB_NAME", "rocky").strip()
     mistral_api_key: str = os.getenv("MISTRAL_API_KEY", "").strip()
-    mistral_model: str = os.getenv(
-        "MISTRAL_MODEL", "mistral-small-latest"
-    ).strip()
-    france_travail_client_id: str = os.getenv(
-        "FRANCE_TRAVAIL_CLIENT_ID", ""
-    ).strip()
+    mistral_model: str = os.getenv("MISTRAL_MODEL", "mistral-small-latest").strip()
+    france_travail_client_id: str = os.getenv("FRANCE_TRAVAIL_CLIENT_ID", "").strip()
     france_travail_client_secret: str = os.getenv(
         "FRANCE_TRAVAIL_CLIENT_SECRET", ""
     ).strip()
@@ -74,22 +70,18 @@ class Settings:
     adzuna_app_key: str = os.getenv("ADZUNA_APP_KEY", "").strip()
     adzuna_country: str = os.getenv("ADZUNA_COUNTRY", "fr").strip()
     theirstack_api_key: str = os.getenv("THEIRSTACK_API_KEY", "").strip()
-    theirstack_indeed_max_age_days: int = _integer(
-        "THEIRSTACK_INDEED_MAX_AGE_DAYS", 30
-    )
+    theirstack_indeed_max_age_days: int = _integer("THEIRSTACK_INDEED_MAX_AGE_DAYS", 30)
     match_threshold: int = _integer("MATCH_THRESHOLD", 70)
     watch_results_per_query: int = _integer("WATCH_RESULTS_PER_QUERY", 20)
     gmail_max_messages: int = _integer("GMAIL_MAX_MESSAGES", 100)
     gmail_lookback_days: int = _integer("GMAIL_LOOKBACK_DAYS", 180)
-    gmail_accounts: tuple[str, ...] = _gmail_accounts(
-        os.getenv("GMAIL_ACCOUNTS", "")
-    )
+    gmail_accounts: tuple[str, ...] = _gmail_accounts(os.getenv("GMAIL_ACCOUNTS", ""))
     gmail_oauth_redirect_uri: str = os.getenv(
         "GMAIL_OAUTH_REDIRECT_URI", "http://localhost:8501/"
     ).strip()
-    rocky_public_url: str = os.getenv(
-        "ROCKY_PUBLIC_URL", "http://localhost:8501"
-    ).strip().rstrip("/")
+    rocky_public_url: str = (
+        os.getenv("ROCKY_PUBLIC_URL", "http://localhost:8501").strip().rstrip("/")
+    )
     rocky_session_secret: str = os.getenv("ROCKY_SESSION_SECRET", "").strip()
     smtp_host: str = os.getenv("SMTP_HOST", "").strip()
     smtp_port: int = _integer("SMTP_PORT", 587)
@@ -99,7 +91,9 @@ class Settings:
         "SMTP_FROM", os.getenv("SMTP_FROM_EMAIL", "")
     ).strip()
     smtp_use_tls: bool = os.getenv("SMTP_USE_TLS", "true").strip().lower() not in {
-        "0", "false", "no",
+        "0",
+        "false",
+        "no",
     }
     storage_dir_override: str = os.getenv("ROCKY_STORAGE_DIR", "").strip()
 
@@ -172,9 +166,7 @@ class Settings:
         """Isole les états OAuth temporaires d'un compte."""
         return self.user_dir(user_id) / "gmail" / "oauth_pending"
 
-    def gmail_token_path_for(
-        self, account_email: str, user_id: int
-    ) -> Path:
+    def gmail_token_path_for(self, account_email: str, user_id: int) -> Path:
         """Construit un chemin stable sans utiliser l'adresse comme sous-dossier."""
         slug = re.sub(r"[^a-z0-9]+", "_", account_email.strip().lower()).strip("_")
         if not slug:
@@ -192,12 +184,9 @@ class Settings:
             "PostgreSQL": self.database_url is not None,
             "Mistral AI": bool(self.mistral_api_key),
             "France Travail": bool(
-                self.france_travail_client_id
-                and self.france_travail_client_secret
+                self.france_travail_client_id and self.france_travail_client_secret
             ),
             "Adzuna": bool(self.adzuna_app_id and self.adzuna_app_key),
-            "TheirStack (Indeed + enrichissement)": bool(
-                self.theirstack_api_key
-            ),
+            "TheirStack (Indeed + enrichissement)": bool(self.theirstack_api_key),
             "Gmail OAuth lecture seule": self.gmail_credentials_path.is_file(),
         }

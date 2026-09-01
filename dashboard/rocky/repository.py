@@ -64,9 +64,13 @@ class RockyRepository:
     def fetch_active_user_ids(self) -> list[int]:
         """Retourne les comptes actifs pour une routine planifiée locale."""
         with self.engine.connect() as connection:
-            rows = connection.execute(
-                text("SELECT id FROM users WHERE status = 'ACTIVE' ORDER BY id")
-            ).scalars().all()
+            rows = (
+                connection.execute(
+                    text("SELECT id FROM users WHERE status = 'ACTIVE' ORDER BY id")
+                )
+                .scalars()
+                .all()
+            )
         return [int(user_id) for user_id in rows]
 
     def _profile_is_owned(self, profile_id: int) -> bool:
@@ -74,13 +78,16 @@ class RockyRepository:
         if self.user_id is None:
             return True
         with self.engine.connect() as connection:
-            return connection.execute(
-                text(
-                    "SELECT 1 FROM candidate_profiles "
-                    "WHERE id = :id AND user_id = :user_id"
-                ),
-                {"id": profile_id, "user_id": self.user_id},
-            ).first() is not None
+            return (
+                connection.execute(
+                    text(
+                        "SELECT 1 FROM candidate_profiles "
+                        "WHERE id = :id AND user_id = :user_id"
+                    ),
+                    {"id": profile_id, "user_id": self.user_id},
+                ).first()
+                is not None
+            )
 
     def _require_profile(self, profile_id: int) -> None:
         """Bloque immédiatement une lecture ou écriture de profil hors périmètre utilisateur."""
@@ -92,16 +99,19 @@ class RockyRepository:
         if self.user_id is None:
             return True
         with self.engine.connect() as connection:
-            return connection.execute(
-                text(
-                    """
+            return (
+                connection.execute(
+                    text(
+                        """
                     SELECT 1 FROM applications a
                     JOIN candidate_profiles p ON p.id = a.profile_id
                     WHERE a.id = :id AND p.user_id = :user_id
                     """
-                ),
-                {"id": application_id, "user_id": self.user_id},
-            ).first() is not None
+                    ),
+                    {"id": application_id, "user_id": self.user_id},
+                ).first()
+                is not None
+            )
 
     def _require_application(self, application_id: int) -> None:
         """Vérifie qu'une candidature appartient au compte avant une action ciblée."""
@@ -115,13 +125,16 @@ class RockyRepository:
         if self.user_id is None:
             return True
         with self.engine.connect() as connection:
-            return connection.execute(
-                text(
-                    "SELECT 1 FROM email_messages "
-                    "WHERE id = :id AND user_id = :user_id"
-                ),
-                {"id": email_id, "user_id": self.user_id},
-            ).first() is not None
+            return (
+                connection.execute(
+                    text(
+                        "SELECT 1 FROM email_messages "
+                        "WHERE id = :id AND user_id = :user_id"
+                    ),
+                    {"id": email_id, "user_id": self.user_id},
+                ).first()
+                is not None
+            )
 
     def _require_email(self, email_id: int) -> None:
         """Vérifie l'appartenance d'un e-mail afin de protéger la file Gmail par compte."""
@@ -162,7 +175,8 @@ class RockyRepository:
             ORDER BY j.publication_date DESC NULLS LAST, j.created_at DESC
         """
         return pd.read_sql(
-            text(query), self.engine,
+            text(query),
+            self.engine,
             params={"profile_id": profile_id, "user_id": self.user_id},
         )
 
@@ -176,11 +190,15 @@ class RockyRepository:
         if self.user_id is not None:
             with self.engine.connect() as connection:
                 owned_job = connection.execute(
-                    text("SELECT 1 FROM job_offers WHERE id = :id AND user_id = :user_id"),
+                    text(
+                        "SELECT 1 FROM job_offers WHERE id = :id AND user_id = :user_id"
+                    ),
                     {"id": job_id, "user_id": self.user_id},
                 ).first()
             if owned_job is None:
-                raise PermissionError("Cette annonce n'appartient pas au compte connecté.")
+                raise PermissionError(
+                    "Cette annonce n'appartient pas au compte connecté."
+                )
         with self.engine.begin() as connection:
             result = connection.execute(
                 text(
@@ -198,26 +216,33 @@ class RockyRepository:
         """Indique si le matching propre à ce profil existe déjà."""
         self._require_profile(profile_id)
         with self.engine.connect() as connection:
-            return connection.execute(
-                text(
-                    """
+            return (
+                connection.execute(
+                    text(
+                        """
                     SELECT 1 FROM job_matches
                     WHERE job_id = :job_id AND profile_id = :profile_id
                     """
-                ),
-                {"job_id": job_id, "profile_id": profile_id},
-            ).first() is not None
+                    ),
+                    {"job_id": job_id, "profile_id": profile_id},
+                ).first()
+                is not None
+            )
 
     def fetch_job(self, job_id: int) -> dict[str, Any] | None:
         """Relit une annonce complète pour sa fiche, son enrichissement ou son dossier."""
         with self.engine.connect() as connection:
-            row = connection.execute(
-                text(
-                    "SELECT * FROM job_offers WHERE id = :id "
-                    "AND (:user_id IS NULL OR user_id = :user_id)"
-                ),
-                {"id": job_id, "user_id": self.user_id},
-            ).mappings().first()
+            row = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM job_offers WHERE id = :id "
+                        "AND (:user_id IS NULL OR user_id = :user_id)"
+                    ),
+                    {"id": job_id, "user_id": self.user_id},
+                )
+                .mappings()
+                .first()
+            )
         return dict(row) if row else None
 
     def fetch_job_offer(self, job_id: int) -> JobOffer | None:
@@ -252,9 +277,7 @@ class RockyRepository:
                 row.get("description_enrichment_external_id") or ""
             ),
             required_education=str(row.get("required_education") or ""),
-            minimum_experience_years=_clean(
-                row.get("minimum_experience_years")
-            ),
+            minimum_experience_years=_clean(row.get("minimum_experience_years")),
             main_domain=str(row.get("main_domain") or ""),
             publication_date=row.get("publication_date"),
             application_deadline=row.get("application_deadline"),
@@ -279,12 +302,15 @@ class RockyRepository:
             params={"user_id": self.user_id},
         )
 
-    def fetch_profile(self, profile_id: int, locale: str = "fr") -> CandidateProfile | None:
+    def fetch_profile(
+        self, profile_id: int, locale: str = "fr"
+    ) -> CandidateProfile | None:
         """Reconstruit un profil dans la langue demandée pour matching ou génération."""
         with self.engine.connect() as connection:
-            row = connection.execute(
-                text(
-                    """
+            row = (
+                connection.execute(
+                    text(
+                        """
                     SELECT p.*, l.summary AS localized_summary,
                            l.target_job_titles AS localized_targets,
                            l.target_domains AS localized_domains,
@@ -295,9 +321,12 @@ class RockyRepository:
                     WHERE p.id = :id
                       AND (:user_id IS NULL OR p.user_id = :user_id)
                     """
-                ),
-                {"id": profile_id, "locale": locale, "user_id": self.user_id},
-            ).mappings().first()
+                    ),
+                    {"id": profile_id, "locale": locale, "user_id": self.user_id},
+                )
+                .mappings()
+                .first()
+            )
         if not row:
             return None
         return CandidateProfile(
@@ -530,13 +559,17 @@ class RockyRepository:
         """Lit une version linguistique après contrôle du propriétaire."""
         self._require_profile(profile_id)
         with self.engine.connect() as connection:
-            row = connection.execute(
-                text(
-                    "SELECT * FROM profile_localizations "
-                    "WHERE profile_id = :profile_id AND locale = :locale"
-                ),
-                {"profile_id": profile_id, "locale": locale},
-            ).mappings().first()
+            row = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM profile_localizations "
+                        "WHERE profile_id = :profile_id AND locale = :locale"
+                    ),
+                    {"profile_id": profile_id, "locale": locale},
+                )
+                .mappings()
+                .first()
+            )
         if row is None:
             return None
         return ProfileLocalization(
@@ -717,14 +750,18 @@ class RockyRepository:
         self._require_profile(profile_id)
         condition = "AND locale = :locale" if locale else ""
         with self.engine.connect() as connection:
-            rows = connection.execute(
-                text(
-                    f"SELECT * FROM profile_documents WHERE profile_id = :profile_id "
-                    f"AND is_current = TRUE "
-                    f"{condition} ORDER BY locale, kind"
-                ),
-                {"profile_id": profile_id, "locale": locale},
-            ).mappings().all()
+            rows = (
+                connection.execute(
+                    text(
+                        f"SELECT * FROM profile_documents WHERE profile_id = :profile_id "
+                        f"AND is_current = TRUE "
+                        f"{condition} ORDER BY locale, kind"
+                    ),
+                    {"profile_id": profile_id, "locale": locale},
+                )
+                .mappings()
+                .all()
+            )
         return [
             ProfileDocument(
                 id=int(row["id"]),
@@ -884,7 +921,9 @@ class RockyRepository:
                 {"id": skill_id, "name_en": name_en.strip(), "user_id": self.user_id},
             )
         if self.user_id is not None and not result.rowcount:
-            raise PermissionError("Cette compétence n'appartient pas au compte connecté.")
+            raise PermissionError(
+                "Cette compétence n'appartient pas au compte connecté."
+            )
 
     def delete_skill(self, skill_id: int) -> None:
         """Retire une compétence lorsque l'utilisateur la juge non pertinente pour son profil."""
@@ -907,9 +946,7 @@ class RockyRepository:
             conditions.append(
                 "(source_name = :source_name AND external_id = :external_id)"
             )
-            params.update(
-                source_name=offer.source_name, external_id=offer.external_id
-            )
+            params.update(source_name=offer.source_name, external_id=offer.external_id)
         if offer.source_url:
             conditions.append(
                 "(source_url = :source_url OR application_url = :source_url)"
@@ -917,8 +954,7 @@ class RockyRepository:
             params["source_url"] = canonical_url(offer.source_url)
         if offer.application_url:
             conditions.append(
-                "(application_url = :application_url "
-                "OR source_url = :application_url)"
+                "(application_url = :application_url OR source_url = :application_url)"
             )
             params["application_url"] = canonical_url(offer.application_url)
         if not conditions:
@@ -928,7 +964,8 @@ class RockyRepository:
                 text(
                     "SELECT id FROM job_offers WHERE "
                     "(:user_id IS NULL OR user_id = :user_id) AND ("
-                    + " OR ".join(conditions) + ")"
+                    + " OR ".join(conditions)
+                    + ")"
                     + " ORDER BY id LIMIT 1"
                 ),
                 params,
@@ -1014,9 +1051,7 @@ class RockyRepository:
             self.link_job_to_profile(job_id, profile_id)
         return job_id, True
 
-    def save_match(
-        self, job_id: int, profile_id: int, result: MatchResult
-    ) -> None:
+    def save_match(self, job_id: int, profile_id: int, result: MatchResult) -> None:
         """Enregistre le score courant et ajoute son instantané à l'historique.
 
         La table ``job_matches`` reste volontairement une vue rapide de la
@@ -1087,9 +1122,7 @@ class RockyRepository:
                     ),
                     {
                         "job_id": job_id,
-                        "required_skills": self._list_value(
-                            result.detected_job_skills
-                        ),
+                        "required_skills": self._list_value(result.detected_job_skills),
                     },
                 )
 
@@ -1144,9 +1177,7 @@ class RockyRepository:
             if offer is None:
                 unavailable += 1
                 continue
-            locale = (
-                offer.language_override or offer.detected_language or "fr"
-            )
+            locale = offer.language_override or offer.detected_language or "fr"
             localized_profile = self.fetch_profile(profile_id, locale) or profile
             result = calculate_match(offer, localized_profile, skills)
             self.save_match(int(row["id"]), profile_id, result)
@@ -1306,9 +1337,10 @@ class RockyRepository:
             return summary
         with self.engine.begin() as connection:
             for job_id in unique_ids:
-                row = connection.execute(
-                    text(
-                        """
+                row = (
+                    connection.execute(
+                        text(
+                            """
                         SELECT j.status,
                                EXISTS(
                                    SELECT 1 FROM applications a
@@ -1318,9 +1350,12 @@ class RockyRepository:
                         WHERE j.id = :id
                           AND (:user_id IS NULL OR j.user_id = :user_id)
                         """
-                    ),
-                    {"id": job_id, "user_id": self.user_id},
-                ).mappings().first()
+                        ),
+                        {"id": job_id, "user_id": self.user_id},
+                    )
+                    .mappings()
+                    .first()
+                )
                 if row is None:
                     continue
                 if str(row["status"] or "") != "ÉCARTÉE":
@@ -1349,9 +1384,7 @@ class RockyRepository:
         values = offer.to_dict()
         values.update(
             id=job_id,
-            source_url=(
-                canonical_url(offer.source_url) if offer.source_url else None
-            ),
+            source_url=(canonical_url(offer.source_url) if offer.source_url else None),
             application_url=(
                 canonical_url(offer.application_url)
                 if offer.application_url
@@ -1488,7 +1521,9 @@ class RockyRepository:
                 ),
                 {"job_id": job_id},
             )
-            details_parameter = ":details" if self.is_sqlite else "CAST(:details AS JSONB)"
+            details_parameter = (
+                ":details" if self.is_sqlite else "CAST(:details AS JSONB)"
+            )
             connection.execute(
                 text(
                     f"""
@@ -1538,9 +1573,10 @@ class RockyRepository:
     def fetch_application(self, application_id: int) -> dict[str, Any] | None:
         """Retourne un dossier avec l'annonce et l'identité du profil."""
         with self.engine.connect() as connection:
-            row = connection.execute(
-                text(
-                    """
+            row = (
+                connection.execute(
+                    text(
+                        """
                     SELECT a.*, j.job_title, j.company_name,
                            j.application_url, j.source_url,
                            p.full_name, p.email, p.phone, p.address,
@@ -1552,9 +1588,12 @@ class RockyRepository:
                     WHERE a.id = :id
                       AND (:user_id IS NULL OR p.user_id = :user_id)
                     """
-                ),
-                {"id": application_id, "user_id": self.user_id},
-            ).mappings().first()
+                    ),
+                    {"id": application_id, "user_id": self.user_id},
+                )
+                .mappings()
+                .first()
+            )
         return dict(row) if row else None
 
     def fetch_latest_application_for_job(
@@ -1563,20 +1602,27 @@ class RockyRepository:
         """Évite de dupliquer un dossier lors d'une nouvelle version PDF."""
         self._require_profile(profile_id)
         with self.engine.connect() as connection:
-            row = connection.execute(
-                text(
-                    """
+            row = (
+                connection.execute(
+                    text(
+                        """
                     SELECT * FROM applications
                     WHERE job_id = :job_id AND profile_id = :profile_id
                     ORDER BY prepared_at DESC, id DESC LIMIT 1
                     """
-                ),
-                {"job_id": job_id, "profile_id": profile_id},
-            ).mappings().first()
+                    ),
+                    {"job_id": job_id, "profile_id": profile_id},
+                )
+                .mappings()
+                .first()
+            )
         return dict(row) if row else None
 
     def update_application_paths(
-        self, application_id: int, cv_path: str, letter_pdf_path: str,
+        self,
+        application_id: int,
+        cv_path: str,
+        letter_pdf_path: str,
         profile_locale: str = "fr",
     ) -> None:
         """Pointe le dossier vers sa dernière paire de PDF validée."""
@@ -1614,10 +1660,14 @@ class RockyRepository:
         status = normalize_application_status(status)
         details_value = json.dumps(details or {}, ensure_ascii=False, default=str)
         with self.engine.begin() as connection:
-            current = connection.execute(
-                text("SELECT status, job_id FROM applications WHERE id = :id"),
-                {"id": application_id},
-            ).mappings().one()
+            current = (
+                connection.execute(
+                    text("SELECT status, job_id FROM applications WHERE id = :id"),
+                    {"id": application_id},
+                )
+                .mappings()
+                .one()
+            )
             old_status = str(current["status"])
             job_id = int(current["job_id"])
             connection.execute(
@@ -1642,7 +1692,9 @@ class RockyRepository:
                     "mark_sent": status == "CANDIDATURE ENVOYÉE",
                 },
             )
-            details_parameter = ":details" if self.is_sqlite else "CAST(:details AS JSONB)"
+            details_parameter = (
+                ":details" if self.is_sqlite else "CAST(:details AS JSONB)"
+            )
             event_id = connection.execute(
                 text(
                     f"""
@@ -1706,16 +1758,20 @@ class RockyRepository:
             return False
         self._require_application(int(application_id))
         with self.engine.begin() as connection:
-            event = connection.execute(
-                text(
-                    """
+            event = (
+                connection.execute(
+                    text(
+                        """
                     SELECT * FROM application_events
                     WHERE id = :id AND reverted_at IS NULL
                       AND event_type = 'STATUS_CHANGED'
                     """
-                ),
-                {"id": event_id},
-            ).mappings().first()
+                    ),
+                    {"id": event_id},
+                )
+                .mappings()
+                .first()
+            )
             if not event or not event.get("old_status"):
                 return False
             latest = connection.execute(
@@ -1909,24 +1965,25 @@ class RockyRepository:
             params={"application_id": application_id},
         )
 
-    def email_message_exists(
-        self, gmail_account: str, gmail_message_id: str
-    ) -> bool:
+    def email_message_exists(self, gmail_account: str, gmail_message_id: str) -> bool:
         """Teste l'identifiant Gmail uniquement dans sa boîte d'origine."""
         with self.engine.connect() as connection:
-            return connection.execute(
-                text(
-                    "SELECT 1 FROM email_messages "
-                    "WHERE gmail_account = :gmail_account "
-                    "AND gmail_message_id = :message_id "
-                    "AND (:user_id IS NULL OR user_id = :user_id)"
-                ),
-                {
-                    "gmail_account": gmail_account,
-                    "message_id": gmail_message_id,
-                    "user_id": self.user_id,
-                },
-            ).first() is not None
+            return (
+                connection.execute(
+                    text(
+                        "SELECT 1 FROM email_messages "
+                        "WHERE gmail_account = :gmail_account "
+                        "AND gmail_message_id = :message_id "
+                        "AND (:user_id IS NULL OR user_id = :user_id)"
+                    ),
+                    {
+                        "gmail_account": gmail_account,
+                        "message_id": gmail_message_id,
+                        "user_id": self.user_id,
+                    },
+                ).first()
+                is not None
+            )
 
     def save_email_message(self, values: dict[str, Any]) -> int | None:
         """Insère une seule fois un message Gmail, sans corps intégral."""
@@ -1943,9 +2000,7 @@ class RockyRepository:
             values.pop("extracted_links", []), ensure_ascii=False, default=str
         )
         links_parameter = (
-            ":extracted_links"
-            if self.is_sqlite
-            else "CAST(:extracted_links AS JSONB)"
+            ":extracted_links" if self.is_sqlite else "CAST(:extracted_links AS JSONB)"
         )
         values["extracted_links"] = links
         values["user_id"] = self.user_id
@@ -2007,7 +2062,9 @@ class RockyRepository:
         self, processing_state: str | None = None, limit: int = 100
     ) -> pd.DataFrame:
         """Lit l'historique Gmail pour permettre audit et vérification UI."""
-        state_clause = "" if processing_state is None else "AND e.processing_state = :state"
+        state_clause = (
+            "" if processing_state is None else "AND e.processing_state = :state"
+        )
         return pd.read_sql(
             text(
                 f"""
@@ -2134,9 +2191,7 @@ class RockyRepository:
                 },
             )
         if result.rowcount != 1:
-            raise ValueError(
-                "Seul un e-mail écarté par Rocky peut être requalifié."
-            )
+            raise ValueError("Seul un e-mail écarté par Rocky peut être requalifié.")
 
     def reclassify_email_as_job_alert(self, email_id: int, reason: str) -> None:
         """Classe définitivement un message comme alerte emploi locale.
@@ -2274,7 +2329,9 @@ class RockyRepository:
     def create_browser_session(self, application_id: int, target_url: str) -> int:
         """Crée la trace avant d'ouvrir le navigateur externe."""
         if self.fetch_application(application_id) is None:
-            raise PermissionError("Cette candidature n'appartient pas au compte connecté.")
+            raise PermissionError(
+                "Cette candidature n'appartient pas au compte connecté."
+            )
         with self.engine.begin() as connection:
             session_id = connection.execute(
                 text(
@@ -2337,18 +2394,22 @@ class RockyRepository:
                 "Un compte authentifié est requis pour lire une session navigateur."
             )
         with self.engine.connect() as connection:
-            row = connection.execute(
-                text(
-                    """
+            row = (
+                connection.execute(
+                    text(
+                        """
                     SELECT s.*
                     FROM application_browser_sessions s
                     JOIN applications a ON a.id = s.application_id
                     JOIN candidate_profiles p ON p.id = a.profile_id
                     WHERE s.id = :id AND p.user_id = :user_id
                     """
-                ),
-                {"id": session_id, "user_id": self.user_id},
-            ).mappings().first()
+                    ),
+                    {"id": session_id, "user_id": self.user_id},
+                )
+                .mappings()
+                .first()
+            )
         return dict(row) if row else None
 
     def fetch_browser_sessions(self, application_id: int) -> pd.DataFrame:
@@ -2399,7 +2460,9 @@ class RockyRepository:
             ).scalar_one()
         return int(run_id)
 
-    def create_monitoring_note(self, profile_id: int | None, content: str) -> int | None:
+    def create_monitoring_note(
+        self, profile_id: int | None, content: str
+    ) -> int | None:
         """Enregistre une note courte liée au projet/profil courant."""
         if profile_id is not None:
             self._require_profile(profile_id)
@@ -2480,9 +2543,7 @@ class RockyRepository:
                     "inserted_count": summary["inserted_count"],
                     "duplicate_count": summary["duplicate_count"],
                     "rejected_count": summary["rejected_count"],
-                    "errors": json.dumps(
-                        summary.get("errors", []), ensure_ascii=False
-                    ),
+                    "errors": json.dumps(summary.get("errors", []), ensure_ascii=False),
                     "source_results": json.dumps(
                         summary.get("sources", []), ensure_ascii=False
                     ),
@@ -2546,16 +2607,20 @@ class RockyRepository:
         """Retourne la dernière veille terminée pour le profil demandé."""
         self._require_profile(profile_id)
         with self.engine.connect() as connection:
-            row = connection.execute(
-                text(
-                    """
+            row = (
+                connection.execute(
+                    text(
+                        """
                     SELECT * FROM watch_runs
                     WHERE profile_id = :profile_id
                       AND finished_at IS NOT NULL
                     ORDER BY finished_at DESC, id DESC
                     LIMIT 1
                     """
-                ),
-                {"profile_id": profile_id},
-            ).mappings().first()
+                    ),
+                    {"profile_id": profile_id},
+                )
+                .mappings()
+                .first()
+            )
         return dict(row) if row else None

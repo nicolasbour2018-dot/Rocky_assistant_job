@@ -29,15 +29,45 @@ from .text_utils import normalize_text
 TECHNICAL_GROUPS = (
     (
         "Langages et Data",
-        ("python", "sql", "pandas", "numpy", "plotly", "excel", "postgres", "aws", "spark"),
+        (
+            "python",
+            "sql",
+            "pandas",
+            "numpy",
+            "plotly",
+            "excel",
+            "postgres",
+            "aws",
+            "spark",
+        ),
     ),
     (
         "Data Science et IA",
-        ("machine", "scikit", "nlp", "rag", "llm", "langchain", "transform", "pytorch", "tensorflow"),
+        (
+            "machine",
+            "scikit",
+            "nlp",
+            "rag",
+            "llm",
+            "langchain",
+            "transform",
+            "pytorch",
+            "tensorflow",
+        ),
     ),
     (
         "Déploiement / Dev",
-        ("api", "fastapi", "docker", "git", "streamlit", "hugging", "mlflow", "n8n", "cloud"),
+        (
+            "api",
+            "fastapi",
+            "docker",
+            "git",
+            "streamlit",
+            "hugging",
+            "mlflow",
+            "n8n",
+            "cloud",
+        ),
     ),
 )
 
@@ -89,7 +119,8 @@ def _group_skills(
     # Les compétences métier alimentent le bloc transversal ; les répéter dans
     # le bloc technique rendrait les badges et le CV finaux ambigus.
     technical = [
-        skill for skill in skills
+        skill
+        for skill in skills
         if str(skill.get("skill_category") or "").lower() not in {"soft", "business"}
     ]
     selected: set[str] = set()
@@ -102,9 +133,7 @@ def _group_skills(
             if any(marker in normalized for marker in markers):
                 candidates.append(
                     (
-                        _relevance(
-                            name, offer_text, bool(skill.get("is_core_skill"))
-                        ),
+                        _relevance(name, offer_text, bool(skill.get("is_core_skill"))),
                         name,
                     )
                 )
@@ -128,7 +157,8 @@ def _group_skills(
     if remaining:
         label = groups[0][0] if groups else "Outils et méthodes"
         additions = tuple(
-            name for _, name in sorted(remaining, key=lambda item: (-item[0], item[1]))[:6]
+            name
+            for _, name in sorted(remaining, key=lambda item: (-item[0], item[1]))[:6]
         )
         if groups:
             # Un bloc de compétences du CV ne peut accueillir que six badges.
@@ -186,10 +216,7 @@ def _select_projects(
         )
         ranked.append((_relevance(evidence, offer_text), project.sort_order, project))
     selected = sorted(ranked, key=lambda item: (-item[0], item[1]))[:3]
-    return tuple(
-        _tailored_project(project)
-        for _, _, project in selected
-    )
+    return tuple(_tailored_project(project) for _, _, project in selected)
 
 
 def _tailored_project(project: ProfileProject) -> TailoredProject:
@@ -221,16 +248,12 @@ def build_tailored_cv_plan_from_selection(
     )
     non_empty_groups = tuple((label, values) for label, values in groups if values)
     selected_projects = tuple(
-        _tailored_project(project)
-        for project in projects
-        if project.is_active
+        _tailored_project(project) for project in projects if project.is_active
     )[:3]
     return TailoredCvPlan(
         technical_groups=non_empty_groups,
         transversal_skills=tuple(
-            str(value).strip()
-            for value in transversal_skills
-            if str(value).strip()
+            str(value).strip() for value in transversal_skills if str(value).strip()
         )[:6],
         projects=selected_projects,
     )
@@ -274,7 +297,9 @@ def _validate_source(source: Path, template: dict[str, object]) -> None:
             raise DocumentError("Le CV source doit contenir exactement une page.")
 
 
-def _redact_zone_text(page: pymupdf.Page, zone: pymupdf.Rect, fill: tuple[float, ...]) -> None:
+def _redact_zone_text(
+    page: pymupdf.Page, zone: pymupdf.Rect, fill: tuple[float, ...]
+) -> None:
     """Retire uniquement la portion des glyphes comprise dans une zone.
 
     Canva peut exporter une ligne complète comme un seul ``span`` PDF, même
@@ -295,14 +320,20 @@ def _font_css(settings: Settings) -> str:
     """Construit le CSS de police compatible avec le rendu PyMuPDF du modèle."""
     fonts = settings.project_dir / "assets" / "fonts"
     return f"""
-    @font-face {{ font-family: Poppins; src: url('{fonts / 'Poppins-Regular.ttf'}'); }}
-    @font-face {{ font-family: Poppins; src: url('{fonts / 'Poppins-Bold.ttf'}'); font-weight: bold; }}
-    @font-face {{ font-family: Questrial; src: url('{fonts / 'Questrial-Regular.ttf'}'); }}
+    @font-face {{ font-family: Poppins; src: url('{fonts / "Poppins-Regular.ttf"}'); }}
+    @font-face {{ font-family: Poppins; src: url('{fonts / "Poppins-Bold.ttf"}'); font-weight: bold; }}
+    @font-face {{ font-family: Questrial; src: url('{fonts / "Questrial-Regular.ttf"}'); }}
     * {{ box-sizing: border-box; }}
     """
 
 
-def _insert(page: pymupdf.Page, rect: pymupdf.Rect, body: str, css: str, minimum_scale: float = 0.82) -> None:
+def _insert(
+    page: pymupdf.Page,
+    rect: pymupdf.Rect,
+    body: str,
+    css: str,
+    minimum_scale: float = 0.82,
+) -> None:
     """Insère du texte dans une zone autorisée en protégeant l'équilibre du CV."""
     spare, scale = page.insert_htmlbox(rect, body, css=css, scale_low=minimum_scale)
     if spare < -0.01 or scale < minimum_scale:
@@ -319,8 +350,7 @@ def create_tailored_cv(
     template = _template(settings)
     _validate_source(source, template)
     zones = {
-        name: pymupdf.Rect(values)
-        for name, values in dict(template["zones"]).items()
+        name: pymupdf.Rect(values) for name, values in dict(template["zones"]).items()
     }
     rgb = tuple(int(value) / 255 for value in template["background_rgb"])
     document = pymupdf.open(source)

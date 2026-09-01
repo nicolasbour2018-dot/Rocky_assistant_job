@@ -47,15 +47,15 @@ def projects_path(
     if locale not in {"fr", "en"}:
         raise ValueError("La langue des projets doit être fr ou en.")
     return (
-        settings.user_profiles_dir(user_id)
-        / str(profile_id)
-        / f"projects_{locale}.md"
+        settings.user_profiles_dir(user_id) / str(profile_id) / f"projects_{locale}.md"
     )
 
 
 def _authenticated_user_id(repository: RockyRepository) -> int:
     if repository.user_id is None:
-        raise PermissionError("Un compte authentifié est requis pour gérer les projets.")
+        raise PermissionError(
+            "Un compte authentifié est requis pour gérer les projets."
+        )
     return repository.user_id
 
 
@@ -82,9 +82,7 @@ def parse_projects_markdown(content: str) -> list[ProfileProject]:
                     fields[current_key] = match.group(2).strip()
                     continue
             if current_key and line.strip():
-                fields[current_key] = (
-                    fields[current_key] + " " + line.strip()
-                ).strip()
+                fields[current_key] = (fields[current_key] + " " + line.strip()).strip()
         if slug in seen:
             raise DocumentError(f"Projet dupliqué dans projects.md : {name}")
         if not fields.get("problem") or not fields.get("deliverable"):
@@ -217,9 +215,7 @@ def prefill_english_projects(
             )
         )
     content = projects_to_markdown(english_projects, locale="en")
-    return save_profile_projects(
-        profile_id, content, settings, repository, locale="en"
-    )
+    return save_profile_projects(profile_id, content, settings, repository, locale="en")
 
 
 def load_profile_projects(

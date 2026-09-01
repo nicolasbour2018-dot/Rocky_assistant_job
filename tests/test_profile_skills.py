@@ -38,9 +38,7 @@ def test_cv_skill_detection_reuses_taxonomy_and_estimates_simple_levels(tmp_path
     cv_path = tmp_path / "cv.pdf"
     _create_cv(cv_path)
 
-    detected = {
-        skill.name: skill for skill in infer_profile_skills_from_cv(cv_path)
-    }
+    detected = {skill.name: skill for skill in infer_profile_skills_from_cv(cv_path)}
 
     assert detected["Python"].level == "expert"
     assert detected["SQL"].level == "avancé"

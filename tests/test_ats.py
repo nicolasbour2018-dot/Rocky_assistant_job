@@ -64,8 +64,7 @@ def test_ats_report_checks_cv_letter_and_job_keywords(tmp_path):
         "Mon expérience en Python, SQL, Power BI et communication correspond "
         "aux missions proposées. "
         + "Je souhaite mettre mon expérience en analyse de données au service "
-        "de votre équipe. " * 22
-        + "Je vous prie d’agréer mes salutations distinguées."
+        "de votre équipe. " * 22 + "Je vous prie d’agréer mes salutations distinguées."
     )
 
     report = analyze_application_ats(cv_path, letter, offer)
@@ -89,9 +88,7 @@ def test_ats_rejects_an_unreadable_pdf(tmp_path):
 
 def test_ats_v2_repairs_character_spacing_and_keeps_real_word_boundaries():
     text, ratio = repair_spaced_pdf_text(
-        "P y t h o n  P a n d a s\n"
-        "E X P E R I E N C E\n"
-        "Une phrase normalement espacée"
+        "P y t h o n  P a n d a s\nE X P E R I E N C E\nUne phrase normalement espacée"
     )
 
     assert text.splitlines() == [
@@ -139,7 +136,9 @@ def test_ats_v2_distinguishes_exact_related_and_missing_skills(tmp_path):
     )
 
     assert "Python" in report.exact_keywords
-    related = {match.required_skill: match.cv_evidence for match in report.related_keywords}
+    related = {
+        match.required_skill: match.cv_evidence for match in report.related_keywords
+    }
     assert related["Git"] == "GitHub"
     assert "Agile" in related
     assert "Jupyter" in related

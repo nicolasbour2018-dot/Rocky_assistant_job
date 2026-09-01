@@ -134,7 +134,9 @@ def run(session_id: int, user_id: int) -> int:
         return 2
     application = repository.fetch_application(int(session["application_id"]))
     if not application:
-        repository.update_browser_session(session_id, "ERROR", error_message="Candidature introuvable")
+        repository.update_browser_session(
+            session_id, "ERROR", error_message="Candidature introuvable"
+        )
         return 2
     values = {
         "Nom complet": str(application.get("full_name") or ""),
@@ -157,7 +159,9 @@ def run(session_id: int, user_id: int) -> int:
                 str(browser_profile_dir), headless=False, no_viewport=True
             )
             page = context.pages[0] if context.pages else context.new_page()
-            page.goto(str(session["target_url"]), wait_until="domcontentloaded", timeout=60000)
+            page.goto(
+                str(session["target_url"]), wait_until="domcontentloaded", timeout=60000
+            )
             page.wait_for_timeout(1200)
             for label, selectors in FIELD_SELECTORS.items():
                 if _fill_first(page, selectors, values[label]):

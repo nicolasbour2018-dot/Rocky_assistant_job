@@ -84,11 +84,9 @@ def plan_rocky_action(message: str) -> ProposedAction:
             )
         normalized = normalize_text(cleaned)
         for label, field in FIELD_LABELS.items():
-            match = re.search(
-                rf"{re.escape(label)}\s*[:=]\s*(.+)$", normalized, re.I
-            )
+            match = re.search(rf"{re.escape(label)}\s*[:=]\s*(.+)$", normalized, re.I)
             if match:
-                value = cleaned[-len(match.group(1)):].strip()
+                value = cleaned[-len(match.group(1)) :].strip()
                 return ProposedAction(
                     "UPDATE_JOB_FIELD",
                     f"Modifier {label} de l'annonce #{job_id} : {value}",
@@ -97,6 +95,9 @@ def plan_rocky_action(message: str) -> ProposedAction:
                     field,
                     True,
                 )
-    if any(word in normalize_text(cleaned) for word in ("stat", "bilan", "combien", "ou en suis")):
+    if any(
+        word in normalize_text(cleaned)
+        for word in ("stat", "bilan", "combien", "ou en suis")
+    ):
         return ProposedAction("READ_SUMMARY", "Afficher le bilan Rocky actuel.")
     return ProposedAction("ANSWER", cleaned)

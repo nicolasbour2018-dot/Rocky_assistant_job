@@ -41,9 +41,7 @@ def _text_similarity(left: str, right: str) -> float:
     right_tokens = _tokens(right)
     union = left_tokens | right_tokens
     jaccard = len(left_tokens & right_tokens) / len(union) if union else 0.0
-    sequence = SequenceMatcher(
-        None, left_normalized, right_normalized
-    ).ratio()
+    sequence = SequenceMatcher(None, left_normalized, right_normalized).ratio()
     return min(1.0, 0.65 * jaccard + 0.35 * sequence)
 
 
@@ -73,7 +71,7 @@ def _add_breakdown(
     raw_score: float,
     detail: str,
 ) -> None:
-    """ Inclue les poids dans le calcul final et permet d'expliquer le score. """
+    """Inclue les poids dans le calcul final et permet d'expliquer le score."""
     breakdown[name] = {
         "label": {
             "skills": "Compétences",
@@ -163,9 +161,7 @@ def calculate_match(
         )
 
     if profile.target_job_titles and offer.job_title:
-        title_score = _best_similarity(
-            offer.job_title, profile.target_job_titles
-        )
+        title_score = _best_similarity(offer.job_title, profile.target_job_titles)
         if profile.target_domains and offer.main_domain:
             domain_score = _best_similarity(offer.main_domain, profile.target_domains)
             title_score = 0.75 * title_score + 0.25 * domain_score
@@ -219,12 +215,15 @@ def calculate_match(
     if active_weight == 0:
         score = 0.0
     else:
-        score = sum(
-            item["raw_score"] * item["weight"] for item in breakdown.values()
-        ) / active_weight
+        score = (
+            sum(item["raw_score"] * item["weight"] for item in breakdown.values())
+            / active_weight
+        )
 
     strengths = [f"Compétence correspondante : {name}" for name in matched_skills]
-    gaps = [f"Compétence non renseignée dans le profil : {name}" for name in missing_skills]
+    gaps = [
+        f"Compétence non renseignée dans le profil : {name}" for name in missing_skills
+    ]
     for item in breakdown.values():
         if item["raw_score"] >= 75 and item["label"] != "Compétences":
             strengths.append(f"{item['label']} compatible")

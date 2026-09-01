@@ -77,10 +77,13 @@ def test_full_account_lifecycle_uses_one_time_tokens(tmp_path):
     with pytest.raises(Exception, match="Adresse ou mot de passe incorrect"):
         service.authenticate("user@example.test", "une nouvelle phrase très sûre")
     with engine.connect() as connection:
-        assert connection.execute(
-            text("SELECT locked_until FROM users WHERE id = :id"),
-            {"id": user.id},
-        ).scalar_one() is not None
+        assert (
+            connection.execute(
+                text("SELECT locked_until FROM users WHERE id = :id"),
+                {"id": user.id},
+            ).scalar_one()
+            is not None
+        )
 
 
 def test_repository_never_crosses_account_boundaries(tmp_path):
@@ -117,15 +120,27 @@ def test_repository_never_crosses_account_boundaries(tmp_path):
         second_repository.fetch_application_documents(application_id)
 
     first_repository.save_profile_document(
-        first_profile, "en", "cv", "manual-en.pdf", "manual-v1",
+        first_profile,
+        "en",
+        "cv",
+        "manual-en.pdf",
+        "manual-v1",
         origin="uploaded",
     )
     first_repository.save_profile_document(
-        first_profile, "en", "letter", "manual-en.docx", "manual-v1",
+        first_profile,
+        "en",
+        "letter",
+        "manual-en.docx",
+        "manual-v1",
         origin="uploaded",
     )
     first_repository.save_profile_document(
-        first_profile, "fr", "cv", "french-v1.pdf", "french-v1",
+        first_profile,
+        "fr",
+        "cv",
+        "french-v1.pdf",
+        "french-v1",
         origin="uploaded",
     )
     english_documents = {
@@ -135,7 +150,11 @@ def test_repository_never_crosses_account_boundaries(tmp_path):
     assert english_documents["cv"].status == "ready"
     assert english_documents["letter"].status == "ready"
     first_repository.save_profile_document(
-        first_profile, "fr", "cv", "french-v2.pdf", "french-v2",
+        first_profile,
+        "fr",
+        "cv",
+        "french-v2.pdf",
+        "french-v2",
         origin="uploaded",
     )
     english_documents = {
@@ -145,13 +164,16 @@ def test_repository_never_crosses_account_boundaries(tmp_path):
     assert english_documents["cv"].status == "ready"
     assert english_documents["letter"].status == "ready"
     with engine.connect() as connection:
-        assert connection.execute(
-            text(
-                "SELECT COUNT(*) FROM profile_documents "
-                "WHERE profile_id = :profile_id AND locale = 'fr' AND kind = 'cv'"
-            ),
-            {"profile_id": first_profile},
-        ).scalar_one() == 2
+        assert (
+            connection.execute(
+                text(
+                    "SELECT COUNT(*) FROM profile_documents "
+                    "WHERE profile_id = :profile_id AND locale = 'fr' AND kind = 'cv'"
+                ),
+                {"profile_id": first_profile},
+            ).scalar_one()
+            == 2
+        )
 
 
 def test_existing_incompatible_schema_fails_clearly(tmp_path):

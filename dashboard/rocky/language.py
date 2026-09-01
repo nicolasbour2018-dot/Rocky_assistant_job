@@ -7,12 +7,36 @@ from dataclasses import dataclass
 
 
 FRENCH_MARKERS = {
-    "le", "la", "les", "des", "une", "avec", "pour", "vous", "votre",
-    "poste", "missions", "compétences", "expérience", "entreprise", "équipe",
+    "le",
+    "la",
+    "les",
+    "des",
+    "une",
+    "avec",
+    "pour",
+    "vous",
+    "votre",
+    "poste",
+    "missions",
+    "compétences",
+    "expérience",
+    "entreprise",
+    "équipe",
 }
 ENGLISH_MARKERS = {
-    "the", "and", "with", "for", "you", "your", "role", "skills",
-    "experience", "company", "team", "responsibilities", "requirements",
+    "the",
+    "and",
+    "with",
+    "for",
+    "you",
+    "your",
+    "role",
+    "skills",
+    "experience",
+    "company",
+    "team",
+    "responsibilities",
+    "requirements",
 }
 
 

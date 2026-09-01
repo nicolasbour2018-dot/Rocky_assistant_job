@@ -14,6 +14,7 @@ from ..models import CandidateProfile, JobOffer
 
 class AdzunaSource:
     """Adaptateur Adzuna qui convertit les résultats API en annonces Rocky auditables."""
+
     name = "Adzuna"
     base_url = "https://api.adzuna.com/v1/api/jobs"
 

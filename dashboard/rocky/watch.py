@@ -65,6 +65,7 @@ def merge_known_offer(existing: Any, incoming: Any):
 
 class WatchService:
     """Orchestre une veille multi-sources, son matching et son journal d'exécution."""
+
     def __init__(
         self,
         settings: Settings,
@@ -97,7 +98,9 @@ class WatchService:
             )
         stale_policy = getattr(self.repository, "apply_stale_new_job_policy", None)
         stale_summary = (
-            stale_policy() if callable(stale_policy) else {
+            stale_policy()
+            if callable(stale_policy)
+            else {
                 "ancient_count": 0,
                 "discarded_count": 0,
             }
@@ -127,22 +130,16 @@ class WatchService:
         }
         for source in self.sources:
             collector = str(getattr(source, "collector_name", "") or "")
-            source_label = (
-                f"{source.name}/{collector}" if collector else source.name
-            )
+            source_label = f"{source.name}/{collector}" if collector else source.name
             logger.info(
                 "[%s] Recherche démarrée · Profil : %s",
                 source_label,
                 profile.profile_name,
             )
             try:
-                offers = source.search(
-                    profile, self.settings.watch_results_per_query
-                )
+                offers = source.search(profile, self.settings.watch_results_per_query)
             except (ConfigurationError, SourceError) as error:
-                summary["errors"].append(
-                    {"source": source.name, "message": str(error)}
-                )
+                summary["errors"].append({"source": source.name, "message": str(error)})
                 source_result = {
                     "source": source.name,
                     "status": "ERREUR",
@@ -157,9 +154,7 @@ class WatchService:
                 # Une évolution HTML d'une plateforme ne doit jamais arrêter
                 # les six autres sources ni exposer un détail technique.
                 message = "Erreur technique isolée dans ce connecteur."
-                summary["errors"].append(
-                    {"source": source.name, "message": message}
-                )
+                summary["errors"].append({"source": source.name, "message": message})
                 source_result = {
                     "source": source.name,
                     "status": "ERREUR",
@@ -189,16 +184,12 @@ class WatchService:
                     # Sa provenance, son statut et sa description validée sont
                     # conservés ; seules les métadonnées source utiles évoluent.
                     summary["duplicate_count"] += 1
-                    self.repository.link_job_to_profile(
-                        duplicate_id, profile.id
-                    )
+                    self.repository.link_job_to_profile(duplicate_id, profile.id)
                     existing = self.repository.fetch_job_offer(duplicate_id)
                     if existing is not None:
                         merged = merge_known_offer(existing, offer)
                         summary["updated_count"] += int(
-                            self.repository.update_job_if_changed(
-                                duplicate_id, merged
-                            )
+                            self.repository.update_job_if_changed(duplicate_id, merged)
                         )
                         # Une annonce peut être connue globalement mais nouvelle
                         # pour ce profil. Son score n'est calculé qu'une fois par
@@ -211,9 +202,7 @@ class WatchService:
                         ):
                             localized = self._localized_profile(profile, merged)
                             result = calculate_match(merged, localized, skills)
-                            self.repository.save_match(
-                                duplicate_id, profile.id, result
-                            )
+                            self.repository.save_match(duplicate_id, profile.id, result)
                     continue
                 hydration = hydrate_job_offer(offer)
                 if not hydration.is_complete:
@@ -225,9 +214,7 @@ class WatchService:
                         description_is_full=False,
                         status=INCOMPLETE_STATUS,
                     )
-                    _, inserted = self.repository.insert_job(
-                        incomplete, profile.id
-                    )
+                    _, inserted = self.repository.insert_job(incomplete, profile.id)
                     summary["inserted_count"] += int(inserted)
                     continue
                 offer = hydration.offer
@@ -237,9 +224,7 @@ class WatchService:
                     summary["below_threshold_count"] += 1
                     summary["rejected_count"] += 1
                     continue
-                job_id, inserted = self.repository.insert_job(
-                    offer, profile.id
-                )
+                job_id, inserted = self.repository.insert_job(offer, profile.id)
                 self.repository.save_match(job_id, profile.id, result)
                 summary["inserted_count"] += int(inserted)
 
@@ -247,16 +232,10 @@ class WatchService:
                 "source": source.name,
                 "status": "OK",
                 "fetched_count": len(offers),
-                "inserted_count": (
-                    summary["inserted_count"] - inserted_before
-                ),
-                "duplicate_count": (
-                    summary["duplicate_count"] - duplicate_before
-                ),
+                "inserted_count": (summary["inserted_count"] - inserted_before),
+                "duplicate_count": (summary["duplicate_count"] - duplicate_before),
                 "updated_count": summary["updated_count"] - updated_before,
-                "rejected_count": (
-                    summary["rejected_count"] - rejected_before
-                ),
+                "rejected_count": (summary["rejected_count"] - rejected_before),
                 "incomplete_count": (
                     summary["incomplete_description_count"] - incomplete_before
                 ),

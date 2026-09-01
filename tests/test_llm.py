@@ -47,7 +47,14 @@ def test_chat_receives_bounded_job_and_application_context(monkeypatch):
     answer = rocky.chat(
         "Quelles offres sont les plus pertinentes ?",
         profile,
-        jobs=[{"id": 42, "job_title": "Data Analyst", "company_name": "Acme", "match_score": 88}],
+        jobs=[
+            {
+                "id": 42,
+                "job_title": "Data Analyst",
+                "company_name": "Acme",
+                "match_score": 88,
+            }
+        ],
         applications=[{"id": 9, "status": "CANDIDATURE ENVOYÉE"}],
         skills=[{"skill_name": "Python", "skill_category": "technical"}],
     )
@@ -61,8 +68,16 @@ def test_stream_chat_yields_mistral_fragments(monkeypatch):
     profile = CandidateProfile(id=1, profile_name="Nico")
     rocky = RockyLLM(Settings(mistral_api_key="test-only"))
     events = [
-        SimpleNamespace(data=SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Bonjour "))])),
-        SimpleNamespace(data=SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Nicolas"))])),
+        SimpleNamespace(
+            data=SimpleNamespace(
+                choices=[SimpleNamespace(delta=SimpleNamespace(content="Bonjour "))]
+            )
+        ),
+        SimpleNamespace(
+            data=SimpleNamespace(
+                choices=[SimpleNamespace(delta=SimpleNamespace(content="Nicolas"))]
+            )
+        ),
     ]
 
     class FakeChat:

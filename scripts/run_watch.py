@@ -57,9 +57,7 @@ def main() -> int:
     except Exception:
         logging.exception("Erreur inattendue pendant la veille")
         return 1
-    logging.info(
-        "Résumé : %s", json.dumps(summary, ensure_ascii=False, default=str)
-    )
+    logging.info("Résumé : %s", json.dumps(summary, ensure_ascii=False, default=str))
     return 0 if summary["status"] in {"SUCCESS", "PARTIAL"} else 1
 
 

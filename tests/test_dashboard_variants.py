@@ -120,9 +120,7 @@ def test_cockpit_cards_use_the_adjustable_score_threshold():
 
     from dashboard.dashboard_b import _jobs_above_threshold
 
-    frame = pd.DataFrame(
-        {"id": [1, 2, 3], "match_score": [69, 70, None]}
-    )
+    frame = pd.DataFrame({"id": [1, 2, 3], "match_score": [69, 70, None]})
 
     assert _jobs_above_threshold(frame, 70)["id"].tolist() == [2]
 
@@ -185,7 +183,9 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
     initialize_database(engine, settings)
     with engine.begin() as connection:
         user_id = connection.execute(
-            text("INSERT INTO users (email, status) VALUES ('variants@example.test', 'ACTIVE') RETURNING id")
+            text(
+                "INSERT INTO users (email, status) VALUES ('variants@example.test', 'ACTIVE') RETURNING id"
+            )
         ).scalar_one()
     repository = RockyRepository(engine).for_user(user_id)
     profile_id = repository.create_profile("Profil test")
@@ -266,26 +266,20 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
         app.session_state["rocky_authenticated_user_id"] = user_id
         app.run(timeout=30)
         assert not app.exception, filename
-        assert not any(
-            "Annonce archivée" in item.value for item in app.subheader
-        ), filename
+        assert not any("Annonce archivée" in item.value for item in app.subheader), (
+            filename
+        )
         if filename == "dashboard_b.py":
             assert any(
-                button.label.startswith("Tout le flux ·")
-                for button in app.button
+                button.label.startswith("Tout le flux ·") for button in app.button
             )
+            assert any(button.label == "À enrichir · 1" for button in app.button)
             assert any(
-                button.label == "À enrichir · 1" for button in app.button
-            )
-            assert any(
-                slider.label == "Seuil minimal de matching"
-                and slider.value == 70
+                slider.label == "Seuil minimal de matching" and slider.value == 70
                 for slider in app.slider
             )
             assert app.subheader[0].value == "Suggestions · 0 résultat(s)"
-            assert not any(
-                item.value == "BI Analyst" for item in app.subheader
-            )
+            assert not any(item.value == "BI Analyst" for item in app.subheader)
             app.session_state["cockpit_view"] = "flow"
             app.run(timeout=30)
             assert any(
@@ -296,13 +290,9 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
                 select.label == "Tranche de 50 annonces" for select in app.selectbox
             )
             assert len(app.dataframe[0].value) == 4
-            assert "Annonce archivée" in set(
-                app.dataframe[0].value["job_title"]
-            )
+            assert "Annonce archivée" in set(app.dataframe[0].value["job_title"])
         if filename == "page_enrichment.py":
-            assert not any(
-                "Aperçu retenu" in item.value for item in app.subheader
-            )
+            assert not any("Aperçu retenu" in item.value for item in app.subheader)
             assert any(
                 button.label == "Tout enrichir le filtre (1)" for button in app.button
             )
@@ -321,9 +311,7 @@ def test_rocky_v2_pages_start_with_existing_data(tmp_path, monkeypatch):
                 button.label == "Appliquer (1)" and not button.disabled
                 for button in app.button
             )
-            assert any(
-                select.label == "Trier par" for select in app.selectbox
-            )
+            assert any(select.label == "Trier par" for select in app.selectbox)
             assert "city" in app.dataframe[0].value.columns
         if filename == "page_profiles.py":
             assert any("Compétences" in item.label for item in app.metric)
@@ -365,15 +353,11 @@ def test_manual_watch_uses_the_session_threshold(tmp_path, monkeypatch):
     app.run(timeout=30)
 
     threshold = next(
-        slider
-        for slider in app.slider
-        if slider.label == "Seuil minimal de matching"
+        slider for slider in app.slider if slider.label == "Seuil minimal de matching"
     )
     threshold.set_value(55)
     app.run(timeout=30)
-    next(
-        button for button in app.button if button.label == "Lancer la veille"
-    ).click()
+    next(button for button in app.button if button.label == "Lancer la veille").click()
     app.run(timeout=30)
 
     assert captured_thresholds == [55]
@@ -389,7 +373,9 @@ def test_job_detail_page_reuses_v11_actions(tmp_path, monkeypatch):
     initialize_database(engine, settings)
     with engine.begin() as connection:
         user_id = connection.execute(
-            text("INSERT INTO users (email, status) VALUES ('detail@example.test', 'ACTIVE') RETURNING id")
+            text(
+                "INSERT INTO users (email, status) VALUES ('detail@example.test', 'ACTIVE') RETURNING id"
+            )
         ).scalar_one()
     repository = RockyRepository(engine).for_user(user_id)
     profile_id = repository.create_profile("Profil test")
@@ -410,9 +396,7 @@ def test_job_detail_page_reuses_v11_actions(tmp_path, monkeypatch):
 
     monkeypatch.setattr(dashboard_common, "Settings", lambda: settings)
     dashboard_common.load_repository.clear()
-    app = AppTest.from_file(
-        PROJECT_DIR / "dashboard" / "page_job_detail.py"
-    )
+    app = AppTest.from_file(PROJECT_DIR / "dashboard" / "page_job_detail.py")
     app.session_state["selected_job_id"] = job_id
     app.session_state["rocky_authenticated_user_id"] = user_id
     app.run(timeout=30)
@@ -437,9 +421,7 @@ def test_job_detail_page_reuses_v11_actions(tmp_path, monkeypatch):
     assert "Lancer l’ATS V2 (recommandé)" not in button_labels
     links = app.get("link_button")
     assert "Préparer la candidature" in button_labels
-    assert any(
-        link.label == "Ouvrir le site de candidature" for link in links
-    )
+    assert any(link.label == "Ouvrir le site de candidature" for link in links)
     preparation = AppTest.from_file(
         PROJECT_DIR / "dashboard" / "page_application_prepare.py"
     )
@@ -456,12 +438,9 @@ def test_job_detail_page_reuses_v11_actions(tmp_path, monkeypatch):
     preparation.session_state[f"v2_prepare_active_section_{job_id}"] = "postulate"
     preparation.run(timeout=30)
     assert not preparation.exception
+    assert any("Dossier de candidature" in item.value for item in preparation.markdown)
     assert any(
-        "Dossier de candidature" in item.value for item in preparation.markdown
-    )
-    assert any(
-        button.label == "🚀 Préremplir avec Playwright"
-        for button in preparation.button
+        button.label == "🚀 Préremplir avec Playwright" for button in preparation.button
     )
     assert any(
         button.label == "✅ C’est envoyé · clôturer la préparation"
@@ -518,9 +497,7 @@ def test_cockpit_metrics_filter_corresponding_cards(tmp_path, monkeypatch):
         select for select in app.selectbox if select.key == "cockpit_my_status"
     )
     assert my_status.value == "À ÉTUDIER"
-    assert any(
-        item.value == "Data Analyst" for item in app.subheader
-    )
+    assert any(item.value == "Data Analyst" for item in app.subheader)
     status_select = next(
         select
         for select in app.selectbox
@@ -528,9 +505,7 @@ def test_cockpit_metrics_filter_corresponding_cards(tmp_path, monkeypatch):
     )
     status_select.select("ÉCARTÉE")
     save_status = next(
-        button
-        for button in app.button
-        if button.key == f"card_status_save_{full_id}"
+        button for button in app.button if button.key == f"card_status_save_{full_id}"
     )
     save_status.click().run(timeout=30)
     assert not any(item.value == "Data Analyst" for item in app.subheader)

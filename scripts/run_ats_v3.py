@@ -39,9 +39,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     description = (
-        args.job_file.read_text(encoding="utf-8")
-        if args.job_file
-        else args.description
+        args.job_file.read_text(encoding="utf-8") if args.job_file else args.description
     )
     report = analyze_ats_v3(
         args.cv.read_bytes(),

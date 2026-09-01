@@ -1,8 +1,8 @@
-                    ##############################################################################################################
-                        # Module d'affichage et d'orchestration du banc de test ATS V3.
-                        # Test ATS V3 : robustesse multi-parseurs, couverture lexicale et sémantique.
-                        # Test effectué à partir du dictionnaire de compétences déterministe, sans texte corrigé ni LLM.
-                    #############################################################################################################
+##############################################################################################################
+# Module d'affichage et d'orchestration du banc de test ATS V3.
+# Test ATS V3 : robustesse multi-parseurs, couverture lexicale et sémantique.
+# Test effectué à partir du dictionnaire de compétences déterministe, sans texte corrigé ni LLM.
+#############################################################################################################
 
 """Banc de test ATS V3 sur le CV réellement transmis.
 
@@ -82,7 +82,9 @@ def _job_label(row: pd.Series) -> str:
 def _selected_job(jobs: pd.DataFrame) -> tuple[int | None, pd.Series | None]:
     """Laisse choisir l'annonce qui fournit le texte de comparaison ATS."""
     if jobs.empty:
-        st.info("Aucune annonce de « Mes annonces » n’est disponible. Utilise le texte manuel.")
+        st.info(
+            "Aucune annonce de « Mes annonces » n’est disponible. Utilise le texte manuel."
+        )
         return None, None
     rows = [row for _, row in jobs.iterrows()]
     requested = st.session_state.get("ats_v3_job_id") or st.session_state.get(
@@ -121,8 +123,7 @@ def _existing_letter_text(
     if applications.empty:
         return "", ""
     matching = applications[
-        (applications["job_id"] == job_id)
-        & (applications["profile_id"] == profile_id)
+        (applications["job_id"] == job_id) & (applications["profile_id"] == profile_id)
     ]
     for _, application in matching.iterrows():
         stored_path = application.get("letter_docx_path")
@@ -352,7 +353,9 @@ def _matching(report: AtsV3Report) -> None:
     for item in report.skill_comparisons:
         exact = set(item.exact_parsers)
         variants = set(item.variant_parsers)
-        semantic = {evidence.parser_id: evidence.evidence for evidence in item.semantic_evidence}
+        semantic = {
+            evidence.parser_id: evidence.evidence for evidence in item.semantic_evidence
+        }
         row: dict[str, Any] = {
             "Compétence": item.skill,
             "Importance": item.importance,
@@ -553,8 +556,22 @@ if report:
             "pour actualiser les résultats."
         )
     with st.expander("Rapport ATS V3", expanded=False):
-        summary_tab, parsing_tab, matching_tab, benchmark_tab, diagnostic_tab, raw_tab = st.tabs(
-            ("Résumé", "Parsing", "Matching annonce", "Benchmarks ATS", "Diagnostic", "Vue brute")
+        (
+            summary_tab,
+            parsing_tab,
+            matching_tab,
+            benchmark_tab,
+            diagnostic_tab,
+            raw_tab,
+        ) = st.tabs(
+            (
+                "Résumé",
+                "Parsing",
+                "Matching annonce",
+                "Benchmarks ATS",
+                "Diagnostic",
+                "Vue brute",
+            )
         )
         with summary_tab:
             _summary(report, st.session_state.get(JOB_ID_KEY))

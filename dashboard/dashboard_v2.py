@@ -11,7 +11,11 @@ import streamlit as st
 
 # importation des modules internes
 from dashboard.auth_ui import require_authenticated_user, render_account_sidebar
-from dashboard.dashboard_common import load_data, load_repository, render_floating_chatbot
+from dashboard.dashboard_common import (
+    load_data,
+    load_repository,
+    render_floating_chatbot,
+)
 from dashboard.rocky.config import Settings
 from dashboard.rocky.gmail_service import GmailService
 from dashboard.rocky.scheduler import ensure_local_scheduler
@@ -74,6 +78,7 @@ def _complete_gmail_oauth_callback(monitoring_page: st.Page) -> None:
     st.session_state["gmail_oauth_notice"] = notice
     st.query_params.clear()
     st.switch_page(monitoring_page)
+
 
 # Configuration de la l'application Streamlit.
 # Configure l'apparence globale de l'application avant le rendu des pages.
@@ -209,7 +214,14 @@ st.markdown(
 navigation = st.navigation(
     {
         "Rocky": [cockpit, applications, statistics, assistant],
-        "Préparer": [profiles, ats, add_url, enrichment, job_detail, application_prepare],
+        "Préparer": [
+            profiles,
+            ats,
+            add_url,
+            enrichment,
+            job_detail,
+            application_prepare,
+        ],
         "Veille & données": [all_jobs, monitoring],
     },
     position="sidebar",

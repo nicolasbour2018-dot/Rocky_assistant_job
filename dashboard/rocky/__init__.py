@@ -9,4 +9,3 @@ from .config import Settings
 from .models import CandidateProfile, JobOffer, MatchResult
 
 __all__ = ["CandidateProfile", "JobOffer", "MatchResult", "Settings"]
-

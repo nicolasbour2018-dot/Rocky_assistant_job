@@ -50,10 +50,7 @@ def extract_offer_number(url: str) -> str:
     une URL arbitraire lorsque ce service sera appelé depuis l'interface Rocky.
     """
     parts = urlsplit(url.strip())
-    if (
-        parts.scheme not in {"http", "https"}
-        or parts.netloc.lower() not in APEC_HOSTS
-    ):
+    if parts.scheme not in {"http", "https"} or parts.netloc.lower() not in APEC_HOSTS:
         raise ApecExtractionError(
             "L’URL doit être une fiche publique du domaine apec.fr."
         )
@@ -219,7 +216,9 @@ def build_extraction(
             or (metadata_items[0] if metadata_items else "")
         ).strip(),
         "company_establishment_id": offer_payload.get("idEtablissement"),
-        "company_reference": str(offer_payload.get("referenceClientOffre") or "").strip(),
+        "company_reference": str(
+            offer_payload.get("referenceClientOffre") or ""
+        ).strip(),
         "locations": locations,
         "contract_type": _contract_from_metadata(metadata_items),
         "number_of_positions": offer_payload.get("nombrePostes"),
@@ -256,8 +255,7 @@ def build_extraction(
         "id": company_payload.get("id"),
         "account_id": company_payload.get("idCompte"),
         "name": str(
-            company_header.get("raisonSociale")
-            or normalized_offer["company_name"]
+            company_header.get("raisonSociale") or normalized_offer["company_name"]
         ),
         "tagline": str(company_header.get("accroche") or ""),
         "title": str(company_main.get("entrepriseTitre") or ""),

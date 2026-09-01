@@ -138,7 +138,9 @@ metrics[2].metric("À enrichir", counts["incomplete"])
 metrics[3].metric("Profil actif", profile.profile_name if profile else "Aucun")
 
 st.subheader("Notes de projet")
-st.caption("Un espace rapide pour garder les prochaines actions, idées et rappels de Rocky.")
+st.caption(
+    "Un espace rapide pour garder les prochaines actions, idées et rappels de Rocky."
+)
 with st.form("monitoring_note_form", clear_on_submit=True):
     note_content = st.text_area(
         "Nouvelle note",
@@ -194,9 +196,7 @@ if profile:
         GmailService(settings, repository, profile, account_email)
         for account_email in settings.gmail_accounts
     ]
-    oauth_client_type = (
-        gmail_services[0].oauth_client_type if gmail_services else None
-    )
+    oauth_client_type = gmail_services[0].oauth_client_type if gmail_services else None
     if oauth_client_type == "web":
         st.warning(
             "Le JSON présent est un client OAuth Web. Télécharge un client "
@@ -242,15 +242,14 @@ if profile:
             disabled=not gmail.is_configured,
             help=(
                 "Place d'abord credentials.json dans .secrets/gmail/."
-                if not gmail.is_configured else None
+                if not gmail.is_configured
+                else None
             ),
             use_container_width=True,
         ):
             try:
                 st.session_state[authorization_url_key] = (
-                    gmail.begin_browser_authorization(
-                        settings.gmail_oauth_redirect_uri
-                    )
+                    gmail.begin_browser_authorization(settings.gmail_oauth_redirect_uri)
                 )
                 st.rerun()
             except Exception as error:
@@ -263,9 +262,7 @@ if profile:
             use_container_width=True,
         ):
             try:
-                with st.spinner(
-                    f"Lecture et classement de {gmail.account_email}…"
-                ):
+                with st.spinner(f"Lecture et classement de {gmail.account_email}…"):
                     summary = gmail.sync_gmail()
                 # Le total du scan peut inclure des messages que les règles
                 # viennent de classer. La file PENDING/REVIEW est la seule

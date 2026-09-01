@@ -1,6 +1,6 @@
-                    ##############################################################################################################
-                        # Page d’enrichissement des annonces incomplètes de Rocky.
-                    #############################################################################################################
+##############################################################################################################
+# Page d’enrichissement des annonces incomplètes de Rocky.
+#############################################################################################################
 
 """File d'enrichissement des annonces dont la description est insuffisante.
 
@@ -67,9 +67,7 @@ if bulk_status_result:
 top = st.columns([1, 2, 2])
 top[0].metric("À enrichir", len(incomplete))
 query = top[1].text_input("Recherche", placeholder="Poste ou entreprise")
-sources = top[2].multiselect(
-    "Sources", options(incomplete, "source_name")
-)
+sources = top[2].multiselect("Sources", options(incomplete, "source_name"))
 with st.expander("Trier les annonces"):
     sort_choice = st.selectbox(
         "Trier par",
@@ -171,9 +169,7 @@ if not filtered.empty:
         ]
     ].reset_index(drop=True)
     selection_signature = hashlib.sha1(
-        ",".join(str(job_id) for job_id in selection_frame["id"]).encode(
-            "utf-8"
-        )
+        ",".join(str(job_id) for job_id in selection_frame["id"]).encode("utf-8")
     ).hexdigest()[:12]
     select_all_label = (
         "Sélectionner la ligne affichée"
@@ -220,9 +216,7 @@ if not filtered.empty:
         if select_all
         else list(selection.selection.rows)
     )
-    selected_ids = selected_row_ids(
-        selection_frame, selected_positions
-    )
+    selected_ids = selected_row_ids(selection_frame, selected_positions)
     bulk = st.columns([1.5, 1, 2])
     bulk_status = bulk[0].selectbox(
         "Nouveau statut",
@@ -279,6 +273,4 @@ for _, row in filtered.iterrows():
                         profile,
                         expander_label=None,
                     )
-            render_job_detail(
-                row, settings, repository, profile, "enrichment"
-            )
+            render_job_detail(row, settings, repository, profile, "enrichment")

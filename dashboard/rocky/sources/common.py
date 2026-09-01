@@ -53,11 +53,7 @@ def public_get(
         response.raise_for_status()
         return response
     except requests.HTTPError as error:
-        status = (
-            error.response.status_code
-            if error.response is not None
-            else "inconnu"
-        )
+        status = error.response.status_code if error.response is not None else "inconnu"
         raise SourceError(
             f"{source_name} a refusé la requête publique (HTTP {status})."
         ) from error
@@ -91,11 +87,7 @@ def public_post_json(
         response.raise_for_status()
         return response
     except requests.HTTPError as error:
-        status = (
-            error.response.status_code
-            if error.response is not None
-            else "inconnu"
-        )
+        status = error.response.status_code if error.response is not None else "inconnu"
         raise SourceError(
             f"{source_name} a refusé la requête publique (HTTP {status})."
         ) from error
@@ -110,9 +102,7 @@ def iso_date(value: object) -> date | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(
-            str(value).replace("Z", "+00:00")
-        ).date()
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
     except ValueError:
         return None
 
@@ -136,9 +126,7 @@ def salary_values(value: object) -> tuple[float | None, float | None, str]:
 
     values: list[float] = []
     range_uses_thousands = bool(re.search(r"\d\s*[kK]", text))
-    for number, suffix in re.findall(
-        r"(\d+(?:[\s.,]\d+)?)\s*([kK]?)", text
-    ):
+    for number, suffix in re.findall(r"(\d+(?:[\s.,]\d+)?)\s*([kK]?)", text):
         cleaned = number.replace(" ", "").replace(",", ".")
         try:
             parsed = float(cleaned)

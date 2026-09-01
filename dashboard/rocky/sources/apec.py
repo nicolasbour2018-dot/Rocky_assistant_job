@@ -17,11 +17,11 @@ from .common import (
 
 class ApecSource:
     """Adaptateur Apec qui transforme son API de recherche en annonces Rocky."""
+
     name = "Apec"
     search_url = "https://www.apec.fr/cms/webservices/rechercheOffre"
     detail_base_url = (
-        "https://www.apec.fr/candidat/recherche-emploi.html/emploi/"
-        "detail-offre"
+        "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre"
     )
 
     @staticmethod
@@ -65,14 +65,10 @@ class ApecSource:
             country="France",
             remote_policy=str(item.get("typeTeletravail") or ""),
             contract_type=str(
-                item.get("typeContratLibelle")
-                or item.get("typeContrat")
-                or ""
+                item.get("typeContratLibelle") or item.get("typeContrat") or ""
             ),
             work_schedule=str(
-                item.get("tempsTravail")
-                or item.get("dureeTravail")
-                or ""
+                item.get("tempsTravail") or item.get("dureeTravail") or ""
             ),
             salary_min=salary_min,
             salary_max=salary_max,
@@ -96,7 +92,9 @@ class ApecSource:
                 self.name,
                 self.search_url,
                 self._payload(query, results_per_query),
-                headers={"Referer": "https://www.apec.fr/candidat/recherche-emploi.html/emploi"},
+                headers={
+                    "Referer": "https://www.apec.fr/candidat/recherche-emploi.html/emploi"
+                },
             )
             try:
                 items = response.json().get("resultats", [])

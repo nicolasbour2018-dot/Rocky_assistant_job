@@ -12,9 +12,7 @@ from .models import BrowserPrefillReport
 from .repository import RockyRepository
 
 
-def application_target_url(
-    application_id: int, repository: RockyRepository
-) -> str:
+def application_target_url(application_id: int, repository: RockyRepository) -> str:
     """Retourne une URL HTTP(S) validée pour le lien de candidature client."""
     application = repository.fetch_application(application_id)
     if not application:

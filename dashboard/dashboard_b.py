@@ -25,16 +25,19 @@ from dashboard.dashboard_common import (
     run_watch,
     jobs_to_enrich,
 )
+
 ## Importation des constantes de statuts de jobs ##
 from dashboard.rocky.statuses import JOB_STATUS_OPTIONS
 
 
-st.markdown('<div class="rocky-kicker">Recherche & décisions</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="rocky-kicker">Recherche & décisions</div>', unsafe_allow_html=True
+)
 st.title("Rocky Assistant Recherche d'emploi · V2")
 st.caption("Cockpit personnel · veille, matching et prochaines actions")
 st.markdown(
     '<div class="rocky-hero"><strong>Ton terrain de jeu pour la prochaine bonne opportunité.</strong><br>'
-    'Explore les suggestions, ajuste ton profil et laisse Rocky te guider vers les annonces qui comptent.</div>',
+    "Explore les suggestions, ajuste ton profil et laisse Rocky te guider vers les annonces qui comptent.</div>",
     unsafe_allow_html=True,
 )
 
@@ -103,9 +106,7 @@ def _sort_jobs(frame: pd.DataFrame, order: str) -> pd.DataFrame:
             ["_score", "_publication", "_created"],
             ascending=[False, False, False],
         ).drop(columns=["_score", "_publication", "_created"])
-    sorted_jobs["_recent"] = sorted_jobs["_publication"].fillna(
-        sorted_jobs["_created"]
-    )
+    sorted_jobs["_recent"] = sorted_jobs["_publication"].fillna(sorted_jobs["_created"])
     return sorted_jobs.sort_values(
         ["_recent", "_created"], ascending=[False, False]
     ).drop(columns=["_publication", "_created", "_recent"])
@@ -119,9 +120,7 @@ def _sort_new_jobs(frame: pd.DataFrame) -> pd.DataFrame:
         errors="coerce",
         utc=True,
     )
-    return sorted_jobs.sort_values("_created", ascending=False).drop(
-        columns="_created"
-    )
+    return sorted_jobs.sort_values("_created", ascending=False).drop(columns="_created")
 
 
 def _published_in_local_period(frame: pd.DataFrame, period: str) -> pd.Series:
@@ -133,9 +132,7 @@ def _published_in_local_period(frame: pd.DataFrame, period: str) -> pd.Series:
     """
     days = {"1 jour": 1, "3 jours": 3, "7 jours": 7}[period]
     published = pd.to_datetime(frame["publication_date"], errors="coerce")
-    today = pd.Timestamp.now(tz=ZoneInfo("Europe/Paris")).normalize().tz_localize(
-        None
-    )
+    today = pd.Timestamp.now(tz=ZoneInfo("Europe/Paris")).normalize().tz_localize(None)
     boundary = today - pd.Timedelta(days - 1, unit="D")
     return published.ge(boundary) & published.le(today)
 
@@ -175,7 +172,9 @@ if (
 ):
     inserted_count = int(last_watch_run.get("inserted_count") or 0)
     recommendation_count = int(
-        (pd.to_numeric(last_watch_exploitable["match_score"], errors="coerce") >= 80).sum()
+        (
+            pd.to_numeric(last_watch_exploitable["match_score"], errors="coerce") >= 80
+        ).sum()
     )
     st.session_state.cockpit_view = "suggestions"
     st.session_state.cockpit_feedback_watch_run = watch_summary.get("run_id")
@@ -222,7 +221,8 @@ view_definitions = (
 )
 for column, (label, view_name, count) in zip(st.columns(5), view_definitions):
     if column.button(
-        f"{label} · {count}", key=f"cockpit_view_{view_name}",
+        f"{label} · {count}",
+        key=f"cockpit_view_{view_name}",
         type="primary" if active_view == view_name else "secondary",
         use_container_width=True,
     ):
@@ -255,7 +255,9 @@ elif enrichment_count:
     next_action_key = "cockpit_next_enrichment"
 else:
     next_action_title = "✨ Rien ne presse — explore tes suggestions"
-    next_action_hint = "Ton cockpit est à jour. Lance une veille quand tu veux relancer la recherche."
+    next_action_hint = (
+        "Ton cockpit est à jour. Lance une veille quand tu veux relancer la recherche."
+    )
     next_action_page = None
     next_action_key = "cockpit_next_suggestions"
 with st.container(border=True):
@@ -288,7 +290,8 @@ if active_view == "suggestions":
     active_metric_label = "Suggestions"
 elif active_view == "new":
     period = st.selectbox(
-        "Période", ("Dernière veille", "1 jour", "3 jours", "7 jours"),
+        "Période",
+        ("Dernière veille", "1 jour", "3 jours", "7 jours"),
         index=("Dernière veille", "1 jour", "3 jours", "7 jours").index(period),
         key="cockpit_new_period",
         help=(
@@ -310,7 +313,12 @@ elif active_view == "new":
         "« Veille manuelle » si nécessaire."
     )
 elif active_view == "mine":
-    selected_status = st.selectbox("Statut", my_statuses, index=my_statuses.index("À ÉTUDIER"), key="cockpit_my_status")
+    selected_status = st.selectbox(
+        "Statut",
+        my_statuses,
+        index=my_statuses.index("À ÉTUDIER"),
+        key="cockpit_my_status",
+    )
     filtered = my_jobs[_status_series(my_jobs).eq(selected_status)]
     active_metric_label = f"Mes annonces · {selected_status.lower().capitalize()}"
     st.caption(
@@ -330,10 +338,16 @@ else:
 
 if active_view in {"mine", "flow"}:
     with st.popover("Filtres avancés", use_container_width=True):
-        query = st.text_input("Recherche", placeholder="Poste ou entreprise", key="cockpit_filter_query")
+        query = st.text_input(
+            "Recherche", placeholder="Poste ou entreprise", key="cockpit_filter_query"
+        )
         filter_columns = st.columns(2)
-        sources = filter_columns[0].multiselect("Sources", options(filtered, "source_name"), key="cockpit_filter_sources")
-        locations = filter_columns[1].multiselect("Lieux", options(filtered, "city"), key="cockpit_filter_locations")
+        sources = filter_columns[0].multiselect(
+            "Sources", options(filtered, "source_name"), key="cockpit_filter_sources"
+        )
+        locations = filter_columns[1].multiselect(
+            "Lieux", options(filtered, "city"), key="cockpit_filter_locations"
+        )
         if active_view == "flow":
             # « Mes annonces » possède déjà son sélecteur de statut dédié ; le
             # filtre multi-statut est réservé au flux complet du Cockpit.
@@ -351,7 +365,9 @@ if active_view in {"mine", "flow"}:
         locations=locations,
         remote_only=remote_only,
     )
-    sort_order = st.selectbox("Tri", ("Plus récentes", "Meilleur score"), key=f"cockpit_sort_{active_view}")
+    sort_order = st.selectbox(
+        "Tri", ("Plus récentes", "Meilleur score"), key=f"cockpit_sort_{active_view}"
+    )
     filtered = _sort_jobs(filtered, sort_order)
     active_filters = []
     if query.strip():
@@ -373,16 +389,27 @@ if active_view in {"mine", "flow"}:
 st.subheader(f"{active_metric_label} · {len(filtered)} résultat(s)")
 if filtered.empty:
     if active_view == "suggestions":
-        last_inserted = int(last_watch_run.get("inserted_count") or 0) if last_watch_run else 0
-        recommendation_count = int((pd.to_numeric(last_watch_exploitable["match_score"], errors="coerce") >= 80).sum())
+        last_inserted = (
+            int(last_watch_run.get("inserted_count") or 0) if last_watch_run else 0
+        )
+        recommendation_count = int(
+            (
+                pd.to_numeric(last_watch_exploitable["match_score"], errors="coerce")
+                >= 80
+            ).sum()
+        )
         if not last_watch_run:
-            st.info("Aucune veille terminée pour ce profil. Lance une veille pour obtenir des suggestions.")
+            st.info(
+                "Aucune veille terminée pour ce profil. Lance une veille pour obtenir des suggestions."
+            )
         elif last_inserted == 0:
             st.info("Dernière veille terminée : aucune nouvelle annonce ajoutée.")
         elif recommendation_count == 0:
             st.info("Dernière veille : aucune nouvelle recommandation à 80 % ou plus.")
         else:
-            st.info("Toutes les recommandations de la dernière veille ont été traitées.")
+            st.info(
+                "Toutes les recommandations de la dernière veille ont été traitées."
+            )
     elif active_view == "new":
         st.info("Aucune nouvelle annonce non traitée sur la période sélectionnée.")
     elif active_view == "mine":
@@ -393,9 +420,7 @@ if filtered.empty:
 # Parcourt les annonces filtrées et affichage sous forme de cartes.
 for start in range(0, len(filtered), 2):
     cards = st.columns(2)
-    for column, (_, row) in zip(
-        cards, filtered.iloc[start : start + 2].iterrows()
-    ):
+    for column, (_, row) in zip(cards, filtered.iloc[start : start + 2].iterrows()):
         # Organise le containeur de chaque carte d'annonce.
         with column.container(border=True):
             # Réserver assez d'espace au score pour éviter le tronquage dans

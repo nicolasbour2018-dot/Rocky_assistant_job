@@ -84,9 +84,7 @@ def _carousel_page(items: pd.DataFrame, *, state_key: str, label: str) -> pd.Dat
     """
     total = len(items)
     maximum_start = max(0, total - CAROUSEL_CARDS_PER_VIEW)
-    current_start = min(
-        max(0, int(st.session_state.get(state_key, 0))), maximum_start
-    )
+    current_start = min(max(0, int(st.session_state.get(state_key, 0))), maximum_start)
     controls = st.columns([1, 4, 1])
     if controls[0].button(
         "←", key=f"{state_key}_previous", disabled=current_start == 0
@@ -119,12 +117,9 @@ def _render_application_carousel(applications: pd.DataFrame) -> None:
         is_selected = application_id == int(selected_application_id or -1)
         with column.container(border=True, height=240):
             st.caption(
-                f"#{application_id} · "
-                f"{_display_date(application.get('prepared_at'))}"
+                f"#{application_id} · {_display_date(application.get('prepared_at'))}"
             )
-            st.markdown(
-                f"**{_short_label(application.get('company_name'), 34)}**"
-            )
+            st.markdown(f"**{_short_label(application.get('company_name'), 34)}**")
             st.write(_short_label(application.get("job_title"), 58))
             score = application.get("match_score")
             score_label = f"{float(score):.0f} %" if pd.notna(score) else "—"
@@ -213,9 +208,7 @@ def _render_application_detail(application, settings, repository) -> None:
     """Rend un seul dossier actif dans trois sous-vues courtes."""
     application_id = int(application["id"])
     heading, close_column = st.columns([6, 1])
-    heading.markdown(
-        f"### {application['company_name']} — {application['job_title']}"
-    )
+    heading.markdown(f"### {application['company_name']} — {application['job_title']}")
     if close_column.button(
         "Fermer", key=f"close_application_{application_id}", use_container_width=True
     ):
@@ -454,13 +447,19 @@ def _render_email_detail(email, applications, repository) -> None:
         else None
     )
     if (
-        proposed or str(email.get("classification")) == "APPLICATION_UPDATE"
-    ) and selected_application is None and application_options:
-        application_query = st.text_input(
-            "Rechercher une candidature",
-            placeholder="Entreprise, poste ou #dossier",
-            key=f"email_application_query_{email_id}",
-        ).strip().lower()
+        (proposed or str(email.get("classification")) == "APPLICATION_UPDATE")
+        and selected_application is None
+        and application_options
+    ):
+        application_query = (
+            st.text_input(
+                "Rechercher une candidature",
+                placeholder="Entreprise, poste ou #dossier",
+                key=f"email_application_query_{email_id}",
+            )
+            .strip()
+            .lower()
+        )
         filtered_application_options = {
             label: application_id
             for label, application_id in application_options.items()
@@ -470,8 +469,7 @@ def _render_email_detail(email, applications, repository) -> None:
             st.warning("Aucune candidature ne correspond à cette recherche.")
         selected_label = st.selectbox(
             "Associer à une candidature avant validation",
-            ["— Choisir une candidature —"]
-            + list(filtered_application_options),
+            ["— Choisir une candidature —"] + list(filtered_application_options),
             key=f"email_application_{email_id}",
         )
         selected_application = filtered_application_options.get(selected_label)
@@ -551,9 +549,7 @@ def _render_history_email_detail(email, repository) -> None:
 
 def _gmail_message_url(email) -> str:
     """Construit un lien Gmail sans exposer de données si l'identifiant manque."""
-    thread_id = str(
-        email.get("gmail_thread_id") or email.get("gmail_message_id") or ""
-    )
+    thread_id = str(email.get("gmail_thread_id") or email.get("gmail_message_id") or "")
     account = str(email.get("gmail_account") or "")
     if not thread_id or not account:
         return ""
@@ -649,8 +645,7 @@ def _render_gmail_sync_action(settings, repository, profile) -> None:
         state.caption("Autorise au moins une boîte Gmail depuis Monitoring.")
     if unauthorized_accounts:
         state.caption(
-            "Non autorisée(s) et ignorée(s) : "
-            + ", ".join(unauthorized_accounts)
+            "Non autorisée(s) et ignorée(s) : " + ", ".join(unauthorized_accounts)
         )
 
 
@@ -678,12 +673,14 @@ metrics[0].metric("Dossiers", len(applications))
 metrics[1].metric(
     "Envoyées",
     int(applications["status"].isin(APPLICATION_STATUS_OPTIONS[2:]).sum())
-    if not applications.empty else 0,
+    if not applications.empty
+    else 0,
 )
 metrics[2].metric(
     "Entretiens",
     int(applications["status"].isin(["ENTRETIEN", "TEST TECHNIQUE"]).sum())
-    if not applications.empty else 0,
+    if not applications.empty
+    else 0,
 )
 metrics[3].metric(
     "Offres",
@@ -802,9 +799,7 @@ elif active_section == "emails":
             "Type",
             ["Tous"] + pending_classes,
             format_func=lambda value: (
-                "Tous les types"
-                if value == "Tous"
-                else EMAIL_LABELS.get(value, value)
+                "Tous les types" if value == "Tous" else EMAIL_LABELS.get(value, value)
             ),
             key="pending_email_class_filter",
         )
@@ -853,9 +848,7 @@ elif active_section == "emails":
         ]
         if not selected_email.empty:
             with st.container(border=True):
-                _render_email_detail(
-                    selected_email.iloc[0], applications, repository
-                )
+                _render_email_detail(selected_email.iloc[0], applications, repository)
         else:
             st.info("Sélectionne une carte pour ouvrir l'e-mail à vérifier.")
 
@@ -946,9 +939,7 @@ elif active_section == "emails":
                     "job_title",
                 ]
             ].copy()
-            history_view["received_at"] = history_view["received_at"].map(
-                _display_date
-            )
+            history_view["received_at"] = history_view["received_at"].map(_display_date)
             history_view["classification"] = history_view["classification"].map(
                 lambda value: EMAIL_LABELS.get(str(value), value)
             )
@@ -992,11 +983,8 @@ elif active_section == "emails":
                 )
             selected_history_id = st.session_state.get("selected_history_email_id")
             selected_history = filtered_history[
-                filtered_history["id"].astype(int)
-                == int(selected_history_id or -1)
+                filtered_history["id"].astype(int) == int(selected_history_id or -1)
             ]
             if not selected_history.empty:
                 with st.container(border=True):
-                    _render_history_email_detail(
-                        selected_history.iloc[0], repository
-                    )
+                    _render_history_email_detail(selected_history.iloc[0], repository)

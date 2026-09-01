@@ -39,21 +39,27 @@ def _performance_table(frame: pd.DataFrame, dimension: str) -> pd.DataFrame:
         return pd.DataFrame()
     measured = frame.copy()
     measured["Réponse"] = measured["status"].isin(RESPONSE_STATUSES).astype(int)
-    measured["Entretien"] = measured["status"].isin(
-        ["ENTRETIEN", "TEST TECHNIQUE", "OFFRE"]
-    ).astype(int)
-    result = measured.groupby(dimension, dropna=False).agg(
-        Dossiers=("id", "count"),
-        Réponses=("Réponse", "sum"),
-        Entretiens=("Entretien", "sum"),
-    ).reset_index()
-    result["Taux de réponse"] = (
-        100 * result["Réponses"] / result["Dossiers"]
-    ).round(0).astype(int).astype(str) + " %"
+    measured["Entretien"] = (
+        measured["status"].isin(["ENTRETIEN", "TEST TECHNIQUE", "OFFRE"]).astype(int)
+    )
+    result = (
+        measured.groupby(dimension, dropna=False)
+        .agg(
+            Dossiers=("id", "count"),
+            Réponses=("Réponse", "sum"),
+            Entretiens=("Entretien", "sum"),
+        )
+        .reset_index()
+    )
+    result["Taux de réponse"] = (100 * result["Réponses"] / result["Dossiers"]).round(
+        0
+    ).astype(int).astype(str) + " %"
     return result.sort_values(["Dossiers", "Réponses"], ascending=False)
 
 
-st.markdown('<div class="rocky-kicker">Mesure & progression</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="rocky-kicker">Mesure & progression</div>', unsafe_allow_html=True
+)
 st.title("Statistiques")
 st.caption(
     "Un bilan visuel du flux d’offres jusqu’aux retours des recruteurs et aux "
@@ -73,16 +79,33 @@ if profile is None:
 
 applications = repository.fetch_applications(profile.id)
 sent_statuses = {
-    "CANDIDATURE ENVOYÉE", "ACCUSÉ DE RÉCEPTION", "EN COURS",
-    "ENTRETIEN", "TEST TECHNIQUE", "OFFRE", "REFUS",
+    "CANDIDATURE ENVOYÉE",
+    "ACCUSÉ DE RÉCEPTION",
+    "EN COURS",
+    "ENTRETIEN",
+    "TEST TECHNIQUE",
+    "OFFRE",
+    "REFUS",
 }
-sent = applications[applications["status"].isin(sent_statuses)] if not applications.empty else applications
-responses = applications[applications["status"].isin(RESPONSE_STATUSES)] if not applications.empty else applications
+sent = (
+    applications[applications["status"].isin(sent_statuses)]
+    if not applications.empty
+    else applications
+)
+responses = (
+    applications[applications["status"].isin(RESPONSE_STATUSES)]
+    if not applications.empty
+    else applications
+)
 
 response_delays = pd.Series(dtype="timedelta64[ns]")
 if not applications.empty:
-    applied_dates = pd.to_datetime(applications["applied_at"], errors="coerce", utc=True)
-    response_dates = pd.to_datetime(applications["last_email_at"], errors="coerce", utc=True)
+    applied_dates = pd.to_datetime(
+        applications["applied_at"], errors="coerce", utc=True
+    )
+    response_dates = pd.to_datetime(
+        applications["last_email_at"], errors="coerce", utc=True
+    )
     response_delays = (response_dates - applied_dates).dropna()
     response_delays = response_delays[response_delays >= pd.Timedelta(0)]
 
@@ -91,12 +114,20 @@ top[0].metric("Offres suivies", len(jobs))
 top[1].metric("Dossiers", len(applications))
 top[2].metric("Envoyées", len(sent))
 top[3].metric("Réponses", len(responses))
-top[4].metric("Entretiens", int(applications["status"].isin(["ENTRETIEN", "TEST TECHNIQUE"]).sum()) if not applications.empty else 0)
-top[5].metric("Taux de réponse", f"{100 * len(responses) / len(sent):.0f} %" if len(sent) else "—")
+top[4].metric(
+    "Entretiens",
+    int(applications["status"].isin(["ENTRETIEN", "TEST TECHNIQUE"]).sum())
+    if not applications.empty
+    else 0,
+)
+top[5].metric(
+    "Taux de réponse", f"{100 * len(responses) / len(sent):.0f} %" if len(sent) else "—"
+)
 top[6].metric(
     "Délai de réponse",
     f"{response_delays.dt.total_seconds().median() / 86400:.1f} j"
-    if not response_delays.empty else "—",
+    if not response_delays.empty
+    else "—",
 )
 
 left, right = st.columns(2)
@@ -109,16 +140,24 @@ with left:
                 len(applications),
                 len(sent),
                 len(responses),
-                int(applications["status"].isin(["ENTRETIEN", "TEST TECHNIQUE"]).sum()) if not applications.empty else 0,
-                int((applications["status"] == "OFFRE").sum()) if not applications.empty else 0,
+                int(applications["status"].isin(["ENTRETIEN", "TEST TECHNIQUE"]).sum())
+                if not applications.empty
+                else 0,
+                int((applications["status"] == "OFFRE").sum())
+                if not applications.empty
+                else 0,
             ],
         }
     )
     st.altair_chart(
-        alt.Chart(funnel).mark_bar(cornerRadiusEnd=8).encode(
+        alt.Chart(funnel)
+        .mark_bar(cornerRadiusEnd=8)
+        .encode(
             x=alt.X("Volume:Q", title=None),
             y=alt.Y("Étape:N", sort=None, title=None),
-            color=alt.Color("Étape:N", legend=None, scale=alt.Scale(scheme="tealblues")),
+            color=alt.Color(
+                "Étape:N", legend=None, scale=alt.Scale(scheme="tealblues")
+            ),
             tooltip=["Étape", "Volume"],
         ),
         width="stretch",
@@ -130,9 +169,13 @@ with right:
     else:
         status_counts = applications.groupby("status").size().reset_index(name="Volume")
         st.altair_chart(
-            alt.Chart(status_counts).mark_arc(innerRadius=45).encode(
+            alt.Chart(status_counts)
+            .mark_arc(innerRadius=45)
+            .encode(
                 theta="Volume:Q",
-                color=alt.Color("status:N", title="Statut", scale=alt.Scale(scheme="tealblues")),
+                color=alt.Color(
+                    "status:N", title="Statut", scale=alt.Scale(scheme="tealblues")
+                ),
                 tooltip=["status", "Volume"],
             ),
             width="stretch",
@@ -141,10 +184,14 @@ with right:
 charts = st.columns(2)
 with charts[0]:
     st.subheader("Sources d’offres")
-    source_counts = jobs.groupby("source_name", dropna=False).size().reset_index(name="Offres")
+    source_counts = (
+        jobs.groupby("source_name", dropna=False).size().reset_index(name="Offres")
+    )
     source_counts["source_name"] = source_counts["source_name"].fillna("Inconnue")
     st.altair_chart(
-        alt.Chart(source_counts.sort_values("Offres", ascending=False).head(12)).mark_bar(cornerRadiusEnd=6).encode(
+        alt.Chart(source_counts.sort_values("Offres", ascending=False).head(12))
+        .mark_bar(cornerRadiusEnd=6)
+        .encode(
             x=alt.X("Offres:Q", title=None),
             y=alt.Y("source_name:N", sort="-x", title=None),
             color=alt.value("#08B5D1"),
@@ -159,7 +206,9 @@ with charts[1]:
         st.info("Aucun score disponible.")
     else:
         st.altair_chart(
-            alt.Chart(pd.DataFrame({"Score": scores})).mark_bar(color="#18212B").encode(
+            alt.Chart(pd.DataFrame({"Score": scores}))
+            .mark_bar(color="#18212B")
+            .encode(
                 x=alt.X("Score:Q", bin=alt.Bin(maxbins=10), title="Score Rocky"),
                 y=alt.Y("count():Q", title="Offres"),
                 tooltip=["count():Q"],
@@ -174,7 +223,9 @@ timeline_period = st.selectbox(
     index=1,
     help="La fenêtre courte évite de mélanger le suivi actuel avec les archives anciennes.",
 )
-period_days = {"1 semaine": 7, "1 mois": 31, "3 mois": 92, "6 mois": 183}[timeline_period]
+period_days = {"1 semaine": 7, "1 mois": 31, "3 mois": 92, "6 mois": 183}[
+    timeline_period
+]
 timeline_boundary = pd.Timestamp.now(tz="UTC").tz_localize(None) - pd.Timedelta(
     period_days, unit="D"
 )
@@ -195,7 +246,9 @@ job_dates = job_dates[job_dates >= timeline_boundary]
 timeline_parts = []
 if job_dates.notna().any():
     period_jobs = (
-        pd.DataFrame({period_label: job_dates.dt.to_period(period_frequency).dt.start_time})
+        pd.DataFrame(
+            {period_label: job_dates.dt.to_period(period_frequency).dt.start_time}
+        )
         .dropna()
         .groupby(period_label)
         .size()
@@ -209,7 +262,13 @@ if not applications.empty:
     ).dt.tz_localize(None)
     application_dates = application_dates[application_dates >= timeline_boundary]
     period_applications = (
-        pd.DataFrame({period_label: application_dates.dt.to_period(period_frequency).dt.start_time})
+        pd.DataFrame(
+            {
+                period_label: application_dates.dt.to_period(
+                    period_frequency
+                ).dt.start_time
+            }
+        )
         .dropna()
         .groupby(period_label)
         .size()
@@ -220,11 +279,17 @@ if not applications.empty:
 if timeline_parts:
     timeline = pd.concat(timeline_parts, ignore_index=True)
     st.altair_chart(
-        alt.Chart(timeline).mark_line(point=True, strokeWidth=3).encode(
+        alt.Chart(timeline)
+        .mark_line(point=True, strokeWidth=3)
+        .encode(
             x=alt.X(f"{period_label}:T", title=None),
             y=alt.Y("Volume:Q", title=f"Volume par {period_label.lower()}"),
             color=alt.Color("Série:N", scale=alt.Scale(range=["#08B5D1", "#18212B"])),
-            tooltip=[alt.Tooltip(f"{period_label}:T", format="%d/%m/%Y"), "Série", "Volume"],
+            tooltip=[
+                alt.Tooltip(f"{period_label}:T", format="%d/%m/%Y"),
+                "Série",
+                "Volume",
+            ],
         ),
         width="stretch",
     )
@@ -239,11 +304,15 @@ else:
     measured = applications.copy()
     measured["source_name"] = measured["source_name"].fillna("Inconnue")
     measured["Famille de poste"] = measured["job_title"].map(_role_family)
-    measured["Tranche de matching"] = pd.cut(
-        pd.to_numeric(measured["match_score"], errors="coerce"),
-        bins=[-0.01, 59.99, 69.99, 79.99, 89.99, 100],
-        labels=["< 60 %", "60–69 %", "70–79 %", "80–89 %", "90–100 %"],
-    ).astype(object).fillna("Sans score")
+    measured["Tranche de matching"] = (
+        pd.cut(
+            pd.to_numeric(measured["match_score"], errors="coerce"),
+            bins=[-0.01, 59.99, 69.99, 79.99, 89.99, 100],
+            labels=["< 60 %", "60–69 %", "70–79 %", "80–89 %", "90–100 %"],
+        )
+        .astype(object)
+        .fillna("Sans score")
+    )
     for column, dimension, title in zip(
         performance_columns,
         ("source_name", "Famille de poste", "Tranche de matching"),
@@ -290,7 +359,9 @@ with skills_columns[1]:
 
 runs = repository.fetch_watch_runs(10)
 health = st.columns(3)
-health[0].metric("Dernière veille", str(runs.iloc[0]["status"]) if not runs.empty else "Jamais")
+health[0].metric(
+    "Dernière veille", str(runs.iloc[0]["status"]) if not runs.empty else "Jamais"
+)
 authorized_gmail_accounts = sum(
     GmailService(settings, repository, profile, account).is_authorized
     for account in settings.gmail_accounts

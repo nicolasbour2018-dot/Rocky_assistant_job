@@ -25,9 +25,7 @@ def main() -> int:
     )
     api_response.raise_for_status()
     info = api_response.json()
-    filenames = {
-        item.get("rfilename", "") for item in info.get("siblings", [])
-    }
+    filenames = {item.get("rfilename", "") for item in info.get("siblings", [])}
     required = {"Dockerfile", "README.md", "dashboard/dashboard_v2.py"}
     if not required.issubset(filenames):
         print("ERREUR : des fichiers Rocky requis manquent sur le Space.")

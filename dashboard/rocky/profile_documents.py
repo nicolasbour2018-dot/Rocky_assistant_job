@@ -35,7 +35,9 @@ def _load_docx(path: Path):
     try:
         from docx import Document
     except ImportError as error:
-        raise DocumentError("Installe python-docx pour lire les lettres DOCX.") from error
+        raise DocumentError(
+            "Installe python-docx pour lire les lettres DOCX."
+        ) from error
     return Document(str(path))
 
 
@@ -352,21 +354,35 @@ def render_english_cv(source: Path, target: Path, llm: RockyLLM) -> None:
     translated: list[str] = []
     for start in range(0, len(blocks), CV_TRANSLATION_BATCH_SIZE):
         translated.extend(
-            llm.translate_blocks(blocks[start:start + CV_TRANSLATION_BATCH_SIZE])
+            llm.translate_blocks(blocks[start : start + CV_TRANSLATION_BATCH_SIZE])
         )
 
     styles = getSampleStyleSheet()
     body = ParagraphStyle(
-        "RockyCvBody", parent=styles["BodyText"], fontName="Helvetica",
-        fontSize=8.4, leading=10.2, spaceAfter=3,
+        "RockyCvBody",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=8.4,
+        leading=10.2,
+        spaceAfter=3,
     )
     heading = ParagraphStyle(
-        "RockyCvHeading", parent=styles["Heading2"], fontName="Helvetica-Bold",
-        textColor="#087f96", fontSize=11, leading=13, spaceBefore=7, spaceAfter=3,
+        "RockyCvHeading",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        textColor="#087f96",
+        fontSize=11,
+        leading=13,
+        spaceBefore=7,
+        spaceAfter=3,
     )
     document = SimpleDocTemplate(
-        str(target), pagesize=A4, rightMargin=1.25 * cm, leftMargin=1.25 * cm,
-        topMargin=1.1 * cm, bottomMargin=1.1 * cm,
+        str(target),
+        pagesize=A4,
+        rightMargin=1.25 * cm,
+        leftMargin=1.25 * cm,
+        topMargin=1.1 * cm,
+        bottomMargin=1.1 * cm,
         title="Rocky English CV",
     )
     story = []
@@ -393,9 +409,15 @@ def generate_english_documents(
     """
     llm = llm or RockyLLM(settings)
     if not llm.is_configured:
-        raise RockyError("Mistral doit être configuré pour générer la version anglaise.")
-    french = {doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "fr")}
-    english = {doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "en")}
+        raise RockyError(
+            "Mistral doit être configuré pour générer la version anglaise."
+        )
+    french = {
+        doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "fr")
+    }
+    english = {
+        doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "en")
+    }
     if "cv" not in french or "letter" not in french:
         raise DocumentError("Ajoute d'abord le CV et la lettre français.")
     source_hash = hashlib.sha256(
@@ -416,8 +438,14 @@ def generate_english_documents(
         temporary_cv.replace(target_cv)
         stored = project_relative(target_cv, settings.project_dir)
         repository.save_profile_document(
-            profile_id, "en", "cv", stored, cv_digest,
-            preview_pdf_path=stored, origin="generated", status="ready",
+            profile_id,
+            "en",
+            "cv",
+            stored,
+            cv_digest,
+            preview_pdf_path=stored,
+            origin="generated",
+            status="ready",
             source_hash=source_hash,
         )
     if "letter" not in english or english["letter"].origin == "generated":
@@ -431,9 +459,13 @@ def generate_english_documents(
         convert_docx_to_pdf(temporary_letter, target_preview)
         temporary_letter.replace(target_letter)
         repository.save_profile_document(
-            profile_id, "en", "letter",
+            profile_id,
+            "en",
+            "letter",
             project_relative(target_letter, settings.project_dir),
             letter_digest,
             preview_pdf_path=project_relative(target_preview, settings.project_dir),
-            origin="generated", status="ready", source_hash=source_hash,
+            origin="generated",
+            status="ready",
+            source_hash=source_hash,
         )

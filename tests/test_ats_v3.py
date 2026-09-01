@@ -99,7 +99,9 @@ def test_v3_flags_a_multi_column_pdf_as_a_parsing_risk():
         "Data Analyst",
     )
 
-    pypdf = next(item for item in report.parser_extractions if item.parser_id == "pypdf")
+    pypdf = next(
+        item for item in report.parser_extractions if item.parser_id == "pypdf"
+    )
     assert pypdf.metadata["has_multiple_columns"] is True
     assert "Disposition multi-colonnes probable." in pypdf.warnings
     assert len({item.raw_text for item in report.parser_extractions}) >= 2
@@ -107,9 +109,7 @@ def test_v3_flags_a_multi_column_pdf_as_a_parsing_risk():
 
 def test_v3_works_on_an_external_fictitious_cv_without_profile_enrichment():
     cv = _pdf(
-        _standard_cv(
-            "Excel, gestion des stocks, planification logistique et achats"
-        )
+        _standard_cv("Excel, gestion des stocks, planification logistique et achats")
     )
     distant_job = (
         "Nous recrutons un ingénieur plateforme. Python, Kubernetes, Docker, "
@@ -141,11 +141,7 @@ def test_v3_compares_pdf_and_docx_built_from_the_same_content():
 
 
 def test_v3_keeps_semantic_evidence_separate_from_lexical_presence():
-    cv = _pdf(
-        _standard_cv(
-            "Python, requetage relationnel et production de rapports"
-        )
-    )
+    cv = _pdf(_standard_cv("Python, requetage relationnel et production de rapports"))
     report = analyze_ats_v3(cv, "amina_semantic.pdf", DATA_JOB)
     sql = _skill(report, "SQL")
 

@@ -227,7 +227,9 @@ class RockyLLM:
             raw = data.get(name, [])
             if not isinstance(raw, list):
                 return ()
-            return tuple(dict.fromkeys(str(item).strip() for item in raw if str(item).strip()))
+            return tuple(
+                dict.fromkeys(str(item).strip() for item in raw if str(item).strip())
+            )
 
         return ProfileAnalysis(
             full_name=str(data.get("full_name") or "").strip(),
@@ -292,6 +294,7 @@ class RockyLLM:
 
         def protect(value: str) -> str:
             """Remplace les éléments sensibles afin que leur conservation ne dépende pas du LLM."""
+
             def replace(match: re.Match[str]) -> str:
                 """Associe un jeton temporaire au fragment qui doit être restauré à l'identique."""
                 token = f"__KEEP_{len(protected):04d}__"
@@ -324,15 +327,16 @@ class RockyLLM:
                     "technologies, chiffres et dates. Tous les jetons __KEEP_0000__ "
                     "doivent rester inchangés. N'ajoute ni ne retire de fait. Réponds avec "
                     "la seule clé blocks, un objet avec exactement les mêmes clés "
-                    "numériques que l'entrée."
-                    + recovery_instruction
+                    "numériques que l'entrée." + recovery_instruction
                 ),
                 json.dumps({"blocks": indexed_values}, ensure_ascii=False),
             )
             candidate = data.get("blocks", [])
             if not isinstance(candidate, dict) or set(candidate) != set(indexed_values):
                 return None
-            translated_values = [str(candidate[str(index)]) for index in range(len(values))]
+            translated_values = [
+                str(candidate[str(index)]) for index in range(len(values))
+            ]
             for source, translated_value in zip(values, translated_values):
                 tokens = re.findall(r"__KEEP_\d{4}__", source)
                 if any(token not in translated_value for token in tokens):
@@ -391,9 +395,7 @@ class RockyLLM:
             "strengths": [
                 str(item) for item in data.get("strengths", []) if str(item).strip()
             ],
-            "gaps": [
-                str(item) for item in data.get("gaps", []) if str(item).strip()
-            ],
+            "gaps": [str(item) for item in data.get("gaps", []) if str(item).strip()],
         }
 
     def company_paragraph(self, offer: JobOffer, locale: str = "fr") -> str:
@@ -463,9 +465,7 @@ class RockyLLM:
             ),
             json.dumps(evidence, ensure_ascii=False, default=str),
         )
-        message = " ".join(
-            str(data.get("application_message", "")).split()
-        )
+        message = " ".join(str(data.get("application_message", "")).split())
         if not 80 <= len(message) <= 650:
             raise RockyError(
                 "Le message d'accompagnement proposé ne respecte pas le format attendu."
@@ -595,9 +595,7 @@ class RockyLLM:
                 "city": item.get("city"),
                 "remote": item.get("remote_policy"),
                 "description": str(
-                    item.get("responsibilities")
-                    or item.get("short_description")
-                    or ""
+                    item.get("responsibilities") or item.get("short_description") or ""
                 )[:1200],
             }
             for item in (jobs or [])[:60]
@@ -620,7 +618,9 @@ class RockyLLM:
                 "targets": profile.target_job_titles,
             },
             "job": offer.to_dict() if offer else None,
-            "match": {"score": match.score, "breakdown": match.breakdown} if match else None,
+            "match": {"score": match.score, "breakdown": match.breakdown}
+            if match
+            else None,
             "skills": [
                 {
                     "name": item.get("skill_name"),
@@ -634,9 +634,23 @@ class RockyLLM:
                 "applications": compact_applications,
                 "job_count": len(jobs or []),
                 "application_count": len(applications or []),
-                "job_status_counts": dict(Counter(str(item.get("status") or "INCONNU") for item in (jobs or []))),
-                "application_status_counts": dict(Counter(str(item.get("status") or "INCONNU") for item in (applications or []))),
-                "source_counts": dict(Counter(str(item.get("source_name") or "INCONNUE") for item in (jobs or []))),
+                "job_status_counts": dict(
+                    Counter(
+                        str(item.get("status") or "INCONNU") for item in (jobs or [])
+                    )
+                ),
+                "application_status_counts": dict(
+                    Counter(
+                        str(item.get("status") or "INCONNU")
+                        for item in (applications or [])
+                    )
+                ),
+                "source_counts": dict(
+                    Counter(
+                        str(item.get("source_name") or "INCONNUE")
+                        for item in (jobs or [])
+                    )
+                ),
             },
             "conversation": (history or [])[-8:],
         }

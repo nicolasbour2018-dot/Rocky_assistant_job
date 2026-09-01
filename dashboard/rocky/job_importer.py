@@ -28,6 +28,7 @@ USER_AGENT = (
 @dataclass
 class ImportPreview:
     """Aperçu contrôlable d'une annonce importée avant son ajout au flux Rocky."""
+
     offer: JobOffer
     extraction_method: str
     warnings: list[str]
@@ -94,8 +95,7 @@ def _json_ld_objects(value: Any):
     """Extrait récursivement les objets JSON-LD utiles aux annonces structurées."""
     if isinstance(value, dict):
         if value.get("@type") == "JobPosting" or (
-            isinstance(value.get("@type"), list)
-            and "JobPosting" in value["@type"]
+            isinstance(value.get("@type"), list) and "JobPosting" in value["@type"]
         ):
             yield value
         for child in value.values():
@@ -129,9 +129,7 @@ def _targeted_description(soup: BeautifulSoup) -> str:
         node = soup.select_one(selector)
         if node is None:
             continue
-        description = re.sub(
-            r"\s+", " ", node.get_text(" ", strip=True)
-        ).strip()
+        description = re.sub(r"\s+", " ", node.get_text(" ", strip=True)).strip()
         if description:
             return description
     return ""
@@ -150,9 +148,7 @@ def _number(value: Any) -> float | None:
         match = re.search(r"\d[\d\s.,]*", str(value))
         if match:
             try:
-                return float(
-                    match.group(0).replace(" ", "").replace(",", ".")
-                )
+                return float(match.group(0).replace(" ", "").replace(",", "."))
             except ValueError:
                 return None
     return None
@@ -291,9 +287,7 @@ def parse_html(html: str, url: str) -> ImportPreview:
         city=city,
         country=country or "France",
         remote_policy=(
-            "Télétravail"
-            if job_data.get("jobLocationType") == "TELECOMMUTE"
-            else ""
+            "Télétravail" if job_data.get("jobLocationType") == "TELECOMMUTE" else ""
         ),
         contract_type=str(employment),
         work_schedule=str(employment),
@@ -336,9 +330,7 @@ def import_job_url(url: str, llm: RockyLLM | None = None) -> ImportPreview:
         known = preview.offer.to_dict()
         enriched = llm.enrich_job(preview.raw_text, known)
         merged = {
-            key: value
-            for key, value in known.items()
-            if value not in (None, "", [])
+            key: value for key, value in known.items() if value not in (None, "", [])
         }
         for key, value in enriched.items():
             if key in known and key not in merged and value not in (None, "", []):
@@ -414,12 +406,8 @@ def hydrate_job_offer(offer: JobOffer) -> DescriptionHydration:
         responsibilities=detail.responsibilities.strip(),
         description_is_full=True,
         description_enrichment_source=offer.source_name,
-        description_enrichment_external_id=(
-            detail.external_id or offer.external_id
-        ),
-        short_description=(
-            detail.short_description.strip() or offer.short_description
-        ),
+        description_enrichment_external_id=(detail.external_id or offer.external_id),
+        short_description=(detail.short_description.strip() or offer.short_description),
         company_name=(
             offer.company_name
             if offer.company_name not in {"", "Non précisée"}
@@ -502,10 +490,7 @@ def _hydrate_apec_offer(offer: JobOffer) -> DescriptionHydration:
         or payload.get("descriptif")
         or ""
     ).strip()
-    if (
-        not raw_description
-        or description_is_probably_truncated(raw_description)
-    ):
+    if not raw_description or description_is_probably_truncated(raw_description):
         return DescriptionHydration(
             offer=offer,
             is_complete=False,
@@ -519,9 +504,7 @@ def _hydrate_apec_offer(offer: JobOffer) -> DescriptionHydration:
         description_is_full=True,
         description_enrichment_source=offer.source_name,
         description_enrichment_external_id=external_id,
-        company_name=str(
-            payload.get("nomCommercial") or offer.company_name
-        ).strip(),
+        company_name=str(payload.get("nomCommercial") or offer.company_name).strip(),
         city=str(payload.get("lieuTexte") or offer.city).strip(),
         remote_policy=str(
             payload.get("typeTeletravail") or offer.remote_policy
@@ -626,14 +609,10 @@ def _hydrate_wttj_offer(offer: JobOffer) -> DescriptionHydration:
         description_enrichment_external_id=offer.external_id,
         contract_type=str(job.get("contract_type") or offer.contract_type),
         work_schedule=str(job.get("contract_type") or offer.work_schedule),
-        experience_level=str(
-            job.get("experience_level") or offer.experience_level
-        ),
+        experience_level=str(job.get("experience_level") or offer.experience_level),
         salary_min=job.get("salary_min") or offer.salary_min,
         salary_max=job.get("salary_max") or offer.salary_max,
-        salary_currency=str(
-            job.get("salary_currency") or offer.salary_currency
-        ),
+        salary_currency=str(job.get("salary_currency") or offer.salary_currency),
         application_url=str(job.get("apply_url") or offer.application_url),
         detected_skills=[*offer.detected_skills, *tools],
     )

@@ -31,6 +31,7 @@ def ensure_local_scheduler(project_dir: Path):
         return _scheduler
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
+
     scheduler = BackgroundScheduler(timezone="Europe/Paris")
     scheduler.add_job(
         _launch_daily,

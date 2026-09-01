@@ -86,9 +86,7 @@ def test_cv_plan_uses_only_profile_evidence(tmp_path, monkeypatch):
             pixmap = document[0].get_pixmap(
                 matrix=pymupdf.Matrix(zoom, zoom), alpha=False
             )
-            return Image.frombytes(
-                "RGB", [pixmap.width, pixmap.height], pixmap.samples
-            )
+            return Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
 
     source_image = render(source)
     target_image = render(target)

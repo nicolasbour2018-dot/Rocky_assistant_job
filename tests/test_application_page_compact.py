@@ -158,9 +158,7 @@ def test_auto_ignored_email_can_be_reopened_from_diagnostic(tmp_path, monkeypatc
     assert int(reopened["id"]) == int(email_id)
     assert reopened["processing_state"] == "REVIEW"
     assert bool(reopened["classification_manual"]) is True
-    assert not any(
-        button.label == "Requalifier ce mail" for button in app.button
-    )
+    assert not any(button.label == "Requalifier ce mail" for button in app.button)
     dashboard_common.load_repository.clear()
 
 

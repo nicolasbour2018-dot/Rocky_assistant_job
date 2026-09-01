@@ -122,7 +122,9 @@ def generate_application(
     )
     if letter_document is not None:
         if profile.locale == "en" and letter_document.status != "ready":
-            raise DocumentError("La version anglaise de la lettre doit être actualisée.")
+            raise DocumentError(
+                "La version anglaise de la lettre doit être actualisée."
+            )
         template_path = Path(letter_document.source_path).expanduser()
         if not template_path.is_absolute():
             template_path = settings.project_dir / template_path

@@ -78,9 +78,7 @@ def _run_account(
             gmail_accounts[gmail.account_email] = {"status": "NOT_CONFIGURED"}
             continue
         if not gmail.is_authorized:
-            gmail_accounts[gmail.account_email] = {
-                "status": "AUTHORIZATION_REQUIRED"
-            }
+            gmail_accounts[gmail.account_email] = {"status": "AUTHORIZATION_REQUIRED"}
             continue
         try:
             gmail_accounts[gmail.account_email] = {
@@ -130,9 +128,7 @@ def run(dry_run: bool = False) -> dict[str, object]:
             account_results[str(user_id)] = {"status": "SKIPPED_NO_PROFILE"}
             continue
         try:
-            account_results[str(user_id)] = _run_account(
-                settings, repository, dry_run
-            )
+            account_results[str(user_id)] = _run_account(settings, repository, dry_run)
         except Exception as error:
             account_results[str(user_id)] = {
                 "status": "FAILED",
@@ -166,7 +162,9 @@ def main() -> int:
             logging.info("Une exécution quotidienne est déjà en cours.")
             return 0
         summary = run(arguments.dry_run)
-        logging.info("Résumé : %s", json.dumps(summary, ensure_ascii=False, default=str))
+        logging.info(
+            "Résumé : %s", json.dumps(summary, ensure_ascii=False, default=str)
+        )
     statuses = {
         str(dict(value).get("status"))
         for value in dict(summary.get("accounts") or {}).values()

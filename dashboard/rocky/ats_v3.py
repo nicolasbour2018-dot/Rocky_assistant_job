@@ -72,7 +72,9 @@ DATE_PATTERN = re.compile(
 )
 
 EMAIL_PATTERN = re.compile(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", re.IGNORECASE)
-PHONE_PATTERN = re.compile(r"(?:\+\d{1,3}[ .-]?)?(?:\(?\d{1,3}\)?[ .-]?)?\d(?:[ .-]?\d){7,12}")
+PHONE_PATTERN = re.compile(
+    r"(?:\+\d{1,3}[ .-]?)?(?:\(?\d{1,3}\)?[ .-]?)?\d(?:[ .-]?\d){7,12}"
+)
 
 LANGUAGE_NAMES = {
     "francais",
@@ -127,13 +129,67 @@ INSTITUTION_WORDS = {
 }
 
 JOB_STOPWORDS = {
-    "avec", "pour", "dans", "vous", "nous", "votre", "notre", "cette",
-    "poste", "mission", "missions", "profil", "entreprise", "equipe", "equipes",
-    "plus", "ainsi", "etre", "avez", "sera", "sont", "leur", "leurs", "tout",
-    "tous", "toutes", "mais", "comme", "chez", "afin", "faire", "fait", "une",
-    "des", "les", "sur", "par", "aux", "the", "and", "with", "your", "you",
-    "this", "that", "from", "will", "role", "team", "work", "job", "our",
-    "are", "have", "has", "into", "about", "they", "their", "who", "what",
+    "avec",
+    "pour",
+    "dans",
+    "vous",
+    "nous",
+    "votre",
+    "notre",
+    "cette",
+    "poste",
+    "mission",
+    "missions",
+    "profil",
+    "entreprise",
+    "equipe",
+    "equipes",
+    "plus",
+    "ainsi",
+    "etre",
+    "avez",
+    "sera",
+    "sont",
+    "leur",
+    "leurs",
+    "tout",
+    "tous",
+    "toutes",
+    "mais",
+    "comme",
+    "chez",
+    "afin",
+    "faire",
+    "fait",
+    "une",
+    "des",
+    "les",
+    "sur",
+    "par",
+    "aux",
+    "the",
+    "and",
+    "with",
+    "your",
+    "you",
+    "this",
+    "that",
+    "from",
+    "will",
+    "role",
+    "team",
+    "work",
+    "job",
+    "our",
+    "are",
+    "have",
+    "has",
+    "into",
+    "about",
+    "they",
+    "their",
+    "who",
+    "what",
 }
 
 # Équivalences volontairement courtes et génériques. Elles ne comptent jamais
@@ -151,6 +207,7 @@ SEMANTIC_EQUIVALENCES: dict[str, tuple[str, ...]] = {
 @dataclass(frozen=True)
 class StructuredCV:
     """Vue structurée minimale d'un CV, commune aux parseurs comparés."""
+
     name: str
     emails: tuple[str, ...]
     phones: tuple[str, ...]
@@ -170,6 +227,7 @@ class StructuredCV:
 @dataclass(frozen=True)
 class ParserExtraction:
     """Résultat brut et structuré d'un parseur, avec ses limites de qualité."""
+
     parser_id: str
     label: str
     engine: str
@@ -186,6 +244,7 @@ class ParserExtraction:
 @dataclass(frozen=True)
 class SkillRequirement:
     """Compétence exigée par l'annonce et niveau d'importance déduit localement."""
+
     skill: str
     job_evidence: str
     importance: str
@@ -194,6 +253,7 @@ class SkillRequirement:
 @dataclass(frozen=True)
 class SemanticEvidence:
     """Équivalence sémantique affichée séparément d'une présence lexicale."""
+
     parser_id: str
     evidence: str
 
@@ -201,6 +261,7 @@ class SemanticEvidence:
 @dataclass(frozen=True)
 class SkillComparison:
     """Comparaison d'une exigence d'annonce entre les extractions de CV."""
+
     skill: str
     importance: str
     job_evidence: str
@@ -213,6 +274,7 @@ class SkillComparison:
 @dataclass(frozen=True)
 class BenchmarkResult:
     """Résultat pédagogique d'un benchmark ATS non propriétaire."""
+
     name: str
     score: int
     interpretation: str
@@ -225,6 +287,7 @@ class BenchmarkResult:
 @dataclass(frozen=True)
 class AtsV3Report:
     """Rapport complet de robustesse ATS V3 pour une annonce et un fichier source."""
+
     file_name: str
     file_type: str
     job_title: str
@@ -469,6 +532,7 @@ def _pypdf_extract(data: bytes) -> tuple[str, dict[str, Any]]:
     x_positions: list[float] = []
     images = 0
     for page in reader.pages:
+
         def visitor(text, _cm, tm, _font, _size):
             """Collecte les positions de texte pour signaler une extraction PDF désordonnée."""
             if str(text).strip():
@@ -480,9 +544,10 @@ def _pypdf_extract(data: bytes) -> tuple[str, dict[str, Any]]:
         except Exception:
             pass
     clusters = sorted({round(value / 40) * 40 for value in x_positions})
-    has_columns = any(
-        right - left > 180 for left, right in zip(clusters, clusters[1:])
-    ) and len(x_positions) > 30
+    has_columns = (
+        any(right - left > 180 for left, right in zip(clusters, clusters[1:]))
+        and len(x_positions) > 30
+    )
     return "\n".join(texts).strip(), {
         "page_count": len(reader.pages),
         "has_images": images > 0,
@@ -649,9 +714,7 @@ def extract_with_independent_parsers(
         try:
             text, metadata = parser(data)
             results.append(
-                _make_extraction(
-                    parser_id, label, engine, license_name, text, metadata
-                )
+                _make_extraction(parser_id, label, engine, license_name, text, metadata)
             )
             success_count += 1
         except Exception as error:
@@ -743,8 +806,7 @@ def _importance(text: str, evidence: str) -> str:
     if position < 0:
         return "détectée"
     sentence_start = max(
-        normalized.rfind(marker, 0, position)
-        for marker in (".", "!", "?", "\n", ";")
+        normalized.rfind(marker, 0, position) for marker in (".", "!", "?", "\n", ";")
     )
     sentence_ends = [
         index
@@ -752,12 +814,18 @@ def _importance(text: str, evidence: str) -> str:
         if (index := normalized.find(marker, position + len(key))) >= 0
     ]
     sentence_end = min(sentence_ends) if sentence_ends else len(normalized)
-    context = normalized[sentence_start + 1:sentence_end]
+    context = normalized[sentence_start + 1 : sentence_end]
     if any(
         marker in context
         for marker in (
-            "indispensable", "obligatoire", "required", "must have", "maitrise",
-            "exige", "imperatif", "requis",
+            "indispensable",
+            "obligatoire",
+            "required",
+            "must have",
+            "maitrise",
+            "exige",
+            "imperatif",
+            "requis",
         )
     ):
         return "obligatoire"
@@ -786,7 +854,9 @@ def _requirements(job_text: str) -> tuple[SkillRequirement, ...]:
 
 def _semantic_evidence(skill: str, text: str) -> str:
     """Cherche une équivalence sémantique déclarée, sans la compter comme exacte."""
-    return _find_phrase(text, list(SEMANTIC_EQUIVALENCES.get(normalize_text(skill), ())))
+    return _find_phrase(
+        text, list(SEMANTIC_EQUIVALENCES.get(normalize_text(skill), ()))
+    )
 
 
 def _compare_skills(
@@ -970,7 +1040,10 @@ def _benchmark_results(
             parsing,
             round(lexical),
             structure,
-            ("Indicateur de visibilité, pas prédiction de classement", "Lecture humaine importante"),
+            (
+                "Indicateur de visibilité, pas prédiction de classement",
+                "Lecture humaine importante",
+            ),
         ),
         (
             "Lever-like",
@@ -993,7 +1066,11 @@ def _benchmark_results(
     for name, score, parse_score, lexical_score, structure_score, notes in profiles:
         rounded = round(score)
         interpretation = (
-            "robuste" if rounded >= 75 else "intermédiaire" if rounded >= 55 else "fragile"
+            "robuste"
+            if rounded >= 75
+            else "intermédiaire"
+            if rounded >= 55
+            else "fragile"
         )
         results.append(
             BenchmarkResult(
@@ -1042,8 +1119,7 @@ def _recommendations(
     experience_counts = [len(item.structured.experiences) for item in extractions]
     if len(set(experience_counts)) > 1:
         detail = ", ".join(
-            f"{item.label}: {len(item.structured.experiences)}"
-            for item in extractions
+            f"{item.label}: {len(item.structured.experiences)}" for item in extractions
         )
         recommendations.append(
             "Le nombre d’expériences reconnues diverge entre parseurs (" + detail + ")."
@@ -1053,8 +1129,7 @@ def _recommendations(
         recommendations.append(
             "Les dates ne sont pas extraites de façon cohérente : "
             + ", ".join(
-                f"{item.label}: {len(item.structured.dates)}"
-                for item in extractions
+                f"{item.label}: {len(item.structured.dates)}" for item in extractions
             )
             + "."
         )
@@ -1092,31 +1167,23 @@ def analyze_ats_v3(
         )
     extractions = extract_with_independent_parsers(cv_data, file_name)
     consistency = _parser_consistency(extractions)
-    average_quality = round(
-        statistics.mean(item.quality_score for item in extractions)
-    )
+    average_quality = round(statistics.mean(item.quality_score for item in extractions))
     parsing = round(0.55 * average_quality + 0.45 * consistency)
     requirements = _requirements(job_description)
     comparisons = _compare_skills(requirements, extractions)
     exact = _exact_coverage(comparisons, len(extractions))
     lexical = _coverage(comparisons, len(extractions))
-    mandatory = _coverage(
-        comparisons, len(extractions), mandatory_only=True
-    )
+    mandatory = _coverage(comparisons, len(extractions), mandatory_only=True)
     semantic = _semantic_coverage(comparisons, len(extractions))
     keywords = _important_keywords(job_description)
     keyword_coverage = _keyword_coverage(keywords, extractions)
     structure = _structure_component(extractions)
-    benchmark = _benchmark_results(
-        parsing, exact, lexical, semantic, structure
-    )
+    benchmark = _benchmark_results(parsing, exact, lexical, semantic, structure)
     if lexical is None:
         secondary = None
     else:
         secondary = round(
-            0.45 * parsing
-            + 0.40 * lexical
-            + 0.15 * (keyword_coverage or 0)
+            0.45 * parsing + 0.40 * lexical + 0.15 * (keyword_coverage or 0)
         )
     return AtsV3Report(
         file_name=file_name,

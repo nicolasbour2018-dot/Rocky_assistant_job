@@ -72,7 +72,9 @@ current_language = offer.language_override or "auto"
 language_choice = language[0].selectbox(
     "Langue de l'annonce et du profil",
     ["auto", "fr", "en"],
-    index=["auto", "fr", "en"].index(current_language if current_language in {"fr", "en"} else "auto"),
+    index=["auto", "fr", "en"].index(
+        current_language if current_language in {"fr", "en"} else "auto"
+    ),
     format_func=lambda value: {
         "auto": f"Automatique · {(offer.detected_language or 'fr').upper()}",
         "fr": "Français",
@@ -151,9 +153,7 @@ else:
         use_container_width=True,
     ):
         with st.spinner("Source d’origine, puis TheirStack si nécessaire…"):
-            hydration = reenrich_saved_job(
-                int(job_id), settings, repository, profile
-            )
+            hydration = reenrich_saved_job(int(job_id), settings, repository, profile)
         if hydration.is_complete:
             st.success(f"Description récupérée via {hydration.method}.")
             st.rerun()
@@ -189,12 +189,8 @@ with overview_tab:
         with st.container(border=True):
             st.caption("Provenance et identifiants")
             st.write(f"**Identifiant interne Rocky :** {job_id}")
-            st.write(
-                f"**Source de collecte :** {offer.source_name or 'Non précisée'}"
-            )
-            st.write(
-                f"**Identifiant externe :** {offer.external_id or 'Non précisé'}"
-            )
+            st.write(f"**Source de collecte :** {offer.source_name or 'Non précisée'}")
+            st.write(f"**Identifiant externe :** {offer.external_id or 'Non précisé'}")
             st.write(f"**URL source :** {offer.source_url or 'Non précisée'}")
             st.write(
                 "**Source d’enrichissement :** "
@@ -211,13 +207,9 @@ with overview_tab:
 
     metadata = st.columns(4)
     metadata[0].write(f"**Lieu**  \n{offer.city or 'Non précisé'}")
-    metadata[1].write(
-        f"**Télétravail**  \n{offer.remote_policy or 'Non précisé'}"
-    )
+    metadata[1].write(f"**Télétravail**  \n{offer.remote_policy or 'Non précisé'}")
     metadata[2].write(f"**Salaire**  \n{display_salary(row)}")
-    metadata[3].write(
-        f"**Contrat**  \n{offer.contract_type or 'Non précisé'}"
-    )
+    metadata[3].write(f"**Contrat**  \n{offer.contract_type or 'Non précisé'}")
     more_metadata = st.columns(4)
     more_metadata[0].write(
         f"**Temps de travail**  \n{offer.work_schedule or 'Non précisé'}"
@@ -229,8 +221,7 @@ with overview_tab:
         f"**Formation**  \n{offer.required_education or 'Non précisée'}"
     )
     more_metadata[3].write(
-        "**Date limite**  \n"
-        f"{display_date(offer.application_deadline)}"
+        f"**Date limite**  \n{display_date(offer.application_deadline)}"
     )
 
     st.subheader("Description")

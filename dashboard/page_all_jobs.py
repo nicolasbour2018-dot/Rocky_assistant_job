@@ -34,10 +34,12 @@ def _filter_jobs(
     filtered = frame.copy()
     if query.strip():
         mask = (
-            filtered["job_title"].fillna("").str.contains(query, case=False, regex=False)
-            | filtered["company_name"].fillna("").str.contains(
-                query, case=False, regex=False
-            )
+            filtered["job_title"]
+            .fillna("")
+            .str.contains(query, case=False, regex=False)
+            | filtered["company_name"]
+            .fillna("")
+            .str.contains(query, case=False, regex=False)
             | filtered["city"].fillna("").str.contains(query, case=False, regex=False)
         )
         filtered = filtered[mask]
@@ -87,7 +89,9 @@ selected_sources = filters[1].multiselect("Sources", options(jobs, "source_name"
 selected_statuses = filters[2].multiselect("Statuts", list(JOB_STATUS_OPTIONS))
 filtered = _filter_jobs(jobs, query, selected_sources, selected_statuses)
 
-export_columns = [column for column in filtered if column not in SYNTHETIC_MATCH_COLUMNS]
+export_columns = [
+    column for column in filtered if column not in SYNTHETIC_MATCH_COLUMNS
+]
 st.download_button(
     f"Exporter les {len(filtered)} annonce(s) filtrées (CSV)",
     filtered[export_columns].to_csv(index=False).encode("utf-8-sig"),
@@ -131,7 +135,9 @@ selection = st.dataframe(
         "company_name": "Entreprise",
         "source_name": "Source",
         "city": "Lieu",
-        "publication_date": st.column_config.DateColumn("Publication", format="DD/MM/YYYY"),
+        "publication_date": st.column_config.DateColumn(
+            "Publication", format="DD/MM/YYYY"
+        ),
         "status": "Statut",
     },
 )

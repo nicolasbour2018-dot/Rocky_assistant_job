@@ -9,7 +9,10 @@ def test_each_rocky_expression_is_renderable_and_distinct():
 
     assert all(svg.startswith("<svg") and "Rocky" in svg for svg in svgs)
     assert len(set(svgs)) == len(EXPRESSIONS)
-    assert all(mascot_data_uri(expression).startswith("data:image/svg+xml;base64,") for expression in EXPRESSIONS)
+    assert all(
+        mascot_data_uri(expression).startswith("data:image/svg+xml;base64,")
+        for expression in EXPRESSIONS
+    )
 
 
 def test_unknown_expression_falls_back_to_a_safe_avatar():

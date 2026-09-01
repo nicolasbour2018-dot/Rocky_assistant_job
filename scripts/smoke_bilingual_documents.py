@@ -64,14 +64,19 @@ def main() -> int:
                 ).scalar_one()
             )
         repository = RockyRepository(engine).for_user(user_id)
-        profile_id = repository.create_profile("Smoke bilingue", onboarding_status="DRAFT")
+        profile_id = repository.create_profile(
+            "Smoke bilingue", onboarding_status="DRAFT"
+        )
         cv_path = root / "cv_fr.pdf"
         letter_path = root / "letter_fr.docx"
         english_cv_path = root / "cv_en.pdf"
         english_letter_path = root / "letter_en.docx"
         _create_cv(cv_path, "Profil Data", "EXPÉRIENCE", "Analyse de données")
         _create_letter(
-            letter_path, "Lettre de motivation", "Introduction factuelle.", "Conclusion."
+            letter_path,
+            "Lettre de motivation",
+            "Introduction factuelle.",
+            "Conclusion.",
         )
         _create_cv(english_cv_path, "Data profile", "EXPERIENCE", "Data analysis")
         _create_letter(
@@ -81,20 +86,37 @@ def main() -> int:
             settings, repository, user_id, profile_id, "fr", "cv", cv_path.read_bytes()
         )
         save_uploaded_profile_document(
-            settings, repository, user_id, profile_id, "fr", "letter",
+            settings,
+            repository,
+            user_id,
+            profile_id,
+            "fr",
+            "letter",
             letter_path.read_bytes(),
         )
         save_uploaded_profile_document(
-            settings, repository, user_id, profile_id, "en", "cv",
+            settings,
+            repository,
+            user_id,
+            profile_id,
+            "en",
+            "cv",
             english_cv_path.read_bytes(),
         )
         save_uploaded_profile_document(
-            settings, repository, user_id, profile_id, "en", "letter",
+            settings,
+            repository,
+            user_id,
+            profile_id,
+            "en",
+            "letter",
             english_letter_path.read_bytes(),
         )
         documents = repository.fetch_profile_documents(profile_id)
         if len(documents) != 4:
-            raise RuntimeError("Le smoke test attend exactement quatre documents courants.")
+            raise RuntimeError(
+                "Le smoke test attend exactement quatre documents courants."
+            )
         for document in documents:
             preview = Path(document.preview_pdf_path or document.source_path)
             if not preview.is_absolute():

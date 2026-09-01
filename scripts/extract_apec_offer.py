@@ -35,17 +35,13 @@ def _arguments() -> argparse.Namespace:
         "-o",
         "--output",
         type=Path,
-        help=(
-            "Fichier JSON de sortie. Par défaut : "
-            "output/apec/<numero-offre>.json."
-        ),
+        help=("Fichier JSON de sortie. Par défaut : output/apec/<numero-offre>.json."),
     )
     parser.add_argument(
         "--headless",
         action="store_true",
         help=(
-            "Masque le navigateur (désactivé par défaut pour permettre "
-            "l'audit visuel)."
+            "Masque le navigateur (désactivé par défaut pour permettre l'audit visuel)."
         ),
     )
     parser.add_argument(
@@ -86,8 +82,7 @@ def main() -> int:
         return 1
 
     output = (
-        arguments.output
-        or PROJECT_DIR / "output" / "apec" / f"{offer_number}.json"
+        arguments.output or PROJECT_DIR / "output" / "apec" / f"{offer_number}.json"
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(

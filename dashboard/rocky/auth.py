@@ -84,8 +84,7 @@ class TransactionalMailer:
         """Envoie un message transactionnel de sécurité après vérification de la configuration."""
         if not self.settings.smtp_is_configured:
             raise ConfigurationError(
-                "L'envoi SMTP n'est pas configuré. Renseigne SMTP_HOST et "
-                "SMTP_FROM."
+                "L'envoi SMTP n'est pas configuré. Renseigne SMTP_HOST et SMTP_FROM."
             )
         message = EmailMessage()
         message["From"] = self.settings.smtp_from_email
@@ -99,9 +98,7 @@ class TransactionalMailer:
                 if self.settings.smtp_use_tls:
                     smtp.starttls()
                 if self.settings.smtp_username:
-                    smtp.login(
-                        self.settings.smtp_username, self.settings.smtp_password
-                    )
+                    smtp.login(self.settings.smtp_username, self.settings.smtp_password)
                 smtp.send_message(message)
         except (OSError, smtplib.SMTPException) as error:
             raise RockyError("L'e-mail de sécurité n'a pas pu être envoyé.") from error
@@ -177,16 +174,18 @@ class AuthService:
         """
         email = normalize_email(email_value)
         with self.engine.begin() as connection:
-            row = connection.execute(
-                text("SELECT id, status FROM users WHERE LOWER(email) = :email"),
-                {"email": email},
-            ).mappings().first()
+            row = (
+                connection.execute(
+                    text("SELECT id, status FROM users WHERE LOWER(email) = :email"),
+                    {"email": email},
+                )
+                .mappings()
+                .first()
+            )
             if row is None:
                 user_id = int(
                     connection.execute(
-                        text(
-                            "INSERT INTO users (email) VALUES (:email) RETURNING id"
-                        ),
+                        text("INSERT INTO users (email) VALUES (:email) RETURNING id"),
                         {"email": email},
                     ).scalar_one()
                 )
@@ -215,23 +214,29 @@ class AuthService:
                 {"email": email},
             ).first()
         if row:
-            token = self._issue_account_token(int(row[0]), "RESET_PASSWORD", RESET_DURATION)
+            token = self._issue_account_token(
+                int(row[0]), "RESET_PASSWORD", RESET_DURATION
+            )
             self._send_token(email, "RESET_PASSWORD", token)
 
     def _consume_token(self, raw_token: str, purpose: str) -> int:
         """Valide puis consomme un lien à usage unique avant tout changement de compte."""
         token_hash = _hash_token(raw_token)
         with self.engine.begin() as connection:
-            row = connection.execute(
-                text(
-                    """
+            row = (
+                connection.execute(
+                    text(
+                        """
                     SELECT id, user_id, expires_at FROM account_tokens
                     WHERE token_hash = :token_hash AND purpose = :purpose
                       AND used_at IS NULL
                     """
-                ),
-                {"token_hash": token_hash, "purpose": purpose},
-            ).mappings().first()
+                    ),
+                    {"token_hash": token_hash, "purpose": purpose},
+                )
+                .mappings()
+                .first()
+            )
             if row is None or (_as_datetime(row["expires_at"]) or _now()) <= _now():
                 raise RockyError("Ce lien est invalide ou a expiré.")
             connection.execute(
@@ -282,14 +287,20 @@ class AuthService:
                 {"user_id": user_id},
             )
 
-    def authenticate(self, email_value: str, password: str) -> tuple[AuthenticatedUser, str]:
+    def authenticate(
+        self, email_value: str, password: str
+    ) -> tuple[AuthenticatedUser, str]:
         """Vérifie les identifiants, applique le verrou et crée une session opaque."""
         email = normalize_email(email_value)
         with self.engine.connect() as connection:
-            row = connection.execute(
-                text("SELECT * FROM users WHERE LOWER(email) = :email"),
-                {"email": email},
-            ).mappings().first()
+            row = (
+                connection.execute(
+                    text("SELECT * FROM users WHERE LOWER(email) = :email"),
+                    {"email": email},
+                )
+                .mappings()
+                .first()
+            )
         locked_until = _as_datetime(row.get("locked_until")) if row else None
         valid = bool(row and row.get("password_hash") and row.get("status") == "ACTIVE")
         if valid and locked_until and locked_until > _now():
@@ -303,14 +314,20 @@ class AuthService:
         if not valid:
             if row:
                 failures = int(row.get("failed_login_count") or 0) + 1
-                lock = _now() + LOCK_DURATION if failures >= MAX_LOGIN_FAILURES else None
+                lock = (
+                    _now() + LOCK_DURATION if failures >= MAX_LOGIN_FAILURES else None
+                )
                 with self.engine.begin() as connection:
                     connection.execute(
                         text(
                             "UPDATE users SET failed_login_count = :failures, "
                             "locked_until = :locked_until WHERE id = :id"
                         ),
-                        {"failures": failures, "locked_until": lock, "id": int(row["id"])},
+                        {
+                            "failures": failures,
+                            "locked_until": lock,
+                            "id": int(row["id"]),
+                        },
                     )
             raise RockyError("Adresse ou mot de passe incorrect.")
 
@@ -343,17 +360,21 @@ class AuthService:
             return None
         token_hash = _hash_token(raw_session)
         with self.engine.begin() as connection:
-            row = connection.execute(
-                text(
-                    """
+            row = (
+                connection.execute(
+                    text(
+                        """
                     SELECT s.id AS session_id, s.expires_at, u.*
                     FROM user_sessions s JOIN users u ON u.id = s.user_id
                     WHERE s.token_hash = :token_hash AND s.revoked_at IS NULL
                       AND u.status = 'ACTIVE'
                     """
-                ),
-                {"token_hash": token_hash},
-            ).mappings().first()
+                    ),
+                    {"token_hash": token_hash},
+                )
+                .mappings()
+                .first()
+            )
             if row is None or (_as_datetime(row["expires_at"]) or _now()) <= _now():
                 return None
             connection.execute(
@@ -381,9 +402,13 @@ class AuthService:
     def fetch_user(self, user_id: int) -> AuthenticatedUser:
         """Relit un compte destiné à borner les accès de l'interface et des services."""
         with self.engine.connect() as connection:
-            row = connection.execute(
-                text("SELECT * FROM users WHERE id = :id"), {"id": user_id}
-            ).mappings().first()
+            row = (
+                connection.execute(
+                    text("SELECT * FROM users WHERE id = :id"), {"id": user_id}
+                )
+                .mappings()
+                .first()
+            )
         if row is None:
             raise RockyError("Compte introuvable.")
         return self._user_from_row(row)

@@ -107,7 +107,9 @@ def _access_screen(service: AuthService, controller) -> None:
     with login_tab:
         with st.form("rocky_login"):
             email = st.text_input("E-mail", key="login_email")
-            password = st.text_input("Mot de passe", type="password", key="login_password")
+            password = st.text_input(
+                "Mot de passe", type="password", key="login_password"
+            )
             submitted = st.form_submit_button("Se connecter", type="primary")
         if submitted:
             try:
@@ -180,6 +182,8 @@ def render_account_sidebar(user: AuthenticatedUser) -> None:
         st.caption(f"Connecté · {user.email}")
         if st.button("Se déconnecter", use_container_width=True):
             raw_session = _read_session(controller)
-            AuthService(load_repository().engine, Settings()).revoke_session(raw_session)
+            AuthService(load_repository().engine, Settings()).revoke_session(
+                raw_session
+            )
             _clear_session(controller)
             st.rerun()

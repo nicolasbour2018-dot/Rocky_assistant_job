@@ -29,9 +29,7 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 
 
 def _repository(tmp_path: Path) -> RockyRepository:
-    settings = Settings(
-        database_url_override=f"sqlite:///{tmp_path / 'rocky_yolo.db'}"
-    )
+    settings = Settings(database_url_override=f"sqlite:///{tmp_path / 'rocky_yolo.db'}")
     ensure_database_exists(settings)
     engine = create_db_engine(settings)
     initialize_database(engine, settings)
@@ -82,7 +80,7 @@ def test_email_classification_and_unique_matching():
     assert application_id == 7
     assert confidence > 0.9
     links = extract_job_links(
-        'Voir https://www.indeed.com/viewjob?jk=123 et https://evil.example/x'
+        "Voir https://www.indeed.com/viewjob?jk=123 et https://evil.example/x"
     )
     assert links == ["https://www.indeed.com/viewjob?jk=123"]
 
@@ -145,11 +143,16 @@ def test_job_title_alone_cannot_match_an_employer_response():
 
 def test_email_triage_separates_job_alerts_from_personal_noise():
     """Une synchronisation ne doit pas transformer toute la boîte en revue."""
-    assert classify_email(
-        "Responsable IA – FIRST FINANCE SAS",
-        "Votre parcours pourrait correspondre pour l'offre d'emploi suivante.",
-    ).classification == "JOB_ALERT"
-    noise = classify_email("Votre facture est disponible", "Merci de consulter votre espace client.")
+    assert (
+        classify_email(
+            "Responsable IA – FIRST FINANCE SAS",
+            "Votre parcours pourrait correspondre pour l'offre d'emploi suivante.",
+        ).classification
+        == "JOB_ALERT"
+    )
+    noise = classify_email(
+        "Votre facture est disponible", "Merci de consulter votre espace client."
+    )
     assert noise.classification == "NOISE"
     assert noise.confidence >= 0.9
 
@@ -183,10 +186,7 @@ def test_application_events_are_reversible(tmp_path):
     )
     assert repository.fetch_application(application_id)["status"] == "ENTRETIEN"
     assert repository.revert_application_event(event_id)
-    assert (
-        repository.fetch_application(application_id)["status"]
-        == "DOSSIER PRÉPARÉ"
-    )
+    assert repository.fetch_application(application_id)["status"] == "DOSSIER PRÉPARÉ"
     assert not can_apply_automatic_transition("REFUS", "ENTRETIEN")
 
 
@@ -208,7 +208,9 @@ def test_manual_send_confirmation_syncs_application_and_job(tmp_path):
         details={"confirmed_from": "application_preparation"},
     )
     assert event_id
-    assert repository.fetch_application(application_id)["status"] == "CANDIDATURE ENVOYÉE"
+    assert (
+        repository.fetch_application(application_id)["status"] == "CANDIDATURE ENVOYÉE"
+    )
     assert repository.fetch_job_offer(job_id).status == "CANDIDATURE ENVOYÉE"
     event = repository.fetch_application_events(application_id).iloc[0]
     assert event["source"] == "USER_CONFIRMATION"
@@ -226,7 +228,9 @@ def test_only_discarded_jobs_without_application_can_be_deleted(tmp_path):
         profile_id,
     )
     repository.update_jobs_status([removable_id, protected_id], "ÉCARTÉE")
-    repository.create_application(protected_id, profile_id, "cv.pdf", None, "letter.pdf")
+    repository.create_application(
+        protected_id, profile_id, "cv.pdf", None, "letter.pdf"
+    )
     # Une action manuelle ultérieure peut écarter une annonce déjà liée : elle
     # doit rester protégée malgré ce statut final.
     repository.update_job_status(protected_id, "ÉCARTÉE")
@@ -278,9 +282,7 @@ def test_stale_new_jobs_are_aged_or_discarded_without_touching_followed_jobs(
 
     def add_offer(title: str, age_days: int | None, status: str = "NOUVELLE"):
         publication_date = (
-            reference - timedelta(days=age_days)
-            if age_days is not None
-            else None
+            reference - timedelta(days=age_days) if age_days is not None else None
         )
         job_id, _ = repository.insert_job(
             JobOffer(
