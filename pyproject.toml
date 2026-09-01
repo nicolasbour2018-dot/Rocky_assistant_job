@@ -1,31 +1,181 @@
+# =============================================================================
+# pyproject.toml : le fichier de configuration central du projet Rocky.
+#
+# C'est le fichier standard de l'écosystème Python. Il sert à deux choses :
+#   1. décrire le projet (nom, version, version de Python exigée) ;
+#   2. régler les outils de développement, pour que tout le monde et la machine
+#      utilisent exactement les mêmes réglages.
+#
+# Rien ici ne s'exécute au démarrage de l'application. Ce fichier est lu par les
+# outils quand on les lance à la main : pytest, ruff, pip.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# [project] : la carte d'identité du projet.
+# -----------------------------------------------------------------------------
 [project]
+
+# Nom technique du projet. Il sert d'identifiant aux outils d'empaquetage.
+# Ce n'est pas le nom affiché dans l'interface.
 name = "rocky-job-assistant"
+
+# Numéro de version. À incrémenter à la main quand on livre un lot de changements.
 version = "0.1.0"
+
+# Description courte, reprise par les outils qui listent le projet.
 description = "Assistant personnel et modulaire de recherche d'emploi"
+
+# Version minimale de Python. Rocky utilise des écritures introduites en 3.11
+# (par exemple `int | None` au lieu de `Optional[int]`).
+# Un pip lancé sur une version plus ancienne refusera d'installer le projet.
 requires-python = ">=3.11"
 
+
+# -----------------------------------------------------------------------------
+# [tool.pytest.ini_options] : réglages de pytest, l'outil qui lance les tests.
+#
+# Ces trois lignes expliquent pourquoi `python -m pytest`, sans aucun argument,
+# suffit à lancer toute la suite depuis la racine du projet.
+# -----------------------------------------------------------------------------
 [tool.pytest.ini_options]
+
+# Où chercher les tests. Sans cette ligne, pytest fouillerait tout le dépôt et
+# ramasserait au passage des fichiers qui ne sont pas des tests.
 testpaths = ["tests"]
+
+# Ajoute la racine du projet au chemin d'import de Python.
+# C'est ce qui permet aux tests d'écrire `from dashboard.rocky...` directement,
+# sans installer Rocky comme une bibliothèque au préalable.
 pythonpath = ["."]
+
+# Options passées automatiquement à chaque lancement.
+# `-q` signifie "quiet" : une ligne de résumé au lieu du détail de chaque test.
 addopts = "-q"
 
+
+# =============================================================================
+# [tool.ruff] : réglages de ruff.
+#
+# Ruff est l'outil de qualité de code du projet. Il fait deux métiers distincts,
+# et la différence compte pour comprendre la suite :
+#
+#   - `ruff check`  = le LINTER. Il lit le code et signale les problèmes :
+#                     import inutilisé, variable jamais lue, motif connu pour
+#                     provoquer des bugs. Il ne réécrit rien de lui-même,
+#                     sauf si on lui passe `--fix`.
+#
+#   - `ruff format` = le FORMATEUR. Il réécrit la mise en page du code :
+#                     indentation, retours à la ligne, guillemets. Il ne change
+#                     jamais ce que le code fait, seulement son apparence.
+#
+# Ces réglages ne bloquent rien aujourd'hui. Ruff ne tourne que si on le lance.
+# Commandes utiles :
+#   uvx ruff check dashboard scripts tests       # lister les problèmes
+#   uvx ruff check --statistics dashboard        # les compter par type
+#   uvx ruff format dashboard scripts tests      # réécrire la mise en page
+# =============================================================================
 [tool.ruff]
+
+# Longueur de ligne visée, en caractères.
+#
+# 88 est le défaut de ruff et de Black, l'ancien formateur de référence.
+# Ce n'est pas un choix arbitraire : sur 17 dépôts Python majeurs vérifiés,
+# pandas, scikit-learn, Django, Poetry et Streamlit utilisent tous 88.
+# Streamlit étant la brique centrale de Rocky, on s'aligne dessus.
 line-length = 88
+
+# Version de Python ciblée par les règles de modernisation.
+# Grâce à cette ligne, ruff sait qu'il peut proposer les écritures modernes
+# de la 3.11, et qu'il ne doit pas proposer celles de la 3.12 ou plus.
 target-version = "py311"
 
+
+# -----------------------------------------------------------------------------
+# [tool.ruff.lint] : quelles familles de règles sont actives.
+# -----------------------------------------------------------------------------
 [tool.ruff.lint]
+
+# Ruff regroupe ses règles en familles, désignées par un préfixe de code.
+# Chaque famille vient d'un outil historique que ruff a réimplémenté.
+#
+#   E, W   pycodestyle           respect de PEP 8, la norme de style Python
+#   F      Pyflakes              vrais défauts : nom non défini, import mort
+#   B      flake8-bugbear        motifs qui provoquent des bugs en production
+#   C4     flake8-comprehensions constructions de listes inutilement coûteuses
+#   PERF   Perflint              boucles remplaçables par une écriture rapide
+#   PIE    flake8-pie            code superflu, à supprimer sans rien changer
+#   RET    flake8-return         `return` inutiles ou mal placés
+#   RUF    règles propres à ruff signalements que les autres outils n'ont pas
+#   SIM    flake8-simplify       code juste, mais exprimable plus simplement
+#   UP     pyupgrade             écritures dépréciées, à moderniser
 select = ["E", "F", "W", "B", "C4", "PERF", "PIE", "RET", "RUF", "SIM", "UP"]
-# Les apostrophes et guillemets typographiques francais sont la convention du
-# projet : docstrings, textes d'interface et valeurs de statut sont en francais.
+
+# Règles désactivées pour tout le projet.
+#
+# RUF001, RUF002 et RUF003 signalent les caractères Unicode "ambigus" :
+# l'apostrophe typographique ’ ressemble à l'apostrophe droite ', les guillemets
+# « » ressemblent à d'autres signes. Sur un projet anglophone, c'est utile :
+# ces caractères s'y glissent par erreur, copiés depuis un traitement de texte.
+#
+# Ici, ils sont voulus. La convention de Rocky impose le français pour les
+# docstrings, les textes d'interface et les valeurs de statut en base.
+# Ces trois règles produisaient 176 signalements, tous faux.
+#
+# Une famille entière n'est jamais désactivée : seulement ces trois règles.
 ignore = ["RUF001", "RUF002", "RUF003"]
 
-# Le formateur vise 88 ; E501 ne signale que ce qu'il ne sait pas decouper,
-# c'est-a-dire le contenu des chaines et des commentaires.
+
+# -----------------------------------------------------------------------------
+# [tool.ruff.lint.pycodestyle] : le seuil d'alerte sur les lignes trop longues.
+# -----------------------------------------------------------------------------
 [tool.ruff.lint.pycodestyle]
+
+# Deux longueurs cohabitent volontairement, et c'est le réglage le moins évident
+# du fichier :
+#
+#   - `line-length = 88` plus haut est la CIBLE DU FORMATEUR. Quand `ruff format`
+#     réécrit un fichier, il essaie de tenir dans 88 caractères.
+#
+#   - `max-line-length = 120` ici est le SEUIL D'ALERTE DU LINTER. La règle E501
+#     ("ligne trop longue") ne se déclenche qu'au-delà de 120.
+#
+# Pourquoi les séparer ? Parce qu'un formateur ne sait pas tout couper.
+# Il découpe le code, mais jamais le contenu d'un texte ni d'un commentaire.
+# Mesure faite sur le projet : même après formatage, 247 lignes dépassent encore
+# 88 caractères, et 78 % d'entre elles sont des chaînes de texte, pas du code.
+# Ce sont les listes de synonymes de `job_analysis.py`, les messages affichés à
+# l'écran et les prompts envoyés au modèle de langage.
+#
+# Les signaler serait du bruit permanent que personne ne traiterait.
+# Avec ce réglage, le formateur range le code, et le linter n'ouvre la bouche
+# que sur ce que le formateur ne sait pas traiter.
 max-line-length = 120
 
+
+# -----------------------------------------------------------------------------
+# [tool.ruff.lint.per-file-ignores] : exceptions ciblées, fichier par fichier.
+#
+# Préférer toujours une exception ciblée à une désactivation globale : ailleurs
+# dans le projet, la règle continue de protéger.
+# -----------------------------------------------------------------------------
 [tool.ruff.lint.per-file-ignores]
-# Ces modules inserent la racine du projet dans sys.path avant d'importer
-# dashboard.* : les imports internes ne peuvent pas remonter en tete de fichier.
+
+# E402 signale un import placé après du code, au lieu d'être en tête de fichier.
+# La règle est bonne : un import qui traîne au milieu d'un fichier est en général
+# un oubli, et il rend l'ordre d'exécution difficile à suivre.
+#
+# Ces fichiers font exception pour une raison technique. Ils commencent par
+# ajouter la racine du projet au chemin d'import de Python :
+#
+#     PROJECT_DIR = Path(__file__).resolve().parents[1]
+#     if str(PROJECT_DIR) not in sys.path:
+#         sys.path.insert(0, str(PROJECT_DIR))
+#
+# Sans ces trois lignes, `from dashboard.rocky...` échoue quand on lance le
+# script directement. Les imports internes doivent donc venir après, sinon
+# Python ne les trouve pas. Remonter ces imports en tête casserait les scripts.
+#
+# 56 signalements, tous dus à ce seul motif.
 "scripts/*.py" = ["E402"]
 "dashboard/dashboard_common.py" = ["E402"]
