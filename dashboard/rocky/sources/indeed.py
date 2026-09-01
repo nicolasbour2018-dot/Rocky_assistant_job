@@ -19,6 +19,7 @@ INDEED_DOMAIN = "indeed.com"
 
 
 def _date_value(value: Any) -> date | None:
+    """Convertit la date Indeed/TheirStack au format métier sans supposer de fuseau."""
     if isinstance(value, date):
         return value
     if value:
@@ -30,6 +31,7 @@ def _date_value(value: Any) -> date | None:
 
 
 def _company_name(item: dict[str, Any]) -> str:
+    """Extrait le nom employeur le plus fiable de la charge Indeed."""
     company = item.get("company_object")
     if isinstance(company, dict) and company.get("name"):
         return str(company["name"]).strip()
@@ -39,6 +41,7 @@ def _company_name(item: dict[str, Any]) -> str:
 
 
 def _company_industry(item: dict[str, Any]) -> str:
+    """Récupère le secteur employeur lorsqu'il est fourni par le collecteur."""
     company = item.get("company_object")
     if not isinstance(company, dict):
         return ""
@@ -46,6 +49,7 @@ def _company_industry(item: dict[str, Any]) -> str:
 
 
 def _indeed_url(item: dict[str, Any]) -> str:
+    """Choisit l'URL Indeed officielle à conserver pour l'audit et la candidature."""
     for key in ("source_url", "url", "final_url"):
         value = str(item.get(key) or "").strip()
         if INDEED_DOMAIN in urlsplit(value).netloc.lower():
@@ -54,6 +58,7 @@ def _indeed_url(item: dict[str, Any]) -> str:
 
 
 def _external_id(item: dict[str, Any], source_url: str) -> str:
+    """Construit l'identifiant externe stable utile à la déduplication des offres."""
     query = parse_qs(urlsplit(source_url).query)
     for key in ("jk", "vjk"):
         value = str(query.get(key, [""])[0]).strip()
@@ -64,6 +69,7 @@ def _external_id(item: dict[str, Any], source_url: str) -> str:
 
 
 def _remote_policy(item: dict[str, Any]) -> str:
+    """Normalise l'indication télétravail fournie par Indeed/TheirStack."""
     workplace_types = {
         normalize_text(value) for value in item.get("workplace_types", [])
     }
@@ -79,6 +85,7 @@ def _remote_policy(item: dict[str, Any]) -> str:
 def _filter_values(
     values: list[str], mapping: dict[str, tuple[str, ...]]
 ) -> list[str]:
+    """Prépare les filtres d'intitulés pour l'API sans transmettre de valeurs vides."""
     selected: list[str] = []
     for value in values:
         normalized = normalize_text(value).replace("_", " ")
@@ -91,6 +98,7 @@ def _filter_values(
 
 
 class IndeedSource:
+    """Source Indeed via TheirStack, sans scraping direct ni contournement de portail."""
     """Source fonctionnelle Indeed, collectée techniquement par TheirStack."""
 
     name = "Indeed"
@@ -101,11 +109,13 @@ class IndeedSource:
         settings: Settings,
         client: TheirStackClient | None = None,
     ):
+        """Injecte le client TheirStack et la limite de fraîcheur appliquée aux résultats."""
         self.settings = settings
         self.client = client or TheirStackClient(settings.theirstack_api_key)
 
     @staticmethod
     def _offer(item: dict[str, Any]) -> JobOffer | None:
+        """Convertit un résultat Indeed enrichi, ou l'écarte si son identité est incomplète."""
         source_url = _indeed_url(item)
         if not source_url:
             return None
@@ -162,6 +172,7 @@ class IndeedSource:
         results_per_query: int,
         location_ids: list[int],
     ) -> dict[str, Any]:
+        """Construit la requête TheirStack correspondant aux postes et zones du profil."""
         titles = profile.target_job_titles or [profile.profile_name]
         payload: dict[str, Any] = {
             "job_title_or": titles,
@@ -212,6 +223,7 @@ class IndeedSource:
     def search(
         self, profile: CandidateProfile, results_per_query: int
     ) -> list[JobOffer]:
+        """Collecte les annonces Indeed récentes via TheirStack pour le cycle de veille."""
         if not self.settings.theirstack_api_key:
             raise ConfigurationError(
                 "TheirStack est requis pour collecter les annonces Indeed."

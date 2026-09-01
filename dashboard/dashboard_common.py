@@ -1,4 +1,9 @@
-"""Composants fonctionnels partagés par les pages de Rocky V2."""
+"""Services d'interface communs aux pages Streamlit de Rocky.
+
+Le module centralise le chargement borné des données, les filtres de tableaux
+et les rendus réutilisables. Les règles métier persistantes restent dans
+``dashboard.rocky`` pour conserver une interface fine et testable.
+"""
 
 # importation des librairies standard
 from __future__ import annotations
@@ -27,7 +32,6 @@ from dashboard.job_analysis import (
     SOFT_SKILLS,
     TECHNICAL_SKILLS,
 )
-from dashboard.rocky.bootstrap import bootstrap_default_profile
 from dashboard.rocky.config import Settings
 from dashboard.rocky.database import (
     create_db_engine,
@@ -38,6 +42,7 @@ from dashboard.rocky.enrichment import reenrich_saved_job
 from dashboard.rocky.errors import RockyError
 from dashboard.rocky.llm import RockyLLM
 from dashboard.rocky.matching import calculate_match
+from dashboard.rocky.mascot import mascot_data_uri
 from dashboard.rocky.models import CandidateProfile, MatchResult
 from dashboard.rocky.repository import RockyRepository
 from dashboard.rocky.sources import build_watch_sources
@@ -251,14 +256,12 @@ def jobs_to_enrich(jobs: pd.DataFrame) -> pd.DataFrame:
 
 @st.cache_resource
 def load_repository() -> RockyRepository:
-    """Charge le repo Rocky avec la base de données et le profil par défaut."""
+    """Charge la façade administrateur utilisée uniquement pour l'initialisation."""
     settings = Settings()
     ensure_database_exists(settings)
     engine = create_db_engine(settings)
     initialize_database(engine, settings)
-    repository = RockyRepository(engine)
-    bootstrap_default_profile(settings, repository)
-    return repository
+    return RockyRepository(engine)
 
 
 def load_data() -> tuple[
@@ -266,7 +269,11 @@ def load_data() -> tuple[
 ]:
     """Charge les paramètres, le repo, le profil actif et les annonces visibles."""
     settings = Settings()
-    repository = load_repository()
+    base_repository = load_repository()
+    user_id = st.session_state.get("rocky_authenticated_user_id")
+    repository = (
+        base_repository.for_user(int(user_id)) if user_id is not None else base_repository
+    )
     profile = repository.fetch_active_profile()
     jobs = visible_jobs(
         repository.get_jobs_for_profile(profile.id)
@@ -340,6 +347,7 @@ def display_score(value: Any) -> str:
 
 
 def display_date(value: Any) -> str:
+    """Formate une date pour les écrans Rocky en tolérant les données anciennes vides."""
     if value in (None, ""):
         return "Date inconnue"
     try:
@@ -388,7 +396,35 @@ def run_watch(
     repository: RockyRepository,
     key: str,
 ) -> None:
-    """ Orchestre la veille avec les paramètres de seuil choisis par l’utilisateur et le lancement de WatchService. """
+    """Lance une veille avec seuil et postes ponctuels, sans modifier le profil.
+
+    Le champ de recherche accepte plusieurs intitulés séparés par des virgules
+    (ou des retours à la ligne). Vide, il réutilise exactement les postes
+    enregistrés dans le profil actif.
+    """
+    profile = repository.fetch_active_profile()
+    saved_queries = profile.target_job_titles if profile else []
+    placeholder_queries = ", ".join(saved_queries[:3]) or (
+        "Ex. Data Analyst, Data Scientist, Product Data"
+    )
+    query_text = st.text_input(
+        "Postes recherchés pour cette veille",
+        value="",
+        placeholder=placeholder_queries,
+        # Suffix ``input`` démarque l'ancien champ prérempli afin qu'un
+        # rerun de Streamlit ne ressuscite pas les intitulés sauvegardés.
+        key=f"watch_queries_{key}_input",
+        help=(
+            "Sépare plusieurs intitulés par des virgules. Laisse vide pour "
+            "reprendre les postes du profil actif."
+        ),
+    )
+    custom_queries = ensure_list(query_text.replace("\n", ","))
+    effective_queries = custom_queries or saved_queries
+    if effective_queries:
+        st.caption("Requête(s) utilisées : " + " · ".join(effective_queries))
+    else:
+        st.warning("Aucun poste renseigné : la veille utilisera le nom du profil.")
     threshold_key = f"watch_threshold_{key}"
     if threshold_key not in st.session_state:
         st.session_state[threshold_key] = max(
@@ -428,11 +464,17 @@ def run_watch(
             match_threshold=int(selected_threshold),
         )
         with st.spinner("Recherche des nouvelles annonces…"):
-            summary = WatchService(
+            watch_profile = (
+                replace(profile, target_job_titles=effective_queries)
+                if profile and effective_queries
+                else profile
+            )
+            service = WatchService(
                 watch_settings,
                 repository,
                 build_watch_sources(watch_settings),
-            ).run()
+            )
+            summary = service.run(profile_override=watch_profile)
         summary["match_threshold"] = int(selected_threshold)
         st.session_state[f"watch_summary_{key}"] = summary
         st.rerun()
@@ -441,7 +483,9 @@ def run_watch(
         st.caption(
             f"Dernière veille : {summary['inserted_count']} ajout(s), "
             f"{summary['duplicate_count']} déjà connue(s), "
-            f"{summary.get('incomplete_description_count', 0)} incomplète(s) · "
+            f"{summary.get('incomplete_description_count', 0)} incomplète(s), "
+            f"{summary.get('ancient_count', 0)} ancienne(s), "
+            f"{summary.get('discarded_count', 0)} écartée(s) automatiquement · "
             f"seuil {summary.get('match_threshold', selected_threshold)} %."
         )
 
@@ -533,8 +577,13 @@ def metric_counts(jobs: pd.DataFrame, recent_days: int = 1) -> dict[str, int]:
     if jobs.empty:
         return {"total": 0, "complete": 0, "incomplete": 0, "recent": 0}
     dates = pd.to_datetime(jobs["publication_date"], errors="coerce")
+    # « 1 jour » désigne aujourd'hui uniquement, donc N jours couvrent N dates
+    # calendaires et non aujourd'hui plus N jours révolus.
     boundary = pd.Timestamp(
-        (date.today() - timedelta(days=max(1, int(recent_days)))).isoformat()
+        (
+            date.today()
+            - timedelta(days=max(1, int(recent_days)) - 1)
+        ).isoformat()
     )
     return {
         "total": len(jobs),
@@ -549,31 +598,52 @@ def metric_counts(jobs: pd.DataFrame, recent_days: int = 1) -> dict[str, int]:
 ###################################################################################################################################################
 
 def render_floating_chatbot() -> None:
-    """Expose le chat V1.1 dans un popover persistant de Rocky V2."""
+    """Expose le chat avec un avatar Rocky expressif et persistant."""
+    expression = st.session_state.get("rocky_expression", "smiling")
+    avatar_uri = mascot_data_uri(expression)
+    curious_uri = mascot_data_uri("curious")
     st.markdown(
-        """
+        f"""
         <style>
-        div[data-testid="stElementContainer"]:has(#rocky-chat-anchor)
-          + div[data-testid="stElementContainer"] {
+        div[data-testid="stLayoutWrapper"].st-key-rocky_v2_chat_popover {{
             position: fixed;
             right: 1.5rem;
             bottom: 1.5rem;
             z-index: 1000;
             width: auto;
-        }
-        div[data-testid="stPopoverBody"] {
+        }}
+        div[data-testid="stPopoverBody"] {{
             min-width: min(420px, 88vw);
-        }
+        }}
+        /* Streamlit varie la profondeur des conteneurs selon sa version :
+           l'attribut kind=primary identifie ici sans ambiguïté le popover Rocky. */
+        button[data-testid="stPopoverButton"][kind="primary"] {{
+            width: 62px; height: 62px; padding: 0; border-radius: 50%;
+            border: 3px solid #fff; background-color: #fff;
+            background-image: url('{avatar_uri}'); background-size: contain;
+            background-position: center; background-repeat: no-repeat;
+            overflow: hidden; color: transparent;
+            box-shadow: 0 8px 22px rgba(8, 141, 164, .25);
+            font-size: 0; transition: transform .18s ease, box-shadow .18s ease;
+        }}
+        button[data-testid="stPopoverButton"][kind="primary"] > div {{ opacity: 0; }}
+        /* Le focus est instantané au clic, avant même le prochain rerun
+           Streamlit : Rocky devient curieux dès l'ouverture du chat. */
+        button[data-testid="stPopoverButton"][kind="primary"]:focus {{
+            background-image: url('{curious_uri}');
+        }}
+        button[data-testid="stPopoverButton"][kind="primary"]:hover {{
+            transform: translateY(-3px) rotate(3deg); box-shadow: 0 12px 28px rgba(255, 127, 102, .28);
+        }}
         </style>
         <span id="rocky-chat-anchor"></span>
         """,
         unsafe_allow_html=True,
     )
     with st.popover(
-        "Discuter avec Rocky",
+        "Rocky",
         icon="🐾",
         type="primary",
-        key="rocky_v2_chat_popover",
     ):
         try:
             settings, repository, profile, jobs = load_data()
@@ -620,6 +690,7 @@ def render_floating_chatbot() -> None:
                 "Envoyer", type="primary", use_container_width=True
             )
         if send and prompt.strip():
+            st.session_state["rocky_expression"] = "curious"
             messages.append({"role": "user", "content": prompt.strip()})
             selected_offer = None
             selected_match = None
@@ -628,16 +699,35 @@ def render_floating_chatbot() -> None:
                     int(selected_job_id)
                 )
                 if selected_offer and selected_offer.description_is_full:
+                    localized_profile = (
+                        repository.profile_for_offer(profile.id, selected_offer)
+                        or profile
+                    )
                     selected_match = calculate_match(
                         selected_offer,
-                        profile,
+                        localized_profile,
                         repository.fetch_skills(profile.id),
                     )
             try:
-                answer = llm.chat(
-                    prompt.strip(), profile, selected_offer, selected_match
-                )
+                application_rows = repository.fetch_applications(profile.id)
+                with st.chat_message("assistant"):
+                    st.session_state["rocky_expression"] = "thinking"
+                    answer = st.write_stream(
+                        llm.stream_chat(
+                            prompt.strip(),
+                            profile,
+                            selected_offer,
+                            selected_match,
+                            jobs=jobs.to_dict("records"),
+                            applications=application_rows.to_dict("records"),
+                            skills=repository.fetch_skills(profile.id),
+                            history=messages[:-1],
+                        )
+                    )
             except RockyError as error:
                 answer = str(error)
+                st.session_state["rocky_expression"] = "compassionate"
+            else:
+                st.session_state["rocky_expression"] = "good-job-check"
             messages.append({"role": "assistant", "content": answer})
             st.rerun()

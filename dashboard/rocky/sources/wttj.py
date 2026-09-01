@@ -11,12 +11,14 @@ from .common import deduplicate_offers, iso_date, public_get
 
 
 class WelcomeToTheJungleSource:
+    """Adaptateur Welcome to the Jungle pour intégrer ses offres au flux homogène Rocky."""
     name = "Welcome to the Jungle"
     search_url = "https://api.welcometothejungle.com/api/v3/public/jobs"
     website_url = "https://www.welcometothejungle.com"
 
     @classmethod
     def _offer(cls, item: dict[str, Any]) -> JobOffer:
+        """Traduit une réponse WTTJ en annonce normalisée avec ses liens de provenance."""
         organization = item.get("organization") or {}
         office = item.get("office") or {}
         organization_slug = str(organization.get("slug") or "")
@@ -73,6 +75,7 @@ class WelcomeToTheJungleSource:
     def search(
         self, profile: CandidateProfile, results_per_query: int
     ) -> list[JobOffer]:
+        """Interroge les offres WTTJ pour les intitulés ciblés par le profil."""
         queries: Iterable[str] = profile.target_job_titles or [profile.profile_name]
         collected: list[JobOffer] = []
         for query in queries:

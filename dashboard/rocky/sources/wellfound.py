@@ -21,6 +21,7 @@ from .common import (
 
 
 class WellfoundSource:
+    """Adaptateur Wellfound qui lit les opportunités publiques pour la veille Rocky."""
     name = "Wellfound"
     base_url = "https://wellfound.com"
 
@@ -76,6 +77,7 @@ class WellfoundSource:
     def _offer(
         cls, item: dict[str, Any], company_name: str
     ) -> JobOffer:
+        """Normalise une carte Wellfound avec son entreprise et ses liens de provenance."""
         external_id = str(item.get("id") or "")
         slug = str(item.get("slug") or "job")
         url = f"{cls.base_url}/jobs/{external_id}-{slug}"
@@ -149,6 +151,7 @@ class WellfoundSource:
     def search(
         self, profile: CandidateProfile, results_per_query: int
     ) -> list[JobOffer]:
+        """Recherche Wellfound selon le profil actif et renvoie les annonces à traiter."""
         queries: Iterable[str] = profile.target_job_titles or [profile.profile_name]
         collected: list[JobOffer] = []
         last_error: SourceError | None = None

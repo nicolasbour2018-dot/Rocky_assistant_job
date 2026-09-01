@@ -1,4 +1,4 @@
-# Veille Rocky chaque matin à 07 h 30, heure locale du Mac.
-# Copie seulement la ligne suivante dans la sortie de : crontab -e
-30 7 * * * cd "/Users/nicolasbour/Desktop/Projets_IA /job_ass_gpt" && "/Users/nicolasbour/Desktop/Projets_IA /job_ass_gpt/.venv/bin/python" scripts/run_watch.py >> "/Users/nicolasbour/Desktop/Projets_IA /job_ass_gpt/logs/cron.log" 2>&1
-
+# Synchronisation Gmail puis veille Rocky chaque jour à midi, heure locale du Mac.
+# Remplace le chemin avant de copier ces deux lignes dans crontab -e.
+ROCKY_DIR=/absolute/path/to/rocky
+0 12 * * * cd "$ROCKY_DIR" && "$ROCKY_DIR/.venv/bin/python" scripts/run_daily.py >> "$ROCKY_DIR/logs/cron.log" 2>&1

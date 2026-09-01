@@ -41,6 +41,7 @@ SOURCE_REFRESH_FIELDS = (
 
 
 def _has_value(value: Any) -> bool:
+    """Distingue les valeurs métier renseignées des valeurs pandas vides ou indéfinies."""
     return value not in (None, "", [])
 
 
@@ -63,26 +64,54 @@ def merge_known_offer(existing: Any, incoming: Any):
 
 
 class WatchService:
+    """Orchestre une veille multi-sources, son matching et son journal d'exécution."""
     def __init__(
         self,
         settings: Settings,
         repository: RockyRepository,
         sources: list[JobSource],
     ):
+        """Assemble réglages, persistance et connecteurs sans déclencher de collecte."""
         self.settings = settings
         self.repository = repository
         self.sources = sources
 
-    def run(self) -> dict[str, Any]:
-        profile = self.repository.fetch_active_profile()
+    def _localized_profile(self, profile, offer):
+        """Garde la compatibilité avec les repositories factices des connecteurs."""
+        selector = getattr(self.repository, "profile_for_offer", None)
+        if not callable(selector):
+            return profile
+        return selector(profile.id, offer) or profile
+
+    def run(self, profile_override=None) -> dict[str, Any]:
+        """Exécute la veille, éventuellement avec des postes ponctuels.
+
+        ``profile_override`` permet à l'interface de tester une requête libre
+        sans écraser les préférences persistées du profil. En l'absence de
+        surcharge, le comportement historique (profil actif) est inchangé.
+        """
+        profile = profile_override or self.repository.fetch_active_profile()
         if profile is None:
             raise ConfigurationError(
                 "Choisis un profil actif dans le dashboard avant la veille."
             )
+        stale_policy = getattr(self.repository, "apply_stale_new_job_policy", None)
+        stale_summary = (
+            stale_policy() if callable(stale_policy) else {
+                "ancient_count": 0,
+                "discarded_count": 0,
+            }
+        )
         skills = self.repository.fetch_skills(profile.id)
-        run_id = self.repository.start_watch_run(profile.id)
+        searched_job_titles = tuple(
+            str(title).strip()
+            for title in profile.target_job_titles
+            if str(title).strip()
+        )
+        run_id = self.repository.start_watch_run(profile.id, searched_job_titles)
         summary: dict[str, Any] = {
             "run_id": run_id,
+            "searched_job_titles": list(searched_job_titles),
             "status": "SUCCESS",
             "fetched_count": 0,
             "inserted_count": 0,
@@ -91,6 +120,8 @@ class WatchService:
             "rejected_count": 0,
             "below_threshold_count": 0,
             "incomplete_description_count": 0,
+            "ancient_count": int(stale_summary.get("ancient_count", 0)),
+            "discarded_count": int(stale_summary.get("discarded_count", 0)),
             "errors": [],
             "sources": [],
         }
@@ -142,11 +173,15 @@ class WatchService:
                     source_label,
                 )
                 continue
+
             logger.info("[%s] %d annonce(s) reçue(s)", source_label, len(offers))
             inserted_before = summary["inserted_count"]
             duplicate_before = summary["duplicate_count"]
             updated_before = summary["updated_count"]
+            rejected_before = summary["rejected_count"]
+            incomplete_before = summary["incomplete_description_count"]
             summary["fetched_count"] += len(offers)
+
             for offer in offers:
                 duplicate_id = self.repository.find_duplicate(offer)
                 if duplicate_id is not None:
@@ -174,7 +209,8 @@ class WatchService:
                                 duplicate_id, profile.id
                             )
                         ):
-                            result = calculate_match(merged, profile, skills)
+                            localized = self._localized_profile(profile, merged)
+                            result = calculate_match(merged, localized, skills)
                             self.repository.save_match(
                                 duplicate_id, profile.id, result
                             )
@@ -195,7 +231,8 @@ class WatchService:
                     summary["inserted_count"] += int(inserted)
                     continue
                 offer = hydration.offer
-                result = calculate_match(offer, profile, skills)
+                localized = self._localized_profile(profile, offer)
+                result = calculate_match(offer, localized, skills)
                 if result.score < self.settings.match_threshold:
                     summary["below_threshold_count"] += 1
                     summary["rejected_count"] += 1
@@ -217,6 +254,12 @@ class WatchService:
                     summary["duplicate_count"] - duplicate_before
                 ),
                 "updated_count": summary["updated_count"] - updated_before,
+                "rejected_count": (
+                    summary["rejected_count"] - rejected_before
+                ),
+                "incomplete_count": (
+                    summary["incomplete_description_count"] - incomplete_before
+                ),
             }
             if collector:
                 source_result["collector"] = collector

@@ -27,10 +27,12 @@ THEIRSTACK_RESULT_LIMIT = 3
 
 
 def _identity_text(value: Any) -> str:
+    """Normalise une identité d'offre ou d'employeur pour les rapprochements de connecteur."""
     return re.sub(r"[^a-z0-9]+", " ", normalize_text(value)).strip()
 
 
 def _similarity(left: Any, right: Any) -> float:
+    """Mesure une proximité textuelle utilisée uniquement pour désambiguïser un enrichissement."""
     normalized_left = _identity_text(left)
     normalized_right = _identity_text(right)
     if not normalized_left or not normalized_right:
@@ -39,6 +41,7 @@ def _similarity(left: Any, right: Any) -> float:
 
 
 def _date_value(value: Any) -> date | None:
+    """Convertit une date TheirStack hétérogène sans créer de date de publication fictive."""
     if isinstance(value, datetime):
         return value.date()
     if isinstance(value, date):
@@ -52,6 +55,7 @@ def _date_value(value: Any) -> date | None:
 
 
 def _job_company(item: dict[str, Any]) -> str:
+    """Extrait le nom employeur le plus stable d'une réponse TheirStack."""
     company_object = item.get("company_object")
     if isinstance(company_object, dict):
         company_name = company_object.get("name")
@@ -61,6 +65,7 @@ def _job_company(item: dict[str, Any]) -> str:
 
 
 def _job_urls(item: dict[str, Any]) -> set[str]:
+    """Collecte les URLs candidates pour vérifier l'identité d'une annonce enrichie."""
     urls = set()
     for key in ("url", "source_url", "final_url"):
         value = str(item.get(key) or "").strip()
@@ -112,14 +117,17 @@ def _identity_score(offer: JobOffer, item: dict[str, Any]) -> float:
 
 
 class TheirStackClient:
+    """Client HTTP borné pour recherche Indeed et enrichissement descriptif via TheirStack."""
     """Client HTTP commun, sans logique métier propre à une source Rocky."""
 
     def __init__(self, api_key: str, timeout: int = 20):
+        """Configure le client sans lancer d'appel réseau ni exposer la clé API."""
         self.api_key = api_key.strip()
         self.timeout = timeout
         self._location_cache: dict[tuple[str, str], int | None] = {}
 
     def _headers(self) -> dict[str, str]:
+        """Prépare les en-têtes d'authentification nécessaires aux appels TheirStack."""
         if not self.api_key:
             raise ConfigurationError("TheirStack n’est pas configuré.")
         return {
@@ -129,6 +137,7 @@ class TheirStackClient:
 
     @staticmethod
     def _request_error(error: requests.RequestException) -> SourceError:
+        """Convertit une erreur HTTP en incident de source sûr à afficher dans Monitoring."""
         status = getattr(getattr(error, "response", None), "status_code", None)
         if status == 402:
             detail = "quota ou crédits insuffisants"
@@ -234,6 +243,7 @@ class TheirStackClient:
         return resolved
 
     def search_candidates(self, offer: JobOffer) -> list[dict[str, Any]]:
+        """Recherche des candidats d'enrichissement sans modifier l'annonce d'origine."""
         if not offer.company_name.strip() or not offer.job_title.strip():
             return []
         payload = {
@@ -244,6 +254,7 @@ class TheirStackClient:
         return self.search_jobs(payload)
 
     def hydrate(self, offer: JobOffer) -> DescriptionHydration:
+        """Tente de compléter la description d'une offre tout en conservant sa provenance."""
         candidates = self.search_candidates(offer)
         ranked = sorted(
             ((_identity_score(offer, item), item) for item in candidates),

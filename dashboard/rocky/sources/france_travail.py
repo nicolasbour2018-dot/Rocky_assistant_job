@@ -14,6 +14,7 @@ from ..models import CandidateProfile, JobOffer
 
 
 class FranceTravailSource:
+    """Adaptateur OAuth France Travail pour enrichir la veille locale par API officielle."""
     name = "France Travail"
     token_url = (
         "https://entreprise.francetravail.fr/connexion/oauth2/access_token"
@@ -24,6 +25,7 @@ class FranceTravailSource:
     )
 
     def __init__(self, settings: Settings):
+        """Retient les identifiants France Travail sans les exposer aux pages Streamlit."""
         self.settings = settings
 
     @staticmethod
@@ -54,6 +56,7 @@ class FranceTravailSource:
         return value if value in allowed else None
 
     def _token(self) -> str:
+        """Obtient un jeton OAuth court avant une recherche officielle France Travail."""
         if (
             not self.settings.france_travail_client_id
             or not self.settings.france_travail_client_secret
@@ -99,6 +102,7 @@ class FranceTravailSource:
 
     @staticmethod
     def _salary(value: str) -> tuple[float | None, float | None]:
+        """Interprète une fourchette salaire publiée sans inventer de borne absente."""
         numbers = []
         for raw in re.findall(r"\d[\d\s.,]*", value or ""):
             try:
@@ -113,6 +117,7 @@ class FranceTravailSource:
 
     @classmethod
     def _offer(cls, item: dict[str, Any]) -> JobOffer:
+        """Convertit une réponse France Travail au format d'annonce Rocky."""
         company = item.get("entreprise") or {}
         location = item.get("lieuTravail") or {}
         origin = item.get("origineOffre") or {}
@@ -171,6 +176,7 @@ class FranceTravailSource:
     def search(
         self, profile: CandidateProfile, results_per_query: int
     ) -> list[JobOffer]:
+        """Exécute une recherche France Travail pour les intitulés actifs du profil."""
         token = self._token()
         queries = profile.target_job_titles or [profile.profile_name]
         collected: list[JobOffer] = []

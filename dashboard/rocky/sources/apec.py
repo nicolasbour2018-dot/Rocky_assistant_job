@@ -15,6 +15,7 @@ from .common import (
 
 
 class ApecSource:
+    """Adaptateur Apec qui transforme son API de recherche en annonces Rocky."""
     name = "Apec"
     search_url = "https://www.apec.fr/cms/webservices/rechercheOffre"
     detail_base_url = (
@@ -47,6 +48,7 @@ class ApecSource:
 
     @classmethod
     def _offer(cls, item: dict[str, Any]) -> JobOffer:
+        """Normalise une offre Apec pour le flux commun de veille."""
         salary_min, salary_max, currency = salary_values(item.get("salaireTexte"))
         external_id = str(item.get("numeroOffre") or item.get("id") or "")
         url = f"{cls.detail_base_url}/{external_id}"
@@ -85,6 +87,7 @@ class ApecSource:
     def search(
         self, profile: CandidateProfile, results_per_query: int
     ) -> list[JobOffer]:
+        """Recherche les postes du profil via Apec et retourne des offres non persistées."""
         queries: Iterable[str] = profile.target_job_titles or [profile.profile_name]
         collected: list[JobOffer] = []
         for query in queries:

@@ -61,6 +61,14 @@ class RockyRepository:
         """Crée une façade dont toutes les racines métier sont bornées au compte."""
         return RockyRepository(self.engine, user_id)
 
+    def fetch_active_user_ids(self) -> list[int]:
+        """Retourne les comptes actifs pour une routine planifiée locale."""
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                text("SELECT id FROM users WHERE status = 'ACTIVE' ORDER BY id")
+            ).scalars().all()
+        return [int(user_id) for user_id in rows]
+
     def _profile_is_owned(self, profile_id: int) -> bool:
         """Centralise le contrôle d'accès utilisé avant toute écriture enfant."""
         if self.user_id is None:

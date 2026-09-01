@@ -17,6 +17,7 @@ from .common import deduplicate_offers, iso_date, public_get
 
 
 class LinkedInSource:
+    """Source HTML LinkedIn de lecture seule, sans action sur le portail tiers."""
     name = "LinkedIn"
     search_url = (
         "https://www.linkedin.com/jobs-guest/jobs/api/"
@@ -74,6 +75,7 @@ class LinkedInSource:
     def search(
         self, profile: CandidateProfile, results_per_query: int
     ) -> list[JobOffer]:
+        """Construit les recherches LinkedIn du profil et retourne les offres collectées."""
         queries: Iterable[str] = profile.target_job_titles or [profile.profile_name]
         location = profile.preferred_locations[0] if profile.preferred_locations else "France"
         collected: list[JobOffer] = []

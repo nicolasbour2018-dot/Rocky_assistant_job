@@ -13,14 +13,17 @@ from ..models import CandidateProfile, JobOffer
 
 
 class AdzunaSource:
+    """Adaptateur Adzuna qui convertit les résultats API en annonces Rocky auditables."""
     name = "Adzuna"
     base_url = "https://api.adzuna.com/v1/api/jobs"
 
     def __init__(self, settings: Settings):
+        """Retient la configuration API nécessaire aux recherches du profil."""
         self.settings = settings
 
     @staticmethod
     def _offer(item: dict[str, Any]) -> JobOffer:
+        """Traduit une réponse Adzuna en modèle métier homogène."""
         location = item.get("location") or {}
         company = item.get("company") or {}
         category = item.get("category") or {}
@@ -56,6 +59,7 @@ class AdzunaSource:
     def search(
         self, profile: CandidateProfile, results_per_query: int
     ) -> list[JobOffer]:
+        """Interroge Adzuna pour les intitulés du profil sans persister directement les résultats."""
         if not self.settings.adzuna_app_id or not self.settings.adzuna_app_key:
             raise ConfigurationError("Les credentials Adzuna sont absents.")
         queries = profile.target_job_titles or [profile.profile_name]
