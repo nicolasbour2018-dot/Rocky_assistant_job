@@ -278,6 +278,11 @@ max-line-length = 120
 "scripts/*.py" = ["E402", "T20"]
 "dashboard/dashboard_common.py" = ["E402"]
 
+# Même raison pour ce fichier : c'est un hook d'outillage lancé par Codex, et
+# ses deux `print` écrivent sur la sortie d'erreur pour signaler à l'opérateur
+# qu'un binaire manque sur la machine. C'est tout ce que fait le fichier.
+".codex/hooks/*.py" = ["T20"]
+
 # DTZ011 interdit `date.today()`, qui suit le fuseau du serveur. La règle vaut
 # pour le code applicatif : sur le Space Hugging Face le serveur est en UTC, et
 # la date bascule deux heures après Paris. Dans les tests, « aujourd'hui » est
