@@ -1,0 +1,128 @@
+# Contrôle automatique des pull requests.
+#
+# Les outils lancés ici sont ceux déclarés dans `pyproject.toml`. Ce fichier ne
+# choisit rien : il exécute. Les seuils de xenon sont la seule exception, radon
+# ne lisant aucune configuration depuis `pyproject.toml`.
+name: CI
+
+on:
+  pull_request:
+
+# La CI ne fait que lire le dépôt.
+permissions:
+  contents: read
+
+# Une nouvelle poussée sur une branche annule le contrôle en cours de la
+# précédente. Sur une pile de 24 PR, un `gh stack submit` déclenche autant
+# d'exécutions : sans ceci, chaque reprise les cumulerait.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, types, sécurité, tests
+    runs-on: ubuntu-latest
+
+    # Deux tests de `tests/test_dashboard_variants.py` échouent sans base.
+    # Mesuré : 2 failed, 129 passed. Les 129 autres tournent hors ligne.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: rocky
+          POSTGRES_PASSWORD: rocky
+          POSTGRES_DB: rocky
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # `Settings` lit `DATABASE_URL` en priorité, puis les `DB_*`.
+    # `scripts/init_db.py` passe par `ensure_database_exists`, qui a besoin des
+    # `DB_*` pour se connecter avant que la base cible existe.
+    env:
+      DATABASE_URL: postgresql+psycopg2://rocky:rocky@127.0.0.1:5432/rocky
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_USER: rocky
+      DB_PASSWORD: rocky
+      DB_NAME: rocky
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # La version de Python n'est pas répétée ici : `uv` lit `.python-version`.
+      # Sans ce fichier, `requires-python = ">=3.11"` laisse uv prendre la plus
+      # récente, et mypy échoue en lisant des stubs écrits pour 3.12+ sous les
+      # règles de 3.11.
+      #
+      # Version exacte : `setup-uv` ne publie pas de tag mobile de version
+      # majeure. `v10` n'existe pas, seulement `v10.0.0` et `v10.0.1`.
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+
+      # `--locked` échoue si `uv.lock` ne décrit plus `[dependency-groups]`.
+      # C'est ce qui rend le contrôle reproductible : une version de ruff ou de
+      # mypy ne change pas sans que le verrou change avec elle.
+      - name: Outils de développement, versions verrouillées
+        run: uv sync --locked --group dev
+
+      # Les dépendances d'exécution restent dans `requirements.txt`, qui part
+      # tel quel sur le Space Hugging Face. Elles gardent donc leurs bornes.
+      - name: Dépendances d'exécution
+        run: uv pip install -r requirements.txt
+
+      - name: Mettre les outils sur le PATH
+        run: echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: ruff check
+        run: ruff check .
+
+      - name: ruff format
+        run: ruff format --check .
+
+      - name: mypy
+        run: mypy
+
+      # `-b` compare aux 37 constats connus : seul un NOUVEAU fait échouer.
+      - name: bandit
+        run: bandit -r dashboard scripts -b .bandit-baseline.json -q
+
+      # Périmètre et seuil dans `[tool.vulture]`.
+      - name: vulture
+        run: vulture
+
+      # Cliquet de complexité, calé sur l'état d'aujourd'hui. Il bloque une
+      # aggravation, jamais l'existant. Voir `docs/decisions/0004-portes-radon-vulture.md`.
+      #
+      # `--max-absolute F` ne bloque rien au niveau fonction, F étant la
+      # dernière note : c'est le prix à payer pour ne masquer aucun fichier.
+      # Une seule fonction empêche de descendre à E, `render_letter_workshop`
+      # (F 65). Le jour où elle passe sous F, ce seuil devient E.
+      - name: xenon
+        run: xenon --max-absolute F --max-modules C --max-average B dashboard scripts
+
+      - name: Schéma de la base
+        run: python scripts/init_db.py
+
+      # `tests/test_browser_prefill.py::test_prefill_fixture_never_submits`
+      # lance un vrai navigateur pour vérifier qu'aucun bouton d'envoi n'est
+      # cliqué. C'est la règle dure d'`AGENTS.md` : ce test doit tourner.
+      # Le navigateur reste local ; aucune API externe n'est appelée.
+      - name: Navigateur Playwright
+        run: playwright install --with-deps chromium
+
+      - name: pytest
+        run: pytest
+
+      # Informatif : la liste des fonctions notées D ou pire, à lire, jamais
+      # bloquante. Le cliquet ci-dessus est la porte.
+      - name: radon, liste des fonctions complexes
+        if: always()
+        continue-on-error: true
+        run: radon cc dashboard scripts -n D -s

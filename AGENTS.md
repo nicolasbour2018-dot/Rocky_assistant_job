@@ -7,7 +7,9 @@ Detail lives in path-scoped `.claude/rules/`; each rule loads when you read a ma
 ## Commands
 
 ```bash
-source .venv/bin/activate                     # project venv is mandatory
+uv sync --group dev                           # create .venv and install the tools
+uv pip install -r requirements.txt            # runtime deps, the file the Space ships
+source .venv/bin/activate                     # every command below assumes it
 python -m pytest                              # full suite (offline, APIs mocked)
 python -m pytest tests/test_llm.py -k credentials   # one test
 python -m compileall dashboard scripts        # syntax check
@@ -17,16 +19,20 @@ python scripts/smoke_dashboard.py             # dashboard check against real DB,
 python scripts/check_connections.py [--only apec]   # probe external APIs, keys never printed
 ```
 
-Quality tools, declared in `[project.optional-dependencies] dev`:
+Quality tools, declared in `[dependency-groups] dev`, run by `.github/workflows/ci.yml` on every PR:
 
 ```bash
-python -m pip install -e ".[dev]"             # install them
 ruff check .                                  # lint, security rules included
 ruff format --check .                         # formatting
 mypy                                          # types, config in pyproject.toml
 bandit -r dashboard scripts -b .bandit-baseline.json   # only new findings
 bandit -r dashboard scripts -f json -o .bandit-baseline.json   # accept a new one
+vulture                                       # dead code, threshold in pyproject.toml
+xenon --max-absolute F --max-modules C --max-average B dashboard scripts   # complexity ratchet
+radon cc dashboard scripts -n D -s            # the complex functions, to read
 ```
+
+The xenon thresholds sit at today's level on purpose: they block a regression, never the existing code. See `docs/decisions/0004-portes-radon-vulture.md`.
 
 ## Layout and invariants
 

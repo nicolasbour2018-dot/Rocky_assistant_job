@@ -33,21 +33,28 @@ requires-python = ">=3.11"
 
 
 # -----------------------------------------------------------------------------
-# [project.optional-dependencies] : les outils qui servent à travailler sur
-# Rocky, mais dont l'application n'a pas besoin pour tourner.
+# [dependency-groups] : les outils qui servent à travailler sur Rocky, mais dont
+# l'application n'a pas besoin pour tourner.
 #
 # Pourquoi ils ne sont PAS dans `requirements.txt` : ce fichier-là est envoyé
 # tel quel sur le Space Hugging Face par `scripts/deploy_hf.py`. Tout ce qu'on
 # y ajoute est installé sur le serveur au démarrage. Un vérificateur de types
 # n'a rien à y faire : il ralentirait le démarrage sans servir une seule fois.
 #
-# Installation, depuis la racine du projet :
-#   .venv/bin/python -m pip install -e ".[dev]"
+# `[dependency-groups]` est la table standard de la PEP 735. Elle remplace
+# `[project.optional-dependencies]`, qui décrit des « extras » : des variantes
+# installables par un utilisateur du paquet. Personne n'installe Rocky comme
+# paquet, et personne ne veut ses linters. Ce ne sont pas des extras.
 #
-# Le `-e` installe Rocky lui-même en mode « lien » : le code reste à sa place et
-# n'est pas recopié. Le `[dev]` désigne la liste ci-dessous.
+# Installation, depuis la racine du projet :
+#   uv sync --group dev
+#
+# La liste est verrouillée dans `uv.lock`, versionné à côté de ce fichier. Ce
+# verrou ne couvre QUE cette liste : `requirements.txt` reste hors du projet uv,
+# donc les versions d'exécution gardent leurs bornes, comme sur le Space. Il
+# fixe ce qui décide si la CI est verte : une version de ruff ou de mypy.
 # -----------------------------------------------------------------------------
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     # Les deux outils d'analyse. Voir leurs réglages plus bas dans ce fichier.
     "mypy>=1.18,<3",
@@ -73,11 +80,42 @@ dev = [
     # connus vivent donc dans un fichier de référence, et bandit ne signale
     # ensuite que ce qui est nouveau :
     #
-    #   uvx bandit -r dashboard scripts -f json -o .bandit-baseline.json -q
-    #   uvx bandit -r dashboard scripts -b .bandit-baseline.json -q
+    #   bandit -r dashboard scripts -f json -o .bandit-baseline.json -q
+    #   bandit -r dashboard scripts -b .bandit-baseline.json -q
     #
     # La première ligne engendre le fichier, la seconde est le contrôle.
     "bandit>=1.9,<2",
+
+    # vulture cherche le code que plus rien n'appelle : fonction morte, variable
+    # jamais lue, import inutile qu'aucun linter ne voit parce qu'il traverse
+    # plusieurs fichiers.
+    #
+    # Il ne prouve rien : il devine, et annonce sa confiance en pourcentage.
+    # Mesure sur ce dépôt :
+    #
+    #   --min-confidence 100    0 signalement
+    #   --min-confidence  80    0 signalement
+    #   --min-confidence  60   52 signalements
+    #
+    # Le seuil retenu est 80, réglé plus bas dans `[tool.vulture]`. À 60, les
+    # 52 constats sont des méthodes de `repository.py` appelées depuis les
+    # pages Streamlit par des chemins que vulture ne suit pas. Les trier est un
+    # travail en soi, pas une porte.
+    "vulture>=2.14,<3",
+
+    # radon mesure la complexité cyclomatique : le nombre de chemins
+    # d'exécution indépendants dans une fonction. Chaque `if`, `for`, `and` ou
+    # `except` en ajoute un. La note va de A à F.
+    #
+    # xenon est sa porte : il rend un code d'erreur quand un seuil est dépassé.
+    # Les seuils vivent dans `.github/workflows/ci.yml`, radon ne lisant aucune
+    # configuration depuis ce fichier.
+    #
+    # Voir `docs/decisions/0004-portes-radon-vulture.md` : les seuils sont
+    # calés sur l'état d'aujourd'hui, pour bloquer une aggravation sans forcer
+    # un seul refactor.
+    "radon>=6,<7",
+    "xenon>=0.9,<1",
 
     # Les paquets `-stubs` et `types-*` ne contiennent aucun code exécutable.
     # Ce sont des fiches de description : pour chaque fonction d'une
@@ -114,6 +152,25 @@ pythonpath = ["."]
 # Options passées automatiquement à chaque lancement.
 # `-q` signifie "quiet" : une ligne de résumé au lieu du détail de chaque test.
 addopts = "-q"
+
+
+# -----------------------------------------------------------------------------
+# [tool.vulture] : le seuil de confiance du chercheur de code mort.
+# -----------------------------------------------------------------------------
+[tool.vulture]
+
+# vulture devine, il ne prouve pas. Chaque constat porte un pourcentage de
+# confiance : 100 % pour un import inutile, que Python lui-même peut vérifier,
+# et 60 % pour une méthode qu'il ne voit appelée nulle part — ce qui, dans une
+# application Streamlit, arrive dès qu'un appel traverse un `st.button`.
+#
+# Le seuil est haut parce qu'en dessous les constats deviennent une liste à
+# trier, pas une porte. Les 52 constats à 60 % sont réels mais demandent une
+# lecture par site.
+min_confidence = 80
+
+# Le même périmètre que mypy : le code de l'application, pas les tests.
+paths = ["dashboard", "scripts"]
 
 
 # =============================================================================
