@@ -47,12 +47,39 @@ class RockyLLM:
 
     @staticmethod
     def _safe_failure_detail(error: Exception) -> str:
-        """Extrait un éventuel statut HTTP sans recopier l'erreur du SDK."""
-        status = getattr(error, "status_code", None)
-        if status is None:
-            response = getattr(error, "response", None)
-            status = getattr(response, "status_code", None)
-        return f" (HTTP {status})" if isinstance(status, int) else ""
+        """Extrait un diagnostic Groq borné sans exposer les credentials."""
+        response = getattr(error, "response", None)
+
+        if response is None:
+            return ""
+
+        status = getattr(response, "status_code", None)
+        detail = f" (HTTP {status}" if isinstance(status, int) else " (HTTP"
+
+        try:
+            payload = response.json()
+            groq_error = payload.get("error", {})
+
+            if isinstance(groq_error, dict):
+                error_type = groq_error.get("type")
+                error_code = groq_error.get("code")
+                message = groq_error.get("message")
+
+                if error_type:
+                    detail += f" · type={error_type}"
+
+                if error_code:
+                    detail += f" · code={error_code}"
+
+                if message:
+                    # Diagnostic temporaire : borne fortement le texte renvoyé.
+                    safe_message = " ".join(str(message).split())[:500]
+                    detail += f" · {safe_message}"
+
+        except Exception:
+            pass
+
+        return detail + ")"
 
     @staticmethod
     def _content(response: dict[str, Any]) -> str:
@@ -81,7 +108,13 @@ class RockyLLM:
                 json={
                     "model": self.settings.groq_model,
                     "messages": [
-                        {"role": "system", "content": system_prompt},
+                        {
+                            "role": "system",
+                            "content": (
+                                system_prompt
+                                + "\nRéponds obligatoirement au format JSON."
+                            ),
+                        },
                         {"role": "user", "content": user_prompt},
                     ],
                     "temperature": temperature,

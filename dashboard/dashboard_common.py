@@ -597,6 +597,23 @@ def metric_counts(jobs: pd.DataFrame, recent_days: int = 1) -> dict[str, int]:
 # Bloc d'orchestration du popover de chat avec Rocky. 
 ###################################################################################################################################################
 
+def stream_llm_response(stream) -> str:
+    """Affiche progressivement un flux texte et retourne la réponse complète."""
+    placeholder = st.empty()
+    chunks: list[str] = []
+
+    for chunk in stream:
+        if not isinstance(chunk, str) or not chunk:
+            continue
+
+        chunks.append(chunk)
+        placeholder.markdown("".join(chunks) + " ▌")
+
+    answer = "".join(chunks)
+    placeholder.markdown(answer)
+
+    return answer
+
 def render_floating_chatbot() -> None:
     """Expose le chat avec un avatar Rocky expressif et persistant."""
     expression = st.session_state.get("rocky_expression", "smiling")
@@ -712,7 +729,7 @@ def render_floating_chatbot() -> None:
                 application_rows = repository.fetch_applications(profile.id)
                 with st.chat_message("assistant"):
                     st.session_state["rocky_expression"] = "thinking"
-                    answer = st.write_stream(
+                    answer = stream_llm_response(
                         llm.stream_chat(
                             prompt.strip(),
                             profile,
@@ -730,4 +747,4 @@ def render_floating_chatbot() -> None:
             else:
                 st.session_state["rocky_expression"] = "good-job-check"
             messages.append({"role": "assistant", "content": answer})
-            st.rerun()
+            

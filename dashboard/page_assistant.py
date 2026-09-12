@@ -12,7 +12,7 @@ from dataclasses import asdict
 import pandas as pd
 import streamlit as st
 
-from dashboard.dashboard_common import load_data
+from dashboard.dashboard_common import load_data, stream_llm_response
 from dashboard.rocky.assistant_agent import plan_rocky_action
 from dashboard.rocky.llm import RockyLLM
 from dashboard.rocky.mascot import mascot_data_uri
@@ -98,7 +98,7 @@ if prompt:
             try:
                 with st.chat_message("assistant"):
                     st.session_state["rocky_expression"] = "thinking"
-                    answer = st.write_stream(
+                    answer = stream_llm_response(
                         llm.stream_chat(
                             prompt,
                             profile,
