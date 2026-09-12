@@ -30,7 +30,7 @@ def _arguments() -> argparse.Namespace:
         choices=(
             "all",
             "postgresql",
-            "mistral",
+            "groq",
             "france-travail",
             "adzuna",
             "linkedin",
@@ -59,7 +59,7 @@ def main() -> int:
             failures += 1
             print(f"ERREUR PostgreSQL : {error}")
 
-    if requested in {"all", "mistral"}:
+    if requested in {"all", "groq"}:
         try:
             answer = RockyLLM(settings).complete_text(
                 "Réponds uniquement avec ROCKY_OK.",
@@ -68,10 +68,10 @@ def main() -> int:
             )
             if "ROCKY_OK" not in answer.upper():
                 raise RuntimeError("Réponse inattendue du modèle")
-            print(f"OK Mistral ({settings.mistral_model})")
+            print(f"OK Groq ({settings.groq_model})")
         except Exception as error:
             failures += 1
-            print(f"ERREUR Mistral : {error}")
+            print(f"ERREUR Groq : {error}")
 
     test_profile = CandidateProfile(
         id=0,

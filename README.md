@@ -37,10 +37,82 @@ existante est seulement validée : si son schéma est incompatible, Rocky échou
 avec une erreur explicite. Il n'y a pas de migration automatique ni de reprise
 silencieuse d'un ancien format.
 
-## Lancer Rocky
+## Lancer Rocky manuellement
+
+### Mode natif macOS (mode de référence)
+
+Depuis la racine du dépôt, vérifie d'abord PostgreSQL puis, si les fonctions
+assistées sont nécessaires, Groq :
 
 ```bash
-.venv/bin/python -m streamlit run dashboard/dashboard_v2.py
+.venv/bin/python scripts/check_connections.py --only postgresql
+.venv/bin/python scripts/check_connections.py --only groq
+```
+
+Le second contrôle effectue un véritable appel Groq. Une erreur
+`Appel Groq impossible (HTTP 429)` signifie que Rocky a bien chargé la clé,
+mais que Groq refuse temporairement l'appel (limite de débit ou quota du
+compte). Vérifie alors les limites du compte Groq et la valeur de
+`GROQ_MODEL` dans `.env`, puis réessaie. Rocky peut démarrer sans cet appel,
+mais ses fonctions assistées resteront indisponibles.
+
+Pour garder le terminal attaché au serveur, ce qui permet de l'arrêter avec
+`Ctrl-C` :
+
+```bash
+.venv/bin/python -m streamlit run dashboard/dashboard_v2.py \
+  --server.address=127.0.0.1 \
+  --server.port=8501
+```
+
+Pour le lancer en arrière-plan :
+
+```bash
+.venv/bin/python scripts/start_local.py
+tail -f logs/rocky_streamlit.log
+```
+
+Dans les deux cas, ouvre <http://127.0.0.1:8501>. Ce contrôle doit répondre
+`ok` :
+
+```bash
+curl --fail http://127.0.0.1:8501/_stcore/health
+```
+
+Un seul processus peut utiliser le port 8501. Arrête donc le conteneur Rocky
+avec `docker compose stop rocky` avant un lancement natif si le prototype
+Docker tourne déjà.
+
+### Prototype Docker local
+
+Cette procédure concerne le poste déjà configuré avec le conteneur PostgreSQL
+`job-assistant-postgres`, le réseau externe `job-assistant_default`, le volume
+privé `rocky-assistant-secrets` et le fichier local `compose.yaml`. Ces éléments
+ne font pas partie de l'installation native reproductible du dépôt.
+
+```bash
+docker start job-assistant-postgres
+docker exec job-assistant-postgres pg_isready
+docker compose up --detach --build rocky
+```
+
+Après une modification de `.env`, relance la dernière commande pour recréer le
+conteneur avec la nouvelle configuration. Vérifie ensuite toute la chaîne sans
+afficher les secrets :
+
+```bash
+docker compose ps
+curl --fail http://127.0.0.1:8501/_stcore/health
+docker compose exec -T rocky python scripts/check_connections.py --only postgresql
+docker compose exec -T rocky python scripts/check_connections.py --only groq
+docker compose exec -T rocky python scripts/smoke_dashboard.py
+docker compose logs --tail=100 rocky
+```
+
+Pour arrêter uniquement l'application en conservant les données et PostgreSQL :
+
+```bash
+docker compose stop rocky
 ```
 
 Crée un compte, active-le via le lien SMTP, puis importe un CV PDF et une lettre
@@ -84,7 +156,7 @@ automatiquement.
 .venv/bin/python scripts/smoke_dashboard.py
 ```
 
-Les tests sont hors ligne : les APIs et le client Mistral sont simulés. Le
+Les tests sont hors ligne : les APIs et le client Groq sont simulés. Le
 smoke dashboard lit la base locale mais n'envoie aucun message et ne lance
 aucune candidature.
 

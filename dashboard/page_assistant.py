@@ -114,7 +114,7 @@ if prompt:
             else:
                 st.session_state["rocky_expression"] = "good-job-check"
         else:
-            answer = "Mistral n'est pas configuré, mais les commandes de statut restent disponibles."
+            answer = "Groq n'est pas configuré, mais les commandes de statut restent disponibles."
         messages.append({"role": "assistant", "content": answer})
         st.session_state.pop("rocky_pending_action", None)
     st.rerun()

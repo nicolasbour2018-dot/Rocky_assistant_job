@@ -349,18 +349,18 @@ def import_job_url(url: str, llm: RockyLLM | None = None) -> ImportPreview:
         merged.setdefault("job_title", preview.offer.job_title)
         merged.setdefault("company_name", preview.offer.company_name)
         merged.setdefault("responsibilities", preview.offer.responsibilities)
-        # Mistral enrichit les champs mais ne peut pas transformer un aperçu
+        # Groq enrichit les champs mais ne peut pas transformer un aperçu
         # fourni par le site en description source complète.
         merged["description_is_full"] = preview.offer.description_is_full
         preview.offer = JobOffer(**_coerce_offer_fields(merged))
-        preview.extraction_method += " + Mistral"
+        preview.extraction_method += " + Groq"
     return preview
 
 
 def hydrate_job_offer(offer: JobOffer) -> DescriptionHydration:
     """Remplace un aperçu par la description issue de la page détaillée.
 
-    Cette fonction n'appelle pas Mistral : elle récupère d'abord le texte
+    Cette fonction n'appelle pas Groq : elle récupère d'abord le texte
     source complet, qui sera ensuite utilisé par le moteur de matching. Elle
     conserve l'identité de l'annonce fournie par le connecteur de veille.
     """

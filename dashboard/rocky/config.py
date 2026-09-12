@@ -60,9 +60,9 @@ class Settings:
     db_host: str = os.getenv("DB_HOST", "localhost").strip()
     db_port: str = os.getenv("DB_PORT", "5432").strip()
     db_name: str = os.getenv("DB_NAME", "rocky").strip()
-    mistral_api_key: str = os.getenv("MISTRAL_API_KEY", "").strip()
-    mistral_model: str = os.getenv(
-        "MISTRAL_MODEL", "mistral-small-latest"
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "").strip()
+    groq_model: str = os.getenv(
+        "GROQ_MODEL", "groq/compound-mini"
     ).strip()
     france_travail_client_id: str = os.getenv(
         "FRANCE_TRAVAIL_CLIENT_ID", ""
@@ -190,7 +190,7 @@ class Settings:
         """Indique la présence des réglages, jamais leur valeur."""
         return {
             "PostgreSQL": self.database_url is not None,
-            "Mistral AI": bool(self.mistral_api_key),
+            "Groq": bool(self.groq_api_key),
             "France Travail": bool(
                 self.france_travail_client_id
                 and self.france_travail_client_secret

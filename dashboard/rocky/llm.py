@@ -1,4 +1,4 @@
-"""Client Mistral Small utilisé par l'assistant Rocky."""
+"""Client Groq utilisé par l'assistant Rocky."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from .models import (
 
 
 class RockyLLM:
-    """Encapsule le SDK Mistral et valide toutes les sorties structurées."""
+    """Encapsule le SDK Groq et valide toutes les sorties structurées."""
 
     def __init__(self, settings: Settings):
         """Retient la configuration du fournisseur sans instancier de client à l'import."""
@@ -28,22 +28,22 @@ class RockyLLM:
 
     @property
     def is_configured(self) -> bool:
-        """Indique si les écrans peuvent proposer une action Mistral sans révéler la clé."""
-        return bool(self.settings.mistral_api_key)
+        """Indique si les écrans peuvent proposer une action Groq sans révéler la clé."""
+        return bool(self.settings.groq_api_key)
 
     def _client(self):
-        """Instancie le SDK seulement au moment d'un appel explicitement demandé."""
+        """Instancie le client HTTP seulement au moment d'un appel explicitement demandé."""
         if not self.is_configured:
             raise ConfigurationError(
-                "Ajoute MISTRAL_API_KEY dans .env pour utiliser Rocky."
+                "Ajoute GROQ_API_KEY dans .env pour utiliser Rocky."
             )
         try:
-            from mistralai import Mistral
+            import requests
         except ImportError as error:
             raise ConfigurationError(
-                "Le paquet mistralai n'est pas installé."
+                "Le paquet requests n'est pas installé."
             ) from error
-        return Mistral(api_key=self.settings.mistral_api_key)
+        return requests.Session()
 
     @staticmethod
     def _safe_failure_detail(error: Exception) -> str:
@@ -55,9 +55,9 @@ class RockyLLM:
         return f" (HTTP {status})" if isinstance(status, int) else ""
 
     @staticmethod
-    def _content(response: Any) -> str:
-        """Normalise les formes de contenu du SDK avant validation métier."""
-        content = response.choices[0].message.content
+    def _content(response: dict[str, Any]) -> str:
+        """Normalise le contenu JSON de l'API avant validation métier."""
+        content = response["choices"][0]["message"]["content"]
         if isinstance(content, str):
             return content
         if isinstance(content, list):
@@ -72,75 +72,108 @@ class RockyLLM:
         user_prompt: str,
         temperature: float = 0.1,
     ) -> dict[str, Any]:
-        """Appelle Mistral en JSON et refuse toute réponse non structurée."""
+        """Appelle Groq en JSON et refuse toute réponse non structurée."""
+        client = self._client()
         try:
-            response = self._client().chat.complete(
-                model=self.settings.mistral_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=temperature,
-                response_format={"type": "json_object"},
+            response = client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {self.settings.groq_api_key}"},
+                json={
+                    "model": self.settings.groq_model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": temperature,
+                    "response_format": {"type": "json_object"},
+                },
+                timeout=60,
             )
-            data = json.loads(self._content(response))
+            response.raise_for_status()
+            data = json.loads(self._content(response.json()))
         except ConfigurationError:
             raise
         except (json.JSONDecodeError, IndexError, AttributeError) as error:
             raise RockyError(
-                "Mistral a renvoyé une réponse impossible à valider."
+                "Groq a renvoyé une réponse impossible à valider."
             ) from error
         except Exception as error:
             detail = self._safe_failure_detail(error)
-            raise RockyError(f"Appel Mistral impossible{detail}.") from error
+            raise RockyError(f"Appel Groq impossible{detail}.") from error
+        finally:
+            client.close()
         if not isinstance(data, dict):
-            raise RockyError("La réponse Mistral doit être un objet JSON.")
+            raise RockyError("La réponse Groq doit être un objet JSON.")
         return data
 
     def complete_text(
         self, system_prompt: str, user_prompt: str, temperature: float = 0.2
     ) -> str:
         """Obtient un texte court pour un atelier, en encapsulant les erreurs du fournisseur."""
+        client = self._client()
         try:
-            response = self._client().chat.complete(
-                model=self.settings.mistral_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=temperature,
+            response = client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {self.settings.groq_api_key}"},
+                json={
+                    "model": self.settings.groq_model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": temperature,
+                },
+                timeout=60,
             )
-            return self._content(response).strip()
+            response.raise_for_status()
+            return self._content(response.json()).strip()
         except ConfigurationError:
             raise
         except Exception as error:
             detail = self._safe_failure_detail(error)
-            raise RockyError(f"Appel Mistral impossible{detail}.") from error
+            raise RockyError(f"Appel Groq impossible{detail}.") from error
+        finally:
+            client.close()
 
     def stream_text(
         self, system_prompt: str, user_prompt: str, temperature: float = 0.2
     ):
-        """Produit les fragments Mistral au fil de l'eau pour l'interface.
+        """Produit les fragments Groq au fil de l'eau pour l'interface.
 
         Le générateur ne journalise jamais le contenu et convertit les
         événements SDK en chaînes simples attendues par ``st.write_stream``.
         Une erreur est transformée en ``RockyError`` au moment de l'itération,
         ce qui permet à la page d'afficher un message propre.
         """
+        client = self._client()
         try:
-            stream = self._client().chat.stream(
-                model=self.settings.mistral_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=temperature,
+            response = client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {self.settings.groq_api_key}"},
+                json={
+                    "model": self.settings.groq_model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": temperature,
+                    "stream": True,
+                },
+                stream=True,
+                timeout=60,
             )
-            for event in stream:
-                choices = getattr(getattr(event, "data", event), "choices", [])
+            response.raise_for_status()
+            for line in response.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data: "):
+                    continue
+                payload = line.removeprefix("data: ")
+                if payload == "[DONE]":
+                    break
+                event = json.loads(payload)
+                choices = event.get("choices", [])
                 if not choices:
                     continue
-                content = getattr(getattr(choices[0], "delta", None), "content", "")
+                content = choices[0].get("delta", {}).get("content", "")
                 if isinstance(content, str) and content:
                     yield content
                 elif isinstance(content, list):
@@ -152,7 +185,9 @@ class RockyLLM:
             raise
         except Exception as error:
             detail = self._safe_failure_detail(error)
-            raise RockyError(f"Appel Mistral impossible{detail}.") from error
+            raise RockyError(f"Appel Groq impossible{detail}.") from error
+        finally:
+            client.close()
 
     def enrich_job(self, raw_text: str, known_fields: dict[str, Any]) -> dict[str, Any]:
         """Extrait des champs d'annonce sans inventer de données avant validation Rocky."""
@@ -342,7 +377,7 @@ class RockyLLM:
         translated = request_translation(protected_blocks)
         if translated is None:
             # Une seule reprise structurée évite qu'un lot DOCX défectueux ne
-            # déclenche une rafale de requêtes unitaires et ne sature Mistral.
+            # déclenche une rafale de requêtes unitaires et ne sature Groq.
             translated = request_translation(
                 protected_blocks, retry_after_invalid_structure=True
             )
@@ -410,7 +445,7 @@ class RockyLLM:
         )
         paragraph = str(data.get("company_paragraph", "")).strip()
         if not paragraph:
-            raise RockyError("Mistral n'a pas produit le paragraphe entreprise.")
+            raise RockyError("Groq n'a pas produit le paragraphe entreprise.")
         return paragraph
 
     def application_accompanying_message(

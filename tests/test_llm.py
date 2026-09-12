@@ -1,6 +1,5 @@
 import json
 import pytest
-from types import SimpleNamespace
 
 from dashboard.rocky.config import Settings
 from dashboard.rocky.errors import RockyError
@@ -9,23 +8,27 @@ from dashboard.rocky.models import CandidateProfile
 from dashboard.rocky.models import JobOffer, ProfileProject
 
 
-def test_current_mistral_sdk_client_can_be_created_without_calling_api():
-    rocky = RockyLLM(Settings(mistral_api_key="test-only"))
+def test_current_groq_http_client_can_be_created_without_calling_api():
+    rocky = RockyLLM(Settings(groq_api_key="test-only"))
     client = rocky._client()
-    assert hasattr(client.chat, "complete")
+    assert hasattr(client, "post")
+    client.close()
 
 
-def test_mistral_errors_never_expose_credentials(monkeypatch):
+def test_groq_errors_never_expose_credentials(monkeypatch):
     class FailingCompletions:
         @staticmethod
-        def complete(**kwargs):
+        def post(*_args, **_kwargs):
             raise RuntimeError("request failed with api_key=SUPER_SECRET")
 
     class FailingClient:
-        class chat:
-            complete = FailingCompletions.complete
+        post = FailingCompletions.post
 
-    rocky = RockyLLM(Settings(mistral_api_key="SUPER_SECRET"))
+        @staticmethod
+        def close():
+            pass
+
+    rocky = RockyLLM(Settings(groq_api_key="SUPER_SECRET"))
     monkeypatch.setattr(rocky, "_client", lambda: FailingClient())
 
     with pytest.raises(RockyError) as captured:
@@ -35,7 +38,7 @@ def test_mistral_errors_never_expose_credentials(monkeypatch):
 
 def test_chat_receives_bounded_job_and_application_context(monkeypatch):
     profile = CandidateProfile(id=1, profile_name="Nico", summary="Data scientist")
-    rocky = RockyLLM(Settings(mistral_api_key="test-only"))
+    rocky = RockyLLM(Settings(groq_api_key="test-only"))
     captured = {}
 
     def fake_complete_text(system, user, temperature=0.2):
@@ -57,25 +60,44 @@ def test_chat_receives_bounded_job_and_application_context(monkeypatch):
     assert "database.jobs" in captured["system"]
 
 
-def test_stream_chat_yields_mistral_fragments(monkeypatch):
+def test_stream_chat_yields_groq_fragments(monkeypatch):
     profile = CandidateProfile(id=1, profile_name="Nico")
-    rocky = RockyLLM(Settings(mistral_api_key="test-only"))
-    events = [
-        SimpleNamespace(data=SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Bonjour "))])),
-        SimpleNamespace(data=SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Nicolas"))])),
-    ]
+    rocky = RockyLLM(Settings(groq_api_key="test-only"))
+    class FakeResponse:
+        @staticmethod
+        def raise_for_status():
+            pass
 
-    class FakeChat:
-        def stream(self, **_kwargs):
-            return iter(events)
+        @staticmethod
+        def iter_lines(**_kwargs):
+            return iter(
+                [
+                    'data: {"choices": [{"delta": {"content": "Bonjour "}}]}',
+                    'data: {"choices": [{"delta": {"content": "Nicolas"}}]}',
+                    "data: [DONE]",
+                ]
+            )
 
-    monkeypatch.setattr(rocky, "_client", lambda: SimpleNamespace(chat=FakeChat()))
+    class FakeClient:
+        @staticmethod
+        def post(*_args, **_kwargs):
+            return FakeResponse()
+
+        @staticmethod
+        def close():
+            pass
+
+    monkeypatch.setattr(
+        rocky,
+        "_client",
+        lambda: FakeClient(),
+    )
     assert "".join(rocky.stream_chat("Salut", profile)) == "Bonjour Nicolas"
 
 
 def test_translate_blocks_retries_one_structured_batch_when_invalid(monkeypatch):
     """Une réponse incomplète ne doit jamais déclencher une rafale d'appels LLM."""
-    rocky = RockyLLM(Settings(mistral_api_key="test-only"))
+    rocky = RockyLLM(Settings(groq_api_key="test-only"))
     batch_sizes = []
 
     def fake_complete_json(_system, user, temperature=0.1):
@@ -97,7 +119,7 @@ def test_application_message_uses_validated_profile_evidence(monkeypatch):
     """Le champ libre est court et ne constitue pas une troisième lettre."""
     profile = CandidateProfile(id=1, profile_name="Nico", summary="Data scientist")
     offer = JobOffer("Data Analyst", "Acme", "Python et SQL", description_is_full=True)
-    rocky = RockyLLM(Settings(mistral_api_key="test-only"))
+    rocky = RockyLLM(Settings(groq_api_key="test-only"))
     captured = {}
 
     def fake_complete_json(system, user, temperature=0.1):

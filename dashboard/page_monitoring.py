@@ -175,7 +175,7 @@ st.dataframe(
     width="stretch",
 )
 st.caption(
-    f"Modèle Mistral : {settings.mistral_model} · "
+    f"Modèle Groq : {settings.groq_model} · "
     f"Seuil par défaut : {settings.match_threshold} %"
 )
 

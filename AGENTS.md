@@ -19,7 +19,7 @@ python scripts/check_connections.py [--only apec]   # probe external APIs, keys 
 ## Layout and invariants
 
 - UI in `dashboard/` (`dashboard_v2.py` is the single entry point); UI-free business layer in `dashboard/rocky/`.
-- Single access points, never bypass them: `config.py` (.env), `repository.py` (SQL), `llm.py` (Mistral), `sources/registry.py` (source registration).
+- Single access points, never bypass them: `config.py` (.env), `repository.py` (SQL), `llm.py` (Groq), `sources/registry.py` (source registration).
 - The match score is deterministic (`matching.py`); the LLM never decides it.
 
 ## Hard rules

@@ -294,10 +294,10 @@ def _analysis_editor(settings, repository, profile, french_documents) -> None:
     """Analyse les sources puis laisse l'utilisateur valider chaque fait extrait."""
     st.caption(
         "Rocky n'invente rien. Avec ton accord, le texte extrait est envoyé au "
-        "service Mistral configuré ; les documents eux-mêmes ne sont pas journalisés."
+        "service Groq configuré ; les documents eux-mêmes ne sont pas journalisés."
     )
     consent = st.checkbox(
-        "J'autorise l'analyse Mistral pour préremplir ce profil.",
+        "J'autorise l'analyse Groq pour préremplir ce profil.",
         key=f"analysis_consent_{profile.id}",
     )
     if st.button(
@@ -614,7 +614,7 @@ if locale == "en":
     except RockyError as error:
         st.warning(
             "Rocky could not create the English pre-fill yet. You can retry after "
-            f"checking Mistral: {error}"
+            f"checking Groq: {error}"
         )
 profile = repository.fetch_profile(selected_id, locale)
 if profile is None:

@@ -651,12 +651,12 @@ def render_floating_chatbot() -> None:
             st.error("Le chat ne peut pas accéder aux données Rocky.")
             return
         llm = RockyLLM(settings)
-        st.caption(f"Assistant Rocky · {settings.mistral_model}")
+        st.caption(f"Assistant Rocky · {settings.groq_model}")
         if profile is None:
             st.info("Crée ou active un profil pour discuter avec Rocky.")
             return
         if not llm.is_configured:
-            st.warning("Ajoute MISTRAL_API_KEY dans .env puis redémarre Rocky.")
+            st.warning("Ajoute GROQ_API_KEY dans .env puis redémarre Rocky.")
             return
 
         job_options = {0: "Sans annonce particulière"}

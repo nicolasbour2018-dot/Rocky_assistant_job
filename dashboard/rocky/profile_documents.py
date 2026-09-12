@@ -238,7 +238,7 @@ def analyze_profile(
     letter_path: Path,
     consent_to_llm: bool,
 ) -> ProfileAnalysis:
-    """Combine extraction locale et analyse Mistral, avec repli manuel exploitable."""
+    """Combine extraction locale et analyse Groq, avec repli manuel exploitable."""
     raw_cv, _, _ = extract_pdf_text(cv_path)
     cv_text, _ = repair_spaced_pdf_text(raw_cv)
     letter_text = extract_docx_text(letter_path)
@@ -248,7 +248,7 @@ def analyze_profile(
     if consent_to_llm:
         llm = RockyLLM(settings)
         if not llm.is_configured:
-            raise RockyError("Mistral n'est pas configuré pour analyser les documents.")
+            raise RockyError("Groq n'est pas configuré pour analyser les documents.")
         result = llm.analyze_profile_documents(cv_text, letter_text)
         merged_skills = tuple(dict.fromkeys([*result.skills, *local_skills]))
         return ProfileAnalysis(
@@ -389,11 +389,11 @@ def generate_english_documents(
     """Génère uniquement les actifs anglais absents ou déjà générés.
 
     Le client injectable sert au smoke test hors ligne ; l'application utilise
-    toujours le client Mistral configuré par défaut.
+    toujours le client Groq configuré par défaut.
     """
     llm = llm or RockyLLM(settings)
     if not llm.is_configured:
-        raise RockyError("Mistral doit être configuré pour générer la version anglaise.")
+        raise RockyError("Groq doit être configuré pour générer la version anglaise.")
     french = {doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "fr")}
     english = {doc.kind: doc for doc in repository.fetch_profile_documents(profile_id, "en")}
     if "cv" not in french or "letter" not in french:

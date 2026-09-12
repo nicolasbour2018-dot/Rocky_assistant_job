@@ -1044,7 +1044,7 @@ def render_letter_workshop(
                 )
         if not llm.is_configured:
             st.caption(
-                "Mistral non configuré : les deux brouillons restent modifiables manuellement."
+                "Groq non configuré : les deux brouillons restent modifiables manuellement."
             )
     variables = LetterVariables(
         job_title=offer.job_title,
