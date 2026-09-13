@@ -727,20 +727,18 @@ def render_floating_chatbot() -> None:
                     )
             try:
                 application_rows = repository.fetch_applications(profile.id)
-                with st.chat_message("assistant"):
-                    st.session_state["rocky_expression"] = "thinking"
-                    answer = stream_llm_response(
-                        llm.stream_chat(
-                            prompt.strip(),
-                            profile,
-                            selected_offer,
-                            selected_match,
-                            jobs=jobs.to_dict("records"),
-                            applications=application_rows.to_dict("records"),
-                            skills=repository.fetch_skills(profile.id),
-                            history=messages[:-1],
-                        )
-                    )
+                answer = llm.chat(
+                    prompt.strip(),
+                    profile,
+                    selected_offer,
+                    selected_match,
+                    jobs=jobs.to_dict("records"),
+                    applications=application_rows.to_dict("records"),
+                    skills=repository.fetch_skills(profile.id),
+                    history=messages[:-1],
+                )
+
+                st.markdown(answer)
             except RockyError as error:
                 answer = str(error)
                 st.session_state["rocky_expression"] = "compassionate"

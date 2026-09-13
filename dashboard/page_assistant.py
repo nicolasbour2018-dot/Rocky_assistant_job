@@ -98,16 +98,17 @@ if prompt:
             try:
                 with st.chat_message("assistant"):
                     st.session_state["rocky_expression"] = "thinking"
-                    answer = stream_llm_response(
-                        llm.stream_chat(
-                            prompt,
-                            profile,
-                            jobs=jobs.to_dict("records"),
-                            applications=repository.fetch_applications(profile.id).to_dict("records"),
-                            skills=repository.fetch_skills(profile.id),
-                            history=messages[:-1],
-                        )
+
+                    answer = llm.chat(
+                        prompt,
+                        profile,
+                        jobs=jobs.to_dict("records"),
+                        applications=repository.fetch_applications(profile.id).to_dict("records"),
+                        skills=repository.fetch_skills(profile.id),
+                        history=messages[:-1],
                     )
+
+                    st.markdown(answer)
             except Exception as error:
                 st.session_state["rocky_expression"] = "compassionate"
                 answer = str(error)

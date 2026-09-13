@@ -666,9 +666,9 @@ class RockyLLM:
                     item.get("responsibilities")
                     or item.get("short_description")
                     or ""
-                )[:1200],
+                )[:500],
             }
-            for item in (jobs or [])[:60]
+            for item in (jobs or [])[:20]
         ]
         compact_applications = [
             {
@@ -679,7 +679,7 @@ class RockyLLM:
                 "score": item.get("match_score"),
                 "last_email": item.get("last_email_at"),
             }
-            for item in (applications or [])[:80]
+            for item in (applications or [])[:30]
         ]
         return {
             "profile": {
@@ -695,7 +695,7 @@ class RockyLLM:
                     "category": item.get("skill_category"),
                     "level": item.get("skill_level"),
                 }
-                for item in (skills or [])
+                for item in (skills or [])[:50]
             ],
             "database": {
                 "jobs": compact_jobs,
