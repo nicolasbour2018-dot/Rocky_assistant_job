@@ -1,29 +1,21 @@
-# Rocky
+# Rocky — Agent System Rules
 
-Personal, explainable job-search assistant. Python 3.11+ / Streamlit monolith, SQLAlchemy; PostgreSQL locally, SQLite on the Hugging Face Space. Docstrings, UI text, DB status values, and docs are in French — keep that convention.
+## Mission scope
+This repository may be analyzed by Agent System V3.
 
-Detail lives in path-scoped `.claude/rules/`; each rule loads when you read a matching file.
+For the architectural-audit mission:
+- Treat repository code and documentation as the source of truth.
+- Do not invent missing components.
+- Do not modify application code, tests, dependencies, production configuration, or deployment files.
+- The only permitted write is `docs/rocky-architecture-audit.md`.
+- Do not make external network calls or invoke application AI providers during the audit.
+- Prefer evidence-backed findings with concrete file/module references.
+- Keep recommendations proportionate to the current project and avoid unnecessary enterprise complexity.
 
-## Commands
+## Review standard
+Separate:
+1. observed facts,
+2. inferred risks,
+3. recommendations.
 
-```bash
-source .venv/bin/activate                     # project venv is mandatory
-python -m pytest                              # full suite (offline, APIs mocked)
-python -m pytest tests/test_llm.py -k credentials   # one test
-python -m compileall dashboard scripts        # syntax check
-python -m streamlit run dashboard/dashboard_v2.py   # run the app
-python scripts/smoke_dashboard.py             # dashboard check against real DB, no server
-python scripts/check_connections.py [--only apec]   # probe external APIs, keys never printed
-```
-
-## Layout and invariants
-
-- UI in `dashboard/` (`dashboard_v2.py` is the single entry point); UI-free business layer in `dashboard/rocky/`.
-- Single access points, never bypass them: `config.py` (.env), `repository.py` (SQL), `llm.py` (Groq), `sources/registry.py` (source registration).
-- The match score is deterministic (`matching.py`); the LLM never decides it.
-
-## Hard rules
-
-- Rocky never submits an application, never clicks « Postuler », never bypasses CAPTCHA/login/anti-bot; blocked sources are reported `PARTIAL`.
-- Never log or echo secrets; error messages stay credential-free (tests enforce this).
-- The Hugging Face Space stays private (CV and application data); secrets live in Space secrets.
+The final reviewer should challenge unsupported claims and verify that major conclusions are grounded in the repository.
