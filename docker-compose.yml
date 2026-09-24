@@ -2,7 +2,7 @@
 # See docs/decisions/B1-squelette.md. Compose interpolates this whole file: a literal "$" is written "$$".
 #
 #   docker compose run --rm --build check   # global verification (ruff, mypy, pytest)
-#   docker compose up -d app                # application on http://127.0.0.1:8000
+#   docker compose up -d --build --wait app # migrations (service migrate), then http://127.0.0.1:8000
 #
 # Never run `docker compose config`: it prints the values interpolated from the local environment file.
 
@@ -34,6 +34,16 @@ x-dockerfile: &dockerfile |
   FROM base AS dev
   RUN uv sync --frozen --no-install-project
   ENV PYTHONPATH=/app
+
+# Runtime image and database URL shared by the application and the migrations.
+x-app-image: &app-image
+  build:
+    context: .
+    dockerfile_inline: *dockerfile
+    target: runtime
+  image: rocky-app:dev
+  environment:
+    ROCKY_DATABASE_URL: postgresql://rocky_app:${ROCKY_DB_APP_PASSWORD:-}@db:5432/rocky
 
 # Creates the application role: never a superuser, owner of its database.
 x-db-init: &db-init
@@ -79,19 +89,21 @@ services:
       - *db-init
     healthcheck: *db-healthcheck
 
-  app:
-    build:
-      context: .
-      dockerfile_inline: *dockerfile
-      target: runtime
-    image: rocky-app:dev
-    environment:
-      ROCKY_DATABASE_URL: postgresql://rocky_app:${ROCKY_DB_APP_PASSWORD:-}@db:5432/rocky
-    ports:
-      - "127.0.0.1:8000:8000"
+  # Brings the schema to the latest migration, then exits; the application waits for its success.
+  migrate:
+    <<: *app-image
+    command: ["alembic", "upgrade", "head"]
     depends_on:
       db:
         condition: service_healthy
+
+  app:
+    <<: *app-image
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
       interval: 10s

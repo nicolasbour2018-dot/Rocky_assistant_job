@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-import psycopg
+from sqlalchemy import Connection, text
 
 
-def test_test_database_runs_postgresql_18_or_later(
-    pg_connection: psycopg.Connection,
-) -> None:
-    assert pg_connection.info.server_version >= 180000
+def test_test_database_runs_postgresql_18_or_later(db: Connection) -> None:
+    version = db.dialect.server_version_info
+
+    assert version is not None
+    assert version >= (18,)
 
 
-def test_application_role_is_not_superuser(pg_connection: psycopg.Connection) -> None:
-    row = pg_connection.execute(
-        "SELECT rolsuper, rolcreatedb, rolcreaterole FROM pg_roles"
-        " WHERE rolname = current_user"
-    ).fetchone()
+def test_application_role_is_not_superuser(db: Connection) -> None:
+    row = db.execute(
+        text(
+            "SELECT rolsuper, rolcreatedb, rolcreaterole FROM pg_roles"
+            " WHERE rolname = current_user"
+        )
+    ).one()
 
-    assert row == (False, False, False)
+    assert tuple(row) == (False, False, False)

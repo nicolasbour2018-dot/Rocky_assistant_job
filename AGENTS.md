@@ -122,7 +122,11 @@ docs/
 - Vérification globale : `docker compose run --rm --build check` (ruff format, ruff check, mypy strict, pytest
   sur la base de test) — doit rester verte en moins de 2 min.
 - Tests seuls, boucle rapide : `docker compose up -d test-db` puis `uv run pytest` (idem `uv run ruff check`, `uv run mypy`).
-- Lancer l'application : `docker compose up -d --build --wait app` → `http://127.0.0.1:8000/health`.
+- Lancer l'application : `docker compose up -d --build --wait app` → `http://127.0.0.1:8000/health`
+  (le service `migrate` amène d'abord la base à la dernière migration).
+- Migrations sur la base de développement : `docker compose run --rm --build migrate` (`upgrade head`) ;
+  `docker compose run --rm migrate alembic <commande>` pour les autres (`current`, `downgrade -1`…).
+  Règles d'écriture des migrations : `.claude/rules/system.md`.
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
 - Sur GitHub : `.github/workflows/verification.yml` exécute la vérification globale à chaque push sur `refonte` et
   sur chaque PR. Une étape n'est terminée que si ce passage est vert aussi.

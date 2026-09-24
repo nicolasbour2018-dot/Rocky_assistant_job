@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Assistant personnel de recherche d'emploi"
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.20.0",
     "fastapi>=0.141.1",
     "psycopg[binary]>=3.3.6",
+    "sqlalchemy>=2.0.54",
     "uvicorn>=0.53.0",
 ]
 
@@ -29,6 +31,10 @@ python-preference = "only-managed"
 # Only the new Rocky is packaged; the old code at the root (dashboard/, scripts/...) stays out.
 module-name = "rocky"
 module-root = ""
+
+[tool.alembic]
+# Migrations ship inside the package: the runtime image (service migrate) finds them too.
+script_location = "rocky.system:migrations"
 
 [tool.ruff]
 line-length = 88

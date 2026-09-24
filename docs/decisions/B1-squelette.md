@@ -50,6 +50,7 @@ Mesuré le 24/09/2026 sur le Mac de Nicolas (Apple Silicon), `time docker compos
 | À froid (images `postgres:18`, `python:3.13-slim`, `uv` téléchargées, image construite) | 54 s | vert, 8 tests |
 | Après modification de code (cas du critère) | 3,6 s | vert |
 | Erreur de type introduite volontairement | — | échec (mypy, code de sortie 1) |
+| Sur GitHub Actions (`ubuntu-latest`, sans cache), commit `63b2fc9` | 34 s (dont 31 s pour la commande) | vert |
 
 Autres contrôles :
 - `pytest --collect-only` : 8 tests, tous dans `tests/system/` ; aucun ancien test collecté.

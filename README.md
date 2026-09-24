@@ -29,7 +29,8 @@ cp .env.example .env     # puis renseigner les mots de passe PostgreSQL
 |---|---|
 | Vérification globale (format, lint, types, tests) | `docker compose run --rm --build check` |
 | Tests seuls, depuis le poste | `docker compose up -d test-db` puis `uv run pytest` |
-| Lancer l'application | `docker compose up -d --build --wait app` → <http://127.0.0.1:8000/health> |
+| Lancer l'application (migrations comprises) | `docker compose up -d --build --wait app` → <http://127.0.0.1:8000/health> |
+| Appliquer les migrations (base de développement) | `docker compose run --rm --build migrate` |
 | Arrêter | `docker compose down` (les données restent dans le volume `rocky-db-data`) |
 
 La vérification globale n'a besoin que de Docker ; elle tourne contre une base PostgreSQL de test jetable
