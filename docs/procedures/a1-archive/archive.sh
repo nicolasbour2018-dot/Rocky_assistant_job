@@ -167,7 +167,7 @@ docker exec "$APP" tar -C /data -cf - \
     | tar -C "$OUT/documents/volume" -xf -
 docker exec "$APP" sh -c 'cd /data && for f in rocky.db rocky.db-wal rocky.db-shm; do [ -f "$f" ] && echo "$f"; done' \
     | while read -r f; do docker exec "$APP" cat "/data/$f" > "$OUT/db/sqlite/volume_$f"; done
-# Sur l'hôte, les fichiers iCloud non téléchargés sont rapatriés à la lecture : cette partie peut être lente.
+# Si le dépôt est synchronisé par iCloud, les fichiers non téléchargés sont rapatriés à la lecture (lent).
 # Les chemins relatifs « output/… » d'août se résolvent depuis la racine du dépôt (l'app tournait alors sur l'hôte).
 if [[ -d "$ROOT/output" ]]; then
     log "documents de ./output (hôte)"

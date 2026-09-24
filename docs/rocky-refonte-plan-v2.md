@@ -226,6 +226,6 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(A1 → D5, B5)** Chemins de documents hétérogènes dans l'ancienne base : absolus (`/data/…`), relatifs au
   répertoire courant (`output/…`, `data/…`), dont un CV de profil de test jamais conservé. Le nouveau Rocky stocke
   des chemins relatifs à une racine de stockage configurée, vérifiés par hash.
-- **(A1 → B1)** Le dépôt est sur un Bureau synchronisé iCloud (fichiers non téléchargés : `du` trompeur, lectures
-  lentes) et les montages bind Docker échouent (`Resource deadlock avoided`). Données PostgreSQL et fichiers du
-  nouveau Rocky : volumes Docker nommés, pas de montage depuis le Bureau.
+- **(A1 → B1)** Les montages bind Docker échouent (`Resource deadlock avoided`, OSError 35), aggravés par la
+  synchronisation iCloud du Bureau (depuis levée : dépôt renommé `Rocky_assistant_job.nosync`). Données PostgreSQL et
+  fichiers du nouveau Rocky : volumes Docker nommés ; vérifier en B1 si les montages bind refonctionnent hors iCloud.

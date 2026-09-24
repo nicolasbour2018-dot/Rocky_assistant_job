@@ -34,8 +34,12 @@ Date : 24/09/2026 · Étape : A1 (plan v2) · Procédure : `docs/procedures/a1-a
 - `SHA256SUMS` vérifié ; aucun fichier secret dans l'archive ; conteneur de contrôle supprimé ;
   ancien Rocky toujours disponible (HTTP 200 sur `127.0.0.1:8501`).
 
-## Point d'attention
+## Synchronisation iCloud (résolu)
 
-Le dépôt est sur le Bureau, synchronisé par iCloud (fichiers « non téléchargés » constatés dans `./output`).
-L'archive, qui contient données personnelles et empreintes de mots de passe, est donc probablement copiée
-dans iCloud. À trancher par Nicolas : accepter, ou déplacer l'archive hors du Bureau.
+Pendant A1, le dépôt était sur le Bureau synchronisé par iCloud (fichiers « non téléchargés » constatés dans
+`./output`), donc l'archive — données personnelles et empreintes de mots de passe — y partait aussi.
+Le 24/09, après rapatriement complet des fichiers (aucun fichier « dataless » restant, `SHA256SUMS` de l'archive
+vérifié), Nicolas a renommé le dépôt en `Rocky_assistant_job.nosync` : iCloud l'exclut désormais.
+Nouveau chemin : `~/Desktop/Projets_IA/Rocky_assistant_job.nosync` ; l'archive reste dans `backups/`.
+Attention : renommer en `.nosync` un dossier contenant des fichiers encore dataless les rend illisibles ;
+toujours vérifier `find . -flags +dataless` avant.
