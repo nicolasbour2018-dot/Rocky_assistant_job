@@ -111,7 +111,7 @@ aucun identifiant interne affiché.
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
 | A1. Archive | `pg_dump` complet ; export Parquet + CSV des offres, scores, rattachements, candidatures, événements, mails et décisions Gmail ; copie des documents ; tag Git de l'ancienne version | Dump restauré sur base vierge avec comptes identiques ; exports lisibles dans un notebook | ✅ |
-| A2. Cadrage écrit | Ce plan dans `docs/` ; `AGENTS.md` (écritures autorisées, arborescence, conventions) ; nouveau code sur une branche ; ancien Rocky lancé depuis un `git worktree` séparé ; règles `.claude/rules/` alignées | Un agent sait sans ambiguïté ce qu'il a le droit de toucher | ⬜ |
+| A2. Cadrage écrit | Ce plan dans `docs/` ; `AGENTS.md` (écritures autorisées, arborescence, conventions) ; nouveau code sur une branche ; ancien Rocky lancé depuis un `git worktree` séparé ; règles `.claude/rules/` alignées | Un agent sait sans ambiguïté ce qu'il a le droit de toucher | ✅ |
 
 ### B. Socle `system` et `profil`
 
@@ -226,6 +226,12 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(A1 → D5, B5)** Chemins de documents hétérogènes dans l'ancienne base : absolus (`/data/…`), relatifs au
   répertoire courant (`output/…`, `data/…`), dont un CV de profil de test jamais conservé. Le nouveau Rocky stocke
   des chemins relatifs à une racine de stockage configurée, vérifiés par hash.
-- **(A1 → B1)** Les montages bind Docker échouent (`Resource deadlock avoided`, OSError 35), aggravés par la
-  synchronisation iCloud du Bureau (depuis levée : dépôt renommé `Rocky_assistant_job.nosync`). Données PostgreSQL et
-  fichiers du nouveau Rocky : volumes Docker nommés ; vérifier en B1 si les montages bind refonctionnent hors iCloud.
+- **(A1 → B1)** Les montages bind Docker échouaient (`Resource deadlock avoided`, OSError 35) quand le dépôt était
+  sous iCloud. Le dépôt vit désormais dans `~/Developer/` : vérifier en B1 si les montages bind fonctionnent ;
+  données PostgreSQL et fichiers du nouveau Rocky en volumes Docker nommés dans tous les cas.
+- **(A2 → B1)** `pyproject.toml` de l'ancien Rocky déclare `testpaths = ["tests"]` : la configuration pytest du nouveau
+  Rocky ne doit collecter que `tests/<module>/`, pas les anciens tests à plat.
+- **(A2 → B1)** Le garde-fou `.claude/hooks/guard_paths.py` ne couvre que Claude Code ; Codex ne s'appuie que sur
+  `AGENTS.md`. À réévaluer si Codex travaille sur la refonte.
+- **(A2 → C4)** Les règles de score de l'ancien Rocky s'appellent `matching-v1` : la version des nouvelles règles
+  porte un nom distinct (pas `matching-v2`).

@@ -3,8 +3,9 @@
 ## 1. Contexte
 
 Rocky est en **refonte complète**. Le document normatif est `docs/rocky-refonte-plan-v2.md`.
-Le nouveau Rocky est développé sur la branche de refonte, à côté de l'ancien (Streamlit),
-qui reste l'outil quotidien de Nicolas jusqu'à la bascule (étape F2).
+Le nouveau Rocky est développé sur la branche **`refonte`**. L'ancien Rocky (Streamlit) reste l'outil
+quotidien de Nicolas jusqu'à la bascule (étape F2) : il tourne dans Docker, lancé depuis le worktree
+`../Rocky_v1` (tag `rocky-v1-streamlit`), jamais depuis ce dépôt.
 
 Ordre des sources de vérité, en cas de conflit :
 1. `docs/rocky-refonte-plan-v2.md` (décisions D1–D16, étapes, critères de sortie) ;
@@ -13,8 +14,7 @@ Ordre des sources de vérité, en cas de conflit :
 4. le code du nouveau Rocky.
 
 `docs/archive/` et l'ancien code sont **historiques et non normatifs** : on peut les lire pour porter
-une logique, jamais les suivre comme règle. Les règles `.claude/rules/` héritées de l'ancien Rocky
-ne s'appliquent pas au nouveau code tant qu'elles n'ont pas été alignées sur le plan v2.
+une logique, jamais les suivre comme règle. Les anciennes règles d'agent sont dans `docs/archive/rules-v1/`.
 
 ## 2. Méthode de travail
 
@@ -25,27 +25,50 @@ ne s'appliquent pas au nouveau code tant qu'elles n'ont pas été alignées sur 
 - Mettre à jour la colonne « État » de l'étape dans le plan.
 - Un constat hors du périmètre de l'étape est **noté** dans la section 8 du plan (avec l'étape concernée), pas corrigé.
 - Les décisions métier obtenues avec Nicolas sont consignées dans `docs/decisions/<étape>-<sujet>.md` avant l'implémentation.
-- Une étape = une session de travail = un commit (ou une petite série de commits cohérente).
+- Une étape = une session de travail = un commit (ou une petite série de commits cohérente), **poussé** sur `origin`
+  à la fin de l'étape : GitHub est la source de vérité du code.
 - En cas de doute sur une règle métier : demander à Nicolas plutôt qu'inventer.
 
 ## 3. Écritures
 
-**Autorisé**
-- Le nouveau code sous `rocky/` (`system/`, `profil/`, `offres/`, `candidatures/`, `messages/`).
-- `tests/` pour le nouveau code.
-- `docs/` : état des étapes et section 8 du plan, `docs/decisions/`, documentation du nouveau code.
-- Les fichiers de racine prévus par le plan : `pyproject.toml`, `docker-compose.yml`, `.env.example`, `README`.
-- L'ajout d'une dépendance quand l'étape le requiert, justifié dans le plan ou la décision de l'étape.
+| Chemin | Droit |
+|---|---|
+| `rocky/` (`system/`, `profil/`, `offres/`, `candidatures/`, `messages/`) | écriture — nouveau code |
+| `tests/<module>/`, `tests/conftest.py` | écriture — tests du nouveau code |
+| `docs/` hors `docs/archive/` | écriture — plan (colonne « État », section 8), `docs/decisions/`, `docs/procedures/`, docs du nouveau code |
+| `pyproject.toml`, `docker-compose.yml`, `.env.example`, `README.md`, `.gitignore` | écriture — fichiers de racine du plan ; les versions actuelles sont celles de l'ancien Rocky, remplacées à partir de B1 |
+| `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/` | écriture — configuration des agents, alignée sur le plan v2 |
+| `dashboard/`, `database/`, `scripts/`, `cron/`, `templates/`, `deployment/`, `assets/`, `.streamlit/`, `output/`, `Dockerfile`, `.dockerignore`, `requirements.txt`, `tests/test_*.py` (tests à plat) | **lecture seule** — ancien Rocky, retiré en F2 |
+| `../Rocky_v1/` (worktree de l'ancien Rocky, avec son `compose.yaml` non versionné, son `.env` et son `output/` d'hôte) | **lecture seule** |
+| `backups/` (archive A1), `data/`, `logs/`, `docs/archive/` | **lecture seule** — seul `docs/procedures/a1-archive/archive.sh` écrit dans `backups/` |
+| `.env` (sauf `.env.example`), `.secrets/`, `credentials*.json`, `token*.json`, clés d'API | **interdit**, même en lecture, et jamais versionné |
 
-**Interdit**
-- Modifier l'ancien Rocky : `dashboard/`, `database/`, `scripts/`, `cron/`, ancien `Dockerfile`,
-  scripts Hugging Face (lecture autorisée ; retrait prévu uniquement en F2).
-- Toucher la base de données utilisée au quotidien par l'ancien Rocky, ou l'archive (lecture seule).
-- Lire, écrire ou versionner des secrets : `.env`, `credentials.json`, jetons OAuth, clés d'API.
-- Créer des fichiers à la racine en dehors de ceux listés ci-dessus.
-- Modifier les décisions D1–D16 du plan sans validation explicite de Nicolas.
+Également interdit :
+- toucher la base PostgreSQL de l'ancien Rocky (`job-assistant-postgres`) ou ses volumes Docker, sauf lecture
+  explicitement demandée par l'étape ;
+- créer à la racine un fichier absent du tableau ;
+- modifier les décisions D1–D16 du plan sans validation explicite de Nicolas ;
+- ajouter une dépendance sans justification dans le plan ou la décision de l'étape.
+
+**Garde-fou** : `.claude/hooks/guard_paths.py` (hook `PreToolUse` de Claude Code) refuse les outils de fichiers
+qui écrivent dans une zone en lecture seule et toute mention d'un secret, y compris dans une commande shell.
+Un refus ne se contourne pas (pas d'écriture par `sed`, `cp` ou script à la place) : on demande à Nicolas.
+Les écritures par commande shell restent régies par ce tableau. Cas de contrôle :
+`/usr/bin/python3 .claude/hooks/check_guard_paths.py`.
 
 ## 4. Architecture (rappel du plan, section 3)
+
+```
+rocky/
+  system/        base, config, comptes & sessions, événements, LLM, fichiers, planificateur, layout web
+  profil/        profil unique FR/EN, pistes, compétences, CV maître
+  offres/        sources, import URL, analyse d'annonce, scoring, veille, décisions
+  candidatures/  dossier, statuts, documents, révisions, envoi, suivi
+  messages/      Gmail, classification, alertes emploi, décisions sur les candidatures
+tests/
+  <module>/      un dossier par module, miroir de rocky/ (les tests à plat tests/test_*.py sont ceux de l'ancien Rocky)
+docs/
+```
 
 - Modules métier (`profil`, `offres`, `candidatures`, `messages`) sur un socle technique `system`.
   Un module utilise `system` ; il ne recopie pas ce qui s'y trouve et n'accède pas au SQL d'un autre module.
@@ -58,8 +81,26 @@ ne s'appliquent pas au nouveau code tant qu'elles n'ont pas été alignées sur 
 - **Aucune exception avalée en silence** : une erreur est soit remontée, soit enregistrée et rendue visible.
 - Une fonction de calcul (score, classification) n'a pas d'effet de bord ; l'écriture est une opération nommée séparée.
 - PostgreSQL uniquement, y compris pour les tests (PostgreSQL de test). Schéma géré par Alembic.
+- Règles d'agent par module : `.claude/rules/<module>.md` (`paths: rocky/<module>/**`), créées quand le module
+  naît, uniquement pour ce qui n'est pas déjà dans ce fichier.
 
-## 5. Invariants produit
+## 5. Conventions
+
+| Élément | Langue |
+|---|---|
+| Code : identifiants, docstrings, commentaires, messages d'erreur internes, noms de tests | anglais |
+| Messages de commit et descriptions de PR | anglais |
+| Noms des modules métier (D13) : `profil`, `offres`, `candidatures`, `messages` | français (fixés par le plan) |
+| Textes de l'interface, documentation (`docs/`, README), décisions | français |
+
+- Commits : `<type>(<étape>): <summary>` à l'impératif, par ex. `feat(B2): add append-only event journal`.
+  Types : `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
+- Branche de travail : `refonte` ; une PR vers `main` seulement à la bascule, sauf demande de Nicolas.
+- Poste de travail : le dépôt vit dans `~/Developer/Rocky_assistant_job`, l'ancien Rocky dans `~/Developer/Rocky_v1`,
+  **hors iCloud**. Ne jamais placer le dépôt dans le Bureau, Documents ou un dossier synchronisé (incident A1/A2 :
+  fichiers déchargés puis supprimés par iCloud).
+
+## 6. Invariants produit
 
 - Rocky **ne postule jamais** à la place de l'utilisateur : préremplissage avec confirmation, envoi final manuel.
 - Gmail en **lecture seule** ; aucun élargissement de scope.
@@ -69,20 +110,21 @@ ne s'appliquent pas au nouveau code tant qu'elles n'ont pas été alignées sur 
   sont conservées avec leur raison (données d'entraînement, décision D14).
 - Aucune offre collectée n'est jetée : une offre sous le seuil est conservée avec son motif.
 
-## 6. Réseau, API et données de test
+## 7. Réseau, API et données de test
 
 - Tests : aucun appel réseau ni fournisseur LLM ; utiliser des jeux de données enregistrés et des faux adaptateurs.
 - Appels réels (sources, Gmail, Groq) seulement quand l'étape l'exige, avec l'accord de Nicolas.
 - Les jeux de test issus de l'archive sont anonymisés si nécessaire et ne contiennent aucun secret.
 
-## 7. Vérification
+## 8. Vérification
 
-<!-- À compléter à l'étape B1 -->
+Commandes définies à l'étape B1 ; d'ici là, aucune vérification globale n'existe.
 - Vérification globale : `…` (lint ruff, typage, tests)
 - Tests seuls : `…`
 - Lancer l'application : `…`
+- Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
 
-## 8. Standard de revue
+## 9. Standard de revue
 
 Toute revue ou tout audit sépare :
 1. les faits observés (avec références fichier/module) ;
