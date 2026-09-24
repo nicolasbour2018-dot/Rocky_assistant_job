@@ -1,10 +1,69 @@
 [project]
-name = "rocky-job-assistant"
+name = "rocky"
 version = "0.1.0"
-description = "Assistant personnel et modulaire de recherche d'emploi"
-requires-python = ">=3.11"
+description = "Assistant personnel de recherche d'emploi"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.141.1",
+    "psycopg[binary]>=3.3.6",
+    "uvicorn>=0.53.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.8",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.18,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv]
+# Use a uv-managed interpreter, never the Anaconda one found on the PATH.
+python-preference = "only-managed"
+
+[tool.uv.build-backend]
+# Only the new Rocky is packaged; the old code at the root (dashboard/, scripts/...) stays out.
+module-name = "rocky"
+module-root = ""
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+# The old Rocky (flat tests/test_*.py, dashboard/, scripts/...) is read-only and never linted here.
+include = ["rocky/**/*.py", "tests/**/*.py"]
+extend-exclude = ["tests/test_*.py"]
+
+[tool.ruff.lint]
+# Rule selection carried over from origin/main, where it was tuned on this project.
+select = [
+    "A", "ASYNC", "B", "C4", "DTZ", "E", "EXE", "F", "FLY", "FURB", "G", "I",
+    "INT", "ISC", "LOG", "N", "PERF", "PGH", "PIE", "PLW", "PTH", "PYI", "RET",
+    "RUF", "S101", "S105", "S112", "S314", "S324", "S603", "S607", "S608",
+    "SIM", "SLOT", "T20", "TID", "UP", "W", "YTT",
+]
+ignore = ["RUF001", "RUF002", "RUF003", "SIM108", "PERF401"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["rocky", "tests"]
+exclude = ['^tests/test_[^/]*\.py$']
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
-addopts = "-q"
+addopts = "-q --strict-markers --import-mode=importlib"
+# A deprecation in a dependency fails the run instead of scrolling past.
+filterwarnings = ["error"]

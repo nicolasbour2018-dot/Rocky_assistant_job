@@ -1,0 +1,139 @@
+# New Rocky: application, PostgreSQL, test PostgreSQL and the single verification command.
+# See docs/decisions/B1-squelette.md. Compose interpolates this whole file: a literal "$" is written "$$".
+#
+#   docker compose run --rm --build check   # global verification (ruff, mypy, pytest)
+#   docker compose up -d app                # application on http://127.0.0.1:8000
+#
+# Never run `docker compose config`: it prints the values interpolated from the local environment file.
+
+name: rocky
+
+# The root Dockerfile belongs to the old Rocky (read-only until F2): the new image is defined here.
+x-dockerfile: &dockerfile |
+  FROM python:3.13-slim AS base
+  COPY --from=ghcr.io/astral-sh/uv:0.12.18 /uv /bin/uv
+  ENV PYTHONDONTWRITEBYTECODE=1 \
+      PYTHONUNBUFFERED=1 \
+      UV_COMPILE_BYTECODE=1 \
+      UV_LINK_MODE=copy \
+      UV_PYTHON_DOWNLOADS=never \
+      UV_PYTHON_PREFERENCE=only-system \
+      UV_PROJECT_ENVIRONMENT=/opt/venv \
+      PATH=/opt/venv/bin:$$PATH
+  WORKDIR /app
+  COPY pyproject.toml uv.lock ./
+
+  FROM base AS runtime
+  RUN uv sync --frozen --no-dev --no-install-project
+  COPY rocky ./rocky
+  RUN uv sync --frozen --no-dev --no-editable && useradd --create-home --uid 1000 rocky
+  USER rocky
+  EXPOSE 8000
+  CMD ["uvicorn", "--factory", "rocky.system.web:create_app", "--host", "0.0.0.0", "--port", "8000"]
+
+  FROM base AS dev
+  RUN uv sync --frozen --no-install-project
+  ENV PYTHONPATH=/app
+
+# Creates the application role: never a superuser, owner of its database.
+x-db-init: &db-init
+  source: db-init
+  target: /docker-entrypoint-initdb.d/10-rocky-app-role.sh
+  mode: 0555
+
+x-db-healthcheck: &db-healthcheck
+  # TCP, not the socket: the temporary server of the init phase only listens on the socket.
+  test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+  interval: 2s
+  timeout: 3s
+  retries: 30
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: rocky_admin
+      POSTGRES_PASSWORD: ${ROCKY_DB_ADMIN_PASSWORD:-}
+      POSTGRES_DB: rocky
+      ROCKY_DB_APP_PASSWORD: ${ROCKY_DB_APP_PASSWORD:-}
+    volumes:
+      - db-data:/var/lib/postgresql
+    configs:
+      - *db-init
+    healthcheck: *db-healthcheck
+
+  # Throwaway database for the tests: in memory, durability off, fixed non-secret credentials.
+  test-db:
+    image: postgres:18
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+    environment:
+      POSTGRES_USER: rocky_test_admin
+      POSTGRES_PASSWORD: rocky_test_admin
+      POSTGRES_DB: rocky_test
+      ROCKY_DB_APP_PASSWORD: rocky_test
+    tmpfs:
+      - /var/lib/postgresql
+    ports:
+      - "127.0.0.1:55432:5432"
+    configs:
+      - *db-init
+    healthcheck: *db-healthcheck
+
+  app:
+    build:
+      context: .
+      dockerfile_inline: *dockerfile
+      target: runtime
+    image: rocky-app:dev
+    environment:
+      ROCKY_DATABASE_URL: postgresql://rocky_app:${ROCKY_DB_APP_PASSWORD:-}@db:5432/rocky
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  check:
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile_inline: *dockerfile
+      target: dev
+    image: rocky-check:dev
+    environment:
+      ROCKY_TEST_DATABASE_URL: postgresql://rocky_app:rocky_test@test-db:5432/rocky_test
+      RUFF_CACHE_DIR: /cache/ruff
+      MYPY_CACHE_DIR: /cache/mypy
+      PYTEST_ADDOPTS: -p no:cacheprovider
+    volumes:
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./rocky:/app/rocky:ro
+      - ./tests:/app/tests:ro
+      - check-cache:/cache
+    depends_on:
+      test-db:
+        condition: service_healthy
+    command: ["sh", "-c", "ruff format --check && ruff check && mypy && pytest"]
+
+configs:
+  db-init:
+    content: |
+      #!/bin/sh
+      set -eu
+      : "$${ROCKY_DB_APP_PASSWORD:?ROCKY_DB_APP_PASSWORD is empty (see .env.example)}"
+      psql -v ON_ERROR_STOP=1 --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" \
+        -v app_password="$$ROCKY_DB_APP_PASSWORD" -v db_name="$$POSTGRES_DB" <<'SQL'
+      CREATE ROLE rocky_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD :'app_password';
+      ALTER DATABASE :"db_name" OWNER TO rocky_app;
+      SQL
+
+volumes:
+  db-data:
+    name: rocky-db-data
+  check-cache:
+    name: rocky-check-cache

@@ -36,7 +36,7 @@ une logique, jamais les suivre comme règle. Les anciennes règles d'agent sont 
 | `rocky/` (`system/`, `profil/`, `offres/`, `candidatures/`, `messages/`) | écriture — nouveau code |
 | `tests/<module>/`, `tests/conftest.py` | écriture — tests du nouveau code |
 | `docs/` hors `docs/archive/` | écriture — plan (colonne « État », section 8), `docs/decisions/`, `docs/procedures/`, docs du nouveau code |
-| `pyproject.toml`, `docker-compose.yml`, `.env.example`, `README.md`, `.gitignore` | écriture — fichiers de racine du plan ; les versions actuelles sont celles de l'ancien Rocky, remplacées à partir de B1 |
+| `pyproject.toml`, `uv.lock`, `docker-compose.yml`, `.env.example`, `README.md`, `.gitignore` | écriture — fichiers de racine du nouveau Rocky ; `uv.lock` n'est modifié que par `uv` (`uv add`, `uv lock`), jamais à la main |
 | `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/` | écriture — configuration des agents, alignée sur le plan v2 |
 | `dashboard/`, `database/`, `scripts/`, `cron/`, `templates/`, `deployment/`, `assets/`, `.streamlit/`, `output/`, `Dockerfile`, `.dockerignore`, `requirements.txt`, `tests/test_*.py` (tests à plat) | **lecture seule** — ancien Rocky, retiré en F2 |
 | `../Rocky_v1/` (worktree de l'ancien Rocky, avec son `compose.yaml` non versionné, son `.env` et son `output/` d'hôte) | **lecture seule** |
@@ -118,11 +118,17 @@ docs/
 
 ## 8. Vérification
 
-Commandes définies à l'étape B1 ; d'ici là, aucune vérification globale n'existe.
-- Vérification globale : `…` (lint ruff, typage, tests)
-- Tests seuls : `…`
-- Lancer l'application : `…`
+- Vérification globale : `docker compose run --rm --build check` (ruff format, ruff check, mypy strict, pytest
+  sur la base de test) — doit rester verte en moins de 2 min.
+- Tests seuls, boucle rapide : `docker compose up -d test-db` puis `uv run pytest` (idem `uv run ruff check`, `uv run mypy`).
+- Lancer l'application : `docker compose up -d --build --wait app` → `http://127.0.0.1:8000/health`.
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
+
+Précautions (détails : `docs/decisions/B1-squelette.md`) :
+- **ne jamais lancer `docker compose config`** : il affiche les valeurs interpolées depuis le `.env` ;
+- aucune commande n'a besoin de nommer le `.env` : Compose le lit seul ;
+- une base de test injoignable fait échouer les tests, elle ne les fait jamais ignorer ;
+- dépendances ajoutées avec `uv add` (ou `uv add --dev`), jamais avec `pip`.
 
 ## 9. Standard de revue
 

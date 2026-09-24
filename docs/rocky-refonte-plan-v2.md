@@ -117,7 +117,7 @@ aucun identifiant interne affiché.
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| B1. Squelette | Arborescence ; Docker Compose (app, PostgreSQL, PostgreSQL de test) ; configuration `.env` ; ruff + vérificateur de types ; pytest sur PostgreSQL ; commande unique de vérification | Vérification verte en moins de 2 min | ⬜ |
+| B1. Squelette | Arborescence ; Docker Compose (app, PostgreSQL, PostgreSQL de test) ; configuration `.env` ; ruff + vérificateur de types ; pytest sur PostgreSQL ; commande unique de vérification | Vérification verte en moins de 2 min | ✅ |
 | B2. Base et événements | Connexion ; Alembic (première révision) ; journal d'événements en ajout seul | `upgrade` / `downgrade` fonctionnent sur base vide | ⬜ |
 | B3. Comptes et sessions | Comptes, SMTP ; sessions D11 ; tout le SQL d'authentification dans l'accès SQL de `system` | Rechargement, URL directe et redémarrage du navigateur gardent la session ; la déconnexion l'invalide | ⬜ |
 | B4. Coque web et prototype | FastAPI + Jinja + HTMX ; layout et 7 entrées de navigation ; prototype de l'écran de tri sur données factices | Décision explicite : HTMX confirmé ou plan B (NiceGUI) | ⬜ |
@@ -221,6 +221,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(A1 → B1, §5 VPS)** Le conteneur `job-assistant-postgres` a `POSTGRES_USER=valeur_de_DB_USER` (gabarit non
   substitué) ; le rôle réel `job_user` est **superutilisateur** et sert à l'application. Le nouveau Rocky
   doit utiliser un rôle applicatif sans privilège de superutilisateur.
+  *Résolu en B1 : rôle `rocky_app` sans privilège, vérifié par un test.*
 - **(A1 → F2)** `main` a divergé du code en service (78/82 fichiers différents : corrections lint/typage/sécurité
   jamais déployées). La référence de l'ancien Rocky est le tag `rocky-v1-streamlit` ; décider en F2 du sort de `main`.
 - **(A1 → D5, B5)** Chemins de documents hétérogènes dans l'ancienne base : absolus (`/data/…`), relatifs au
@@ -229,9 +230,20 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(A1 → B1)** Les montages bind Docker échouaient (`Resource deadlock avoided`, OSError 35) quand le dépôt était
   sous iCloud. Le dépôt vit désormais dans `~/Developer/` : vérifier en B1 si les montages bind fonctionnent ;
   données PostgreSQL et fichiers du nouveau Rocky en volumes Docker nommés dans tous les cas.
+  *Résolu en B1 pour PostgreSQL : montages bind fonctionnels (service `check`), base en volume `rocky-db-data`.*
 - **(A2 → B1)** `pyproject.toml` de l'ancien Rocky déclare `testpaths = ["tests"]` : la configuration pytest du nouveau
   Rocky ne doit collecter que `tests/<module>/`, pas les anciens tests à plat.
+  *Résolu en B1 : `collect_ignore_glob` dans `tests/conftest.py`.*
 - **(A2 → B1)** Le garde-fou `.claude/hooks/guard_paths.py` ne couvre que Claude Code ; Codex ne s'appuie que sur
   `AGENTS.md`. À réévaluer si Codex travaille sur la refonte.
 - **(A2 → C4)** Les règles de score de l'ancien Rocky s'appellent `matching-v1` : la version des nouvelles règles
   porte un nom distinct (pas `matching-v2`).
+- **(B1 → F2)** Le Dockerfile du nouveau Rocky est écrit en ligne dans `docker-compose.yml`, car `Dockerfile` et
+  `.dockerignore` à la racine appartiennent à l'ancien Rocky. En F2 : l'extraire en `Dockerfile` et remplacer
+  le `.dockerignore`.
+- **(B1 → D2, D5)** Le volume nommé des fichiers du nouveau Rocky (CV, lettres) n'existe pas encore : à créer quand
+  les premiers fichiers sont écrits.
+- **(B1 → à décider avec Nicolas)** `main` avait une CI GitHub (`.github/workflows/ci.yml`) ; la branche `refonte`
+  n'en a pas et `.github/` n'est pas au tableau des écritures d'`AGENTS.md`. La vérification ne tourne qu'en local.
+- **(B1 → B2)** Le service `test-db` reste démarré entre deux vérifications et garde son contenu en mémoire :
+  l'isolation entre tests (transaction annulée ou schéma recréé) est à définir avec la première migration.
