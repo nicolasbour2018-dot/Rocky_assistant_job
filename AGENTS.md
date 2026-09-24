@@ -38,6 +38,7 @@ une logique, jamais les suivre comme règle. Les anciennes règles d'agent sont 
 | `docs/` hors `docs/archive/` | écriture — plan (colonne « État », section 8), `docs/decisions/`, `docs/procedures/`, docs du nouveau code |
 | `pyproject.toml`, `uv.lock`, `docker-compose.yml`, `.env.example`, `README.md`, `.gitignore` | écriture — fichiers de racine du nouveau Rocky ; `uv.lock` n'est modifié que par `uv` (`uv add`, `uv lock`), jamais à la main |
 | `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/` | écriture — configuration des agents, alignée sur le plan v2 |
+| `.github/workflows/` | écriture — vérification sur GitHub ; elle exécute la même commande que la vérification locale, sans secret |
 | `dashboard/`, `database/`, `scripts/`, `cron/`, `templates/`, `deployment/`, `assets/`, `.streamlit/`, `output/`, `Dockerfile`, `.dockerignore`, `requirements.txt`, `tests/test_*.py` (tests à plat) | **lecture seule** — ancien Rocky, retiré en F2 |
 | `../Rocky_v1/` (worktree de l'ancien Rocky, avec son `compose.yaml` non versionné, son `.env` et son `output/` d'hôte) | **lecture seule** |
 | `backups/` (archive A1), `data/`, `logs/`, `docs/archive/` | **lecture seule** — seul `docs/procedures/a1-archive/archive.sh` écrit dans `backups/` |
@@ -123,6 +124,8 @@ docs/
 - Tests seuls, boucle rapide : `docker compose up -d test-db` puis `uv run pytest` (idem `uv run ruff check`, `uv run mypy`).
 - Lancer l'application : `docker compose up -d --build --wait app` → `http://127.0.0.1:8000/health`.
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
+- Sur GitHub : `.github/workflows/verification.yml` exécute la vérification globale à chaque push sur `refonte` et
+  sur chaque PR. Une étape n'est terminée que si ce passage est vert aussi.
 
 Précautions (détails : `docs/decisions/B1-squelette.md`) :
 - **ne jamais lancer `docker compose config`** : il affiche les valeurs interpolées depuis le `.env` ;

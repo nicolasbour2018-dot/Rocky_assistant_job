@@ -245,5 +245,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   les premiers fichiers sont écrits.
 - **(B1 → à décider avec Nicolas)** `main` avait une CI GitHub (`.github/workflows/ci.yml`) ; la branche `refonte`
   n'en a pas et `.github/` n'est pas au tableau des écritures d'`AGENTS.md`. La vérification ne tourne qu'en local.
+  *Résolu en B1 (arbitrage de Nicolas) : `.github/workflows/verification.yml` exécute la même commande que la
+  vérification locale. Exiger ce passage avant le merge dans `main` se règle en F2.*
 - **(B1 → B2)** Le service `test-db` reste démarré entre deux vérifications et garde son contenu en mémoire :
   l'isolation entre tests (transaction annulée ou schéma recréé) est à définir avec la première migration.

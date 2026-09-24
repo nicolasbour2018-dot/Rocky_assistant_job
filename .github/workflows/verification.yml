@@ -1,0 +1,27 @@
+# Global verification of the new Rocky, identical to the local command (AGENTS.md, section 8).
+# Everything (PostgreSQL test database, roles, locked versions) comes from docker-compose.yml and uv.lock:
+# no second definition to keep in sync, and no secret needed.
+name: Verification
+
+on:
+  push:
+    branches: [refonte]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ruff, mypy, pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: docker compose run --rm --build check
+        run: docker compose run --rm --build check
