@@ -274,11 +274,11 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   d'un autre site.
 - **(B3)** Les outils Playwright écrivent leurs traces dans `.playwright-mcp/` à la racine : ignoré par Git,
   à supprimer après usage.
-- **(B4 → base de développement)** Erreur de Claude : un compte d'essai `essai-b4@rocky.local` (en attente) et son
-  événement d'invitation ont été créés dans la base de développement, qui contient déjà le vrai compte de Nicolas ;
-  ils ne peuvent pas être supprimés (journal en ajout seul). Les essais de navigateur utilisent depuis une instance
-  à part (application sur le poste, schéma dédié de `test-db`). À traiter avant la bascule (F2), avec la décision sur la
-  base de production.
+- **(B4 → F2)** La base de développement contient des comptes d'essai : `essai-b4@rocky.local` (créé par Claude,
+  en attente) et le compte d'essai de Nicolas sur sa deuxième adresse. À la bascule : nettoyer les comptes d'essai et
+  activer le compte principal réel de Nicolas (le journal en ajout seul empêche de les supprimer : prévoir la méthode,
+  par exemple une base de production neuve). Les essais de navigateur de Claude utilisent une instance à part
+  (application sur le poste, schéma dédié de `test-db`).
 - **(B4 → C1, C6)** Données hétérogènes de l'archive : nom de source enregistré comme une URL, télétravail en cinq
   formulations (`Télétravail`, `partial`, `no`…), quasi-doublons d'une même offre sous deux noms d'employeur
   (« Jems Group » / « JEMS »). La déduplication de C6 doit rapprocher les variantes d'un employeur.
