@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Rocky{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/rocky.css">
+  <script src="/static/{{ htmx_script }}" defer></script>
+  <script src="/static/rocky.js" defer></script>
+</head>
+<body hx-boost="true">
+  <div class="shell">
+    <nav class="sidebar" aria-label="Navigation principale">
+      <a class="brand" href="/">Rocky <span aria-hidden="true">🐾</span></a>
+      <ul class="nav-list">
+        {% for entry in navigation %}
+        <li><a href="{{ entry.path }}" class="nav-link"{% if entry.key == active %} aria-current="page"{% endif %}>
+          <span class="nav-icon" aria-hidden="true">{{ entry.icon }}</span>{{ entry.label }}</a></li>
+        {% endfor %}
+      </ul>
+      <div class="sidebar-foot">
+        <button type="button" class="btn btn-ghost drawer-button" popovertarget="rocky-drawer">
+          <span aria-hidden="true">🐾</span> Rocky</button>
+        <p class="account" title="{{ account.email }}">{{ account.email }}</p>
+        <form method="post" action="/deconnexion"><button type="submit" class="btn btn-link">Se déconnecter</button></form>
+      </div>
+    </nav>
+
+    <main id="main" class="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <nav class="tabbar" aria-label="Navigation principale">
+    {% for entry in navigation if entry.primary %}
+    <a href="{{ entry.path }}" class="tab"{% if entry.key == active %} aria-current="page"{% endif %}>
+      <span aria-hidden="true">{{ entry.icon }}</span><span>{{ entry.label }}</span></a>
+    {% endfor %}
+    <button type="button" class="tab" popovertarget="more-menu"
+      {% for entry in navigation if not entry.primary and entry.key == active %}aria-current="page"{% endfor %}>
+      <span aria-hidden="true">⋯</span><span>Plus</span></button>
+  </nav>
+
+  <div id="more-menu" class="sheet" popover>
+    <ul class="nav-list">
+      {% for entry in navigation if not entry.primary %}
+      <li><a href="{{ entry.path }}" class="nav-link"{% if entry.key == active %} aria-current="page"{% endif %}>
+        <span class="nav-icon" aria-hidden="true">{{ entry.icon }}</span>{{ entry.label }}</a></li>
+      {% endfor %}
+      <li><button type="button" class="nav-link" popovertarget="rocky-drawer">
+        <span class="nav-icon" aria-hidden="true">🐾</span>Rocky</button></li>
+    </ul>
+    <p class="account">{{ account.email }}</p>
+    <form method="post" action="/deconnexion"><button type="submit" class="btn btn-link">Se déconnecter</button></form>
+  </div>
+
+  <aside id="rocky-drawer" class="drawer" popover aria-label="Rocky">
+    <h2><span aria-hidden="true">🐾</span> Rocky</h2>
+    <p class="muted">Bientôt, Rocky t'aidera ici selon l'écran où tu te trouves (étape F1).</p>
+    <button type="button" class="btn" popovertarget="rocky-drawer" popovertargetaction="hide">Fermer</button>
+  </aside>
+
+  {% block overlays %}{% endblock %}
+</body>
+</html>

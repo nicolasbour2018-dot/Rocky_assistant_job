@@ -125,6 +125,16 @@ class InMemoryAuthStore:
         token.used_at = now
         return token.account_id
 
+    def peek_token(
+        self, token_hash: str, purpose: TokenPurpose, now: datetime
+    ) -> int | None:
+        token = self.tokens.get(token_hash)
+        if token is None or token.purpose is not purpose:
+            return None
+        if token.used_at is not None or token.expires_at <= now:
+            return None
+        return token.account_id
+
     def open_session(
         self, account_id: int, token_hash: str, now: datetime, expires_at: datetime
     ) -> None:

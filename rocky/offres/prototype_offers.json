@@ -1,0 +1,2117 @@
+{
+ "note": "Prototype B4 : offres réelles de l'archive A1 ; scores provisoires, maquette du format C4.",
+ "threshold": 60,
+ "reference_day": "2026-09-24",
+ "tracks": [
+  {
+   "key": "ai_ml",
+   "label": "IA / Machine learning"
+  },
+  {
+   "key": "data_analyst",
+   "label": "Data analyst"
+  }
+ ],
+ "profile": {
+  "target_titles": [
+   "Data Scientist"
+  ],
+  "locations": [
+   "Paris"
+  ],
+  "contracts": [
+   "CDI",
+   "CDD",
+   "VIE"
+  ],
+  "minimum_salary": 35000.0,
+  "skills": [
+   "Python",
+   "SQL",
+   "Pandas",
+   "NumPy",
+   "AWS",
+   "Scikit-learn",
+   "LangChain",
+   "n8n",
+   "FastAPI",
+   "Docker",
+   "GitHub",
+   "Streamlit",
+   "Machine Learning",
+   "LLM",
+   "RAG",
+   "API REST",
+   "Data Visualisation",
+   "Analyse statistique",
+   "Automatisation",
+   "intelligence artificielle",
+   "Agile",
+   "GCP",
+   "BigQuery",
+   "Excel",
+   "Dashboarding",
+   "Gestion des données",
+   "Matplotlib",
+   "NLP",
+   "Plotly",
+   "PostgreSQL",
+   "PyTorch",
+   "Seaborn",
+   "Spark",
+   "TensorFlow",
+   "Analyse de données",
+   "Visualisation de données",
+   "IA générative",
+   "Gestion de projet",
+   "Modélisation",
+   "Déploiement de modèles",
+   "HuggingFace",
+   "MLFlow",
+   "Architecture engineering",
+   "Anglais (C1)",
+   "Espagnol (B2)",
+   "Transformers",
+   "EDA",
+   "Analyse de sentiment",
+   "Traitement du langage naturel (NLP)",
+   "Modélisation prédictive",
+   "Deep Learning"
+  ]
+ },
+ "offers": [
+  {
+   "id": 1020,
+   "title": "Machine Learning Engineer H/F",
+   "company": "Team.is",
+   "city": "Paris",
+   "remote": "Télétravail",
+   "contract": "CDI",
+   "salary": {
+    "min": 60000.0,
+    "max": 75000.0,
+    "period": "year"
+   },
+   "source": "Hellowork",
+   "url": "https://www.hellowork.com/fr-fr/emplois/83072301.html",
+   "published_on": "2026-09-05",
+   "deadline": "2026-10-05",
+   "description": "Les missions du poste Depuis 2021, Team.is accompagne les startups, scale-ups et entreprises innovantes, industries de pointe et entreprises de services dans leurs recrutements les plus stratégiques, en France comme à l'international. AI, GenAI, DeepTech, Tech, Gaming, Industrie ou fonctions Business critiques : nous identifions et attirons les talents capables d'accélérer la croissance, l'innovation et l'exécution. Grâce à une approche AI-powered, une connaissance approfondie des marchés et une expertise en headhunting, nous relevons les défis de recrutement les plus complexes et les plus pénuriques. En postulant à cette offre, vous aurez l'opportunité de rejoindre une entreprise innovante et en pleine croissance, qualifiée de \"Mission Driven Company\". Dix-huit mois après sa création et suite à une récente levée de fonds, cette start-up développe une infrastructure de marché et une marketplace unique dédiée au secteur de l'aviation pour l'échange de créneaux de décollage. Elle a déjà gagné la confiance de sept des plus grandes compagnies aériennes européennes ! Ils sont à la recherche d'un(e) AI/ML Engineer pour accompagner le développement de leur marketplace. Celle-ci permet aux compagnies aériennes d'échanger des créneaux de décollage en temps réel afin de réduire les retards, d'améliorer la ponctualité et de limiter les perturbations opérationnelles. Vos missions si vous les acceptez : - Traiter et analyser de grands volumes de données. - Développer des modèles d'intelligence artificielle et de machine learning (modélisation de séries temporelles, IA pour la théorie des graphes, chaînes de Markov, IA géospatiale). - Rédiger du code de production pour transformer ces modèles en solutions opérationnelles, avec le soutien de la direction technique. - Lire et analyser les publications de recherche de pointe en IA et machine learning. - Contribuer au design produit : échanger avec le CEO, rédiger des notes de recherche et faire le lien entre différents domaines. - Rédiger des articles techniques sur les modèles développés pour le Livre Blanc (White Paper) de l'entreprise. - Collaborer avec l'équipe sur l'architecture, les conventions de codage ainsi que les décisions produit et design. - Rencontrer les clients et fournir un support technique pour faciliter l'adoption du produit. Avantages Il en faut plus pour vous convaincre ? - Une opportunité au croisement de l'IA et de la gestion opérationnelle, avec un impact concret et mesurable. - Un cadre stimulant au sein d'une entreprise à fort potentiel ayant déjà convaincu 7 compagnies aériennes majeures en Europe. - Une rémunération fixe comprise entre 60K€ et 75K€ + un variable annuel allant jusqu'à 5K€ + 0,5% à 1% de BSPCE. - Des locaux confortables situés en plein centre de Paris avec 2 jours de télétravail autorisés par semaine. Le profil recherché Et vous ?Vous êtes titulaire d'un diplôme de niveau Master (Bac +5) d'une école de premier rang en data science, machine learning, statistiques ou IA (une expérience de recherche académique sera appréciée).Vous disposez de 2 à 4 ans d'expérience professionnelle en data science, machine learning et/ou IA, incluant une expérience DevOps.Vous maîtrisez le français et disposez d'un niveau d'anglais professionnel (niveau B2).Vous maîtrisez Python, C/C++ ainsi que les concepts de deep learning, d'architecture logicielle et les conventions de codage.Vous avez le souhait d'approfondir rapidement vos connaissances à travers l'ensemble des domaines du machine learning et de l'IA.Vous vous reconnaissez dans des valeurs de forte intensité, de créativité, de rapidité, d'humilité, d'ambition et de détermination. Bienvenue chez Team.is Depuis 2021, Team.is accompagne les startups, scale-ups et entreprises innovantes, industries de pointe et entreprises de services dans leurs recrutements les plus stratégiques, en France comme à l'international.AI, GenAI, DeepTech, Tech, Gaming, Industrie ou fonctions Business critiques : nous identifions et attirons les talents capables d'accélérer la croissance, l'innovation et l'exécution. Grâce à une approche AI-powered, une connaissance approfondie des marchés et une expertise en headhunting, nous relevons les défis de recrutement les plus complexes et les plus pénuriques.",
+   "description_is_full": true,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 90,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : IA / Machine learning",
+     "evidence": "Machine Learning Engineer H/F"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "good",
+     "summary": "5 sur 7 dans ton profil",
+     "evidence": "…ac +5) d'une école de premier rang en data science, machine learning, statistiques ou IA (une expérience de recherche académique sera appréciée).Vous di…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris : zone de Paris",
+     "evidence": "Paris"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDI : dans tes préférences",
+     "evidence": "CDI"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "good",
+     "summary": "60000–75000 € par an (minimum souhaité : 35 000 €)",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "Machine Learning",
+    "intelligence artificielle",
+    "Modélisation",
+    "Deep Learning"
+   ],
+   "skills_missing": [
+    "Statistiques",
+    "C++"
+   ]
+  },
+  {
+   "id": 1157,
+   "title": "Data Analyst / Data Scientist (H/F)",
+   "company": "Carbon Data Solutions",
+   "city": "Paris (75)",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://indeed.com/viewjob?jk=3fce2c161ecc3fc5",
+   "published_on": "2026-09-18",
+   "deadline": null,
+   "description": "**Required skills**\n\n- Data Analyst\n- Apparel & Fashion\n- Headquarters\n\nIl y a vingt ans, les premières sélections Les Composantes voyaient le jour. Une histoire née d’une soif d’indépendance et d’une passion pour le vintage. Une manière instinctive de faire circuler les vêtements, guidée par une attention particulière à ce qui dure.\n\nDans son prolongement, Sézane prend vie en 2013 : la première marque de mode française née en ligne. Puis sont venus enrichir cet univers : Octobre Éditions pour les hommes, Les Composantes, dédiée cette fois à l’art de vivre, et Petit Sézane pour les enfants.\n\nTout s’est construit comme on avance dans la vie : par élans, par gestes spontanés avec cette manière d’apprendre en faisant. Une autre relation au détail, au service et au lien. Une autre manière d’habiller le réel, d’abord en ligne, puis à travers nos Appartements.\n\nNous recherchons aujourd’hui des talents créatifs, structurés et agiles qui partagent l’envie d’améliorer sans cesse tout ce qui peut l’être. Des talents passionnés, autonomes qui conçoivent le travail dans le respect des autres et pour qui rien n'est hors d'atteinte, pour peu qu'on s'en donne les moyens.\n\nEnvie d’imaginer la suite de cette histoire à nos côtés ? Ecrivez-nous !\n\nNous recherchons aujourd'hui un(e) Data Scientist / Data Analyst pour rejoindre notre équipe Data. Ce poste est situé à Paris (75) et à pourvoir dès que possible.\n\nEn tant que de Data Scientist / Data Analyst, vous serez notamment en charge des missions suivantes :\n\nData Science / Machine Learning :\n\n- Data Preprocessing : Vous découvrez et vous appropriez de nouvelles sources de données ;\n- Feature Engineering : Vous créez de nouvelles features à intégrer aux modèles, et analysez la pertinence de ces features ;\n- Modélisation : Vous effectuez le choix du/des modèles et menez une analyse comparative de ces derniers ;\n- Industrialisation : Vous intervenez en collaboration étroite avec l’équipe tech en vue de l’industrialisation des modèles ;\n- Monitoring : Vous automatisez les processus de réentraînement et assurez le monitoring des modèles ;\n\nData Analyse :\n\n- Vous communiquez habilement avec les équipes métiers afin de définir précisément les enjeux de chaque étude ;\n- Vous menez la réflexion sur la méthodologie, la mise en place, la création d’insight, et de plans d’actions pour répondre aux enjeux identifiés ;\n- Vous menez des études comportementales approfondies (cohortes, LTV, rétention, élasticité prix, acquisition, etc.) et pensez incrémentalité plus que simple corrélation ;\n- Vous restituez et vulgarisez les résultats et plans d’actions auprès des décideurs (Comex, managers) sous forme de décisions chiffrées, prescriptives et directement actionnables ;\n\nReportings :\n\n- Vous participez activement à la définition des problématiques abordées par le report ;\n- Vous créez les requêtes SQL permettant de récupérer l’information attendue ;\n- Vous mettez en forme et homogénéisez les résultats ;\n- Vous assurez la mise à jour récurrente des reports, monitoring, et ajustements ;\n- Vous communiquez les résultats aux équipes pertinentes ;\n- Autres missions participant à l’activité de Sézane :\n\nVous répondez aux besoins de différentes équipes métiers : Marketing, CRM, Paid Media, Développement International, Service Client, etc.\n\n- Vous accompagnez proactivement les directions métiers pour traduire leurs enjeux stratégiques en projets Data ciblés ;\n- Vous créez des ciblages précis pour les équipes E-commerce ;\n- Vous mesurez la performance : mise en place de groupes de contrôle ;\n- Vous participez à l’enrichissement de la vision client : création d’objets métiers concrets ;\n- Documentation et organisation de l’équipe Data Science & Analytics ;\n- Montée en compétences sur l’infrastructure ML chez Sézane (Metaflow, Github, etc.).\n\n**Requirements**\n\n- Vous êtes titulaire d’une formation supérieure BAC + 5 avec une spécialité en Data Science ou équivalent, et possédez au moins 2 ans d'expérience dans le domaine de la data ;\n- Vous maîtrisez Python & SQL, ainsi que les principales méthodes de statistiques et de machine learning ;\n- Vous êtes sensible aux problématiques business et animé(e) par l’envie de comprendre les besoins et les habitudes de nos clients ainsi que les processus internes, dans le but de les optimiser ;\n- Vous possédez des compétences en visualisation de la donnée ;\n- Vous êtes rigoureux(-se), structuré(e) et organisé(e) ;\n- Vous aimez le travail en équipe, tant avec d’autres experts data qu’avec une grande variété de métiers ;\n- Vous aimez proposer de nouvelles idées et souhaitez évoluer dans un univers où tout est à construire.\n\nFind more English Speaking Jobs in France on Arbeitnow",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 82,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Data Analyst / Data Scientist (H/F)"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "good",
+     "summary": "5 sur 6 dans ton profil",
+     "evidence": "…- Vous maîtrisez Python & SQL, ainsi que les principales méthodes de statistiques et de machine learning ;\n- Vous êtes sensible aux problématiques busi…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris (75) : zone de Paris",
+     "evidence": "Paris (75)"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "SQL",
+    "GitHub",
+    "Machine Learning",
+    "Modélisation"
+   ],
+   "skills_missing": [
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 451,
+   "title": "Data Analyst – Power Markets M/F",
+   "company": "Qair GmbH",
+   "city": "Paris (75)",
+   "remote": null,
+   "contract": "CDI",
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://indeed.com/viewjob?jk=6d80f72641de0574",
+   "published_on": "2026-07-27",
+   "deadline": null,
+   "description": "Paris, France Permanent Contract Energy Management\n\nAt Qair, we have chosen an organization that promotes versatility among our employees and allows the company to constantly adapt to market needs.\n\nOur corporate culture is inspired by the entrepreneurial spirit that has driven Qair since its inception. Far from traditional hierarchical management, we encourage initiative and autonomy, fostering an environment conducive to innovation and creativity.\n\nWe are an independent renewable energy company. Our 800 employees operate and build over 1.7 GW of assets in the 20 countries where we are present and are developing a pipeline of more than 35 GW.\n\nOur culture, based on trust and mutual respect, allows our employees to thrive professionally and actively contribute to the company's success. By unleashing the potential of each individual, we boost collective performance and equip ourselves to meet the challenges of a constantly evolving market.\n\nYou will join Qair's Energy Management team, which is developing a new sales and trading activity on electricity markets. At the intersection of data, renewable asset optimization, and trading, the team drives the valuation of multi-technology portfolios (solar, wind, storage) and supports the evolution of Qair's energy model toward a more integrated, market-driven approach.\n\nAs a Data Analyst – Power Markets, you will transform market data into operational insights to support the trading teams' decision-making. Your role covers the full analytical chain: collecting, structuring, analyzing, and visually presenting market data, with a focus on continuous performance improvement.\n\nThe position is based in Paris, with no travel required. Following the end of the trial period, a planned on-call arrangement will be implemented, involving one Saturday and one Sunday per month, with equivalent compensation.\n\nYou are looking for a stimulating and empowering challenge, where innovation is rewarded?\n\nJoin us and unleash your potential!\n\nMain Tasks\n\nAs a Data Analyst – Power Markets, your main responsibilities will include:\n\n- Collect, structure, and validate market data (prices, volumes, production, consumption, weather);\n- Produce regular analyses on market dynamics across intraday, spot, and forward timeframes (liquidity, shape, volatility, spreads, intraday patterns);\n- Identify and analyze market opportunities and anomalies from data;\n- Contribute to measuring trading strategy performance (PnL, risk, KPIs);\n- Participate in the continuous improvement of data tools (quality, automation, visualization);\n- Collaborate with trading and IT teams to integrate analyses into existing systems (ETRM, EMS, BI);\n- Develop PPA pricing, supply, and renewable portfolio aggregation tools.\n\nSkills Required\n\n**The following skills are essential for the role:**\n\n- Proficiency in Python (pandas, numpy) applied to data manipulation and analysis;\n- Strong command of SQL for handling large datasets;\n- Proficiency in a data visualization tool (Power BI, Tableau, or equivalent);\n- Analytical mindset and rigor in data processing;\n- Ability to translate data into concrete, actionable insights;\n- Business acumen and understanding of operational challenges;\n- Autonomy, proactivity, and ability to prioritize in a loosely structured environment;\n- Proficiency in professional French and English.\n\n**The following skills may help you stand out among applicants:**\n\n- Strong interest in electricity markets and understanding of short-term price formation dynamics (supply/demand, weather, grid constraints);\n- Prior experience with the Polish and/or European energy market;\n- Proficiency in an additional language spoken in countries where Qair operates.\n\nThis role may not be suitable for you if you prefer a purely technical analytical scope disconnected from operational challenges, if you have no interest in energy markets, or if you are not comfortable with a high degree of autonomy and fast-growing responsibility in a developing environment.\n\nBenefits\n\n- Annual gross fixed salary: €46,000 – €52,000;\n- 10% annual performance bonus;\n- Profit-sharing bonus;\n- Option to purchase Qair shares;\n- Meal vouchers worth €9.50;\n- Annual day-based working arrangement (forfait jours), entitling you to 10 additional rest days (RTT) in 2027.\n\n**TYPE OF CONTRACT:** Permanent Contract\n\n**JOB LOCATION:** Paris, 8th arrondissement.",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 81,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Data Analyst – Power Markets M/F"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "4 sur 6 dans ton profil",
+     "evidence": "…handling large datasets;\n- Proficiency in a data visualization tool (Power BI, Tableau, or equivalent);\n- Analytical mindset and rigor in data proc…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris (75) : zone de Paris",
+     "evidence": "Paris (75)"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDI : dans tes préférences",
+     "evidence": "CDI"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "SQL",
+    "Pandas",
+    "NumPy"
+   ],
+   "skills_missing": [
+    "Power BI",
+    "Tableau"
+   ]
+  },
+  {
+   "id": 941,
+   "title": "Data Scientist IA H/F",
+   "company": "The Human Link",
+   "city": "Paris",
+   "remote": null,
+   "contract": "CDI",
+   "salary": null,
+   "source": "Hellowork",
+   "url": "https://www.hellowork.com/fr-fr/emplois/82734890.html",
+   "published_on": "2026-08-27",
+   "deadline": "2026-09-26",
+   "description": "Détail du poste Dans le cadre d'une mission au sein d'un organisme de la statistique publique, vous interviendrez en autonomie sur un projet de traitement automatique de formulaires et de reconnaissance d'écriture manuscrite, en lien avec une équipe métier basée à Lyon. Vos responsabilités clés : - Développer un pipeline de reconnaissance d'écriture manuscrite (OCR/HTR) et de modèles vision-langage (VLM) sur des formulaires scannés - Prétraiter les images (redressement, binarisation), recaler/aligner les formulaires, segmenter et découper les zones d'intérêt - Comparer plusieurs modèles et approches, identifier les plus adaptés au besoin - Concevoir une méthodologie d'évaluation rigoureuse : métriques par tâche, calibration, gestion de l'incertitude, analyse fine des erreurs, scores de confiance - Construire un pipeline de sortie comparé automatiquement à un fichier de référence, avec analyse des divergences par classe de variable - Documenter la solution (code reproductible et versionné sous git, documentation technique, note de passation) - Assurer une restitution régulière, à l'écrit comme à l'oral, auprès de publics techniques et métier - Respecter des exigences fortes de confidentialité et de sécurité (secret statistique, non-exfiltration des données, transparence, auditabilité des traitements) Le profil recherché Formation : Master 2, diplôme d'ingénieur ou doctorat en science des données, apprentissage automatique, vision par ordinateur ou équivalentExpérience : 2 à 5 ans en projets ML/IA, avec mise en production de projets de data science et évaluation rigoureuse des performancesCompétences techniques : Python de niveau professionnel (PyTorch, OpenCV, écosystème Hugging Face, pandas)Environnement Machine Learning avec MLflow, bonnes pratiques MLOpsDéploiement en environnement conteneurisé (Docker/Kubernetes), stockage objet S3, usage de GPUVision par ordinateur : prétraitement d'images, segmentation, détection de zones d'intérêtApprentissage profond : OCR/HTR, modèles vision-langage (VLM) ; fine-tuning de LLM/VLM open-weight apprécié Mais aussi... 50 - 75 EUR / YEAR",
+   "description_is_full": true,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 80,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : IA / Machine learning",
+     "evidence": "Data Scientist IA H/F"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "7 sur 11 dans ton profil",
+     "evidence": "…nnes pratiques MLOpsDéploiement en environnement conteneurisé (Docker/Kubernetes), stockage objet S3, usage de GPUVision par ordinateur : prétraitemen…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris : zone de Paris",
+     "evidence": "Paris"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDI : dans tes préférences",
+     "evidence": "CDI"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "Pandas",
+    "Docker",
+    "Machine Learning",
+    "LLM",
+    "PyTorch",
+    "MLFlow"
+   ],
+   "skills_missing": [
+    "Kubernetes",
+    "Git",
+    "Hugging Face",
+    "MLflow"
+   ]
+  },
+  {
+   "id": 450,
+   "title": "Confirmed Data Analyst - Demand",
+   "company": "BlaBlaCar",
+   "city": "Paris (75)",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://indeed.com/viewjob?jk=ce71aac33e85d718",
+   "published_on": "2026-07-30",
+   "deadline": null,
+   "description": "**About BlaBlaCar** \n \nBlaBlaCar is the world’s leading community-based travel app enabling 27 million members a year to carpool or travel by bus in 21 countries. Our team of 800 employees counts over 50 nationalities and is spread across our 5 global offices, 30% working fully remotely.\n\n## **Your mission**\n\nOur Data department is organised following Data Mesh principles, distributing data ownership to cross-functional and domain-specific teams that manage, own, and serve the data as a product.\n\nThe Data Demand team’s mission is to help BlaBlaCar grow as a global OTA through data, covering the full customer journey from brand and product discovery through marketing and landing pages, to search, booking, post-booking, and payment. As the team expands its scope from self-service towards decision intelligence, we want to strengthen our ability to proactively analyse member, marketplace, and product behaviours, and to influence the decisions that shape the product.\n\nAs a Data Analyst, you will join the Data Demand team to drive decision-making through data: framing the right questions with stakeholders, going deep into data to explain what is happening, sizing opportunities, interpreting experiments, and translating insights into actionable recommendations for Product and Marketing teams.\n\n## **Your responsibilities**\n\n- Partner with Product, Marketing, and Business stakeholders to understand their goals, frame analytical questions, and identify the decisions where data can have the highest impact.\n- Collaborate with Data Engineers, Data Scientists, and other Data Analysts to improve the quality, usability, and coverage of our data products, and explore opportunities to turn advanced analytics or ML/AI initiatives into measurable business impact.\n- Lead end-to-end analyses on product and business topics such as marketplace dynamics, search-to-book performance, member behaviour, audience knowledge, or CRM and marketing impact.\n- Go beyond dashboards to investigate the “why” behind trends, anomalies, and performance changes, combining exploratory analysis, statistical reasoning, and strong business context.\n- Build clear narratives from data: communicate findings, trade-offs, confidence levels, and recommendations in a way that helps stakeholders align and act.\n- Contribute to reusable business knowledge and context engineering by documenting insights, analytical frameworks, or business relationships, and play a governance role in aligning definitions, reducing gaps between teams, and improving data quality over time.\n- Leverage BlaBlaCar’s available GenAI tools to work more efficiently in day-to-day analysis and documentation, while applying strong critical thinking to challenge, validate, and contextualise the outputs before using them in decision-making.\n\n## **Your qualifications**\n\n- Master’s degree or equivalent: engineering school, business school, etc\n- At least 3 years of professional experience working as a Data Analyst\n- Strong SQL skills and hands-on experience analysing large and complex datasets.\n- Good understanding of product analytics, funnel analysis, cohort analysis, segmentation, experimentation, and performance monitoring.\n- Ability to structure ambiguous problems, challenge assumptions, and translate business or product questions into robust analytical approaches.\n- Experience with data visualisation, with a strong sense of how to design clear, trustworthy, and decision-oriented outputs.\n- Solid communication skills: you can turn analysis into a compelling story, adapt your message to different audiences, and influence decisions with clarity and humility.\n- Comfort working with cross-functional teams and building strong stakeholder relationships.\n- Curiosity for product, growth, marketplaces, and member behaviour, with a pragmatic mindset focused on impact over perfect analysis.\n- Python or another analytical programming language, causal inference, or advanced experimentation knowledge is a plus.\n- Fluent in English\n\n*If you don’t meet 100% of the qualifications outlined above, tell us why you’d still be a great fit for this role in your application!*\n\n## **What we have to offer**\n\n- Hybrid: 2 to 3 days at the office for this role\n- 4 additional weeks on top of legal maternity/paternity leaves\n- 50% healthcare coverage (Alan)\n- Financial support for home office equipment\n- Minimum 25 days holiday per year\n- Local meal plan policy (Swile card)\n- 50% transportation paid (Forfait Mobilité Durable)\n- Free unlimited carpooling & bus rides\n- Personal growth via trainings, mentorship, and internal mobility programs\n- Employee Stock ownership plan\n- Regular team building events\n- Mental health support through Moka.care\n- 1 day off per year to test our product\n- 1 day per year for social engagements with non-profits\n\n## **Interested in joining the ride?**\n\nHere’s what your hiring journey will look like:\n\n- a 45-min video-call with @Maxime GAUDILLIÈRE , Talent Acquisition Manager to get to know you, understand your career expectations, and answer your first questions\n- a 60-min video-call with your future manager, @Adrien TORDJEMAN Engineering Manager, to get to know you, present you the team, and discuss your technical fit for the role.\n- a home assignment to evaluate your technical skills followed by a 90-min video-call with a Data Analyst and one of your future stakeholders.\n- a 30-min video-call with @Orianne Friedrich, Head of Data for vision fit and rounding off the process\n\n*BlaBlaCar is an equal opportunity employer. We celebrate diversity and are committed to creating an inclusive environment for all employees.*\n\nWe may use artificial intelligence (AI) tools to support parts of the hiring process, such as reviewing applications, analyzing resumes, or assessing responses. These tools assist our recruitment team but do not replace human judgment. Final hiring decisions are ultimately made by humans. If you would like more information about how your data is processed, please contact us.",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 79,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Confirmed Data Analyst - Demand"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "good",
+     "summary": "3 sur 4 dans ton profil",
+     "evidence": "…n-making through data: framing the right questions with stakeholders, going deep into data to explain what is happening, sizing opportunities,…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris (75) : zone de Paris",
+     "evidence": "Paris (75)"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "SQL",
+    "Data Visualisation"
+   ],
+   "skills_missing": [
+    "Go"
+   ]
+  },
+  {
+   "id": 802,
+   "title": "Machine Learning Engineer (MLE) Pricing",
+   "company": "KUBE Partners S.L. / Pixie Services",
+   "city": "Paris",
+   "remote": "Télétravail partiel",
+   "contract": null,
+   "salary": {
+    "min": 450.0,
+    "max": 450.0,
+    "period": "day"
+   },
+   "source": "Free-Work",
+   "url": "https://www.free-work.com/fr/tech-it/job-mission/developpeur-ia-machine-learning/machine-learning-engineer-mle-pricing",
+   "published_on": "2026-08-27",
+   "deadline": "2026-10-26",
+   "description": "Contexte de la mission Notre objectif est de transformer notre stratégie de pricing grâce à la donnée et à l’intelligence artificielle. Nous voulons passer d’une tarification traditionnelle à une tarification dynamique, plus intelligente et prédictive, capable d’équilibrer la rentabilité de l’entreprise et la perception de la valeur par nos clients. Pour porter cette ambition, au sein de notre équipe digital data Pricing nous concevons, développons et industrialisons les algorithmes et les produits Data qui piloteront nos prix de manière proactive et agile. Objectifs et livrables Le consultant interviendra sur un scope large, allant de l’analyse exploratoire à la mise en production (MLOps). Les chantiers majeurs identifiés pour les prochains mois sont : • Élasticité Prix: Optimisation des algorithmes d’élasticité prix existants, avec un focus majeur sur la modélisation pour le lancement de nouveaux produits. • Moteur de Promotion : Développement d’un algorithme d’optimisation des campagnes promotionnelles. • Tarification Dynamique : Analyses exploratoires préliminaires et formulation de propositions pour un moteur d’aide à la décision (Dynamic Pricing “home-made”). • Industrialisation & MLOps : Optimisation des modèles existants, intégration de nouvelles sources de données, APIzation et automatisation des pipelines (Ops). • Agent amélioration : Contribution sur notre agent pricing. • Monitoring : Mise en place d’un tracking robuste de la performance des modèles et de la qualité de la donnée. Nous recherchons un profil hybride et autonome, capable de naviguer entre la vision produit et la technique. Hard skills: • Core Tech : Maîtrise avancée de Python et de son écosystème Data Science / ML (Pandas, Scikit-Learn, TensorFlow/PyTorch). • ML Engineering & MLOps : Expérience solide en mise en production d’algorithmes à grande échelle, packaging de modèles, CI/CD (Git) et industrialisation d’API. • Data & Cloud : Pratique des environnements Cloud (AWS / Databricks appréciés) et manipulation de gros volumes de données (Spark, dbt). Soft skills: • Product Ownership & Proactivité : Capacité à creuser le besoin métier, clarifier les exigences et proposer des solutions concrètes sans attendre un cahier des charges figé. • Leadership technique : Autonomie pour piloter des sujets de bout en bout et interagir avec des interlocuteurs variés (équipes Data, Tech et Métier). • Langues : Anglais courant indispensable. Une expérience préalable ou un fort background sur des problématiques de Pricing (élasticité, yield management, optimisation de marge) sera grandement valorisée.",
+   "description_is_full": true,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 78,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : IA / Machine learning",
+     "evidence": "Machine Learning Engineer (MLE) Pricing"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "good",
+     "summary": "11 sur 15 dans ton profil",
+     "evidence": "…abricks appréciés) et manipulation de gros volumes de données (Spark, dbt). Soft skills: • Product Ownership & Proactivité : Capacité à creuser…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris : zone de Paris",
+     "evidence": "Paris"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "TJM de 450 € par jour : pas un salaire annuel",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "Pandas",
+    "AWS",
+    "Scikit-learn",
+    "Automatisation",
+    "intelligence artificielle",
+    "Agile",
+    "PyTorch",
+    "Spark",
+    "TensorFlow",
+    "Modélisation"
+   ],
+   "skills_missing": [
+    "dbt",
+    "Databricks",
+    "Git",
+    "MLOps"
+   ]
+  },
+  {
+   "id": 803,
+   "title": "ML engineer: Pricing ( Python,Git, Google cloud )-(h/f)",
+   "company": "emagine Consulting SARL",
+   "city": "Roissy-en-France",
+   "remote": "Télétravail partiel",
+   "contract": null,
+   "salary": {
+    "min": 400.0,
+    "max": 400.0,
+    "period": "day"
+   },
+   "source": "Free-Work",
+   "url": "https://www.free-work.com/fr/tech-it/job-mission/data-scientist/data-scientist-ai-engineer-h-f-1",
+   "published_on": "2026-08-20",
+   "deadline": "2026-10-12",
+   "description": "Merci de contacter Sumi Delplanque directement via LinkedIn Cet emploi de ML engineer: Pricing vise à soutenir la stratégie commerciale d'un groupe mondial en développant des modèles machine learning pour optimiser la tarification des produits annexes. Responsabilités : Développer, mettre en œuvre et maintenir des modèles d'apprentissage automatique pour la tarification des produits annexes comme les sièges, les bagages, et les surclassements. Concevoir et implémenter l'ensemble du pipeline d'apprentissage automatique, allant du reclassement au déploiement et à la surveillance des modèles. Surveiller et améliorer continuellement les modèles d'apprentissage automatique en production. Travailler dans l'écosystème Google Cloud Platform (GCP) et utiliser des outils comme BigQuery et VertexAI. Utiliser Terraform, Docker et Github Actions pour assurer des solutions robustes et évolutives. Participer à des projets d'innovation et partager des apprentissages lors d'événements communautaires. Must-haves: Master en Informatique, Data Science, Intelligence Artificielle ou domaine connexe. 3+ années d'expérience dans le développement logiciel. Minimum 1 an d'expérience avec des équipes de Data Science/Machine Learning. Expérience prouvée dans le développement de pipelines MLOps. Compétences solides en programmation orientée objet et en Python. Expérience avec GCP et des outils tels que BigQuery et la suite VertexAI. Anglais courant Nice-to-haves : Expérience avec des technologies comme Terraform, Docker, et Github Actions. Connaissance des API REST et de Git. Intérêt pour l'apprentissage continu des nouvelles technologies en machine learning. Détails supplémentaires : Contexte : Début prévu au Septembre 2026, mission longue durée. Localisation : Île-de-France Présence sur site attendue : 2 à 3 jours par semaine. Taille de l’équipe : 5 personnes, avec un équilibre entre innovation et continuité.",
+   "description_is_full": true,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 78,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : IA / Machine learning",
+     "evidence": "ML engineer: Pricing ( Python,Git, Google cloud )-(h/f)"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "good",
+     "summary": "8 sur 11 dans ton profil",
+     "evidence": "…des outils comme BigQuery et VertexAI. Utiliser Terraform, Docker et Github Actions pour assurer des solutions robustes et évolutives. Partici…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Roissy-en-France : zone de Paris",
+     "evidence": "Roissy-en-France"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "TJM de 400 € par jour : pas un salaire annuel",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "Docker",
+    "GitHub",
+    "Machine Learning",
+    "API REST",
+    "intelligence artificielle",
+    "GCP",
+    "BigQuery"
+   ],
+   "skills_missing": [
+    "Git",
+    "MLOps",
+    "Terraform"
+   ]
+  },
+  {
+   "id": 529,
+   "title": "Data analyst",
+   "company": "La banque Postale",
+   "city": "Paris",
+   "remote": null,
+   "contract": "CDD",
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://fr.indeed.com/viewjob?from=app-tracker-saved-appcard&hl=fr&jk=f49e1ba56a0643db&tk=1k0apsug6rknu800",
+   "published_on": null,
+   "deadline": null,
+   "description": "Description du poste\nIntroduction\n\nLa banque des entreprises et du développement local (BEDL) est le pôle métier de La Banque Postale dédiée aux clients personnes morales : grandes entreprises, PME/ETI, secteur public et économie sociale, et institutions financières. Nous sommes le 1er financeur bancaire des collectivités et des hôpitaux publics, le partenaire bancaire de la moitié des grandes entreprises du CAC 40 et du SBF 120, mais aussi de 11 000 PME/ETI partout en France.\n\nLa BEDL conjugue des expertises avancées (transaction banking, financements structurés, financements d’actifs et de projets, immobilier, finance de marché, affacturage et leasing) avec la proximité territoriale de ses 27 centres d’affaires en régions, pour apporter des solutions au plus près des besoins de ses clients.\n\n\n\n\nVOUS N’AVEZ PAS IDÉE DE CE QUE L’ON PEUT RÉUSSIR ENSEMBLE\n\n\nSaviez-vous qu’à La Banque Postale, on a un regard singulier sur notre métier ? Peut-être parce que notre jeunesse fait de nous une banque avec des convictions. Une banque qui croit vraiment que la finance a un sens, qu’elle joue un vrai rôle sociétal.\n\nD’ailleurs, on accompagne plus d’un million de clients financièrement fragiles et on est la 1ère banque mondiale en matière de RSE grâce nos actions en faveur d’une finance durable.\n\nNotre jeunesse nous rend aussi conquérants. A raison ! Notre Groupe Banque/Assurance accompagne plus de 20 millions de clients, ce qui fait de nous le 3ème groupe du secteur en France.\n\nEt, comme tous les jeunes, on bouillonne d’idées et de projets innovants pour continuer à nous développer, avec toujours le même engagement vis-à-vis de nos collaborateurs : leur offrir toutes les conditions pour s’étonner.\n\nMaintenant qu’on se connaît, on vous en dit plus sur le poste ?\n\n\n\n\nVOICI LES MISSIONS QUI VOUS ATTENDENT\n\nVous partagez nos convictions ? Vous avez envie de rejoindre une équipe dynamique et d’évoluer dans un environnement bienveillant ? Venez travailler à la Direction efficacité opérationnelle et plus précisément au sein du pôle outils de pilotage et traitements des données commerciales où vous mettrez vos talents au service de nos objectifs.\n\nParmi vos missions au quotidien :\n\nDévelopper, mettre à jour et maintenir les outils de pilotage de la performance commerciale et financière BEDL\nPiloter l'administration du portail mes outils de pilotage : prise en main utilisateurs, gestion des mains courantes, tutoriels…\nSuivre les actions commerciales\nEtudier les données sur les bases clients et prospects de la BEDL\nElaborer les outils de Datavisualisation commerciaux d’aide à la décision et mesure de la performance\nEtudier ad hoc et traitements de données commerciales et financières\nQuels seront votre salaire et vos avantages ?\n\nVous disposerez d’un package complet composé d’une partie fixe sur 12 mois, d’une part variable liée à vos résultats et d’un intéressement. Vous bénéficierez également d’une mutuelle avantageuse, du CE de La Banque Postale, de jours de télétravail et vous aurez accès à des formations et à de multiples possibilités d’évolution.\n\n\n\n\nVOICI COMMENT VOUS POUVEZ NOUS REJOINDRE\n\nPour voir si on est fait pour s’entendre, on vous proposera d’abord un entretien avec le manager au cours duquel vous en apprendrez plus sur le poste. Ensuite, vous rencontrerez notre RH pour lui exprimer vos motivations puis vous réaliserez un test de personnalité afin de déterminer vos soft skills. Et si on décide de travailler ensemble, vous suivrez un processus d’intégration digitalisé et personnalisé.\n\nVOTRE FORMATION, VOS EXPÉRIENCES, AUTRE CHOSE ?\n\nIssu-e d'un Bac + 4/5 MIAGE, MASS, Informatique ou Statistiques, vous disposez idéalement d'une première expérience dans le domaine et vous avez une appétence pour la culture data ainsi que la culture bancaire. Curieux-se, rigoureux-se et organisé-e, vous avez une excellente capacité d'analyse. Vous maîtrisez impérativement SAS, Qliksense, DATAIKU, SQL et le Pack Office (Excel, Powerpoint).\n\nLa maîtrise de Python et DataIku (Data Science Studio) seront un plus pour ce poste.\n\nBanque citoyenne, La Banque Postale s’engage en faveur de la diversité et de l’égalité des chances pour donner accès à tous ses métiers sans discrimination de genre, d’origine sociale ou culturelle, d’orientation sexuelle ou de handicap.",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 78,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Data analyst"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "3 sur 5 dans ton profil",
+     "evidence": "…avez une excellente capacité d'analyse. Vous maîtrisez impérativement SAS, Qliksense, DATAIKU, SQL et le Pack Office (Excel, Powerpoint).\n\nLa m…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris : zone de Paris",
+     "evidence": "Paris"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDD : dans tes préférences",
+     "evidence": "CDD"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "SQL",
+    "Excel"
+   ],
+   "skills_missing": [
+    "SAS",
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 1239,
+   "title": "Business Analyst/Data Analyst H/F",
+   "company": "Jems Group",
+   "city": "Paris (75)",
+   "remote": null,
+   "contract": "CDI",
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://indeed.com/viewjob?jk=bdd676a93ccbc122",
+   "published_on": "2026-09-23",
+   "deadline": null,
+   "description": "## **A propos de nous**\n\nNous sommes **le premier industriel de la donnée en Europe**. Notre métier est de **créer, manager et exploiter** le patrimoine data de nos clients.\n\nNous avons la conviction que chaque entreprise peut adopter une **démarche innovante de gestion de la donnée** et créer des **cas d’usage disruptifs** en réduisant l'impact écologique et en diminuant la dette technique.\n \n \nNous comptons plus de 900 collaborateurs en mission chez nos clients grands comptes dans tout secteur d’activité\n\n## **MissionS proposéeS**\n\nNous recherchons **un(e) Business Analyst Data H/F en CDI sur Paris pour une grande maison de luxe**\n\nVous aurez la charge de :\n\n- Récolter et analyser les besoins exprimés par les lignes de métier concernées\n- Rédiger les spécifications fonctionnelles de manière itérative selon la méthodologie Agile\n- Effectuer les activités d'analyse fonctionnelle, dans le cadre des différents projets d'évolution et de maintenance liés aux solutions\n- Analyser et intégrer les outils du marché, assurer la coordination avec les fournisseurs externes\n- Définir les cas de tests fonctionnels permettant de valider les solutions proposées ; mener les tests d'acceptance et de non-régression (FAT)\n- Prendre en charge, documenter et analyser les incidents de production ainsi que les demandes de support de 3e niveau\n\n## **Notre profil idéal**\n\nEn tant que **Business Analyst** vous disposez d'une:\n\n- **Expertise Power BI** pour la conception et la visualisation des dashboards\n- **Maitrise de SQL**, pour interroger, analyser et exploiter les données.\n\nVous disposez :\n\n- De connaissances informatiques de base nécessaire pour une bonne compréhension des possibilités d’implémentation dans les systèmes IT\n- D'une bonne capacité à communiquer avec les équipes de développement\n- D'une capacité rédactionnelle claire et structurée\n- D'un esprit analytique et capacité de synthèse sur des problématiques complexes\n- De qualités rédactionnelles et oratoires en Français et en Anglais, lesquelles sont indispensables\n\nDiplômé(e) d'une école d'ingénieur ou d'une université, vous disposez d’au moins **4 ans d’expérience en Business Intelligence / Data**, dont idéalement **3 ans minimum dans l’univers du luxe.**\n\n**Vous êtes rigoureux(se), autonome et aimez travailler en équipe.**\n\n \n\nParis\n\n38,50h\n\n/semaine\n\nDe 40000€\n\nà 60000€\n\n/an\n\nCDI\n\nEngineering\n\nFrançais",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 75,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Business Analyst/Data Analyst H/F"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "2 sur 3 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…En tant que **Business Analyst** vous disposez d'une:\n\n- **Expertise Power BI** pour la conception et la visualisation des dashboards\n- **Maitrise…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris (75) : zone de Paris",
+     "evidence": "Paris (75)"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDI : dans tes préférences",
+     "evidence": "CDI"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "SQL",
+    "Agile"
+   ],
+   "skills_missing": [
+    "Power BI"
+   ]
+  },
+  {
+   "id": 6,
+   "title": "Data Analyst",
+   "company": "MYRIAD Data",
+   "city": "Neuilly-sur-Seine",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "LinkedIn",
+   "url": "https://fr.linkedin.com/jobs/view/data-analyst-at-myriad-data-4435975462",
+   "published_on": "2026-07-10",
+   "deadline": "2026-09-05",
+   "description": "Qu'est-ce que tu vas faire?<br><br>En tant qu’analyste de données, tes principales responsabilités tournent autour de l’utilisation de Python et de SQL pour la manipulation et l’analyse des données, ainsi que de l’exploitation d’outils de visualisation tels que PowerBI ou tableau et les applications Web pour présenter efficacement les informations<br><br>Tes challenges ?<br><br>Comprendre les besoins des métiers, identifier les données pertinentes et faire les analyses afin de traiter ces informations et de permettre aux décisionnaires de faire les meilleurs choix stratégiques<br><br><strong>Au Quotidien, Tes Principales Tâches Seront<br><br></strong><ul><li>L’analyse des données : utilisation de Python et de SQL pour extraire, nettoyer et analyser les données afin d’en tirer des informations exploitables</li><li>Les techniques de visualisation : utilisation de PowerBI, Tableau et des applications Web pour créer des représentations visuelles intuitives et pertinente des données pour une communication efficace</li><li>La compréhension statistique : tu devras appliquer des concepts statistiques et bien comprendre les structures de données pour interpréter avec précision les modèles et les tendances des données<br><br></li></ul><strong>Ton Profil<br><br></strong><ul><li>Diplôme d’ingénieur et/ou Master en mathématiques/Statistique/Data ou équivalent</li><li>Maîtrise de Python, SQL et de la manipulation de données à des fins d’analyse</li><li>Expérience dans les outils de visualisation de données tels que Tableau, PowerBI et les applications Web pour créer des tableaux de bord interactifs et informatifs</li><li>Solide compréhension des statistiques et des structures de données pour une interprétation précise des données</li><li>Compétences avérées en résolution de problèmes et état d’esprit orienté client et axé sur les solutions</li><li>Excellentes compétences en communication pour collaborer efficacement au sein des équipes et avec les parties prenantes</li><li>Adaptabilité et mentalité de start-up pour prospérer dans un environnement dynamique</li><li>Anglais indispensable</li></ul>",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 74,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Data Analyst"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "3 sur 5 dans ton profil",
+     "evidence": "…i que de l’exploitation d’outils de visualisation tels que PowerBI ou tableau et les applications Web pour présenter efficacement les informations<…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Neuilly-sur-Seine : zone de Paris",
+     "evidence": "Neuilly-sur-Seine"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "SQL",
+    "Visualisation de données"
+   ],
+   "skills_missing": [
+    "Tableau",
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 1127,
+   "title": "Data Analyst / Data Scientist",
+   "company": "UCASE CONSULTING",
+   "city": "Paris (75)",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://indeed.com/viewjob?jk=eca374b2d1dfa993",
+   "published_on": "2026-09-10",
+   "deadline": null,
+   "description": "Bonjour à tous ??\n \n \nNous recherchons actuellement un(e) Data Analyst / Data Scientist pour rejoindre l?équipe Data Science & Insights chez l?un de nos clients.\n \n \n? Le contexte ?\n \nVous travaillerez sur des problématiques autour de la data client : comportement client, performance des offres, optimisation des campagnes, segmentation, scores d?appétence, sujets réglementaires?\n \n \n**? Vos missions :** \nRecueillir les besoins des équipes métiers et formaliser les problématiques\n \n \nPréparer, nettoyer et analyser les données\n \n \nRéaliser des études statistiques et du datamining\n \n \nCréer des features et développer des modèles de Data Science\n \n \nCollaborer avec les équipes Data et BI\n \n \nAutomatiser certains traitements lorsque nécessaire\n \n \nRestituer vos analyses et recommandations auprès des équipes métiers\n \n \nDocumenter vos travaux et assurer leur suivi\n \n \nNous recherchons surtout une personne autonome, rigoureuse, pragmatique et orientée business, avec un bon esprit d?équipe et capable de vulgariser des sujets data auprès d?interlocuteurs métiers.\n \n \n? Intéressé(e) ? Vous connaissez quelqu?un qui pourrait correspondre ?\n \n \n**Profil candidat:****? Le profil recherché :** \nMinimum 3 ans d?expérience en Data Analysis / Data Science\n \n \nTrès bon niveau en SQL et Python\n \n \nMaîtrise avancée de Dataiku\n \n \nSolides connaissances en datamining et Data Science\n \n \nExpérience sur des environnements avec de gros volumes de données\n \n \nUne expérience dans le retail / e-commerce est un plus",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 70,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Data Analyst / Data Scientist"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "2 sur 3 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…Préparer, nettoyer et analyser les données\n \n \nRéaliser des études statistiques et du datamining\n \n \nCréer des features et développer des modèles de…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris (75) : zone de Paris",
+     "evidence": "Paris (75)"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "SQL"
+   ],
+   "skills_missing": [
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 23,
+   "title": "Ingénieur IA Générative & Cybersécurité (LLM / Python) F/H",
+   "company": "Act Digital France",
+   "city": "Paris 01 - 75",
+   "remote": null,
+   "contract": null,
+   "salary": {
+    "min": 50000.0,
+    "max": 55000.0,
+    "period": "year"
+   },
+   "source": "Apec",
+   "url": "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179242525W",
+   "published_on": "2026-08-07",
+   "deadline": null,
+   "description": "Vous intégrerez, au sein de notre Pôle Cybersécurité, une équipe dédiée au développement de solutions d'intelligence artificielle appliquées à la cybersécurité. Vous serez détaché(e) auprès d'un acteur majeur du secteur de l'assurance, au sein de l'équipe CERT (Computer Emergency...",
+   "description_is_full": false,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 69,
+   "confidence": "low",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : IA / Machine learning",
+     "evidence": "Ingénieur IA Générative & Cybersécurité (LLM / Python) F/H"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "bad",
+     "summary": "1 sur 1 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…Pôle Cybersécurité, une équipe dédiée au développement de solutions d'intelligence artificielle appliquées à la cybersécurité. Vous serez détaché(e) auprès d'un acte…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris 01 - 75 : zone de Paris",
+     "evidence": "Paris 01 - 75"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "good",
+     "summary": "50000–55000 € par an (minimum souhaité : 35 000 €)",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "intelligence artificielle"
+   ],
+   "skills_missing": []
+  },
+  {
+   "id": 303,
+   "title": "AI Engineer - CDI F/H",
+   "company": "CONVERTEO",
+   "city": "Paris, Ile-de-France",
+   "remote": null,
+   "contract": "CDI",
+   "salary": null,
+   "source": "Adzuna",
+   "url": "https://www.adzuna.fr/details/5806034974",
+   "published_on": "2026-07-18",
+   "deadline": null,
+   "description": "En tant qu' AI Engineer , votre quotidien s'éloigne de la Data Science traditionnelle (statistiques, problem solving) pour se concentrer sur l'ingénierie logicielle et le développement de systèmes d'intelligence artificielle modernes. Sous le pilotage d'un Lead, vous apportez votre expertise de pointe pour construire des solutions génératives et agentiques robustes, scalables et orientées produit. Vos responsabilités s'articulent autour des missions suivantes : Ingénierie Agentique & GenAI (Bui…",
+   "description_is_full": false,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 66,
+   "confidence": "low",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : IA / Machine learning",
+     "evidence": "AI Engineer - CDI F/H"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "bad",
+     "summary": "1 sur 2 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…gineer , votre quotidien s'éloigne de la Data Science traditionnelle (statistiques, problem solving) pour se concentrer sur l'ingénierie logicielle et l…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris, Ile-de-France : zone de Paris",
+     "evidence": "Paris, Ile-de-France"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDI : dans tes préférences",
+     "evidence": "CDI"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "intelligence artificielle"
+   ],
+   "skills_missing": [
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 32,
+   "title": "Data Analyst – AI Legal Training",
+   "company": "Outbreak Global",
+   "city": "Alaska",
+   "remote": "Télétravail complet",
+   "contract": null,
+   "salary": {
+    "min": 100000.0,
+    "max": 180000.0,
+    "period": "year"
+   },
+   "source": "Wellfound",
+   "url": "https://wellfound.com/jobs/4225577-data-analyst-ai-legal-training",
+   "published_on": "2026-06-14",
+   "deadline": null,
+   "description": "Location: Remote (Global – 47 Countries) Type: Contract / Flexible Salary Range: $100,000 – $180,000 (Calculated at $50 – $90/hr)\n\nAbout the Role\nRemote Works is an expert network that routes premium AI training briefs to qualified specialists. We are seeking legal experts (JDs, LLMs, or equivalent) to help refine the logic and reasoning of the world’s leading legal AI models. In this role, you will evaluate model outputs for jurisdiction-specific accuracy, ensuring that AI-generated legal reasoning is sound, ethical, and factually correct.\n\nThe Impact of This Role\nAs AI becomes a core tool for the legal profession, the need for human oversight is critical. By coordinating the evaluation of complex legal logic, you directly support the ability to scale high-quality AI without compromising the integrity of legal standards.\n\nKey Responsibilities\nLegal Reasoning Evaluation: Review and rank AI-generated responses to complex legal queries across various jurisdictions.\nContract Analysis: Audit AI-drafted contracts for precision, identifying subtle errors in logic or statutory application.\nSafety & Bias Review: Ensure model outputs remain neutral and aligned with ethical legal frameworks.\nFeedback & Rubric Authoring: Draft clear technical justifications to explain why one legal output is superior to another, helping to \"teach\" the model.\nWhat You Will Bring\nEssential Skills (Must-Haves):\n\nLegal Expertise: A Juris Doctor (JD), Master of Laws (LLM), or equivalent high-level legal degree.\nProfessional Experience: 3+ years of experience in practicing law, contract analysis, or legal research.\nAnalytical Precision: The ability to explain complex legal trade-offs in a clear, concise manner for technical teams.\nDesirable Skills (Nice-to-Haves):\n\nExperience with LLM training or Reinforcement Learning from Human Feedback (RLHF).\nBackground in Jurisdiction-specific statutory review or compliance.\nWhy You’ll Love Remote Works\nTransparent Weekly Pay: Every brief shows the rate before you accept. Payouts clear every Friday via ACH, Wise, or PayPal.\nEfficiency: Our routing engine surfaces only the projects that match your background and rate floor—no \"race-to-the-bottom\" bidding.\nSingle Dashboard: Manage your credential dossier and projects in one place, avoiding the context-switching of multiple platforms.\nHow to Apply\nPlease submit your resume through Wellfound. Remote Works is an equal opportunity employer committed to building an inclusive workforce that reflects our global community. We encourage specialists of all backgrounds and perspectives to apply.",
+   "description_is_full": true,
+   "tracks": [
+    "ai_ml",
+    "data_analyst"
+   ],
+   "score": 61,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : IA / Machine learning, Data analyst",
+     "evidence": "Data Analyst – AI Legal Training"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "bad",
+     "summary": "1 sur 2 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…s.\nDesirable Skills (Nice-to-Haves):\n\nExperience with LLM training or Reinforcement Learning from Human Feedback (RLHF).\nBackground in Jurisdiction-specific statu…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "partial",
+     "summary": "Alaska : hors de la zone de Paris, télétravail possible",
+     "evidence": "Location: Remote (Global – 47 Countries) Type: Contract / Flexible Salary Range: $100,…"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "good",
+     "summary": "100000–180000 € par an (minimum souhaité : 35 000 €)",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "LLM"
+   ],
+   "skills_missing": [
+    "Reinforcement Learning"
+   ]
+  },
+  {
+   "id": 304,
+   "title": "Consultant IA Product Manager F/H",
+   "company": "CONVERTEO",
+   "city": "Paris, Ile-de-France",
+   "remote": null,
+   "contract": "CDI",
+   "salary": {
+    "min": 43000.0,
+    "max": 59000.0,
+    "period": "year"
+   },
+   "source": "Adzuna",
+   "url": "https://www.adzuna.fr/details/5757027042",
+   "published_on": "2026-06-09",
+   "deadline": null,
+   "description": "Découvrez le Pôle d'accélération IA et Agentic Le pôle a pour mission de déployer l'IA et la technologie à grande échelle pour industrialiser la performance. Elle rassemble des experts qui relèvent les défis stratégiques des directions IT et Data, de l'expérimentation à l'industrialisation. Leurs expertises couvrent le Data & Machine Learning Engineering, la data science, l'Analytics Engineering et la BI nouvelle génération. Cette practice intègre également des Product Managers, qui assurent la…",
+   "description_is_full": false,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 61,
+   "confidence": "low",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "partial",
+     "summary": "Correspond à : IA / Machine learning ; niveau « Manager » au-dessus de ta cible",
+     "evidence": "Consultant IA Product Manager F/H"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "bad",
+     "summary": "1 sur 1 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…imentation à l'industrialisation. Leurs expertises couvrent le Data & Machine Learning Engineering, la data science, l'Analytics Engineering et la BI nouvel…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris, Ile-de-France : zone de Paris",
+     "evidence": "Paris, Ile-de-France"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDI : dans tes préférences",
+     "evidence": "CDI"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "good",
+     "summary": "43000–59000 € par an (minimum souhaité : 35 000 €)",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Machine Learning"
+   ],
+   "skills_missing": []
+  },
+  {
+   "id": 24,
+   "title": "Senior Machine Learning Engineer F/H",
+   "company": "Innova Solutions",
+   "city": "Montpellier - 34",
+   "remote": null,
+   "contract": "CDI",
+   "salary": {
+    "min": 70000.0,
+    "max": 95000.0,
+    "period": "year"
+   },
+   "source": "Apec",
+   "url": "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179239021W",
+   "published_on": "2026-08-06",
+   "deadline": null,
+   "description": "Nous recherchons en CDI pour un client final un/e Senior Machine Learning Engineer en full-remote depuis la France métropolitaine ou la Corse. Vous évoluerez dans un environnement où les modèles de Machine Learning sont au cœur du produit et impactent directement des milliards ...",
+   "description_is_full": false,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 61,
+   "confidence": "low",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "partial",
+     "summary": "Correspond à : IA / Machine learning ; niveau « Senior » au-dessus de ta cible",
+     "evidence": "Senior Machine Learning Engineer F/H"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "bad",
+     "summary": "1 sur 1 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "Nous recherchons en CDI pour un client final un/e Senior Machine Learning Engineer en full-remote depuis la France métropolitaine ou la Corse.…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Télétravail complet",
+     "evidence": "…en CDI pour un client final un/e Senior Machine Learning Engineer en full-remote depuis la France métropolitaine ou la Corse. Vous évoluerez dans un e…"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDI : dans tes préférences",
+     "evidence": "CDI"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "good",
+     "summary": "70000–95000 € par an (minimum souhaité : 35 000 €)",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Machine Learning"
+   ],
+   "skills_missing": []
+  },
+  {
+   "id": 1242,
+   "title": "Data Analyst Senior / Chef de projet Data – Power BI & BigQuery F/H",
+   "company": "Smartpoint",
+   "city": "Paris (75)",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://indeed.com/viewjob?jk=8c8fec9765f5f880",
+   "published_on": "2026-09-18",
+   "deadline": null,
+   "description": "Au sein de la Direction IA & Data, la Direction Data a pour ambition de maximiser la valorisation du patrimoine de données de l?entreprise, de développer l?intelligence autour de la donnée et de piloter la performance des activités et des offres.\n \n \nDans ce cadre, le pôle Data Intelligence recherche un(e) Data Analyst Senior / Chef(fe) de projet Data pour accompagner les directions métiers dans la mise en place d?analyses, d?indicateurs et de tableaux de bord dédiés au pilotage de la performance opérationnelle.\n \n \nVous interviendrez à l?interface entre les équipes métiers, Data et SI, avec un rôle à la fois analytique, fonctionnel et orienté gestion de projet.\n \n \nVos missions\n \n \nCadrage et gestion des projets Data\n \n \nRecueillir et analyser les besoins auprès des différentes directions métiers : Production, RH, Finance, etc.\n \n \nCadrer les projets d?analyse et de reporting en définissant les objectifs, périmètres, indicateurs et sources de données.\n \n \nTraduire les besoins métiers en spécifications fonctionnelles et besoins data.\n \n \nIdentifier et collecter les données nécessaires dans les différents systèmes d?information.\n \n \nDéfinir et mettre en place une méthodologie de travail commune à plusieurs directions métiers.\n \n \nPiloter les différentes étapes des projets, de la collecte du besoin jusqu?à la mise à disposition des analyses et dashboards.\n \n \nData Analyse et Business Analyse\n \n \nAnalyser les données disponibles afin d?identifier les tendances, écarts, indicateurs de performance et leviers d?amélioration.\n \n \nTransformer les données en analyses, synthèses et recommandations concrètes à destination des métiers.\n \n \nExploiter les données existantes pour enrichir et faire évoluer les dispositifs de pilotage.\n \n \nAccompagner les utilisateurs dans l?interprétation et l?utilisation des analyses produites.\n \n \nDatavisualisation et Power BI\n \n \nConcevoir et mettre en place de nouveaux dashboards Power BI répondant aux besoins métiers.\n \n \nFaire évoluer, ajuster et optimiser les tableaux de bord existants.\n \n \nAutomatiser et industrialiser les reportings afin de réduire les tâches à faible valeur ajoutée.\n \n \nGarantir la cohérence des indicateurs, règles de gestion et restitutions.\n \n \nParticiper à la maintenance et à l?amélioration continue des dashboards.\n \n \nCollaboration et coordination Data\n \n \nCollaborer avec les équipes SI, Data Platform et Data Gouvernance pour garantir la disponibilité, la qualité et la fiabilité des données.\n \n \nCoordonner les échanges avec les différentes directions du Groupe.\n \n \nFaciliter la communication entre les interlocuteurs métiers et les équipes techniques.\n \n \nContribuer à la structuration et à la diffusion des bonnes pratiques en matière d?analyse et de pilotage de la performance.\n \n \n**Profil candidat:** \nDe formation supérieure en Data, informatique, statistiques, gestion de projet ou domaine connexe, vous disposez de plus de 5 ans d?expérience en Data Analyse, Business Analyse ou gestion de projets Data.\n \n \n**Vous disposez idéalement des compétences suivantes :** \nSolide maîtrise d?un outil de Data Visualisation, notamment Power BI.\n \n \nBonne compréhension de BigQuery et des environnements Data Cloud.\n \n \nExpérience significative en gestion de projet Data et en recueil/cadrage des besoins métiers.\n \n \n**Capacité à travailler sur l?ensemble de la chaîne :** besoin métier ? collecte et compréhension des données ? analyse ? dashboard ? accompagnement des utilisateurs.\n \n \nCapacité à transformer des données complexes en indicateurs, analyses et recommandations opérationnelles.\n \n \nUne expérience dans les domaines RH, Finance ou Production audiovisuelle serait appréciée.\n \n \nVos qualités\n \n \n**Vous êtes reconnu(e) pour votre :** \nExcellent relationnel et votre capacité à interagir avec des interlocuteurs variés ;\n \n \nPédagogie et capacité à vulgariser les sujets Data ;\n \n \nRigueur et esprit de synthèse ;\n \n \nAutonomie et capacité à prendre en charge un projet de bout en bout ;\n \n \nCuriosité et capacité à comprendre rapidement les enjeux métiers ;\n \n \nEsprit d?analyse et orientation résultats ;\n \n \nCapacité à travailler dans un environnement multi-directions et transverse.",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 61,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "partial",
+     "summary": "Correspond à : Data analyst ; niveau « Senior » au-dessus de ta cible",
+     "evidence": "Data Analyst Senior / Chef de projet Data – Power BI & BigQuery F/H"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "3 sur 5 dans ton profil",
+     "evidence": "…ion et l?utilisation des analyses produites.\n \n \nDatavisualisation et Power BI\n \n \nConcevoir et mettre en place de nouveaux dashboards Power BI répo…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris (75) : zone de Paris",
+     "evidence": "Paris (75)"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Data Visualisation",
+    "BigQuery",
+    "Gestion de projet"
+   ],
+   "skills_missing": [
+    "Power BI",
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 1243,
+   "title": "Data analyst H/F",
+   "company": "Histoire d'Or",
+   "city": "Paris (75)",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://indeed.com/viewjob?jk=2118308e314ffbb6",
+   "published_on": "2026-09-17",
+   "deadline": null,
+   "description": "Description du poste\n\nRattaché au Data Analyste Sénior, le Data Analyste (H/F) sera amené(e) à collecter, administrer, analyser des données pour fournir des éléments décisionnels au métier concerné (CRM/E-commerce/Retail/Service Client) et contribuer ainsi à l’optimisation du chiffre d’affaires et à l’EBITDA des marques.\n\nIl/elle aura les missions suivantes :\n\n1/Développer la connaissance pour le métier concerné et la diffuser au sein de l'entreprise\n\n- Être le référent de la data pour le métier concerné et travailler en transverse avec les équipes techniques et les prestataires externes\n\n- Identifier les nouveaux besoins de reportings, rédiger le cahier des charges, assurer la bonne exécution\n\n- Analyser les insights permettant d’identifier les nouvelles opportunités business\n\n- Développer et monitorer la connaissance pour le métier concerné à travers la mise en place d'enquêtes (produits, satisfaction, optimisation de parcours etc.)\n\n- Réaliser et/ou piloter les études Adhoc pour le métier concerné afin d’apporter des réponses opérationnelles aux challenges soulevés\n\n2/Améliorer la performance des actions pour le métier concerné\n\n- Être référent sur les projets data pour le métier, challenger si nécessaire et assurer l’implémentation auprès de nos équipes techniques et nos partenaires externes\n\n- Identifier les besoins de ciblages & scores prédictifs nécessaires à l’optimisation du quotidien du métier concerné\n\n- Simuler le potentiel des opportunités commerciales dans une logique ROIste et test & learn\n\n3/Soutenir l’omnicanal\n\n- Analyser et comprendre les données on & off line afin d'optimiser le parcours clients omnicanal\n\n- Porter la vision data au sein de l’entreprise en s’appuyant sur l’expertise des équipes techniques et de nos partenaires externes\n\n4/Garantir la conformité de la data à la réglementation :\n\n- Assurer la conformité de la collecte de données à la réglementation en vigueur sur le métier concerné\n\n- Être le référent data sur le métier concerné pour l’équipe conformité\n\n5/Veiller à l’optimisation du stack data :\n\n- Etablir une veille concurrentielle régulière (outils, organisation, use cases)\n\n- Partager régulièrement les innovations rencontrées avec ses pairs/les pays/les équipes BI\n\nCompétences :\n\n- Bac +5 marketing/communication/commerce/digital\n\n- **3 à 5 ans d’expérience en** **data analyse, idéalement** **chez un retailer**\n\n- Maîtrise du Pack Office\n\n- Expertise concernant les techniques statistiques/outils BI & Data\n\n- Connaissance d’un outil de datavisualisation type **Power BI**\n\n- Maitrise de la gestion de projet transverse\n\n- Sensibilité UX/UI, capacité d’écoute des besoins métiers, rigueur, autonomie, sens du relationnel, esprit d’analyse et de synthèse, capacité de vulgarisation de la donnée pour les métiers",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 61,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Data analyst H/F"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "bad",
+     "summary": "1 sur 3 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…tils BI & Data\n\n- Connaissance d’un outil de datavisualisation type **Power BI**\n\n- Maitrise de la gestion de projet transverse\n\n- Sensibilité UX/UI…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris (75) : zone de Paris",
+     "evidence": "Paris (75)"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Gestion de projet"
+   ],
+   "skills_missing": [
+    "Power BI",
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 527,
+   "title": "Analyste de Données | Mesure d'Impact Social F/H/X",
+   "company": "Croix-Rouge française",
+   "city": "Montrouge",
+   "remote": "Télétravail",
+   "contract": "CDD",
+   "salary": {
+    "min": 50000.0,
+    "max": 60000.0,
+    "period": "year"
+   },
+   "source": "Croix-Rouge",
+   "url": "https://www.croix-rouge.fr/jobs/53640-analyste-de-donnees-mesure-d-impact-social-f-h-x-montrouge",
+   "published_on": "2026-07-31",
+   "deadline": null,
+   "description": "Le/la Data Analyst contribue à améliorer la qualité, la fiabilité et l’exploitation des données afin de renforcer le pilotage des activités et la prise de décision.\nIl/elle intervient en appui des équipes métiers et techniques pour structurer les données, produire des analyses pertinentes et faciliter leur utilisation opérationnelle.\nMISSION 1 : Structuration et définition des données\n\nParticiper à la construction et à la mise à jour du dictionnaire des indicateurs\nFormaliser des définitions communes (indicateurs, variables, règles de calcul)\nHarmoniser les pratiques entre équipes, y compris équipes techniques\nParticiper à la formalisation des besoins en matière de suivi et reporting\nContribuer à la simplification et à la standardisation des outils de pilotage\n\nMISSION 2 : Analyse et Production de livrables\n\nProduire des analyses exploratoires et opérationnelles\nConcevoir et maintenir des tableaux de bord de suivi d’activité\nTraduire les données en insights utiles à la décision\nRépondre à des demandes d’analyse ponctuelles, en particulier sur des études quantitatives nécessitant des analyses statistiques\nAssurer une veille sur les données publiques et leur structuration\n\nMISSION 3 : Qualité des données\n\nMettre en place et suivre des indicateurs de qualité de données (complétude, cohérence, fiabilité)\nIdentifier les anomalies et proposer des actions correctives\nDocumenter les règles de gestion et de contrôle\nTravailler avec les équipes métiers pour améliorer les pratiques de collecte\nTester et valider la qualité des données issues des systèmes\nParticiper à l’évolution des outils de collecte \n\nMISSION 4 : Activités transverses\n\nAccompagner les équipes dans la compréhension et l’utilisation des données\nParticiper à la rédaction de guides et bonnes pratiques\nAssurer une veille sur les méthodes d’analyse et de gestion des données",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 59,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Analyste de Données | Mesure d'Impact Social F/H/X"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "bad",
+     "summary": "1 sur 2 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…en particulier sur des études quantitatives nécessitant des analyses statistiques\nAssurer une veille sur les données publiques et leur structuration\n\nM…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "bad",
+     "summary": "Montrouge : hors de la zone de Paris",
+     "evidence": "Montrouge"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDD : dans tes préférences",
+     "evidence": "CDD"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "good",
+     "summary": "50000–60000 € par an (minimum souhaité : 35 000 €)",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Gestion des données"
+   ],
+   "skills_missing": [
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 859,
+   "title": "Senior Data Scientist - Care AI",
+   "company": "Back Market",
+   "city": "Paris",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "LinkedIn",
+   "url": "https://fr.linkedin.com/jobs/view/senior-data-scientist-care-ai-at-back-market-4453156123",
+   "published_on": "2026-09-24",
+   "deadline": "2026-09-11",
+   "description": "Hi, we’re Back Market.<br><br>We’re here to help <strong>make tech reliable, affordable, and better than new</strong>. We're a global marketplace for refurbished devices, helping lower our collective environmental impact by providing trustworthy, affordable tech with 92% less carbon emissions than new.<br><br>Yep, you read that right. Turns out refurbished tech is way better for the planet than new. In fact, With every device purchased on Back Market, our positive impact on the planet grows. From our Customer Care representatives to our software engineer, every individual at Back Market cuts the planet — and consumers — a break. <strong>Our mission is simple: to do more with what we already have.<br><br></strong>Are you ready to join us?<br><br><strong>About The Role<br><br></strong>As part of the Bureau of Technology, you’ll design, build, and scale AI-driven solutions to improve our Customer Care. You’ll join a new team, Care AI (a mix of data scientists and software engineers) focused on enhancing the experience of our customers in need of help with faster and more precise resolutions.<br><br>Your focus will be in implementing and scaling our Care AI agents and improving AI powered features aimed at increasing agents efficiency, detecting customer sentiment and speeding up resolutions.<br><br><strong>What You Will Do<br><br></strong><ul><li>Identify company problems and opportunities that AI can address, own them end-to-end, from problem definition to production rollout, collaborating with stakeholders and relevant teams to design and ship the product features that solves them.</li><li>Hands-on development, productionisation, and operation of machine learning models and/or GenAI applications at scale. This includes integrating and optimizing LLMs for production environments.</li><li>Contribute to the development of the AI community within the company by promoting best practices and sharing your work internally to raise awareness about AI capabilities</li><li>Regularly present work internally (demo, internal conferences,...) to technical, engineering and product stakeholders to acculturate the business to AI related topics<br><br></li></ul><strong>About You<br><br></strong><ul><li>6+ years of industry experience in data science or related fields, with a Master's or PhD in a quantitative discipline (Statistics, Economics, Sciences, or Engineering)</li><li>Proven track record of leading impactful data science initiatives that solve real business problems, with the ability to mentor and develop scientists, engineers, and peers</li><li>Deep knowledge of the ML lifecycle, algorithms, best practices, and hands-on experience with LLMs, prompt engineering, and Generative AI APIs</li><li>Strong ability to design end-to-end AI and data architectures that integrate with existing product systems, data platforms, and engineering infrastructure, with solid Python skills and software engineering fundamentals (testing, code review, deployment)</li><li>Proficiency in AI-assisted and agentic coding workflows (e.g. Claude Code), and strong communication skills to convey complex technical concepts to both technical and non-technical audiences<br><br></li></ul><strong>Recruitment Process<br><br></strong><ul><li>Call with Stéphane, Senior Talent Acquisition Partner (1h)</li><li>Technical screening (30 min)</li><li>Technical Interview (1h15)</li><li>Stakeholder interview (1h)</li><li>Back Market Values fit interview - 45 min<br><br></li></ul><strong>WHY SHOULD YOU JOIN US ? ✌🏼<br><br></strong>At Back Market, we’re committed to hiring and supporting diverse teams of people from all backgrounds, experiences, and perspectives — it’s one of the reasons we’re such a high-scoring certified B Corp company (93.2).<br><br><strong>Benefits<br><br></strong>No matter your role and seniority level, you’ll enjoy impact-driven work with hands-on career development in an innovative, driven, and fast-paced environment — with benefits to match, like:<br><br><ul><li> A mission driven work environment where your day to day makes an impact on the planet. Seriously.</li><li> Hybrid work environment, with 2 remote days a week and 1 remote work week per quarter, plus 3 flex days.</li><li> Employee Resource Groups, including mentorship programs, comprehensive accessibility policies, and cultural competency training.<br><br></li></ul>At Back Market, we strive to create a workplace that embodies the world we’re trying to change. We’ve embedded our diversity, equity, and inclusion principles into our DNA — from dedicated staff to employee resource groups to our company values.<br><br>We know that the perfect background for a role doesn’t mean the perfect fit — we encourage you to apply for a role even if you think you may not have all the qualifications.<br><br>If reasonable accommodations are needed for the interview process, please do not hesitate to discuss this with the Talent Acquisition Team.<br><br>",
+   "description_is_full": true,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 58,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "partial",
+     "summary": "Correspond à : IA / Machine learning ; niveau « Senior » au-dessus de ta cible",
+     "evidence": "Senior Data Scientist - Care AI"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "2 sur 2 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…t systems, data platforms, and engineering infrastructure, with solid Python skills and software engineering fundamentals (testing, code review, d…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris : zone de Paris",
+     "evidence": "Paris"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "Python",
+    "Machine Learning"
+   ],
+   "skills_missing": []
+  },
+  {
+   "id": 302,
+   "title": "Product Manager IA",
+   "company": "Non précisée",
+   "city": "16ème Arrondissement, Paris",
+   "remote": null,
+   "contract": "CDI",
+   "salary": null,
+   "source": "Adzuna",
+   "url": "https://www.adzuna.fr/details/5813049175",
+   "published_on": "2026-07-24",
+   "deadline": null,
+   "description": "Qui nous sommes? Chez Seedext, notre mission est claire : éliminer le stress des prises de notes en réunion, les heures post-réunion passées à rédiger des comptes rendus, et la recherche éperdue d'informations notées sur un bout de papier. Nous aspirons à révolutionner l'avenir du travail. Seedext, c'est ton assistant intelligent qui transcrit et synthétise toutes tes réunions en un clic, que ce soit sur Zoom, Google Meet, Teams, ou en présentiel. Notre objectif ultime : devenir LA solution de …",
+   "description_is_full": false,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 56,
+   "confidence": "low",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "partial",
+     "summary": "Correspond à : IA / Machine learning ; niveau « Manager » au-dessus de ta cible",
+     "evidence": "Product Manager IA"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "unknown",
+     "summary": "Aucune compétence repérée dans l'annonce",
+     "evidence": ""
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "16ème Arrondissement, Paris : zone de Paris",
+     "evidence": "16ème Arrondissement, Paris"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "good",
+     "summary": "CDI : dans tes préférences",
+     "evidence": "CDI"
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [],
+   "skills_missing": []
+  },
+  {
+   "id": 308,
+   "title": "Lead Product Manager - CDI Paris - Theodo Data & IA",
+   "company": "Theodo",
+   "city": "Paris, Ile-de-France",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Adzuna",
+   "url": "https://www.adzuna.fr/details/5270357280",
+   "published_on": "2025-06-26",
+   "deadline": null,
+   "description": "L’histoire du groupe Theodo et son succès Theodo accompagne depuis 2009 les entreprises innovantes dans la conception, le développement et le déploiement de produits digitaux ingénieux - tels que la plateforme TF1, l'application LCL Pro ou l'application France Identité Numérique - en tirant parti du meilleur de la technologie et de l’approche Lean. Theodo connait une croissance exceptionnelle depuis 15 ans : nos équipes rassemblent plus de 850 Theodoers, principalement des Software Engineers, p…",
+   "description_is_full": false,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 50,
+   "confidence": "low",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "partial",
+     "summary": "Correspond à : IA / Machine learning ; niveau « Lead » au-dessus de ta cible",
+     "evidence": "Lead Product Manager - CDI Paris - Theodo Data & IA"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "unknown",
+     "summary": "Aucune compétence repérée dans l'annonce",
+     "evidence": ""
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris, Ile-de-France : zone de Paris",
+     "evidence": "Paris, Ile-de-France"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [],
+   "skills_missing": []
+  },
+  {
+   "id": 657,
+   "title": "Project Manager DATA / IA F/H",
+   "company": "CGI",
+   "city": "Lyon",
+   "remote": "partial",
+   "contract": null,
+   "salary": null,
+   "source": "Welcome to the Jungle",
+   "url": "https://www.welcometothejungle.com/fr/companies/cgi-france/jobs/project-manager-data-ia-f-h_lyon",
+   "published_on": "2026-08-24",
+   "deadline": null,
+   "description": "Description du poste\nJob Description Project Manager DATA / IA F/H Description de poste Vous rejoignez CGI, leader mondial du conseil et des services numériques à Lyon et accompagnez nos clients. Au sein de nos équipes, vous intervenez auprès d’acteurs majeurs des secteurs pharmaceutique, de la chimie et de l’industrie. De l’expression du besoin jusqu’au déploiement des solutions, nous accompagnons nos clients dans leurs projets de transformation, d’industrialisation, d’amélioration de la performance et de modernisation de leurs outils et processus. Nos interventions couvrent notamment les environnements réglementés, les activités de production, la qualité et la supply chain, avec un objectif constant d’excellence opérationnelle et d’innovation. Fonctions et responsabilités En tant que Project Manager , vous interviendrez dans les domaines suivants : Delivery : • Pilotage de plusieurs projets Build, de la signature du contrat jusqu’à la fin des travaux, incluant la gestion financière et organisationnelle, le respect des délais et de la qualité, ainsi que le pilotage des ressources. • Promouvoir la visibilité de l’expertise Data & IA de CGI auprès des clients. • Garantir un niveau élevé de satisfaction client. • Animer les instances de gouvernance. Management : • Selon les opportunités et votre appétence, possibilité d’encadrer une équipe de 12 à 15 ingénieurs. • Partager et développer les compétences des membres de la communauté Data. Ambassadeur de notre savoir-faire : • Promouvoir le savoir-faire de CGI auprès de nos clients et partenaires. • Participer au pilotage des actions d’avant-vente et aux réponses aux appels d’offres. • Proposer des démarches d’innovation et contribuer à la valorisation des expertises CGI. • Développer et maintenir un haut niveau d’expertise dans le domaine de la Data & IA et jouer un rôle de conseil auprès du management sur ces sujets. Nous recherchons un leader capable de partager la vision de CGI auprès de nos clients, de nos équipes et de nos partenaires. Vous porterez une vision stratégique et ambitieuse auprès de nos équipes et de nos clients. En rejoignant CGI, vous bénéficiez notamment d’une offre complète de formations (techniques, métiers, développement personnel,…), de flexibilité grâce à notre accord télétravail (jusqu’à 3 jours de télétravail par semaine), d’une politique de congés avantageuse (27 jours de congés payés, RTT, congés ancienneté et enfant malade,…) et d’un package d’avantages intéressant (régime d’achats d’actions, participation, CSE,…). Qualités requises pour réussir dans ce rôle De formation supérieure (Bac+5) en école d’ingénieur, informatique, data science, intelligence artificielle, mathématiques appliquées ou équivalent, vous justifiez d’une expérience significative dans le pilotage de projets Data et/ou IA. Vous disposez notamment d’au moins 3 ans d’expérience sur un poste similaire, avec la responsabilité de projets d’envergure, de la phase de cadrage jusqu’au déploiement des solutions, dans des environnements complexes impliquant de multiples parties prenantes. Vous avez : • Une connaissance du monde des services IT, avec au moins 3 ans d’expérience sur un poste similaire. • Une expérience de pilotage de projets Build en mode Agile ou Waterfall en tant que Directeur de projet. • Une expertise technique dans le domaine de la Data & IA sur les principales technologies du marché. • Un excellent sens du relationnel. Diplomate et à l’écoute, vous savez fédérer vos interlocuteurs. • Une réelle posture de leader. Intègre, vous êtes doté(e) d’une forte fibre managériale. • Le sens des responsabilités ; sérieux(se), rigoureux(se) et organisé(e), vous êtes attaché(e) à la qualité de vos réalisations. • Un niveau d’anglais C1/C2. Une mobilité ponctuelle pourra être requise en fonction des besoins des projets et des clients. CGI est un employeur inclusif et attentif aux candidatures des personnes en situation de handicap, à l’évolution de carrières des hommes et des femmes et au bien-être de nos salariés LGBT+. Notre engagement en faveur de la diversité et de l’inclusion a été reconnu par l’obtention du label recrutement inclusif, décerné par Job in Live, acteur spécialisé dans le recrutement inclusif et la valorisation de la diversité en entreprise. Dans un souci d’accessibilité et de clarté, le point médian n’est pas utilisé dans cette annonce. Tous les termes employés se réfèrent aussi bien au genre féminin que masculin. Ensemble, en tant que propriétaires, mettons notre savoir-faire à l’œuvre. La vie chez CGI est ancrée dans l’actionnariat, le travail d’équipe, le respect et un sentiment d’appartenance. Chez nous, vous pourrez exploiter votre plein potentiel parce que… Nous vous invitons à devenir propriétaire dès le jour 1 alors que nous travaillons ensemble à faire de notre rêve une réalité. C’est pourquoi nous nous désignons comme associés de CGI, plutôt que comme employés. Nous tirons profit des retombées de notre succès collectif et contribuons activement à l’orientation et à la stratégie de notre entreprise. Votre travail crée de la valeur. Vous élaborerez des solutions novatrices et développerez des relations durables avec vos collègues et clients, tout en ayant accès à des capacités mondiales pour concrétiser vos idées, saisir de nouvelles opportunités, et bénéficier d’une expertise sectorielle et technologique de pointe. Vous ferez évoluer votre carrière en vous joignant à une entreprise bâtie pour croître et durer. Vous serez soutenus par des leaders qui ont votre santé et bien-être à cœur et qui vous permettront de saisir des occasions afin de parfaire vos compétences et élargir les horizons. Ce même engagement envers l’équité s’étend à notre utilisation des technologies. Afin de soutenir notre équipe de recrutement, des outils d’IA peuvent être utilisés pour aider à l’évaluation des candidatures, sans jamais remplacer le jugement humain. Toutes les décisions d’embauche demeurent entièrement entre les mains de nos professionnels du recrutement. Joignez-vous à nous, l’une des plus importantes entreprises de conseil en technologie de l’information (TI) et en management au monde. Skills English Reference 1327907",
+   "description_is_full": true,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 50,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "partial",
+     "summary": "Correspond à : IA / Machine learning ; niveau « Manager » au-dessus de ta cible",
+     "evidence": "Project Manager DATA / IA F/H"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "2 sur 2 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…supérieure (Bac+5) en école d’ingénieur, informatique, data science, intelligence artificielle, mathématiques appliquées ou équivalent, vous justifiez d’une expérie…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "partial",
+     "summary": "Lyon : hors de la zone de Paris, télétravail possible",
+     "evidence": "…iers, développement personnel,…), de flexibilité grâce à notre accord télétravail (jusqu’à 3 jours de télétravail par semaine), d’une politique de cong…"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [
+    "intelligence artificielle",
+    "Agile"
+   ],
+   "skills_missing": []
+  },
+  {
+   "id": 1234,
+   "title": "Data Analyst & IA - Stage",
+   "company": "CORUM",
+   "city": "8ème Arrondissement, Paris",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Adzuna",
+   "url": "https://www.adzuna.fr/details/5894383828",
+   "published_on": "2026-09-23",
+   "deadline": "2026-10-07",
+   "description": "Objectif du poste La connaissance et l’analyse de nos données (données liées à la performance de l’entreprise et de nos fonds immobiliers et obligataires, données clients et produits) est au cœur des préoccupations de CORUM L’Épargne. Elle constitue un volet indispensable de notre stratégie de développement pour les années à venir. Au sein de l’équipe Performance & Analytics, vous contribuerez à des projets concrets visant à améliorer le pilotage de l’activité, la qualité de nos analyses et l’efficacité de nos processus internes. Nous recherchons un(e) stagiaire issu(e) d’une grande école d’ingénieur ou de commerce, curieux(se), analytique et attiré(e) par les sujets sur la donnée, la performance et l’intelligence artificielle. Qui sommes-nous? Nous sommes une entreprise européenne dynamique et indépendante, forte de plus de 270 collaborateurs dévoués à la satisfaction de nos clients. Nous offrons des solutions d’épargne performantes et innovantes dans plusieurs pays européens. Notre entreprise est reconnue pour son développement réussi et sa capacité d’innovation. Le Groupe est entièrement détenu par ses managers. Avec la confiance de près de 160 000 clients , nous gérons plus de 9,6 milliards d'euros d'épargne. Nos bureaux sont situés à Paris, Londres, Dublin, Amsterdam, Lisbonne, Vienne et Singapour, avec notre siège basé à Paris. Nos collaborateurs, issus de 23 nationalités différentes, parlent près de 30 langues et ont une moyenne d’âge de 35 ans. Vos missions 1. Pilotage de la performance et data visualisation Concevoir, développer et améliorer des tableaux de bord Power BI destinés au suivi des indicateurs clés de l'entreprise. Recueillir les besoins des équipes métiers et les traduire en solutions de reporting pertinentes. Participer à la définition et à la fiabilisation des indicateurs de performance. Améliorer l'ergonomie, la lisibilité et l'expérience utilisateur des rapports existants. Contribuer à la documentation des rapports, des sources de données et des règles de calcul. 2. Analyse et exploitation des données Rédiger, optimiser et maintenir des requêtes SQL. Explorer et analyser différentes sources de données afin d'identifier des tendances, des anomalies ou des leviers d'amélioration. Participer à la structuration, à la fiabilisation et à l'amélioration de la qualité des données. Réaliser des analyses ad hoc pour répondre aux besoins des équipes opérationnelles et managériales. 3. Automatisation et développement Python Développer des scripts Python afin d'automatiser certains traitements récurrents. Fiabiliser et industrialiser des processus aujourd'hui réalisés manuellement. Mettre en place des contrôles et des mécanismes de suivi garantissant la qualité des traitements. Documenter les scripts et les méthodes développées pour faciliter leur maintenance et leur réutilisation. 4. Recherche et expérimentation en intelligence artificielle Assurer une veille sur les usages de l'IA appliqués à la data visualisation, à l'analyse de données et à l'automatisation. Expérimenter des solutions d'intelligence artificielle destinées à améliorer la création, l'utilisation et la maintenance des rapports Power BI. Étudier les opportunités offertes par l'IA pour accélérer l'analyse des données et faciliter l'identification d'informations pertinentes. Prototyper des solutions intégrant des assistants IA, des grands modèles de langage (LLM) ou des technologies de recherche augmentée. Évaluer la pertinence, la fiabilité et les limites des solutions testées dans un environnement professionnel. Profil recherché Étudiant(e) dans une grande école d’ingénieurs, avec une spécialisation ou un fort intérêt pour la data, les statistiques et l’IA Très bonne maîtrise de Python et solides connaissances en SQL. Intérêt pour la data visualisation et idéalement une première expérience avec Power BI. Bonne compréhension des enjeux liés à la qualité, à la structuration et à l’exploitation des données. Curiosité pour les nouveaux usages de l’intelligence artificielle et envie de passer rapidement de l’expérimentation à des solutions concrètes. Esprit analytique, rigueur et capacité à structurer des problèmes complexes. Autonomie, sens du service et aptitude à échanger avec des interlocuteurs métiers. Une bonne maîtrise de l’anglais professionnel serait appréciée. Une première expérience en projet data, en développement Python, en Business Intelligence ou en intelligence artificielle constitue un atout, mais nous accordons également une grande importance à la motivation, à la capacité d’apprentissage et à la qualité du raisonnement. Pourquoi nous rejoindre ? Intégrer une aventure entrepreneuriale dans un cadre international Travailler sur des projets variés qui stimuleront votre créativité Évoluer dans un environnement dynamique favorisant l'autonomie et la prise d'initiative Être accompagné(e) dans votre montée en compétences tout au long de votre parcours",
+   "description_is_full": true,
+   "tracks": [
+    "ai_ml",
+    "data_analyst"
+   ],
+   "score": 40,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : IA / Machine learning, Data analyst",
+     "evidence": "Data Analyst & IA - Stage"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "good",
+     "summary": "7 sur 9 dans ton profil",
+     "evidence": "…visualisation Concevoir, développer et améliorer des tableaux de bord Power BI destinés au suivi des indicateurs clés de l'entreprise. Recueillir le…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "8ème Arrondissement, Paris : zone de Paris",
+     "evidence": "8ème Arrondissement, Paris"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [
+    {
+     "label": "Stage ou alternance",
+     "evidence": "Data Analyst & IA - Stage"
+    }
+   ],
+   "skills_found": [
+    "Python",
+    "SQL",
+    "LLM",
+    "Data Visualisation",
+    "Automatisation",
+    "intelligence artificielle",
+    "Analyse de données"
+   ],
+   "skills_missing": [
+    "Power BI",
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 713,
+   "title": "Data analyst intern",
+   "company": "Papernest",
+   "city": "Barcelona",
+   "remote": "no",
+   "contract": null,
+   "salary": {
+    "min": 800.0,
+    "max": null,
+    "period": "day"
+   },
+   "source": "Welcome to the Jungle",
+   "url": "https://www.welcometothejungle.com/fr/companies/souscritoo/jobs/data-analyst-intern_barcelona_PAPER_Z1358J",
+   "published_on": "2026-08-21",
+   "deadline": null,
+   "description": "Description du poste\nA first interview with Arianna from the Talent Acquisition team A SQL test A 45-minute interview with Giulia Andrea or Barnabé, Data Analysts from the team",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 40,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Data analyst intern"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "bad",
+     "summary": "1 sur 1 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "…ste\nA first interview with Arianna from the Talent Acquisition team A SQL test A 45-minute interview with Giulia Andrea or Barnabé, Data Analys…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "bad",
+     "summary": "Barcelona : hors de la zone de Paris",
+     "evidence": "Barcelona"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "TJM de 800 € par jour : pas un salaire annuel",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [
+    {
+     "label": "Stage ou alternance",
+     "evidence": "Data analyst intern"
+    }
+   ],
+   "skills_found": [
+    "SQL"
+   ],
+   "skills_missing": []
+  },
+  {
+   "id": 69,
+   "title": "Alternant - Data Analyst - Relation Client F/H",
+   "company": "SFR",
+   "city": "Paris 15 - 75",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Apec",
+   "url": "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179243978W",
+   "published_on": "2026-08-07",
+   "deadline": null,
+   "description": "Missions : Au sein de la Direction Générale Grand Public de SFR, vous intégrez la Direction Relation Client Fixe au sein du service Legacy et avez pour mission de : Recueillir les besoins internes pour le service Legacy. Comprendre précisément les problématiques métiers Legacy...",
+   "description_is_full": false,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 40,
+   "confidence": "low",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Alternant - Data Analyst - Relation Client F/H"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "unknown",
+     "summary": "Aucune compétence repérée dans l'annonce",
+     "evidence": ""
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris 15 - 75 : zone de Paris",
+     "evidence": "Paris 15 - 75"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [
+    {
+     "label": "Stage ou alternance",
+     "evidence": "Alternant - Data Analyst - Relation Client F/H"
+    }
+   ],
+   "skills_found": [],
+   "skills_missing": []
+  },
+  {
+   "id": 505,
+   "title": "Data Analyst en alternance F/H",
+   "company": "Demant_Aides_Auditives_FR",
+   "city": "Saint-Ouen - 93",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Apec",
+   "url": "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179277015W",
+   "published_on": "2026-08-18",
+   "deadline": null,
+   "description": "Entreprise Leader mondial des solutions auditives, le groupe Demant , basé au Danemark, développe et commercialise des technologies innovantes pour améliorer la santé auditive. Présent dans plus de 30 pays, le groupe compte plus de 22 000 collaborateurs et réalise un chiffre d’af...",
+   "description_is_full": false,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 40,
+   "confidence": "low",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Data Analyst en alternance F/H"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "unknown",
+     "summary": "Aucune compétence repérée dans l'annonce",
+     "evidence": ""
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Saint-Ouen - 93 : zone de Paris",
+     "evidence": "Saint-Ouen - 93"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [
+    {
+     "label": "Stage ou alternance",
+     "evidence": "Data Analyst en alternance F/H"
+    }
+   ],
+   "skills_found": [],
+   "skills_missing": []
+  },
+  {
+   "id": 89,
+   "title": "Accelerator Lead Data & AI Engineering (Paris)",
+   "company": "Sanofi Group",
+   "city": "Paris, Ile-de-France",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Adzuna",
+   "url": "https://www.adzuna.fr/land/ad/5837775661?se=mPiImGmW8RGresWpCpBhhA&v=43BF1189E8D5F65E974519E0185B7B2A9C5997DD",
+   "published_on": "2026-08-12",
+   "deadline": null,
+   "description": "_Le contenu du poste est libellé en anglais car il nécessite de nombreuses interactions avec nos filiales à l'international, l'anglais étant la langue de travail._ _This job offer is accessible to all, regardless of gender._ Job title: _Lead Data & AI Engineering_ _Location: Paris_ _Hybrid: 2 days off site and 3 days on site_ _About the job_ At Sanofi, we're committed to providing the next-gen healthcare that patients and customers need. It's about harnessing data insights and leveraging AI r…",
+   "description_is_full": false,
+   "tracks": [
+    "ai_ml"
+   ],
+   "score": 40,
+   "confidence": "low",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "partial",
+     "summary": "Correspond à : IA / Machine learning ; niveau « Lead » au-dessus de ta cible",
+     "evidence": "Accelerator Lead Data & AI Engineering (Paris)"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "bad",
+     "summary": "0 sur 1 dans ton profil (trop peu d'indices pour conclure)",
+     "evidence": "_Le contenu du poste est libellé en anglais car il nécessite de nombreuses interactions avec nos filiales à l'interna…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris, Ile-de-France : zone de Paris",
+     "evidence": "Paris, Ile-de-France"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [],
+   "skills_found": [],
+   "skills_missing": [
+    "R"
+   ]
+  },
+  {
+   "id": 1241,
+   "title": "Stage Data Analyst Marketing (H/F) - Canada",
+   "company": "Experience Internship Canada",
+   "city": "Paris (75)",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://indeed.com/viewjob?jk=bf0732350f864bc8",
+   "published_on": "2026-09-18",
+   "deadline": null,
+   "description": "Description :\n\nContexte (Stage au Canada)\n\nDans un environnement numérique en constante évolution, les données sont au cœur des décisions marketing. Ce stage te permet de rejoindre une entreprise dynamique et d’utiliser tes compétences en **data analyse** pour améliorer la performance des campagnes marketing, comprendre le comportement client et planifier les actions stratégiques.\n\nMissions\n\n- **Collecte et structuration des données :** Extraire et organiser les données issues de différentes sources (CRM, outils internes, bases externes).\n- **Nettoyage et traitement des données :** Corriger les erreurs, harmoniser les formats, et préparer les datasets pour l’analyse.\n- **Analyse statistique et exploration :** Réaliser des analyses descriptives, identifier des tendances, corréler les indicateurs.\n- **Création de dashboards :** Mettre en place des tableaux de bord dynamiques à l’aide d’outils de data visualisation (Power BI, Tableau, Looker...).\n- **Support aux équipes métiers :** Fournir des rapports réguliers et des insights pour appuyer les prises de décisions (marketing, finance, opération...).\n- **Documentation et traçabilité :** Maintenir une documentation claire sur les sources et les traitements de données appliqués.\n- **Veille et amélioration continue :** Rechercher des moyens d’optimiser les processus d’analyse et de collecte de données.\n\nProfil recherché :\n\nProfil recherché\n\n- Formation en **Marketing, Data Science, Statistiques**, ou équivalent (niveau Master apprécié).\n- À l’aise avec des outils comme **Excel, SQL, Tableau, Power BI, Google Analytics…**\n- Bonne culture marketing : compréhension des **KPI** et leviers d’acquisition.\n- Capacité à vulgariser les analyses et à restituer des recommandations claires.\n- Esprit analytique, rigueur, autonomie, sens du détail.\n- Aisance dans la collaboration avec des équipes marketing, produit ou commerciales.\n- Un bon niveau d’anglais peut être requis selon l’entreprise partenaire.\n\nAvantages\n\n- **Rémunération fixe**\n- **Formation pratique** en data marketing avec des outils professionnels\n- **Mentorat** par des experts data & marketing\n- **Possibilité d’évolution** vers un poste long terme en analyse, CRM ou stratégie marketing",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 40,
+   "confidence": "high",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Stage Data Analyst Marketing (H/F) - Canada"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "partial",
+     "summary": "4 sur 8 dans ton profil",
+     "evidence": "…tableaux de bord dynamiques à l’aide d’outils de data visualisation (Power BI, Tableau, Looker...).\n- **Support aux équipes métiers :** Fournir des…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris (75) : zone de Paris",
+     "evidence": "Paris (75)"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [
+    {
+     "label": "Stage ou alternance",
+     "evidence": "Stage Data Analyst Marketing (H/F) - Canada"
+    }
+   ],
+   "skills_found": [
+    "SQL",
+    "Data Visualisation",
+    "Analyse statistique",
+    "Excel"
+   ],
+   "skills_missing": [
+    "Power BI",
+    "Tableau",
+    "Looker",
+    "Statistiques"
+   ]
+  },
+  {
+   "id": 1246,
+   "title": "Stage Chef de Projet - Data Analyst",
+   "company": "Aqoa",
+   "city": "Paris (75)",
+   "remote": null,
+   "contract": null,
+   "salary": null,
+   "source": "Indeed",
+   "url": "https://indeed.com/viewjob?jk=441ecd43b8933c3d",
+   "published_on": "2026-09-15",
+   "deadline": null,
+   "description": "**Qui sommes-nous ?**\n\nFondée en 2007, AQOA est une agence de conseil spécialisée dans le traitement, l'analyse et la valorisation des données.\n\nNous accompagnons nos clients dans leurs problématiques Data Marketing et Business Intelligence, depuis la collecte des données jusqu'à la production d'analyses et d'indicateurs d'aide à la décision.\n\nÀ taille humaine, AQOA offre à ses collaborateurs un environnement responsabilisant où chacun contribue activement à l'amélioration des projets, des outils et des méthodes de travail.\n\n**Clients & Partenaires**\n\nExpert de la donnée Marketing / Vente, AQOA accompagne de grandes marques françaises et internationales, leaders de leurs marchés, notamment :\n\n**Luxe / Beauté** : L’Oréal, Hermès…\n\n**Divertissement** : Disney, Warner, Universal, Sony, Paramount, Pathé…\n\n**Édition** : Flammarion, Gallimard, Auzou…\n\n**Tech & Media** : Amazon, Orange, TF1, Canal+, M6, Arte…\n\n**Institutionnels** : CNC, SNE, SLF…\n\n**Votre mission**\n\nVous intégrerez l'équipe projet et serez rapidement impliqué(e) dans le suivi opérationnel de plusieurs clients.\n\nAu-delà de la production des livrables, nous recherchons une personne capable de comprendre les enjeux métier, d'analyser les situations rencontrées et de contribuer à l'amélioration continue de nos projets et de nos processus.\n\nVos missions seront notamment de :\n\n- Produire, contrôler et optimiser les traitements de données à l'aide de nos outils internes.\n\n- Coordonner les échanges avec les développeurs internes et externes afin de suivre les évolutions des outils, identifier les points de blocage et contribuer à leur amélioration.\n\n- Analyser, contrôler et fiabiliser les données produites afin de garantir leur qualité et leur exploitabilité par nos clients.\n\n- Concevoir, faire évoluer et optimiser des reportings sur Power BI afin de répondre aux besoins métiers.\n\n- Répondre aux demandes des clients, réaliser des analyses ponctuelles, mettre les données en perspective et formuler des recommandations adaptées à leurs problématiques.\n\n- Identifier des opportunités d'amélioration des méthodes de travail : Intégrer les outils d'intelligence artificielle dans vos missions quotidiennes afin d'améliorer la qualité des analyses, d'automatiser certaines tâches et d'optimiser nos processus internes. Vous serez encouragé(e) à identifier de nouveaux usages, à les expérimenter et à évaluer de manière critique leur pertinence avant leur mise en œuvre.\n\n- Participer à la création et à la diffusion des contenus de communication d'AQOA.\n\nCe stage vous permettra d'intervenir sur des sujets variés mêlant data, analyse, gestion de projet, relation client et innovation.\n\n**Le profil que nous recherchons**\n\nVous êtes étudiant(e) en Université ou en École de commerce (Bac+4 / Bac+5) et vous aimez comprendre les chiffres autant que les faire parler.\n\nNous recherchons une personne qui aime comprendre le fonctionnement des projets, chercher des solutions et proposer des idées.\n\nVous êtes :\n\nCurieux(se) et aimez apprendre en continu.\n\nÀ l'aise dans vos échanges, avec d'excellentes capacités de communication, à l'écrit comme à l'oral.\n\nAutonome dans votre manière de travailler : vous savez rechercher des informations, tester des pistes et poser les bonnes questions.\n\nÀ l'aise avec l'analyse et capable de transformer des observations en recommandations concrètes.\n\nAnimé(e) par un véritable sens du service, vous aimez comprendre les besoins de vos interlocuteurs afin d'apporter des réponses pertinentes.\n\nRigoureux(se), organisé(e) et attentif(ve) aux détails.\n\nForce de proposition et motivé(e) par l'amélioration continue.\n\nIntéressé(e) par les nouveaux usages de l'intelligence artificielle et leur application dans des contextes opérationnels. Vous savez utiliser ces outils pour gagner en efficacité tout en conservant un regard critique sur les résultats produits.\n\n**Compétences :**\n\nMaîtrise avancée d’Office 365 (Excel / PowerPoint) obligatoire.\n\nUne première expérience de Power BI est un plus.\n\nVous considérez l'IA comme un véritable copilote de travail et non comme une simple solution de génération de contenu. Vous savez exploiter ces outils avec discernement, vérifier les résultats et choisir quand ils apportent (ou non) une réelle valeur.\n\n**Envoyez vos candidatures à : [adresse retirée]**\n\nRémunération : 900,00€ à 1 200,00€ par mois\n\nQuestion(s) de présélection:\n\n- Quel est votre niveau sur Excel ?\n\nLieu du poste : En présentiel",
+   "description_is_full": true,
+   "tracks": [
+    "data_analyst"
+   ],
+   "score": 40,
+   "confidence": "medium",
+   "components": [
+    {
+     "key": "title",
+     "label": "Intitulé ↔ pistes",
+     "verdict": "good",
+     "summary": "Correspond à : Data analyst",
+     "evidence": "Stage Chef de Projet - Data Analyst"
+    },
+    {
+     "key": "skills",
+     "label": "Compétences",
+     "verdict": "good",
+     "summary": "3 sur 4 dans ton profil",
+     "evidence": "…clients.\n\n- Concevoir, faire évoluer et optimiser des reportings sur Power BI afin de répondre aux besoins métiers.\n\n- Répondre aux demandes des cl…"
+    },
+    {
+     "key": "location",
+     "label": "Lieu et télétravail",
+     "verdict": "good",
+     "summary": "Paris (75) : zone de Paris",
+     "evidence": "Paris (75)"
+    },
+    {
+     "key": "contract",
+     "label": "Contrat",
+     "verdict": "unknown",
+     "summary": "Contrat non précisé",
+     "evidence": ""
+    },
+    {
+     "key": "salary",
+     "label": "Salaire ou TJM",
+     "verdict": "unknown",
+     "summary": "Salaire non précisé",
+     "evidence": ""
+    }
+   ],
+   "eliminatory": [
+    {
+     "label": "Stage ou alternance",
+     "evidence": "Stage Chef de Projet - Data Analyst"
+    }
+   ],
+   "skills_found": [
+    "intelligence artificielle",
+    "Excel",
+    "Gestion de projet"
+   ],
+   "skills_missing": [
+    "Power BI"
+   ]
+  }
+ ]
+}

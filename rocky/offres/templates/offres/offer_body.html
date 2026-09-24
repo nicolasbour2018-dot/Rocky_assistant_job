@@ -1,0 +1,54 @@
+{% set band = "high" if offer.score >= 75 else ("mid" if offer.score >= catalog.threshold else "low") %}
+<header class="offer-head">
+  <div class="offer-heading">
+    <h2 class="offer-title">{{ offer.title }}</h2>
+    <p class="muted">{{ offer.company or "Entreprise non précisée" }}{% if offer.city %} · {{ offer.city }}{% endif %}</p>
+  </div>
+  <div class="score-block">
+    <span class="score score-{{ band }}">{{ offer.score }}</span>
+    <span class="confidence confidence-{{ offer.confidence }}">confiance {{ offer.confidence_label }}</span>
+  </div>
+</header>
+
+<ul class="badges">
+  {% if offer.deadline %}<li class="badge badge-warn">⏰ limite {{ offer.deadline.strftime("%d/%m/%Y") }}</li>{% endif %}
+  {% for key in offer.tracks %}<li class="badge badge-accent">{{ catalog.tracks[key] }}</li>{% endfor %}
+  <li class="badge">{{ offer.source }} · {{ offer.published_on | age }}</li>
+  {% if not offer.description_is_full %}<li class="badge badge-muted">annonce incomplète</li>{% endif %}
+</ul>
+
+<section class="synthesis" aria-label="Synthèse">
+  {% if offer.eliminatory %}
+  <p class="line-bad">⛔ Éliminatoire : {{ offer.eliminatory | map(attribute="label") | join(", ") }}</p>
+  {% else %}
+  <p class="muted">⛔ Éliminatoires : aucun repéré</p>
+  {% endif %}
+  {% if offer.skills_found or offer.skills_missing %}
+  <p>{% if offer.skills_found %}<span class="line-good">✔ {{ offer.skills_found | join(", ") }}</span>{% endif %}
+     {% if offer.skills_missing %}<span class="line-bad">✘ manque : {{ offer.skills_missing | join(", ") }}</span>{% endif %}</p>
+  {% else %}
+  <p class="muted">Compétences : aucune repérée dans l'annonce</p>
+  {% endif %}
+</section>
+
+<dl class="facts">
+  <div><dt>Contrat</dt><dd>{{ offer.contract or "non précisé" }}</dd></div>
+  <div><dt>Salaire</dt><dd>{{ offer.salary.text if offer.salary else "non précisé" }}</dd></div>
+  {% if offer.remote_label %}<div><dt>Télétravail</dt><dd>{{ offer.remote_label }}</dd></div>{% endif %}
+</dl>
+
+<div id="decision-area" class="decision-area">{% include "offres/actions.html" %}</div>
+
+<details class="why">
+  <summary data-key="w" hx-get="/offres/{{ offer.id }}/pourquoi" hx-target="next .why-body" hx-trigger="click once">
+    Pourquoi ce score ? <kbd>w</kbd></summary>
+  <div class="why-body"><p class="muted">Chargement…</p></div>
+</details>
+
+<details class="description">
+  <summary>Description{% if not offer.description_is_full %} (incomplète){% endif %}</summary>
+  <div class="description-text">{{ offer.description }}</div>
+</details>
+
+{% if offer.url %}<p><a href="{{ offer.url }}" target="_blank" rel="noopener noreferrer" hx-boost="false" data-key="o">
+  Voir l'annonce d'origine ↗ <kbd>o</kbd></a></p>{% endif %}

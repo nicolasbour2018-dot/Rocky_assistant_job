@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{% block title %}{{ entry.label }} · Rocky{% endblock %}
+{% block content %}
+<header class="page-header"><h1><span aria-hidden="true">{{ entry.icon }}</span> {{ entry.label }}</h1></header>
+<section class="empty-state">
+  <p class="empty-lead">{{ entry.purpose }}</p>
+  <p class="muted">Cette page arrive à l'étape {{ entry.arrives_in }} de la refonte.</p>
+  {% if entry.key != "offers" %}<p><a class="btn" href="/offres">🔎 Trier les offres</a></p>{% endif %}
+</section>
+{% endblock %}

@@ -120,7 +120,7 @@ aucun identifiant interne affiché.
 | B1. Squelette | Arborescence ; Docker Compose (app, PostgreSQL, PostgreSQL de test) ; configuration `.env` ; ruff + vérificateur de types ; pytest sur PostgreSQL ; commande unique de vérification | Vérification verte en moins de 2 min | ✅ |
 | B2. Base et événements | Connexion ; Alembic (première révision) ; journal d'événements en ajout seul | `upgrade` / `downgrade` fonctionnent sur base vide | ✅ |
 | B3. Comptes et sessions | Comptes, SMTP ; sessions D11 ; tout le SQL d'authentification dans l'accès SQL de `system` | Rechargement, URL directe et redémarrage du navigateur gardent la session ; la déconnexion l'invalide | ✅ |
-| B4. Coque web et prototype | FastAPI + Jinja + HTMX ; layout et 7 entrées de navigation ; prototype de l'écran de tri sur données factices | Décision explicite : HTMX confirmé ou plan B (NiceGUI) | ⬜ |
+| B4. Coque web et prototype | FastAPI + Jinja + HTMX ; layout et 7 entrées de navigation ; prototype de l'écran de tri sur données factices | Décision explicite : HTMX confirmé ou plan B (NiceGUI) | 🔄 |
 | B5. Profil et pistes | Profil unique FR/EN ; compétences avec alias canoniques (ex. « NLP » = « Traitement du langage naturel (NLP) ») ; pistes (intitulés, mots-clés, lieux) ; réimport du profil de Nicolas depuis l'archive ; édition séparée de l'onboarding ; projets affichés proprement ; activation sans kit anglais | Profil réimporté sans doublons ; au moins 2 pistes définies | ⬜ |
 
 ### C. Offres
@@ -268,8 +268,22 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(B3 → C6)** Sessions et jetons expirés restent en base : purge par une tâche du planificateur.
 - **(B3 → B4)** Pas de `favicon.ico` (erreur 404 dans la console) ; les formulaires de mot de passe n'ont pas de champ
   identifiant caché (Chrome le recommande pour les gestionnaires de mots de passe) : à traiter avec la coque.
+  *Résolu en B4 : `favicon.svg` ; champ identifiant caché lu depuis le lien sans le consommer.*
 - **(B3 → §5 VPS)** Limiter les tentatives de connexion par adresse IP (le verrou actuel est par compte) ;
   changement d'adresse et suppression de compte ; jeton CSRF si un formulaire doit un jour accepter une requête
   d'un autre site.
 - **(B3)** Les outils Playwright écrivent leurs traces dans `.playwright-mcp/` à la racine : ignoré par Git,
   à supprimer après usage.
+- **(B4 → base de développement)** Erreur de Claude : un compte d'essai `essai-b4@rocky.local` (en attente) et son
+  événement d'invitation ont été créés dans la base de développement, qui contient déjà le vrai compte de Nicolas ;
+  ils ne peuvent pas être supprimés (journal en ajout seul). Les essais de navigateur utilisent depuis une instance
+  à part (application sur le poste, schéma dédié de `test-db`). À traiter avant la bascule (F2), avec la décision sur la
+  base de production.
+- **(B4 → C1, C6)** Données hétérogènes de l'archive : nom de source enregistré comme une URL, télétravail en cinq
+  formulations (`Télétravail`, `partial`, `no`…), quasi-doublons d'une même offre sous deux noms d'employeur
+  (« Jems Group » / « JEMS »). La déduplication de C6 doit rapprocher les variantes d'un employeur.
+- **(B4 → C3)** Descriptions contenant du Markdown (`## **…**`) : à mettre en forme.
+- **(B4 → C7)** Décisions persistées (`job_decisions`) et journalisées, y compris annulations et changements ;
+  suppression de `rocky/offres/prototype.py`, `prototype_offers.json` et de `docs/procedures/b4-prototype/`.
+- **(B4 → C7, VPS)** Une touche frappée pendant l'arrivée d'un fragment HTMX se perd : envoyer les panneaux de motifs
+  avec la carte, ou sérialiser les requêtes (`hx-sync`), si la latence du VPS le rend sensible.

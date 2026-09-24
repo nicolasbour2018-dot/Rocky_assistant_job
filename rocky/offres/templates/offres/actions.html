@@ -1,0 +1,13 @@
+{% set chosen = decisions.get(offer.id) %}
+{% if chosen %}
+<p class="current-decision">Décision : <strong>{{ decision_labels[chosen.value] }}</strong>
+  — {% for code in chosen.reasons %}{{ reason_label(chosen.value, code) }}{% if not loop.last %}, {% endif %}{% endfor %}
+  {% if chosen.note %}({{ chosen.note }}){% endif %}</p>
+{% endif %}
+<div class="decision-buttons">
+  {% for value, label in decision_labels.items() %}
+  <button type="button" class="btn btn-decision decision-{{ value }}" data-key="{{ decision_keys[value] }}"
+    hx-get="/offres/{{ offer.id }}/motifs?decision={{ value }}&amp;contexte={{ context }}" hx-target="#decision-area">
+    {{ label }} <kbd>{{ decision_keys[value] }}</kbd></button>
+  {% endfor %}
+</div>

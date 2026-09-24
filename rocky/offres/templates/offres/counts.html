@@ -1,0 +1,4 @@
+<p id="offer-counts" class="counts"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <span><strong>{{ counts.to_review }}</strong> à examiner</span>
+  {% if counts.below %}<a href="/offres?vue=liste&amp;sous_seuil=1">{{ counts.below }} sous le seuil →</a>{% endif %}
+</p>

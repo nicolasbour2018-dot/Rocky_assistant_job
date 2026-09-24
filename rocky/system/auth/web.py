@@ -19,7 +19,7 @@ from sqlalchemy import Engine
 from starlette.concurrency import run_in_threadpool
 
 from rocky.system.auth.mail import MailDeliveryError, Mailer, MailNotConfiguredError
-from rocky.system.auth.model import Account
+from rocky.system.auth.model import Account, TokenPurpose
 from rocky.system.auth.rules import (
     SESSION_IDLE_LIFETIME,
     InvalidPasswordError,
@@ -155,6 +155,9 @@ def require_account(request: Request) -> Account:
 def redirect_to_login(request: Request, error: Exception) -> Response:
     assert isinstance(error, LoginRequiredError)  # noqa: S101  (handler registered for this type)
     target = f"{LOGIN_PATH}?suite={quote(error.next_path, safe='')}"
+    if request.headers.get("HX-Request") == "true":
+        # A fragment request must not swap the login page into the page: HTMX reloads instead.
+        return Response(status_code=200, headers={"HX-Redirect": target})
     return RedirectResponse(target, status_code=303)
 
 
@@ -184,12 +187,6 @@ def _opened(
         response, opened.session_token, secure=auth_services.secure_cookies
     )
     return response
-
-
-@router.get("/", response_class=HTMLResponse)
-def home(request: Request, account: CurrentAccount) -> HTMLResponse:
-    """Temporary home page; the web shell replaces it in step B4."""
-    return _page(request, "home.html", account=account)
 
 
 @router.get(LOGIN_PATH, response_class=HTMLResponse)
@@ -240,9 +237,44 @@ def logout(request: Request) -> Response:
     return response
 
 
+def _link_email(
+    auth_services: AuthServices, token: str, purpose: TokenPurpose
+) -> str | None:
+    """E-mail of a still valid link, read without using it (hidden username field)."""
+    if not token:
+        return None
+    with auth_transaction(auth_services) as auth:
+        return auth.link_email(token, purpose)
+
+
+def _set_password_page(
+    request: Request,
+    *,
+    action: str,
+    jeton: str,
+    purpose: TokenPurpose,
+    status_code: int = 200,
+    error: str | None = None,
+) -> HTMLResponse:
+    email = _link_email(services(request), jeton, purpose)
+    if email is None and error is None:
+        error, status_code = MESSAGES["invalid_link"], 400
+    return _page(
+        request,
+        "auth/set_password.html",
+        status_code=status_code,
+        action=action,
+        jeton=jeton if email else "",
+        email=email,
+        error=error,
+    )
+
+
 @router.get("/activation", response_class=HTMLResponse)
 def activation_form(request: Request, jeton: str = "") -> HTMLResponse:
-    return _page(request, "auth/set_password.html", action="/activation", jeton=jeton)
+    return _set_password_page(
+        request, action="/activation", jeton=jeton, purpose=TokenPurpose.ACTIVATION
+    )
 
 
 @router.post("/activation", response_class=HTMLResponse)
@@ -264,12 +296,12 @@ def activate(
             if isinstance(result, SessionOpened):
                 return _opened(auth_services, result, "/")
             error = MESSAGES["invalid_link"]
-    return _page(
+    return _set_password_page(
         request,
-        "auth/set_password.html",
-        status_code=400,
         action="/activation",
         jeton=jeton,
+        purpose=TokenPurpose.ACTIVATION,
+        status_code=400,
         error=error,
     )
 
@@ -300,8 +332,11 @@ def forgotten(request: Request, email: Annotated[str, Form()]) -> HTMLResponse:
 
 @router.get("/reinitialisation", response_class=HTMLResponse)
 def reset_form(request: Request, jeton: str = "") -> HTMLResponse:
-    return _page(
-        request, "auth/set_password.html", action="/reinitialisation", jeton=jeton
+    return _set_password_page(
+        request,
+        action="/reinitialisation",
+        jeton=jeton,
+        purpose=TokenPurpose.PASSWORD_RESET,
     )
 
 
@@ -328,12 +363,12 @@ def reset(
                 clear_session_cookie(response, secure=auth_services.secure_cookies)
                 return response
             error = MESSAGES["invalid_link"]
-    return _page(
+    return _set_password_page(
         request,
-        "auth/set_password.html",
-        status_code=400,
         action="/reinitialisation",
         jeton=jeton,
+        purpose=TokenPurpose.PASSWORD_RESET,
+        status_code=400,
         error=error,
     )
 

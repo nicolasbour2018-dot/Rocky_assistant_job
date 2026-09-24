@@ -1,0 +1,20 @@
+<section id="triage" class="triage">
+  {% if with_counts %}{% with oob=True %}{% include "offres/counts.html" %}{% endwith %}{% endif %}
+  <div class="triage-bar">
+    {% if previous %}<a class="btn btn-ghost" data-key="k" href="/offres/tri/{{ previous.id }}"
+      hx-get="/offres/tri/{{ previous.id }}" hx-target="#triage" hx-swap="outerHTML">← Précédente <kbd>k</kbd></a>{% endif %}
+    {% if following %}<a class="btn btn-ghost" data-key="j" href="/offres/tri/{{ following.id }}"
+      hx-get="/offres/tri/{{ following.id }}" hx-target="#triage" hx-swap="outerHTML">Suivante <kbd>j</kbd> →</a>{% endif %}
+    <button type="button" class="btn btn-ghost undo" data-key="u" hx-post="/offres/annuler" hx-target="#triage"
+      hx-swap="outerHTML"{% if not can_undo %} disabled{% endif %}>↶ Annuler <kbd>u</kbd></button>
+  </div>
+  {% if current %}
+  {% set offer = current %}{% set context = "tri" %}
+  <article class="card offer-card">{% include "offres/offer_body.html" %}</article>
+  {% else %}
+  <div class="empty-state">
+    <p class="empty-lead">Tout est trié <span aria-hidden="true">🎉</span></p>
+    <p><a class="btn" href="/offres?vue=liste&amp;decision=toutes">Voir la liste</a></p>
+  </div>
+  {% endif %}
+</section>

@@ -78,6 +78,12 @@ class AuthStore(Protocol):
         """Mark a valid token as used, atomically; return its account, or None."""
         ...
 
+    def peek_token(
+        self, token_hash: str, purpose: TokenPurpose, now: datetime
+    ) -> int | None:
+        """The account of a valid token, without using it."""
+        ...
+
     def open_session(
         self, account_id: int, token_hash: str, now: datetime, expires_at: datetime
     ) -> None: ...

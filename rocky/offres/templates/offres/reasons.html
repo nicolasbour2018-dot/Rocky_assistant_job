@@ -1,0 +1,24 @@
+<form class="reasons" hx-post="/offres/{{ offer.id }}/decision"
+  {% if context == "fiche" %}hx-target="#fiche" hx-swap="innerHTML"{% else %}hx-target="#triage" hx-swap="outerHTML"{% endif %}>
+  <input type="hidden" name="decision" value="{{ value }}">
+  <input type="hidden" name="contexte" value="{{ context }}">
+  <fieldset>
+    <legend>{{ question }} <span class="muted">plusieurs possibles</span></legend>
+    {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+    <div class="chips">
+      {% for reason in reasons %}
+      <label class="chip" data-key="{{ loop.index }}">
+        <input type="checkbox" name="motifs" value="{{ reason.code }}"{% if reason.code in checked %} checked{% endif %}>
+        <kbd>{{ loop.index }}</kbd> {{ reason.label }}</label>
+      {% endfor %}
+    </div>
+    <label class="note"><span>Précision <kbd>t</kbd></span>
+      <input type="text" name="precision" value="{{ note or '' }}" data-key="t" autocomplete="off"
+        placeholder="obligatoire pour « autre »"></label>
+  </fieldset>
+  <div class="reasons-actions">
+    <button type="submit" class="btn btn-primary" data-key="Enter">Valider <kbd>Entrée</kbd></button>
+    <button type="button" class="btn btn-ghost" data-key="Escape"
+      hx-get="/offres/{{ offer.id }}/actions?contexte={{ context }}" hx-target="#decision-area">Revenir <kbd>Échap</kbd></button>
+  </div>
+</form>

@@ -1,0 +1,22 @@
+{% if offers %}
+<table class="offer-table">
+  <thead><tr><th>Score</th><th>Offre</th><th class="wide-only">Lieu</th><th class="wide-only">Source</th><th class="wide-only">Publiée</th><th>Décision</th></tr></thead>
+  <tbody>
+    {% for offer in offers %}
+    {% set band = "high" if offer.score >= 75 else ("mid" if offer.score >= catalog.threshold else "low") %}
+    {% set chosen = decisions.get(offer.id) %}
+    <tr>
+      <td><span class="score score-small score-{{ band }}">{{ offer.score }}</span></td>
+      <td><a href="/offres/{{ offer.id }}/fiche" hx-get="/offres/{{ offer.id }}/fiche" hx-target="#fiche">{{ offer.title }}</a>
+        <div class="muted">{{ offer.company or "Entreprise non précisée" }}</div></td>
+      <td class="wide-only">{{ offer.city or "—" }}</td>
+      <td class="wide-only">{{ offer.source }}</td>
+      <td class="wide-only">{{ offer.published_on | age }}</td>
+      <td>{% if chosen %}{{ decision_labels[chosen.value] }}{% else %}<span class="muted">à examiner</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty-state">Aucune offre pour ces filtres.</p>
+{% endif %}

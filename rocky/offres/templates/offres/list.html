@@ -1,0 +1,25 @@
+<section class="list-view">
+  <form class="filters" action="/offres" method="get" hx-get="/offres/liste" hx-target="#offer-rows"
+    hx-trigger="change" hx-push-url="true">
+    <input type="hidden" name="vue" value="liste">
+    <label>Piste
+      <select name="piste">
+        <option value="">Toutes</option>
+        {% for key, label in tracks.items() %}<option value="{{ key }}"{% if filters.track == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></label>
+    <label>Décision
+      <select name="decision">
+        {% for key, label in [("a_examiner", "À examiner"), ("interesse", "Intéressé"), ("ecarte", "Écarté"), ("plus_tard", "Plus tard"), ("toutes", "Toutes")] %}
+        <option value="{{ key }}"{% if filters.decision == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></label>
+    <label class="check"><input type="checkbox" name="sous_seuil" value="1"{% if filters.below_threshold %} checked{% endif %}> Sous le seuil</label>
+    <label class="check"><input type="checkbox" name="incompletes" value="1"{% if filters.incomplete %} checked{% endif %}> Incomplètes</label>
+    <noscript><button type="submit" class="btn">Filtrer</button></noscript>
+  </form>
+  <div class="list-layout">
+    <div id="offer-rows" hx-get="/offres/liste" hx-include=".filters" hx-trigger="offers-changed from:body">
+      {% include "offres/list_rows.html" %}
+    </div>
+    <aside id="fiche" class="sheet-panel" aria-label="Fiche de l'offre">{% if sheet %}{% set offer = sheet %}{% include "offres/sheet.html" %}{% endif %}</aside>
+  </div>
+</section>

@@ -1,0 +1,17 @@
+<p class="muted">Score provisoire : {{ offer.score }}/100, confiance {{ offer.confidence_label }}.
+  Maquette du futur scoring (étape C4), calculée à partir de l'annonce.</p>
+{% if offer.eliminatory %}
+<div class="why-eliminatory">
+  <h3>Éliminatoires</h3>
+  <ul>{% for item in offer.eliminatory %}<li><strong>{{ item.label }}</strong>{% if item.evidence %}<q>{{ item.evidence }}</q>{% endif %}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+<ul class="components">
+  {% for component in offer.components %}
+  <li class="component verdict-{{ component.verdict }}">
+    <span class="verdict" aria-hidden="true">{{ verdict_signs[component.verdict] }}</span>
+    <div><strong>{{ component.label }}</strong> — {{ component.summary }}
+      {% if component.evidence %}<q>{{ component.evidence }}</q>{% endif %}</div>
+  </li>
+  {% endfor %}
+</ul>

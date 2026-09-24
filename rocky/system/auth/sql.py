@@ -191,6 +191,19 @@ class SqlAuthStore:
         account_id = self._conn.execute(statement).scalar_one_or_none()
         return None if account_id is None else int(account_id)
 
+    def peek_token(
+        self, token_hash: str, purpose: TokenPurpose, now: datetime
+    ) -> int | None:
+        account_id = self._conn.execute(
+            select(account_tokens.c.account_id).where(
+                account_tokens.c.token_hash == token_hash,
+                account_tokens.c.purpose == purpose.value,
+                account_tokens.c.used_at.is_(None),
+                account_tokens.c.expires_at > now,
+            )
+        ).scalar_one_or_none()
+        return None if account_id is None else int(account_id)
+
     def open_session(
         self, account_id: int, token_hash: str, now: datetime, expires_at: datetime
     ) -> None:

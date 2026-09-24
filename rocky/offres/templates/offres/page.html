@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block title %}Offres · Rocky{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1><span aria-hidden="true">🔎</span> Offres</h1>
+  <nav class="segmented" aria-label="Affichage">
+    <a href="/offres?vue=tri"{% if view == "tri" %} aria-current="page"{% endif %}>Trier</a>
+    <a href="/offres?vue=liste"{% if view == "liste" %} aria-current="page"{% endif %}>Liste</a>
+  </nav>
+  {% include "offres/counts.html" %}
+  <button type="button" class="btn btn-ghost help-button" popovertarget="shortcuts" data-key="?" title="Raccourcis clavier">?</button>
+</header>
+
+{% if view == "tri" %}{% include "offres/triage.html" %}{% else %}{% include "offres/list.html" %}{% endif %}
+
+<footer class="prototype-note">
+  <span>Prototype B4 : offres réelles de l'archive, score provisoire, décisions gardées en mémoire.</span>
+  <form method="post" action="/offres/reinitialiser"><button type="submit" class="btn btn-link">Remettre à zéro</button></form>
+</footer>
+{% endblock %}
+
+{% block overlays %}
+<div id="shortcuts" class="sheet shortcuts" popover>
+  <h2>Raccourcis</h2>
+  <dl>
+    <dt><kbd>i</kbd> <kbd>e</kbd> <kbd>p</kbd></dt><dd>Intéressé, écarté, plus tard</dd>
+    <dt><kbd>1</kbd>…<kbd>9</kbd></dt><dd>Cocher un motif</dd>
+    <dt><kbd>t</kbd></dt><dd>Écrire une précision</dd>
+    <dt><kbd>Entrée</kbd></dt><dd>Valider la décision</dd>
+    <dt><kbd>Échap</kbd></dt><dd>Revenir sans décider</dd>
+    <dt><kbd>u</kbd></dt><dd>Annuler la dernière décision (plusieurs fois possible)</dd>
+    <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>Offre suivante, précédente</dd>
+    <dt><kbd>w</kbd></dt><dd>Pourquoi ce score ?</dd>
+    <dt><kbd>o</kbd></dt><dd>Ouvrir l'annonce d'origine</dd>
+    <dt><kbd>?</kbd></dt><dd>Cette aide</dd>
+  </dl>
+  <button type="button" class="btn" popovertarget="shortcuts" popovertargetaction="hide">Fermer</button>
+</div>
+{% endblock %}

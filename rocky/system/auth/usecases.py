@@ -166,6 +166,12 @@ class Auth:
         self._event("system.account_activated", Actor.USER, account.id)
         return self._open_session(account.id, now)
 
+    def link_email(self, token: str, purpose: TokenPurpose) -> str | None:
+        """E-mail of the account behind a valid link, without using the link."""
+        account_id = self._store.peek_token(token_hash(token), purpose, self._clock())
+        account = None if account_id is None else self._store.get_account(account_id)
+        return None if account is None else account.email
+
     def login(self, email: str, password: str) -> SessionOpened | LoginRefused:
         now = self._clock()
         try:

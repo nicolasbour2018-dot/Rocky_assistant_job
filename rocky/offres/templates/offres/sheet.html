@@ -1,0 +1,7 @@
+{% if with_counts %}{% with oob=True %}{% include "offres/counts.html" %}{% endwith %}{% endif %}
+{% set context = "fiche" %}
+<article class="sheet-card">
+  <button type="button" class="btn btn-ghost sheet-close" hx-get="/offres/fiche/fermer" hx-target="#fiche"
+    aria-label="Fermer la fiche">✕</button>
+  {% include "offres/offer_body.html" %}
+</article>
