@@ -69,4 +69,5 @@ Autres contrôles :
 - `migrate` applique `0002` sur la base de développement ; `downgrade base` puis `upgrade head` fonctionnent.
 - Le compte d'essai a été effacé par cette remise à zéro de la base de développement (le journal refuse toute
   suppression) : la base était vide avant l'essai et l'est après.
-- SMTP réel : à vérifier par Nicolas (`rocky-admin invite <son adresse>`), voir ci-dessous.
+- SMTP réel, vérifié par Nicolas le 24/09/2026 : `rocky-admin invite <son adresse>` → e-mail reçu → mot de passe
+  choisi par le lien d'activation, compte actif. C'est le premier compte réel de la base de développement.
