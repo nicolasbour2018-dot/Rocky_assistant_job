@@ -16,6 +16,7 @@ from sqlalchemy import (
     Column,
     Connection,
     DateTime,
+    ForeignKey,
     Identity,
     Index,
     Table,
@@ -53,6 +54,7 @@ class NewEvent:
     subject_type: str | None = None
     subject_id: str | None = None
     payload: Mapping[str, JsonValue] = field(default_factory=dict)
+    account_id: int | None = None
 
     def __post_init__(self) -> None:
         match = EVENT_TYPE.match(self.type)
@@ -83,6 +85,8 @@ events = Table(
     Column("subject_type", Text),
     Column("subject_id", Text),
     Column("payload", JSONB, nullable=False, server_default=text("'{}'::jsonb")),
+    # The account concerned; None for events of Rocky itself. Never cascades: the journal keeps all.
+    Column("account_id", BigInteger, ForeignKey("accounts.id")),
     CheckConstraint(
         "actor IN ({})".format(", ".join(f"'{actor.value}'" for actor in Actor)),
         name="actor",
@@ -91,6 +95,7 @@ events = Table(
         "(subject_type IS NULL) = (subject_id IS NULL)", name="subject_complete"
     ),
     Index("ix_events_subject", "subject_type", "subject_id", "id"),
+    Index("ix_events_account_id", "account_id"),
 )
 
 
@@ -107,6 +112,7 @@ def append_event(connection: Connection, event: NewEvent) -> int:
             subject_type=event.subject_type,
             subject_id=event.subject_id,
             payload=dict(event.payload),
+            account_id=event.account_id,
         )
         .returning(events.c.id)
     )

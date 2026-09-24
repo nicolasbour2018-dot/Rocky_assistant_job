@@ -119,7 +119,7 @@ aucun identifiant interne affiché.
 |---|---|---|---|
 | B1. Squelette | Arborescence ; Docker Compose (app, PostgreSQL, PostgreSQL de test) ; configuration `.env` ; ruff + vérificateur de types ; pytest sur PostgreSQL ; commande unique de vérification | Vérification verte en moins de 2 min | ✅ |
 | B2. Base et événements | Connexion ; Alembic (première révision) ; journal d'événements en ajout seul | `upgrade` / `downgrade` fonctionnent sur base vide | ✅ |
-| B3. Comptes et sessions | Comptes, SMTP ; sessions D11 ; tout le SQL d'authentification dans l'accès SQL de `system` | Rechargement, URL directe et redémarrage du navigateur gardent la session ; la déconnexion l'invalide | ⬜ |
+| B3. Comptes et sessions | Comptes, SMTP ; sessions D11 ; tout le SQL d'authentification dans l'accès SQL de `system` | Rechargement, URL directe et redémarrage du navigateur gardent la session ; la déconnexion l'invalide | ✅ |
 | B4. Coque web et prototype | FastAPI + Jinja + HTMX ; layout et 7 entrées de navigation ; prototype de l'écran de tri sur données factices | Décision explicite : HTMX confirmé ou plan B (NiceGUI) | ⬜ |
 | B5. Profil et pistes | Profil unique FR/EN ; compétences avec alias canoniques (ex. « NLP » = « Traitement du langage naturel (NLP) ») ; pistes (intitulés, mots-clés, lieux) ; réimport du profil de Nicolas depuis l'archive ; édition séparée de l'onboarding ; projets affichés proprement ; activation sans kit anglais | Profil réimporté sans doublons ; au moins 2 pistes définies | ⬜ |
 
@@ -252,6 +252,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en B2 : un schéma migré par exécution de pytest, supprimé à la fin ; chaque test dans une transaction annulée.*
 - **(B2 → B3)** `events` n'a pas encore de compte : B3 ajoute `account_id` et sa clé étrangère vers `accounts`
   par une nouvelle migration.
+  *Résolu en B3 : migration `0002`.*
 - **(B2 → D6, F1)** Aucune lecture du journal n'existe encore : la chronologie par sujet (`ix_events_subject`)
   s'écrit avec le premier écran qui l'affiche.
 - **(B2 → §5 VPS)** Le déclencheur d'ajout seul protège des erreurs, pas d'un propriétaire qui le désactiverait :
@@ -264,3 +265,11 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   Docker ou de Compose de la nouvelle image). Contournement immédiat : fixer `runs-on: ubuntu-24.04` dans
   `.github/workflows/verification.yml`. Le VPS de Nicolas tourne aussi sous Ubuntu : même vigilance lors de son
   installation.
+- **(B3 → C6)** Sessions et jetons expirés restent en base : purge par une tâche du planificateur.
+- **(B3 → B4)** Pas de `favicon.ico` (erreur 404 dans la console) ; les formulaires de mot de passe n'ont pas de champ
+  identifiant caché (Chrome le recommande pour les gestionnaires de mots de passe) : à traiter avec la coque.
+- **(B3 → §5 VPS)** Limiter les tentatives de connexion par adresse IP (le verrou actuel est par compte) ;
+  changement d'adresse et suppression de compte ; jeton CSRF si un formulaire doit un jour accepter une requête
+  d'un autre site.
+- **(B3)** Les outils Playwright écrivent leurs traces dans `.playwright-mcp/` à la racine : ignoré par Git,
+  à supprimer après usage.

@@ -19,3 +19,4 @@ tmp/
 /.secrets/
 .playwright-cli/
 /test.ipynb
+.playwright-mcp/

@@ -8,8 +8,10 @@ from alembic.autogenerate import compare_metadata
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy import Engine, inspect, text
 
-import rocky.system.events  # noqa: F401  (registers the events table on metadata)
+import rocky.system.tables  # noqa: F401  (registers every table on metadata)
 from rocky.system.db import metadata
+
+HEAD_TABLES = {"alembic_version", "events", "accounts", "account_tokens", "sessions"}
 
 
 def table_names(engine: Engine) -> set[str]:
@@ -34,7 +36,7 @@ def test_upgrade_and_downgrade_work_on_an_empty_database(
     assert table_names(empty_engine) == set()
 
     migrate_schema(empty_engine, "head")
-    assert table_names(empty_engine) == {"alembic_version", "events"}
+    assert table_names(empty_engine) == HEAD_TABLES
     assert function_names(empty_engine) == {"rocky_forbid_event_change"}
 
     migrate_schema(empty_engine, "base")
@@ -42,7 +44,7 @@ def test_upgrade_and_downgrade_work_on_an_empty_database(
     assert function_names(empty_engine) == set()
 
     migrate_schema(empty_engine, "head")
-    assert table_names(empty_engine) == {"alembic_version", "events"}
+    assert table_names(empty_engine) == HEAD_TABLES
 
 
 def test_declared_tables_match_migrations(migrated_engine: Engine) -> None:

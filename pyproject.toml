@@ -5,11 +5,18 @@ description = "Assistant personnel de recherche d'emploi"
 requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.20.0",
+    "argon2-cffi>=25.1.0",
     "fastapi>=0.141.1",
+    "jinja2>=3.1.6",
     "psycopg[binary]>=3.3.6",
+    "python-multipart>=0.0.32",
     "sqlalchemy>=2.0.54",
     "uvicorn>=0.53.0",
 ]
+
+[project.scripts]
+# Administration commands, run in the application container (accounts are created by invitation).
+rocky-admin = "rocky.system.auth.admin:main"
 
 [dependency-groups]
 dev = [
@@ -67,9 +74,13 @@ python_version = "3.13"
 strict = true
 files = ["rocky", "tests"]
 exclude = ['^tests/test_[^/]*\.py$']
+# Module names follow the directory tree, so that tests can import tests.<module>.fakes.
+explicit_package_bases = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers --import-mode=importlib"
+# The root is importable: shared test adapters live in tests/<module>/fakes.py.
+pythonpath = ["."]
 # A deprecation in a dependency fails the run instead of scrolling past.
 filterwarnings = ["error"]

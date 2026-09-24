@@ -44,6 +44,15 @@ x-app-image: &app-image
   image: rocky-app:dev
   environment:
     ROCKY_DATABASE_URL: postgresql://rocky_app:${ROCKY_DB_APP_PASSWORD:-}@db:5432/rocky
+    # Base of the links in account e-mails; https also makes the session cookie Secure.
+    ROCKY_PUBLIC_URL: ${ROCKY_PUBLIC_URL:-http://127.0.0.1:8000}
+    # Optional: without SMTP, invitations and password resets fail with an explicit message.
+    ROCKY_SMTP_HOST: ${ROCKY_SMTP_HOST:-}
+    ROCKY_SMTP_PORT: ${ROCKY_SMTP_PORT:-587}
+    ROCKY_SMTP_USERNAME: ${ROCKY_SMTP_USERNAME:-}
+    ROCKY_SMTP_PASSWORD: ${ROCKY_SMTP_PASSWORD:-}
+    ROCKY_SMTP_FROM: ${ROCKY_SMTP_FROM:-}
+    ROCKY_SMTP_STARTTLS: ${ROCKY_SMTP_STARTTLS:-true}
 
 # Creates the application role: never a superuser, owner of its database.
 x-db-init: &db-init

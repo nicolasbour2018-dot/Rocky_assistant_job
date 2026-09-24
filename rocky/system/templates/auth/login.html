@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Connexion · Rocky{% endblock %}
+{% block content %}
+<h1>Connexion</h1>
+<form method="post" action="/connexion">
+  <input type="hidden" name="suite" value="{{ suite }}">
+  <p>
+    <label for="email">Adresse e-mail</label>
+    <input id="email" name="email" type="email" autocomplete="username" required value="{{ email or '' }}">
+  </p>
+  <p>
+    <label for="password">Mot de passe</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+  </p>
+  <button type="submit">Se connecter</button>
+</form>
+<p><a href="/mot-de-passe-oublie">Mot de passe oublié ?</a></p>
+{% endblock %}

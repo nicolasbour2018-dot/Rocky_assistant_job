@@ -127,6 +127,8 @@ docs/
 - Migrations sur la base de développement : `docker compose run --rm --build migrate` (`upgrade head`) ;
   `docker compose run --rm migrate alembic <commande>` pour les autres (`current`, `downgrade -1`…).
   Règles d'écriture des migrations : `.claude/rules/system.md`.
+- Inviter une personne (seule façon de créer un compte) : `docker compose run --rm app rocky-admin invite <email>` ;
+  `--print-link` affiche le lien d'activation au lieu de l'envoyer (aucun e-mail ne part).
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
 - Sur GitHub : `.github/workflows/verification.yml` exécute la vérification globale à chaque push sur `refonte` et
   sur chaque PR. Une étape n'est terminée que si ce passage est vert aussi.

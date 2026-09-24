@@ -11,7 +11,7 @@ import logging
 from alembic import context
 from sqlalchemy import Connection
 
-import rocky.system.events  # noqa: F401  (registers the events table on metadata)
+import rocky.system.tables  # noqa: F401  (registers every table on metadata)
 from rocky.system.config import load_settings
 from rocky.system.db import create_db_engine, metadata
 

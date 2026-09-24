@@ -20,7 +20,7 @@ Le dépôt vit dans `~/Developer/`, **hors iCloud**.
 
 ```bash
 uv sync                  # .venv avec Python 3.13 géré par uv et les versions de uv.lock
-cp .env.example .env     # puis renseigner les mots de passe PostgreSQL
+cp .env.example .env     # puis renseigner les mots de passe PostgreSQL et le SMTP
 ```
 
 ## Commandes
@@ -31,10 +31,15 @@ cp .env.example .env     # puis renseigner les mots de passe PostgreSQL
 | Tests seuls, depuis le poste | `docker compose up -d test-db` puis `uv run pytest` |
 | Lancer l'application (migrations comprises) | `docker compose up -d --build --wait app` → <http://127.0.0.1:8000/health> |
 | Appliquer les migrations (base de développement) | `docker compose run --rm --build migrate` |
+| Inviter une personne (création de compte) | `docker compose run --rm app rocky-admin invite <email>` |
 | Arrêter | `docker compose down` (les données restent dans le volume `rocky-db-data`) |
 
 La vérification globale n'a besoin que de Docker ; elle tourne contre une base PostgreSQL de test jetable
 (`test-db`, publiée sur `127.0.0.1:55432`).
+
+Il n'y a pas d'inscription publique : un compte naît par invitation. La personne invitée reçoit un lien
+d'activation (valable 7 jours), choisit son mot de passe et reste connectée tant qu'elle revient au moins une fois
+par semaine.
 
 ## Structure
 
