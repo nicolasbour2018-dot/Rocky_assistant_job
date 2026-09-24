@@ -10,8 +10,9 @@ docs/procedures/a1-archive/archive.sh /chemin/cible   # autre dossier (jamais é
 ## Prérequis
 
 - Conteneurs `job-assistant-postgres` et `rocky-assistant-local` démarrés ; port `127.0.0.1:55432` libre.
-- `.venv` du dépôt (pandas, pyarrow, SQLAlchemy, psycopg2) et `jupyter nbconvert` (`/opt/anaconda3`).
-  Variables surchargeables : `PYTHON`, `JUPYTER`, `LIVE_PG`, `APP`, `PG_USER`, `RESTORE_PORT`.
+- Python avec pandas, pyarrow, SQLAlchemy et psycopg2, et `jupyter nbconvert` (par défaut ceux de `/opt/anaconda3`).
+- Worktree de l'ancien Rocky `../Rocky_v1` : ses `output/` et `data/` d'hôte sont archivés.
+  Variables surchargeables : `PYTHON`, `JUPYTER`, `HOST_DIR`, `LIVE_PG`, `APP`, `PG_USER`, `RESTORE_PORT`.
 - Aucun secret lu : pas de `.env` ; l'accès PostgreSQL passe par la socket locale du conteneur ;
   la base de contrôle a un mot de passe aléatoire éphémère.
 
@@ -23,7 +24,7 @@ docs/procedures/a1-archive/archive.sh /chemin/cible   # autre dossier (jamais é
    des empreintes, de la table `users` et des rôles → `verification/restauration.txt`. Échec = arrêt.
 3. Exports Parquet + CSV depuis la **copie restaurée** (`export_tables.py`).
 4. Copie des documents par flux `tar` (les montages bind Docker échouent sous macOS, OSError 35) :
-   volume Docker, `./output` et `./data` de l'hôte, sans `gmail/` ni `browser_profile/` ; rapport des documents référencés (`verifier_documents.py`).
+   volume Docker, `output/` et `data/` de l'ancien Rocky sur l'hôte (`../Rocky_v1`), sans `gmail/` ni `browser_profile/` ; rapport des documents référencés (`verifier_documents.py`).
 5. Exécution de `lecture_exports.ipynb` ; `SHA256SUMS` ; suppression du conteneur éphémère.
 
 ## Fichiers

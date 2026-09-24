@@ -15,8 +15,8 @@ Code correspondant : tag Git `rocky-v1-streamlit`.
 | `db/sqlite/` | anciens fichiers SQLite `rocky.db` (volume et hôte) |
 | `exports/parquet/`, `exports/csv/` | une table par fichier ; `exports/manifest.json` liste lignes, colonnes, types |
 | `documents/volume/` | volume Docker `rocky-assistant-data` (`/data`) : CV, lettres, profils |
-| `documents/hote/output/` | `./output` de l'hôte : candidatures d'août (chemins relatifs `output/…`) |
-| `documents/hote/data/` | ancien `./data` de l'hôte |
+| `documents/hote/output/` | `output/` de l'ancien Rocky sur l'hôte : candidatures d'août (chemins relatifs `output/…`) |
+| `documents/hote/data/` | `data/` de l'ancien Rocky sur l'hôte, s'il existe |
 | `verification/` | empreintes live / restaurées, `restauration.txt`, `documents.txt`, notebook exécuté |
 | `SHA256SUMS` | vérifier avec `shasum -a 256 -c SHA256SUMS` |
 

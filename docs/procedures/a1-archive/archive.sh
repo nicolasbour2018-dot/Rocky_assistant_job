@@ -4,7 +4,7 @@
 # Produit, dans un dossier jamais versionné :
 #   db/          dumps pg_dump (format custom) des bases, rôles sans mot de passe, copies SQLite
 #   exports/     Parquet + CSV des tables utiles à l'analyse, lus depuis la copie restaurée
-#   documents/   documents du volume Docker, de ./output et de ./data, sans jetons OAuth ni profil navigateur
+#   documents/   documents du volume Docker et de l'ancien Rocky sur l'hôte, sans jetons OAuth ni profil navigateur
 #   verification/ empreintes live et restaurées, rapport de restauration, rapport documents, notebook exécuté
 #   SHA256SUMS   empreinte de chaque fichier de l'archive
 #
@@ -25,7 +25,9 @@ DATABASES=(job_assistant rocky)
 EXPORT_DB="job_assistant"
 RESTORE="rocky-a1-restore"
 RESTORE_PORT="${RESTORE_PORT:-55432}"
-PYTHON="${PYTHON:-$ROOT/.venv/bin/python}"
+# Fichiers de l'ancien Rocky sur l'hôte (./output, ./data) : dans son worktree, pas dans le dépôt de refonte.
+HOST_DIR="${HOST_DIR:-$(cd "$ROOT/.." && pwd)/Rocky_v1}"
+PYTHON="${PYTHON:-/opt/anaconda3/bin/python}"
 JUPYTER="${JUPYTER:-/opt/anaconda3/bin/jupyter}"
 
 log() { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
@@ -167,19 +169,19 @@ docker exec "$APP" tar -C /data -cf - \
     | tar -C "$OUT/documents/volume" -xf -
 docker exec "$APP" sh -c 'cd /data && for f in rocky.db rocky.db-wal rocky.db-shm; do [ -f "$f" ] && echo "$f"; done' \
     | while read -r f; do docker exec "$APP" cat "/data/$f" > "$OUT/db/sqlite/volume_$f"; done
-# Si le dépôt est synchronisé par iCloud, les fichiers non téléchargés sont rapatriés à la lecture (lent).
-# Les chemins relatifs « output/… » d'août se résolvent depuis la racine du dépôt (l'app tournait alors sur l'hôte).
-if [[ -d "$ROOT/output" ]]; then
-    log "documents de ./output (hôte)"
-    tar -C "$ROOT/output" -cf - --exclude='.DS_Store' . | tar -C "$OUT/documents/hote/output" -xf -
+# Les chemins relatifs « output/… » d'août se résolvent depuis le dossier de l'ancien Rocky sur l'hôte
+# (l'app tournait alors hors Docker).
+if [[ -d "$HOST_DIR/output" ]]; then
+    log "documents de $HOST_DIR/output (hôte)"
+    tar -C "$HOST_DIR/output" -cf - --exclude='.DS_Store' . | tar -C "$OUT/documents/hote/output" -xf -
 fi
-if [[ -d "$ROOT/data" ]]; then
-    log "documents de ./data (hôte)"
-    tar -C "$ROOT/data" -cf - \
+if [[ -d "$HOST_DIR/data" ]]; then
+    log "documents de $HOST_DIR/data (hôte)"
+    tar -C "$HOST_DIR/data" -cf - \
         --exclude='gmail' --exclude='browser_profile' --exclude='.DS_Store' --exclude='rocky.db*' --exclude='logs' . \
         | tar -C "$OUT/documents/hote/data" -xf -
     for f in rocky.db rocky.db-wal rocky.db-shm; do
-        [[ -f "$ROOT/data/$f" ]] && cp -p "$ROOT/data/$f" "$OUT/db/sqlite/hote_$f"
+        [[ -f "$HOST_DIR/data/$f" ]] && cp -p "$HOST_DIR/data/$f" "$OUT/db/sqlite/hote_$f"
     done
 fi
 if find "$OUT/documents" \( -path '*gmail*' -o -path '*browser_profile*' -o -name '*token*' -o -name 'credentials*.json' \) | grep -q .; then
