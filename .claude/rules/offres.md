@@ -21,3 +21,5 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Seul JavaScript maison : `rocky/system/static/rocky.js` (raccourcis `data-key`). Toute nouvelle interaction passe
   par un attribut `hx-*` ou un élément HTML natif (`details`, `popover`, formulaire).
 - Chaque route répond aussi sans HTMX (page entière ou redirection).
+- `hx-swap` et `hx-target` s'héritent des ancêtres : tout élément qui cible une zone déclare explicitement son
+  `hx-swap` (bug « Revenir » de B4).

@@ -87,4 +87,22 @@ Points d'attention relevés :
 
 ### Décision de Nicolas
 
-*(après son essai, critère par critère)*
+Essai de Nicolas le 25/09/2026, scénario complet (les 8 étapes cochées, téléphone compris), consigné dans la
+grille `docs/procedures/b4-prototype/grille-essai.html` (artifact privé, base `evaluations/b4`) :
+
+| # | Verdict | Note de Nicolas |
+|---|---|---|
+| a | ✔ tenu | « Finalement très agréable avec les raccourcis clavier, c'est original mais pas inintéressant. » |
+| b | ✔ tenu | — |
+| c | ✔ tenu | — |
+| d | ✔ tenu | « Franchement, à un niveau humain, le ressenti est instantané. » |
+| e | ✔ tenu | — |
+
+**Décision : HTMX confirmé (D6).** Le plan B (NiceGUI) n'est pas construit.
+
+Bug signalé par Nicolas, corrigé avant la clôture : après « Revenir », les boutons de décision ne répondaient plus.
+Cause : HTMX fait hériter `hx-swap` ; le bouton « Revenir », placé dans le formulaire de motifs
+(`hx-swap="outerHTML"`), remplaçait la zone `#decision-area` au lieu de son contenu, et les boutons revenus visaient une
+zone disparue. Correction : `hx-swap="innerHTML"` explicite sur tout ce qui cible `#decision-area` ; test de
+non-régression (qui échoue sans la correction) ; vérifié dans Chromium (trois allers-retours `e` → `Échap`).
+Leçon pour C7 : déclarer `hx-swap` explicitement sur tout élément placé dans un conteneur qui en porte un autre.

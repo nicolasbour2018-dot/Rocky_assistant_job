@@ -19,6 +19,7 @@
   <div class="reasons-actions">
     <button type="submit" class="btn btn-primary" data-key="Enter">Valider <kbd>Entrée</kbd></button>
     <button type="button" class="btn btn-ghost" data-key="Escape"
-      hx-get="/offres/{{ offer.id }}/actions?contexte={{ context }}" hx-target="#decision-area">Revenir <kbd>Échap</kbd></button>
+      hx-get="/offres/{{ offer.id }}/actions?contexte={{ context }}" hx-target="#decision-area"
+      hx-swap="innerHTML">Revenir <kbd>Échap</kbd></button>
   </div>
 </form>

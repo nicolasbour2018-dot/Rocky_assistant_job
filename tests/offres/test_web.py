@@ -271,3 +271,22 @@ def test_decisions_belong_to_their_account(
 def test_unknown_offers_are_not_found(client: TestClient) -> None:
     assert client.get("/offres/999999/pourquoi", headers=HTMX).status_code == 404
     assert client.get("/offres/999999/fiche", headers=HTMX).status_code == 404
+
+
+def test_every_swap_into_the_decision_area_keeps_the_area(client: TestClient) -> None:
+    """HTMX inherits hx-swap: "Revenir" sits in a form swapping outerHTML, so it must say innerHTML itself.
+
+    Without it, "Revenir" replaced #decision-area and the decision buttons lost their target (bug found by Nicolas).
+    """
+    offer = queue()[0]
+    panel = client.get(
+        f"/offres/{offer.id}/motifs?decision=rejected&contexte=tri", headers=HTMX
+    ).text
+    actions = client.get(f"/offres/{offer.id}/actions?contexte=tri", headers=HTMX).text
+
+    for html in (panel, actions):
+        for tag in re.findall(r"<[^>]*hx-target=\"#decision-area\"[^>]*>", html):
+            assert 'hx-swap="innerHTML"' in tag, tag
+    assert (
+        'id="decision-area"' not in actions
+    )  # the fragment fills the area, never replaces it

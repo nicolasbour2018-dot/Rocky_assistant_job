@@ -1,0 +1,271 @@
+<title>Essai HTMX de Rocky</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --accent: #3b5bdb;
+    --accent-soft: #e8edff;
+    --bg: #f6f7fa;
+    --surface: #ffffff;
+    --surface-2: #eff1f6;
+    --border: #dfe2ea;
+    --text: #1b1d24;
+    --muted: #636a7a;
+    --good: #1f8a4c;
+    --good-soft: #e3f4ea;
+    --bad: #c0392b;
+    --bad-soft: #fbe8e5;
+    --warn: #8a6100;
+    --warn-soft: #fcf1d6;
+    --radius: 8px;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --accent: #8198f7; --accent-soft: #222a47; --bg: #0f1116; --surface: #171a21; --surface-2: #1f232d;
+      --border: #2b303c; --text: #e6e7eb; --muted: #969cab; --good: #52c585; --good-soft: #14281d;
+      --bad: #ef7768; --bad-soft: #2d1916; --warn: #e3b554; --warn-soft: #2a2312;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --accent: #8198f7; --accent-soft: #222a47; --bg: #0f1116; --surface: #171a21; --surface-2: #1f232d;
+    --border: #2b303c; --text: #e6e7eb; --muted: #969cab; --good: #52c585; --good-soft: #14281d;
+    --bad: #ef7768; --bad-soft: #2d1916; --warn: #e3b554; --warn-soft: #2a2312;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.55 var(--sans); padding-inline: 16px; }
+  .page { display: grid; gap: 28px; max-width: 760px; margin: 0 auto; padding-block: 32px 64px; }
+  h1, h2 { margin: 0; line-height: 1.2; text-wrap: balance; }
+  h1 { font-size: 26px; font-weight: 700; }
+  h2 { font-size: 18px; font-weight: 600; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+  kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; border: 1px solid var(--border); border-bottom-width: 2px;
+        border-radius: 4px; background: var(--surface-2); font: 12px/1.6 var(--mono); text-align: center; }
+  header { display: grid; gap: 10px; }
+  .eyebrow { color: var(--accent); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .launch { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px; border: 1px solid var(--border);
+            border-radius: var(--radius); background: var(--surface); }
+  .launch code { font: 14px var(--mono); }
+  .btn { min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+         color: var(--text); font: 500 14px var(--sans); cursor: pointer; }
+  .btn:hover { background: var(--surface-2); }
+  .btn:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  section { display: grid; gap: 14px; }
+  .steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  .steps li { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; padding: 10px 14px;
+              border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  .steps input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--accent); }
+  .steps li:has(input:checked) { background: var(--surface-2); }
+  .steps li:has(input:checked) .step-text { color: var(--muted); }
+  .criteria { display: grid; gap: 12px; }
+  .criterion { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius);
+               background: var(--surface); border-left-width: 4px; }
+  .criterion[data-verdict="ok"] { border-left-color: var(--good); }
+  .criterion[data-verdict="ko"] { border-left-color: var(--bad); }
+  .criterion-head { display: flex; gap: 10px; align-items: baseline; }
+  .letter { font: 600 14px var(--mono); color: var(--accent); }
+  .measure { font-size: 13px; color: var(--muted); }
+  .verdicts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .verdicts label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px;
+                    border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-weight: 500; }
+  .verdicts input { position: absolute; opacity: 0; }
+  .verdicts label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .verdicts label.ok:has(input:checked) { border-color: var(--good); background: var(--good-soft); color: var(--good); }
+  .verdicts label.ko:has(input:checked) { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+  textarea { width: 100%; min-height: 60px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+             background: var(--surface); color: var(--text); font: 14px/1.5 var(--sans); resize: vertical; box-sizing: border-box; }
+  .note { padding: 12px 14px; border-radius: var(--radius); background: var(--warn-soft); color: var(--text); }
+  .note strong { color: var(--warn); }
+  .decision { display: grid; gap: 12px; padding: 18px; border: 1px solid var(--accent); border-radius: var(--radius);
+              background: var(--accent-soft); }
+  .decision .verdicts label { background: var(--surface); }
+  .decision label.pick:has(input:checked) { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .suggestion { font-size: 14px; }
+  .status { position: sticky; bottom: env(safe-area-inset-bottom, 0px); justify-self: end; padding: 6px 12px;
+            border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 13px; }
+  .status[data-state="error"] { color: var(--bad); border-color: var(--bad); }
+  @media (prefers-reduced-motion: no-preference) { .criterion { transition: border-color 0.15s; } }
+</style>
+
+<main class="page">
+  <header>
+    <p class="eyebrow">Refonte Rocky · étape B4</p>
+    <h1>Essai du prototype de tri</h1>
+    <p class="muted">Utilise le prototype, puis juge les cinq critères. Il suffit qu'un seul échoue pour que Claude
+      construise un prototype NiceGUI avant la décision finale. Tes réponses s'enregistrent au fur et à mesure.</p>
+  </header>
+
+  <div class="launch">
+    <span>Ouvre dans ton navigateur :</span>
+    <code id="app-url">http://127.0.0.1:8000/offres</code>
+    <button type="button" class="btn" id="copy-url">Copier</button>
+    <a href="http://127.0.0.1:8000/offres" target="_blank" rel="noopener">Ouvrir ↗</a>
+  </div>
+
+  <section aria-labelledby="scenario-title">
+    <h2 id="scenario-title">Scénario</h2>
+    <ul class="steps" id="steps"></ul>
+  </section>
+
+  <p class="note"><strong>Point déjà repéré par Claude.</strong> Une touche tapée pendant qu'un morceau de page arrive
+    (par exemple <kbd>e</kbd> puis <kbd>2</kbd> en moins de quelques millisecondes) s'applique à l'ancien contenu et
+    se perd. Invisible en local ; si tu le ressens, note-le au critère (a).</p>
+
+  <section aria-labelledby="criteria-title">
+    <h2 id="criteria-title">Critères</h2>
+    <div class="criteria" id="criteria"></div>
+  </section>
+
+  <section aria-labelledby="decision-title">
+    <div class="decision">
+      <h2 id="decision-title">Décision</h2>
+      <p class="suggestion" id="suggestion">Juge les critères pour voir la suggestion.</p>
+      <div class="verdicts" role="radiogroup" aria-label="Décision">
+        <label class="pick"><input type="radio" name="decision" id="decision-htmx" value="htmx"> HTMX confirmé</label>
+        <label class="pick"><input type="radio" name="decision" id="decision-nicegui" value="nicegui"> Tester le plan B (NiceGUI)</label>
+      </div>
+      <label for="adjustments"><strong>Ajustements souhaités pour C7</strong>
+        <span class="muted">(densité, motifs, touches, ordre de la fiche…)</span></label>
+      <textarea id="adjustments" placeholder="Exemple : les motifs d'écartement devraient apparaître sans clic…"></textarea>
+    </div>
+  </section>
+
+  <p class="status" id="status" role="status">Chargement…</p>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const STEPS = [
+    ["open", "Connecte-toi et ouvre 🔎 Offres : la page doit s'ouvrir en mode tri sur l'offre la mieux notée."],
+    ["sort", "Trie toute la file au clavier (18 offres) : <kbd>i</kbd> <kbd>e</kbd> <kbd>p</kbd>, motifs <kbd>1</kbd>…<kbd>9</kbd>, précision <kbd>t</kbd>, <kbd>Entrée</kbd>. Ajoute une précision à un motif « autre »."],
+    ["undo", "Annule trois décisions d'affilée avec <kbd>u</kbd>, puis redécide-les."],
+    ["navigate", "Passe d'une offre à l'autre sans décider avec <kbd>j</kbd> / <kbd>k</kbd>, ouvre le « Pourquoi ? » (<kbd>w</kbd>) sur trois offres et une annonce d'origine (<kbd>o</kbd>)."],
+    ["below", "Clique « N sous le seuil → » et décide deux offres depuis leur fiche."],
+    ["list", "En liste : essaie les filtres (piste, décision « Écarté », incomplètes), ouvre des fiches, change une décision depuis une fiche, puis recharge la page : les filtres restent."],
+    ["help", "Ouvre l'aide des raccourcis avec <kbd>?</kbd>."],
+    ["phone", "Téléphone : rétrécis la fenêtre sous 900 px (ou mode appareil du navigateur, 390 px de large). Trie cinq offres avec les boutons, ouvre une fiche en plein écran, le menu « Plus » et le tiroir 🐾."],
+  ];
+  const CRITERIA = [
+    ["a", "Tri au clavier fluide", "Une décision, l'offre suivante, sans rechargement visible.", "Mesuré : aucun rechargement de page pendant le tri."],
+    ["b", "Liste et fiche sans rechargement", "Filtres et fiche latérale se mettent à jour sur place.", "Mesuré : filtres et fiche en fragments ; l'URL garde les filtres."],
+    ["c", "« Pourquoi ? » à la demande", "L'explication du score s'ouvre quand tu la demandes.", "Mesuré : chargée au premier clic seulement."],
+    ["d", "Réponse instantanée", "Moins de 150 ms ressentis, en local.", "Mesuré : médiane 7,9 ms, 90 % sous 16,4 ms (78 requêtes)."],
+    ["e", "Pas de JavaScript maison hors raccourcis", "Tout l'état vit côté serveur.", "Mesuré : un seul script d'environ 40 lignes, pour les raccourcis."],
+  ];
+
+  const empty = () => ({ steps: {}, criteria: {}, decision: null, adjustments: "" });
+  let state = empty();
+  let ref = null;
+  let saving = Promise.resolve();
+  const status = document.getElementById("status");
+
+  const setStatus = (text, kind) => { status.textContent = text; status.dataset.state = kind || ""; };
+
+  function render() {
+    const steps = document.getElementById("steps");
+    steps.replaceChildren(...STEPS.map(([key, html]) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<input type="checkbox" id="step-${key}" aria-describedby="step-text-${key}"><label class="step-text" id="step-text-${key}" for="step-${key}">${html}</label>`;
+      const box = li.querySelector("input");
+      box.checked = Boolean(state.steps[key]);
+      box.addEventListener("change", () => { state.steps[key] = box.checked; save(); });
+      return li;
+    }));
+
+    const criteria = document.getElementById("criteria");
+    criteria.replaceChildren(...CRITERIA.map(([key, title, detail, measure]) => {
+      const current = state.criteria[key] || {};
+      const box = document.createElement("article");
+      box.className = "criterion";
+      box.dataset.verdict = current.verdict || "";
+      box.innerHTML = `
+        <div class="criterion-head"><span class="letter">(${key})</span><h3 style="margin:0;font-size:16px">${title}</h3></div>
+        <p>${detail}</p>
+        <p class="measure">${measure}</p>
+        <div class="verdicts" role="radiogroup" aria-label="Verdict ${key}">
+          <label class="ok"><input type="radio" name="verdict-${key}" id="verdict-${key}-ok" value="ok"> ✔ Tenu</label>
+          <label class="ko"><input type="radio" name="verdict-${key}" id="verdict-${key}-ko" value="ko"> ✘ Échoué</label>
+        </div>
+        <textarea id="note-${key}" aria-label="Note sur le critère ${key}" placeholder="Ce que tu as ressenti (facultatif)"></textarea>`;
+      box.querySelectorAll("input").forEach((radio) => {
+        radio.checked = radio.value === current.verdict;
+        radio.addEventListener("change", () => {
+          state.criteria[key] = { ...(state.criteria[key] || {}), verdict: radio.value };
+          box.dataset.verdict = radio.value;
+          suggest();
+          save();
+        });
+      });
+      const note = box.querySelector("textarea");
+      note.value = current.note || "";
+      note.addEventListener("input", () => { state.criteria[key] = { ...(state.criteria[key] || {}), note: note.value }; saveSoon(); });
+      return box;
+    }));
+
+    document.querySelectorAll('input[name="decision"]').forEach((radio) => { radio.checked = radio.value === state.decision; });
+    document.getElementById("adjustments").value = state.adjustments || "";
+    suggest();
+  }
+
+  function suggest() {
+    const verdicts = CRITERIA.map(([key]) => (state.criteria[key] || {}).verdict);
+    const failed = CRITERIA.filter(([key]) => (state.criteria[key] || {}).verdict === "ko").map(([key]) => `(${key})`);
+    const text = document.getElementById("suggestion");
+    if (failed.length) text.textContent = `Critère en échec : ${failed.join(", ")}. La règle convenue mène au prototype NiceGUI.`;
+    else if (verdicts.every(Boolean)) text.textContent = "Les cinq critères sont tenus : la règle convenue mène à HTMX confirmé.";
+    else text.textContent = `${verdicts.filter(Boolean).length} critère(s) jugé(s) sur 5.`;
+  }
+
+  let timer = null;
+  function saveSoon() { clearTimeout(timer); timer = setTimeout(save, 700); }
+
+  function save() {
+    clearTimeout(timer);
+    const body = JSON.parse(JSON.stringify({ ...state, updatedAt: new Date().toISOString() }));
+    if (!ref) {
+      try { localStorage.setItem("rocky-b4-essai", JSON.stringify(body)); } catch (error) { /* storage unavailable */ }
+      setStatus("Enregistré dans ce navigateur seulement : copie tes réponses à Claude.", "error");
+      return;
+    }
+    setStatus("Enregistrement…");
+    saving = saving.then(() => ref.set(body)).then(
+      () => setStatus("Enregistré"),
+      (error) => setStatus(`Non enregistré (${error && error.code ? error.code : "erreur"}) : réessaie dans un instant.`, "error"),
+    );
+  }
+
+  document.querySelectorAll('input[name="decision"]').forEach((radio) => {
+    radio.addEventListener("change", () => { state.decision = radio.value; save(); });
+  });
+  document.getElementById("adjustments").addEventListener("input", (event) => { state.adjustments = event.target.value; saveSoon(); });
+  document.getElementById("copy-url").addEventListener("click", async (event) => {
+    const url = document.getElementById("app-url").textContent;
+    try { await navigator.clipboard.writeText(url); event.target.textContent = "Copié"; }
+    catch (error) { const range = document.createRange(); range.selectNodeContents(document.getElementById("app-url")); getSelection().removeAllRanges(); getSelection().addRange(range); }
+  });
+
+  render();
+  setStatus("Connexion à l'enregistrement…");
+
+  (async () => {
+    const db = window.claude ? await window.claude.use("db") : null;
+    if (!db) {
+      try { const saved = JSON.parse(localStorage.getItem("rocky-b4-essai") || "null"); if (saved) { state = { ...empty(), ...saved }; render(); } } catch (error) { /* ignore */ }
+      setStatus("Enregistrement indisponible ici : tes réponses restent dans ce navigateur.", "error");
+      return;
+    }
+    ref = db.doc("evaluations/b4");
+    try {
+      const snap = await ref.get();
+      if (snap.exists) { state = { ...empty(), ...snap.data() }; render(); }
+      setStatus(snap.exists ? "Réponses retrouvées" : "Prêt");
+    } catch (error) {
+      setStatus("Lecture impossible pour l'instant : recharge la page.", "error");
+    }
+  })();
+})();
+</script>
