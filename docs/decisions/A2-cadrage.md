@@ -30,7 +30,8 @@ Termes déjà présents dans le dépôt et l'historique, qui ne désignent **pas
 | `matching-v1` (`scoring_version` de `job_match_history`) | règles de score de Rocky v1 ; le nouveau scoring (C4) portera un nom distinct, pas `matching-v2`, pour ne pas suggérer une continuité |
 | `apec-offer-extraction-v1` (`schema_version`) | format de l'extraction détaillée APEC |
 | `ATS V2` (`scripts/test_ats_v2.py`) | voir ATS ci-dessus |
-| `~/Desktop/Projets_IA/Rocky_assistant_job_archive`, `~/Desktop/Projets_IA/Archives/Rocky_assistant_job-main` | anciennes copies de travail de Rocky v1, antérieures au déplacement du dépôt |
+| `~/Desktop/Projets_IA/Rocky_assistant_job_archive` | toute première version de Rocky, gardée à part par Nicolas pour des essais manuels ; **hors périmètre de la refonte**, les agents n'y touchent pas |
+| `~/Desktop/Projets_IA/Archives/Rocky_assistant_job-main` | ancienne copie de travail, antérieure au déplacement du dépôt |
 
 Règle : « v1 » seul, dans un nom de dossier, de tag, de branche ou d'archive, désigne la génération Streamlit.
 Les autres numéros gardent un préfixe explicite (ATS, plan, scoring, gabarit). `docs/archive/AGENTS-v1.md` et
