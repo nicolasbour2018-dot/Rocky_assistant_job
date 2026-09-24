@@ -110,7 +110,7 @@ aucun identifiant interne affiché.
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| A1. Archive | `pg_dump` complet ; export Parquet + CSV des offres, scores, rattachements, candidatures, événements, mails et décisions Gmail ; copie des documents ; tag Git de l'ancienne version | Dump restauré sur base vierge avec comptes identiques ; exports lisibles dans un notebook | ⬜ |
+| A1. Archive | `pg_dump` complet ; export Parquet + CSV des offres, scores, rattachements, candidatures, événements, mails et décisions Gmail ; copie des documents ; tag Git de l'ancienne version | Dump restauré sur base vierge avec comptes identiques ; exports lisibles dans un notebook | ✅ |
 | A2. Cadrage écrit | Ce plan dans `docs/` ; `AGENTS.md` (écritures autorisées, arborescence, conventions) ; nouveau code sur une branche ; ancien Rocky lancé depuis un `git worktree` séparé ; règles `.claude/rules/` alignées | Un agent sait sans ambiguïté ce qu'il a le droit de toucher | ⬜ |
 
 ### B. Socle `system` et `profil`
@@ -218,4 +218,14 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 
 *(Les agents notent ici ce qu'ils observent hors du périmètre de l'étape en cours, avec l'étape concernée.)*
 
-- …
+- **(A1 → B1, §5 VPS)** Le conteneur `job-assistant-postgres` a `POSTGRES_USER=valeur_de_DB_USER` (gabarit non
+  substitué) ; le rôle réel `job_user` est **superutilisateur** et sert à l'application. Le nouveau Rocky
+  doit utiliser un rôle applicatif sans privilège de superutilisateur.
+- **(A1 → F2)** `main` a divergé du code en service (78/82 fichiers différents : corrections lint/typage/sécurité
+  jamais déployées). La référence de l'ancien Rocky est le tag `rocky-v1-streamlit` ; décider en F2 du sort de `main`.
+- **(A1 → D5, B5)** Chemins de documents hétérogènes dans l'ancienne base : absolus (`/data/…`), relatifs au
+  répertoire courant (`output/…`, `data/…`), dont un CV de profil de test jamais conservé. Le nouveau Rocky stocke
+  des chemins relatifs à une racine de stockage configurée, vérifiés par hash.
+- **(A1 → B1)** Le dépôt est sur un Bureau synchronisé iCloud (fichiers non téléchargés : `du` trompeur, lectures
+  lentes) et les montages bind Docker échouent (`Resource deadlock avoided`). Données PostgreSQL et fichiers du
+  nouveau Rocky : volumes Docker nommés, pas de montage depuis le Bureau.
