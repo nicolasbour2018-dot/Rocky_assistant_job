@@ -258,3 +258,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   sur le VPS, envisager que les migrations tournent sous un rôle propriétaire distinct de `rocky_app`.
 - **(B2)** Un schéma `test_…` peut rester dans `test-db` si une exécution de pytest est tuée ; sans conséquence
   (`test-db` est en mémoire et se vide à son redémarrage).
+- **(B2 → vérification GitHub, §5 VPS)** GitHub annonce que `ubuntu-latest` passera à **Ubuntu 26 à partir du
+  19 octobre 2026** (annotation du passage `36047140129`). La vérification tourne dans Docker, donc a priori sans
+  effet ; mais **si la vérification GitHub casse à partir d'octobre, explorer d'abord cette piste** (version de
+  Docker ou de Compose de la nouvelle image). Contournement immédiat : fixer `runs-on: ubuntu-24.04` dans
+  `.github/workflows/verification.yml`. Le VPS de Nicolas tourne aussi sous Ubuntu : même vigilance lors de son
+  installation.
