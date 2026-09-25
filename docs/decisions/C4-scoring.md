@@ -60,3 +60,21 @@ ne remonte plus. »
 | Pays | `CollectedOffer.country` : `France`, `FR`, `FRA` = France. Pays inconnu : l'offre est traitée en France, avec le marqueur « pays non précisé » | Les connecteurs français donnent `France` ; WTTJ un code ISO ; LinkedIn et Wellfound rien. |
 | Paramètres | Toutes les valeurs de ce document sont des constantes de `model.py`, à calibrer en C5 ; toute modification change `RULES_VERSION` | D14 : un score garde la version exacte de ses règles. |
 | Conservation | Rien n'est persisté en C4 ; `Score.to_json()` donne la forme stockée en C6 | Même règle que C1–C3. |
+| Preuve d'une compétence | Liée à une expérience (emploi **ou formation**) ou à un projet | Q3 dit « expérience ou projet » ; le profil range les formations parmi les expériences. À revoir en C5 si une formation prouve trop. |
+| Devise absente | Un montant sans devise est lu en euros | Les sources sont françaises ; une devise écrite autre que l'euro rend la composante absente (Q24). |
+| Lieu « France » | Un lieu de piste nommé « France » couvre tout le pays | Sans géocodage, c'est la seule façon de dire « partout en France ». |
+| Écran | Le détail du score s'affiche dans l'aperçu d'import, avant l'analyse : chiffre entier, piste, confiance et ses raisons, plafonds, tableau des composantes (valeur, poids, ce qui a été comparé, preuves), manques, score par piste | Q13, Q21. La fiche d'offre (C7) reprendra ce gabarit. |
+
+## Mesures (25/09/2026)
+
+Procédure et tableaux : `docs/procedures/c4-mesure/` (profil réel de Nicolas, lu dans la base de développement).
+
+| Mesure | Résultat |
+|---|---|
+| « Data Protection Analyst » (1193) | 79,6 en v1 → **29** (profil réel), confiance faible, « preuves insuffisantes » ; 47 < 50 avec un profil de test qui la favorise (test de sortie) |
+| Hors-sujets de la v1 | « Head of Talent Acquisition » 72 → 7 ; « Sourcing Transformation Digitale » 78 → 12 ; « Project Manager DATA / IA » 72 → 17 |
+| 404 annonces notées en v1 | Corrélation de rang v1 / C4 : 0,08 ; ≥ 50 : 332 en v1, 264 en C4 ; confiance haute 10, moyenne 131, faible 263 ; 13 plafonnées |
+| Écarts laissés à C5 | Confiance faible trop fréquente (médiane des preuves 1,4 point) ; haut du classement saturé à 100 ; fausses exigences hors profil de l'analyse (« anglais obligatoire ») |
+
+Vérifié dans un navigateur (Chromium, instance à part, schéma jetable de `test-db`) : aperçu d'une description
+collée (DPA : 19, sous le seuil) et d'un lien Hellowork réel (69) ; console sans erreur.

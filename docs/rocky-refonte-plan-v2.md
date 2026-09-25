@@ -238,6 +238,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `AGENTS.md`. À réévaluer si Codex travaille sur la refonte.
 - **(A2 → C4)** Les règles de score de l'ancien Rocky s'appellent `matching-v1` : la version des nouvelles règles
   porte un nom distinct (pas `matching-v2`).
+  *Résolu en C4 : `score-2026-09-25.1`.*
 - **(B1 → F2)** Le Dockerfile du nouveau Rocky est écrit en ligne dans `docker-compose.yml`, car `Dockerfile` et
   `.dockerignore` à la racine appartiennent à l'ancien Rocky. En F2 : l'extraire en `Dockerfile` et remplacer
   le `.dockerignore`.
@@ -297,6 +298,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en C3 : `account_skills`, lues par `profil.web.skills_of` (cas d'usage du profil).*
 - **(B5 → C4)** Caractéristiques disponibles pour le score (D14) : drapeau « clé » et niveau des compétences,
   compétences liées aux expériences et projets (preuves), intitulés, mots-clés et mots exclus des pistes.
+  *Résolu en C4 : lues par `scoring_profile` et gardées dans les `features` du score.*
 - **(B5 → C6)** Suppression définitive d'une piste : à interdire dès qu'une offre y est rattachée (seul l'archivage
   reste alors possible).
 - **(B5 → après C6)** Lieux des pistes en libellés libres jusqu'à C6 ; lieux structurés (ville + rayon, région, pays)
@@ -334,6 +336,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C1 → C4, C6)** Welcome to the Jungle ne filtre pas le lieu (offres de New York, Austin, Londres pour « Data
   analyst ») ; Wellfound sert une page pour un lieu qu'il ne connaît pas (« Eure et Loire »). Le lieu doit donc peser
   dans le score ou marquer l'offre, pas seulement la requête.
+  *Résolu en C4 pour le score (Q9, Q15 : hors zone, à l'étranger) ; le filtrage de la veille reste à C6.*
 - **(C1 → C6)** `collect` déduplique par source seulement ; la déduplication entre sources et le rattachement aux
   pistes (appeler la collecte piste par piste) sont à faire en C6. Durée mesurée : 48 s pour une piste de 6 requêtes
   avec détails (pause d'une seconde par site).
@@ -375,6 +378,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   plus, mentionnée) et leur preuve, conditions, contrats et télétravail dans le vocabulaire des préférences, salaire
   avec période (comparable à `min_salary_eur` / `min_daily_rate_eur`), expérience, langues ; `RULES_VERSION` à garder
   avec le score. Une période **déduite** du montant doit peser moins qu'une période écrite.
+  *Résolu en C4 : tout est lu par le score ; période déduite = poids du salaire divisé par deux, confiance moyenne.*
 - **(C3 → C6, C7)** L'analyse et le résumé ne sont pas enregistrés : à stocker avec l'offre (analyse recalculable,
   résumé gardé une fois demandé pour ne pas rappeler le modèle).
 - **(C3 → C2, C6)** Import Hellowork : le CDI n'est que dans le titre de la page (le JSON-LD donne `FULL_TIME`) ; lire
@@ -384,3 +388,17 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C3 → Nicolas)** Résumé réel à essayer : ajouter `ROCKY_GEMINI_API_KEY` au `.env`, relancer l'application
   (`docker compose up -d --build --wait app`), importer une annonce, « Résumer l'annonce ».
   *Résolu en C3 : clé ajoutée par Nicolas ; un résumé réel, fidèle au texte (décision C3, clôture).*
+- **(C4 → C6)** Le score n'est pas enregistré : table des scores (une ligne par offre et par piste, `Score.to_json`,
+  `RULES_VERSION`) à créer avec l'offre et ses rattachements, dans la même transaction.
+- **(C4 → C5)** Calibrage (mesure `docs/procedures/c4-mesure/`) : confiance faible pour 65 % des annonces (médiane des
+  preuves 1,4 point, seuil 2 ; 11 compétences prouvées sur 52) ; haut du classement saturé à 100 ; marge étroite de
+  la « Data Protection Analyst » avec un profil qui la favorise (47 < 50). Corrélation de rang v1 / C4 : 0,08.
+- **(C4 → C3, C5)** Fausses exigences hors profil de l'analyse : « Maîtrise de l'anglais obligatoire » (l'anglais est
+  au profil, C1) et « This posting is representative of multiple roles… » retirent chacune un point de preuve.
+- **(C4 → Nicolas, B5)** Préférences du profil réel : aucun mode de télétravail (composante toujours absente), pas de
+  « Freelance » (une mission vaut 0 au contrat), pas de TJM minimum, aucun mot exclu dans les pistes (« Stage Data
+  Scientist » n'est pas plafonnée).
+- **(C4 → après C6)** Lieux structurés : une ville d'Eure-et-Loir ne répond pas à « Eure et Loire » ; un pays absent
+  (LinkedIn, Wellfound) est lu comme la France, avec le marqueur « pays non précisé ».
+- **(C4 → profil)** Permis et habilitation absents du profil : une condition bloquante plafonne toujours le score
+  (Q6). Les ajouter au profil si le cas se présente.

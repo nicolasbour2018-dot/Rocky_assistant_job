@@ -57,7 +57,18 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
   à un fait ni au score. Toute règle modifiée change `RULES_VERSION`.
 - Chaque fait garde sa phrase-preuve ; une valeur déduite le dit (`period_deduced`). Un code inconnu reste vide.
 - Les faits d'une source se décodent par couple (source, valeur), jamais par la valeur seule.
-- Compétences : termes du compte seulement (`account_skills`, lues par `profil.web.skills_of`), jamais un
+- Compétences : termes du compte seulement (`account_skills`, sur le profil lu par `profil.web.profile_of`), jamais un
   dictionnaire global ni le SQL de `profil`.
 - Changer une règle : relancer `docs/procedures/c3-mesure/measure.py` ; une baisse se justifie dans la décision.
   Une annotation ne se corrige que pour une erreur de lecture, notée dans le README de la mesure.
+
+## Score (`rocky/offres/scoring/`, décision `docs/decisions/C4-scoring.md`)
+- `score` est une fonction pure : elle lit l'analyse C3, l'offre et `ScoringProfile`, n'écrit rien et ne relit jamais le
+  texte. Le LLM n'intervient jamais dans le score.
+- Un score par piste active ; chaque composante dit ce qu'elle a comparé (`detail`) et ses preuves. Une composante sans
+  information est laissée de côté (`value=None`), jamais devinée.
+- Tous les paramètres (poids, points, plafond, seuil, confiance) sont des constantes de `model.py`, calibrées en C5 ;
+  toute modification change `RULES_VERSION`. Les `features` ne contiennent que des valeurs JSON (D14).
+- Le profil se lit par `profil.web.profile_of` puis `scoring_profile`, jamais par le SQL de `profil`.
+- Changer une règle : relancer `docs/procedures/c4-mesure/measure.py` et justifier l'écart dans la décision.
+- `.score` est la pastille de note du prototype (hauteur fixe) : le détail du score utilise `.score-detail`.
