@@ -1,0 +1,48 @@
+{% import "profil/macros.html" as m %}
+{% set key = "competences" %}
+{% macro skill_form(action, values, state, skill=None) %}
+{{ m.form_open(key, action) }}
+  {{ m.error(state) }}
+  <div class="form-grid">
+    {{ m.input("label_fr", "Nom en français", values, required=True) }}
+    {{ m.input("label_en", "Nom en anglais", values, hint="Facultatif") }}
+    <label class="field">Catégorie
+      <select name="category">{% for code in choices.categories %}<option value="{{ code }}"{% if values.has("category", code) %} selected{% endif %}>{{ skill_category_labels[code] }}</option>{% endfor %}</select></label>
+    <label class="field">Niveau
+      <select name="level"><option value="">Non précisé</option>{% for code in choices.levels %}<option value="{{ code }}"{% if values.has("level", code) %} selected{% endif %}>{{ skill_level_labels[code] }}</option>{% endfor %}</select></label>
+  </div>
+  {{ m.lines("aliases", "Autres noms (alias)", values, "Un par ligne : sigle, synonyme… Rocky les reconnaîtra dans les annonces") }}
+  <label class="check"><input type="checkbox" name="is_key" value="1"{% if values.has("is_key", "1") %} checked{% endif %}> Compétence clé</label>
+  {{ m.actions(key, state) }}
+</form>
+{% if skill %}{{ m.delete(key, "/profil/competences/" ~ skill.id ~ "/supprimer", "« " ~ skill.label.fr ~ " » sera retirée du profil, et des expériences et projets qui la citent.") }}{% endif %}
+{% endmacro %}
+
+{% if not profile.skills and state.editing != "nouveau" %}
+<p class="empty-note">Aucune compétence pour l'instant. Ajoute ce que tu sais faire : outils, méthodes, savoir-être.</p>
+{% endif %}
+{% for category in choices.categories %}
+{% set group = profile.skills | selectattr("content.category", "equalto", category) | list %}
+{% if group %}
+<h3 class="group-title">{{ skill_category_labels[category] }} <span class="muted">({{ group | length }})</span></h3>
+<ul class="skill-list">
+  {% for skill in group %}
+  {% if state.editing == skill.id|string %}
+  <li class="item skill-editing">{{ skill_form("/profil/competences/" ~ skill.id, state.values, state, skill) }}</li>
+  {% else %}
+  <li class="skill">
+    <a href="/profil/competences?modifier={{ skill.id }}" hx-get="/profil/competences?modifier={{ skill.id }}" {{ m.swap(key) }} title="Modifier">
+      {% if skill.content.is_key %}<span class="key-mark" title="Compétence clé">★</span>{% endif %}{{ m.text(skill.label, language) }}</a>
+    {% if skill.content.level %}<span class="muted">· {{ skill_level_labels[skill.content.level] }}</span>{% endif %}
+    {% if skill.content.aliases %}<span class="aliases">aussi : {{ skill.content.aliases | join(", ") }}</span>{% endif %}
+  </li>
+  {% endif %}
+  {% endfor %}
+</ul>
+{% endif %}
+{% endfor %}
+{% if state.editing == "nouveau" %}
+<div class="item item-new">{{ skill_form("/profil/competences", state.values, state) }}</div>
+{% else %}
+{{ m.link(key, "+ Ajouter une compétence", "?modifier=nouveau", "btn") }}
+{% endif %}

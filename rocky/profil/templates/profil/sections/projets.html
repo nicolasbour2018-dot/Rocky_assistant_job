@@ -1,0 +1,51 @@
+{% import "profil/macros.html" as m %}
+{% set key = "projets" %}
+{% macro project_form(action, values, state, project=None) %}
+{{ m.form_open(key, action) }}
+  {{ m.error(state) }}
+  <div class="form-grid">
+    {{ m.input("name_fr", "Nom en français", values, required=True) }}
+    {{ m.input("name_en", "Nom en anglais", values, hint="Facultatif") }}
+    {{ m.lines("problem_fr", "Problème", values, "Le besoin de départ") }}
+    {{ m.lines("problem_en", "Problem", values, "Facultatif") }}
+    {{ m.lines("work_fr", "Réalisation", values, "Ce que tu as construit") }}
+    {{ m.lines("work_en", "What I built", values, "Facultatif") }}
+    {{ m.lines("results_fr", "Résultats", values, "Chiffres, retours, usages") }}
+    {{ m.lines("results_en", "Results", values, "Facultatif") }}
+    {{ m.lines("stack", "Stack", values, "Un outil par ligne") }}
+    {{ m.input("url", "Lien", values, "url", hint="Facultatif") }}
+  </div>
+  {{ m.skill_choices(profile, values) }}
+  {{ m.actions(key, state) }}
+</form>
+{% if project %}{{ m.delete(key, "/profil/projets/" ~ project.id ~ "/supprimer", "Le projet « " ~ project.content.name.fr ~ " » sera retiré du profil.") }}{% endif %}
+{% endmacro %}
+
+{% if not profile.projects and state.editing != "nouveau" %}
+<p class="empty-note">Facultatif : un projet personnel, de formation ou de hackathon montre ce que tu sais faire. Rien d'obligatoire si tu n'en as pas.</p>
+{% endif %}
+<ul class="item-list">
+  {% for project in profile.projects %}
+  {% set content = project.content %}
+  <li class="item">
+    {% if state.editing == project.id|string %}
+    {{ project_form("/profil/projets/" ~ project.id, state.values, state, project) }}
+    {% else %}
+    <div class="item-head">
+      <h3>{{ m.text(content.name, language) }}</h3>
+      {{ m.link(key, "Modifier", "?modifier=" ~ project.id ~ "&langue=" ~ language) }}
+    </div>
+    <dl class="project-facts">
+      {% for label_fr, label_en, value in (("Problème", "Problem", content.problem), ("Réalisation", "What I built", content.work), ("Résultats", "Results", content.results)) %}
+      {% if value.fr or value.en %}<div><dt>{{ label_en if language == "en" else label_fr }}</dt><dd class="prose">{{ m.text(value, language) }}</dd></div>{% endif %}
+      {% endfor %}
+    </dl>
+    {% if content.stack %}<ul class="badges">{% for tool in content.stack %}<li class="badge">{{ tool }}</li>{% endfor %}</ul>{% endif %}
+    {{ m.skill_badges(content.skill_ids, skills_by_id, language) }}
+    {% if content.url %}<p><a href="{{ content.url }}" target="_blank" rel="noopener">{{ content.url }}</a></p>{% endif %}
+    {% endif %}
+  </li>
+  {% endfor %}
+  {% if state.editing == "nouveau" %}<li class="item item-new">{{ project_form("/profil/projets", state.values, state) }}</li>{% endif %}
+</ul>
+{% if state.editing != "nouveau" %}{{ m.link(key, "+ Ajouter un projet", "?modifier=nouveau", "btn") }}{% endif %}

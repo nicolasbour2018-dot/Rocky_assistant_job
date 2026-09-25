@@ -1,0 +1,68 @@
+{% import "profil/macros.html" as m %}
+{% set key = "identite" %}
+{% set identity = profile.identity %}
+{% set preferences = profile.preferences %}
+<div class="two-columns">
+  <div>
+    <h3 class="group-title">Identité</h3>
+    {% if state.editing == "identite" %}
+    {{ m.form_open(key, "/profil/identite") }}
+      {{ m.error(state) }}
+      <div class="form-grid">
+        {{ m.input("full_name", "Nom", state.values, required=True) }}
+        {{ m.input("contact_email", "E-mail de contact", state.values, "email") }}
+        {{ m.input("phone", "Téléphone", state.values, "tel") }}
+        {{ m.input("city", "Ville", state.values) }}
+        {{ m.input("postal_code", "Code postal", state.values) }}
+        {{ m.input("linkedin_url", "LinkedIn", state.values, "url") }}
+        {{ m.input("github_url", "GitHub", state.values, "url") }}
+        {{ m.input("portfolio_url", "Portfolio", state.values, "url") }}
+      </div>
+      <div class="form-grid">
+        {{ m.lines("headline_fr", "Accroche en français", state.values, "Quelques lignes en tête de CV", 4) }}
+        {{ m.lines("headline_en", "Accroche en anglais", state.values, "Facultatif", 4) }}
+      </div>
+      {{ m.actions(key, state) }}
+    </form>
+    {% else %}
+    <dl class="facts facts-column">
+      <div><dt>Nom</dt><dd>{{ identity.full_name or "—" }}</dd></div>
+      <div><dt>Contact</dt><dd>{{ identity.contact_email or "—" }}{% if identity.phone %} · {{ identity.phone }}{% endif %}</dd></div>
+      <div><dt>Ville</dt><dd>{{ identity.city or "—" }}{% if identity.postal_code %} ({{ identity.postal_code }}){% endif %}</dd></div>
+      {% for label, url in (("LinkedIn", identity.linkedin_url), ("GitHub", identity.github_url), ("Portfolio", identity.portfolio_url)) %}
+      {% if url %}<div><dt>{{ label }}</dt><dd><a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a></dd></div>{% endif %}
+      {% endfor %}
+      <div><dt>Accroche</dt><dd class="prose">{{ m.text(identity.headline, language) or "—" }}</dd></div>
+    </dl>
+    {{ m.link(key, "Modifier l'identité", "?modifier=identite&langue=" ~ language) }}
+    {% endif %}
+  </div>
+  <div>
+    <h3 class="group-title">Préférences</h3>
+    <p class="muted small">Communes à toutes les pistes.</p>
+    {% if state.editing == "preferences" %}
+    {{ m.form_open(key, "/profil/preferences") }}
+      {{ m.error(state) }}
+      <fieldset class="field"><legend>Contrats</legend>
+        <div class="chips">{% for code in choices.contracts %}<label class="chip"><input type="checkbox" name="contracts" value="{{ code }}"{% if state.values.has("contracts", code) %} checked{% endif %}>{{ contract_labels[code] }}</label>{% endfor %}</div>
+      </fieldset>
+      <fieldset class="field"><legend>Télétravail <span class="hint">Rien de coché : pas de préférence</span></legend>
+        <div class="chips">{% for code in choices.remote_modes %}<label class="chip"><input type="checkbox" name="remote_modes" value="{{ code }}"{% if state.values.has("remote_modes", code) %} checked{% endif %}>{{ remote_labels[code] }}</label>{% endfor %}</div>
+      </fieldset>
+      <div class="form-grid">
+        {{ m.input("min_salary_eur", "Salaire annuel brut minimal (€)", state.values, hint="Facultatif") }}
+        {{ m.input("min_daily_rate_eur", "TJM minimal (€ HT / jour)", state.values, hint="Facultatif, pour le freelance") }}
+      </div>
+      {{ m.actions(key, state) }}
+    </form>
+    {% else %}
+    <dl class="facts facts-column">
+      <div><dt>Contrats</dt><dd>{% for code in preferences.contracts %}{{ contract_labels[code] }}{% if not loop.last %} · {% endif %}{% else %}Tous{% endfor %}</dd></div>
+      <div><dt>Télétravail</dt><dd>{% for code in preferences.remote_modes %}{{ remote_labels[code] }}{% if not loop.last %} · {% endif %}{% else %}Pas de préférence{% endfor %}</dd></div>
+      <div><dt>Salaire minimal</dt><dd>{{ "{:,}".format(preferences.min_salary_eur).replace(",", " ") ~ " € brut / an" if preferences.min_salary_eur else "—" }}</dd></div>
+      <div><dt>TJM minimal</dt><dd>{{ "{:,}".format(preferences.min_daily_rate_eur).replace(",", " ") ~ " € HT / jour" if preferences.min_daily_rate_eur else "—" }}</dd></div>
+    </dl>
+    {{ m.link(key, "Modifier les préférences", "?modifier=preferences&langue=" ~ language) }}
+    {% endif %}
+  </div>
+</div>

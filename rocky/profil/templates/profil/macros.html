@@ -1,0 +1,66 @@
+{# Shared pieces of the profile sections. Every HTMX element declares its own target and swap (lesson of B4). #}
+
+{% macro swap(key) -%}
+hx-target="#section-{{ key }}" hx-swap="outerHTML"
+{%- endmacro %}
+
+{% macro link(key, label, query="", class="btn btn-ghost") -%}
+<a class="{{ class }}" href="/profil/{{ key }}{{ query }}" hx-get="/profil/{{ key }}{{ query }}" {{ swap(key) }}>{{ label }}</a>
+{%- endmacro %}
+
+{% macro form_open(key, action, class="edit-form") -%}
+<form method="post" action="{{ action }}" hx-post="{{ action }}" {{ swap(key) }} class="{{ class }}">
+{%- endmacro %}
+
+{% macro actions(key, state) -%}
+<div class="form-actions">
+  <button type="submit" class="btn btn-primary">Enregistrer</button>
+  {{ link(key, "Annuler", "?langue=" ~ state.language) }}
+</div>
+{%- endmacro %}
+
+{% macro error(state) -%}
+{% if state.error %}<p class="alert alert-error" role="alert">{{ state.error }}</p>{% endif %}
+{%- endmacro %}
+
+{% macro delete(key, action, question) -%}
+<details class="confirm">
+  <summary>Supprimer…</summary>
+  <p>{{ question }}</p>
+  {{ form_open(key, action, "inline-form") }}
+    <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+  </form>
+</details>
+{%- endmacro %}
+
+{# A text in the language shown; an English text not yet written falls back to French, marked as such. #}
+{% macro text(value, language) -%}
+{% if language == "en" and not value.en and value.fr %}<span class="untranslated">{{ value.fr }}</span> <span class="badge badge-muted" title="Pas encore traduit">FR</span>{% else %}{{ value.get(language) or "" }}{% endif %}
+{%- endmacro %}
+
+{% macro lines(name, label, values, hint="Une par ligne", rows=3) -%}
+<label class="field">{{ label }} <span class="hint">{{ hint }}</span>
+  <textarea name="{{ name }}" rows="{{ rows }}">{{ values.get(name) }}</textarea></label>
+{%- endmacro %}
+
+{% macro input(name, label, values, type="text", required=False, hint="") -%}
+<label class="field">{{ label }}{% if hint %} <span class="hint">{{ hint }}</span>{% endif %}
+  <input type="{{ type }}" name="{{ name }}" value="{{ values.get(name) }}"{% if required %} required{% endif %}></label>
+{%- endmacro %}
+
+{% macro skill_choices(profile, values) -%}
+{% if profile.skills %}
+<fieldset class="field">
+  <legend>Compétences mobilisées</legend>
+  <div class="chips">
+    {% for skill in profile.skills %}
+    <label class="chip"><input type="checkbox" name="skills" value="{{ skill.id }}"{% if values.has("skills", skill.id|string) %} checked{% endif %}>{{ skill.label.fr }}</label>
+    {% endfor %}
+  </div>
+</fieldset>
+{% endif %}
+{%- endmacro %}
+
+{% macro skill_badges(skill_ids, skills_by_id, language) -%}
+{% if skill_ids %}<ul class="badges">{% for skill_id in skill_ids %}{% set skill = skills_by_id.get(skill_id) %}{% if skill %}<li class="badge badge-accent">{{ skill.label.get(language) or skill.label.fr }}</li>{% endif %}{% endfor %}</ul>{% endif %}
+{%- endmacro %}

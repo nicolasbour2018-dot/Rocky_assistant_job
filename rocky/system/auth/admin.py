@@ -1,14 +1,7 @@
-"""``rocky-admin``: administration commands (accounts are created by invitation only).
-
-Run in the application container: ``docker compose run --rm app rocky-admin invite <email>``.
-"""
+"""``rocky-admin invite``: accounts are created by invitation only (the command line is in ``rocky.system.admin``)."""
 
 from __future__ import annotations
 
-import argparse
-import sys
-from collections.abc import Sequence
-from datetime import UTC, datetime
 from typing import TextIO
 
 from sqlalchemy import Engine
@@ -17,13 +10,10 @@ from rocky.system.auth.mail import (
     MailDeliveryError,
     Mailer,
     MailNotConfiguredError,
-    SmtpMailer,
 )
 from rocky.system.auth.rules import InvalidEmailError
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import AlreadyActive, Argon2Hasher, Auth, Clock
-from rocky.system.config import load_settings
-from rocky.system.db import create_db_engine
 
 
 def invite(
@@ -67,36 +57,3 @@ def invite(
         return 1
     out.write(f"Invitation envoyée à {result.mail.recipient}.\n")
     return 0
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        prog="rocky-admin", description="Administration de Rocky"
-    )
-    commands = parser.add_subparsers(dest="command", required=True)
-    invite_parser = commands.add_parser(
-        "invite",
-        help="crée le compte d'une personne et lui envoie son lien d'activation",
-    )
-    invite_parser.add_argument("email")
-    invite_parser.add_argument(
-        "--print-link",
-        action="store_true",
-        help="affiche le lien au lieu de l'envoyer par e-mail",
-    )
-    arguments = parser.parse_args(argv)
-
-    settings = load_settings()
-    engine = create_db_engine(settings.database_url)
-    try:
-        return invite(
-            engine,
-            email=arguments.email,
-            public_url=settings.public_url,
-            mailer=SmtpMailer(settings.smtp),
-            print_link=arguments.print_link,
-            out=sys.stdout,
-            clock=lambda: datetime.now(UTC),
-        )
-    finally:
-        engine.dispose()

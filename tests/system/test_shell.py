@@ -52,7 +52,9 @@ def test_the_phone_bar_keeps_four_entries_and_a_more_menu(
 
 
 @pytest.mark.parametrize(
-    "entry", [e for e in NAVIGATION if e.key != "offers"], ids=lambda e: e.key
+    "entry",
+    [e for e in NAVIGATION if e.key not in {"offers", "profile"}],
+    ids=lambda e: e.key,
 )
 def test_pages_not_built_yet_explain_themselves(
     app: FastAPI, migrated_engine: Engine, entry: object

@@ -45,8 +45,13 @@ def invitation_token(engine: Engine, email: str) -> str:
     return parse_qs(urlsplit(mailer.sent[-1].link).query)["jeton"][0]
 
 
-def logged_in(app: FastAPI, engine: Engine) -> tuple[TestClient, str]:
-    """A browser with an activated account and an open session; returns it with the address."""
+def logged_in(
+    app: FastAPI, engine: Engine, *, onboarding: bool = False
+) -> tuple[TestClient, str]:
+    """A browser with an activated account and an open session; returns it with the address.
+
+    Unless ``onboarding`` is asked for, the onboarding is put off ("Plus tard"), so that main pages show.
+    """
     email = f"{uuid4().hex}@example.fr"
     client = TestClient(app, follow_redirects=False)
     response = client.post(
@@ -58,6 +63,8 @@ def logged_in(app: FastAPI, engine: Engine) -> tuple[TestClient, str]:
         },
     )
     assert response.status_code == 303
+    if not onboarding:
+        assert client.post("/profil/demarrage/plus-tard").status_code == 303
     return client, email
 
 

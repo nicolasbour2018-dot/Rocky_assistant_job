@@ -16,7 +16,7 @@ dependencies = [
 
 [project.scripts]
 # Administration commands, run in the application container (accounts are created by invitation).
-rocky-admin = "rocky.system.auth.admin:main"
+rocky-admin = "rocky.system.admin:main"
 
 [dependency-groups]
 dev = [

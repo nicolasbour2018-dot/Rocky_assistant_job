@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block title %}Profil & kit · Rocky{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1><span aria-hidden="true">👤</span> Profil &amp; kit</h1>
+  <nav class="section-index" aria-label="Sections du profil">
+    {% for section in profile_sections %}<a href="#section-{{ section.key }}">{{ section.title }}</a>{% endfor %}
+  </nav>
+</header>
+{% if missing %}
+<p class="alert alert-info banner">
+  Pour que la veille puisse tourner, il manque : {{ missing | join(", ") }}.
+  {% if onboarding_open or not profile.onboarding.completed_at %}<a href="/profil/demarrage">Démarrage guidé →</a>{% endif %}
+</p>
+{% endif %}
+<div class="profile-sections">
+  {% for section in profile_sections %}{% include "profil/section.html" %}{% endfor %}
+</div>
+{% endblock %}

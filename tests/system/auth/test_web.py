@@ -111,6 +111,8 @@ def test_session_survives_reload_direct_url_and_restart_until_logout(
     assert f"Max-Age={SEVEN_DAYS}" in cookie
     assert "SameSite=lax" in cookie
     assert "Secure" not in cookie  # http://testserver; Secure comes with https
+    # Put the onboarding off: "/" then shows the home page instead of leading to it.
+    assert first.post("/profil/demarrage/plus-tard").status_code == 303
 
     # Reload.
     for _ in range(2):
@@ -153,6 +155,7 @@ def test_session_slides_then_expires_after_seven_idle_days(
     app: FastAPI, migrated_engine: Engine, mailer: RecordingMailer, clock: FakeClock
 ) -> None:
     client, _ = activated(app, migrated_engine, mailer, clock)
+    assert client.post("/profil/demarrage/plus-tard").status_code == 303
 
     clock.advance(timedelta(days=6))
     renewed = client.get("/")

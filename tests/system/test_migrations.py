@@ -11,7 +11,22 @@ from sqlalchemy import Engine, inspect, text
 import rocky.system.tables  # noqa: F401  (registers every table on metadata)
 from rocky.system.db import metadata
 
-HEAD_TABLES = {"alembic_version", "events", "accounts", "account_tokens", "sessions"}
+HEAD_TABLES = {
+    "alembic_version",
+    "events",
+    "accounts",
+    "account_tokens",
+    "sessions",
+    "profiles",
+    "search_tracks",
+    "skills",
+    "skill_terms",
+    "languages",
+    "experiences",
+    "projects",
+    "experience_skills",
+    "project_skills",
+}
 
 
 def table_names(engine: Engine) -> set[str]:

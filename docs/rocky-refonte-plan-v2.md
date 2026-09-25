@@ -121,7 +121,7 @@ aucun identifiant interne affiché.
 | B2. Base et événements | Connexion ; Alembic (première révision) ; journal d'événements en ajout seul | `upgrade` / `downgrade` fonctionnent sur base vide | ✅ |
 | B3. Comptes et sessions | Comptes, SMTP ; sessions D11 ; tout le SQL d'authentification dans l'accès SQL de `system` | Rechargement, URL directe et redémarrage du navigateur gardent la session ; la déconnexion l'invalide | ✅ |
 | B4. Coque web et prototype | FastAPI + Jinja + HTMX ; layout et 7 entrées de navigation ; prototype de l'écran de tri sur données factices | Décision explicite : HTMX confirmé ou plan B (NiceGUI) | ✅ |
-| B5. Profil et pistes | Profil unique FR/EN ; compétences avec alias canoniques (ex. « NLP » = « Traitement du langage naturel (NLP) ») ; pistes (intitulés, mots-clés, lieux) ; réimport du profil de Nicolas depuis l'archive ; édition séparée de l'onboarding ; projets affichés proprement ; activation sans kit anglais | Profil réimporté sans doublons ; au moins 2 pistes définies | ⬜ |
+| B5. Profil et pistes | Profil unique FR/EN ; compétences avec alias canoniques (ex. « NLP » = « Traitement du langage naturel (NLP) ») ; pistes (intitulés, mots-clés, lieux) ; réimport du profil de Nicolas depuis l'archive ; édition séparée de l'onboarding ; projets affichés proprement ; activation sans kit anglais | Profil réimporté sans doublons ; au moins 2 pistes définies | 🔄 |
 
 ### C. Offres
 
@@ -290,3 +290,21 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(B4 → C7)** HTMX fait hériter `hx-swap` et `hx-target` de ses ancêtres : un élément placé dans un conteneur qui
   en déclare un autre doit déclarer les siens (bug « Revenir » trouvé par Nicolas, corrigé en B4). D6 confirmé :
   HTMX retenu par Nicolas, cinq critères tenus.
+- **(B5 → C3)** Les compétences et leurs alias sont **propres à chaque compte** (décision B5, Q2) : la détection des
+  compétences d'une annonce se fait avec les termes du compte (`skill_terms`, `normalize_term`), pas avec un
+  dictionnaire global. L'ancien `SKILL_ALIASES` n'a servi qu'au réimport.
+- **(B5 → C4)** Caractéristiques disponibles pour le score (D14) : drapeau « clé » et niveau des compétences,
+  compétences liées aux expériences et projets (preuves), intitulés, mots-clés et mots exclus des pistes.
+- **(B5 → C6)** Suppression définitive d'une piste : à interdire dès qu'une offre y est rattachée (seul l'archivage
+  reste alors possible).
+- **(B5 → après C6)** Lieux des pistes en libellés libres jusqu'à C6 ; lieux structurés (ville + rayon, région, pays)
+  visés pour la version finale.
+- **(B5 → D2)** Le gabarit HTML/CSS du CV **reproduit le design du CV actuel de Nicolas** (validation côte à côte).
+  Import d'un CV PDF à l'onboarding pour un nouvel utilisateur : lu par le LLM de Rocky, proposé champ par champ,
+  ajouté à l'onboarding avec D2.
+- **(B5 → D2, D5)** **Rendu stable** : le même contenu donne le même PDF ; un test de non-régression visuelle
+  (rendu de référence) empêche un CV de dériver en silence au fil des régénérations (remarque de Nicolas).
+- **(B5 → F2)** Réimport du profil de Nicolas dans son compte réel avec le fichier relu
+  (`docs/procedures/b5-reimport/`).
+- **(B5 → `system`, LLM)** Le LLM de Rocky passera de Groq à **Gemini 3.5 Flash Lite** (Nicolas, 25/09) : le plan
+  (§3, Adaptateurs) et `AGENTS.md` (§7) citent Groq, à corriger quand l'adaptateur LLM naîtra.

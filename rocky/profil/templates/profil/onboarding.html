@@ -1,0 +1,63 @@
+{% extends "layout.html" %}
+{% import "profil/macros.html" as m %}
+{% block title %}Démarrage · Rocky{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1><span aria-hidden="true">👤</span> Bienvenue dans Rocky</h1>
+</header>
+<section class="onboarding">
+  <ol class="steps" aria-label="Étapes">
+    {% for label in ("Toi", "Tes compétences", "Ta première piste") %}
+    <li{% if loop.index == step %} aria-current="step"{% elif loop.index < step %} class="done"{% endif %}>
+      <a href="/profil/demarrage?etape={{ loop.index }}">{{ loop.index }}. {{ label }}</a></li>
+    {% endfor %}
+  </ol>
+
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if message %}<p class="alert alert-info">{{ message }}</p>{% endif %}
+
+  {% if step == 1 %}
+  <p class="empty-lead">Quelques mots sur toi : ils serviront à ton CV et à situer la veille.</p>
+  <form method="post" action="/profil/demarrage/identite" class="edit-form">
+    <div class="form-grid">
+      {{ m.input("full_name", "Ton nom", values, required=True) }}
+      {{ m.input("contact_email", "E-mail de contact", values, "email", hint="Celui qui figurera sur ton CV") }}
+      {{ m.input("city", "Ville", values) }}
+      {{ m.input("postal_code", "Code postal", values) }}
+    </div>
+    <div class="form-actions"><button type="submit" class="btn btn-primary">Continuer</button></div>
+  </form>
+
+  {% elif step == 2 %}
+  <p class="empty-lead">Ce que tu sais faire, une compétence par ligne. Tu pourras préciser niveaux et alias ensuite.</p>
+  {% if profile.skills %}<p class="muted">Déjà dans ton profil : {{ profile.skills | map(attribute="label.fr") | join(", ") }}.</p>{% endif %}
+  <form method="post" action="/profil/demarrage/competences" class="edit-form">
+    <div class="form-grid">
+      {% for code in choices.categories %}
+      <label class="field">{{ skill_category_labels[code] }}
+        <textarea name="{{ code }}" rows="6" placeholder="{{ {'technical': 'ex. Python\nSQL', 'business': 'ex. Gestion de projet', 'soft': 'ex. Curiosité'}[code] }}"></textarea></label>
+      {% endfor %}
+    </div>
+    <div class="form-actions"><button type="submit" class="btn btn-primary">Continuer</button>
+      <a class="btn btn-ghost" href="/profil/demarrage?etape=3">Passer</a></div>
+  </form>
+
+  {% else %}
+  <p class="empty-lead">Une piste, c'est un métier que tu vises : les intitulés à chercher et les lieux où chercher. Tu pourras en ajouter d'autres.</p>
+  <form method="post" action="/profil/demarrage/piste" class="edit-form">
+    {{ m.input("name", "Nom de la piste", values, required=True, hint="ex. Data analyst") }}
+    <div class="form-grid">
+      {{ m.lines("titles", "Intitulés recherchés", values, "Un par ligne, en français ou en anglais") }}
+      {{ m.lines("locations", "Lieux", values, "Un par ligne : ville, région, « France », « Télétravail complet »") }}
+      {{ m.lines("keywords", "Mots-clés", values, "Facultatif") }}
+      {{ m.lines("excluded_keywords", "Mots exclus", values, "Facultatif") }}
+    </div>
+    <div class="form-actions"><button type="submit" class="btn btn-primary">Terminer</button></div>
+  </form>
+  {% endif %}
+
+  <form method="post" action="/profil/demarrage/plus-tard" class="later">
+    <button type="submit" class="btn btn-link">Plus tard — aller à mon profil</button>
+  </form>
+</section>
+{% endblock %}

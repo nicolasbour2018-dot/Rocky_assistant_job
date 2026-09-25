@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import Engine
 
 from rocky.offres import web as offres_web
+from rocky.profil import web as profil_web
 from rocky.system import shell
 from rocky.system.auth.mail import Mailer, SmtpMailer
 from rocky.system.auth.usecases import Argon2Hasher, Clock, PasswordHasher
@@ -22,6 +23,7 @@ from rocky.system.db import create_db_engine
 TEMPLATE_DIRS = [
     Path(__file__).parent / "templates",
     Path(offres_web.__file__).parent / "templates",
+    Path(profil_web.__file__).parent / "templates",
 ]
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -47,10 +49,14 @@ def create_app(
     app.state.settings = settings
     app.state.templates = Jinja2Templates(directory=TEMPLATE_DIRS)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    app.state.engine = engine = engine or create_db_engine(settings.database_url)
+    # Starlette runs the middleware added last first: the onboarding gate, added before the session
+    # middleware, sees the account that the session middleware found.
+    app.middleware("http")(profil_web.onboarding_gate(profil_web.MAIN_PATHS))
     install(
         app,
         AuthServices(
-            engine=engine or create_db_engine(settings.database_url),
+            engine=engine,
             hasher=hasher or Argon2Hasher(),
             clock=clock,
             mailer=mailer or SmtpMailer(settings.smtp),
@@ -61,6 +67,7 @@ def create_app(
 
     app.include_router(shell.router)
     offres_web.install(app)
+    profil_web.install(app)
 
     @app.get("/health")
     def health() -> dict[str, str]:

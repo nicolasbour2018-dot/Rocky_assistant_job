@@ -1,0 +1,16 @@
+{% import "profil/macros.html" as m %}
+{% set state = states[section.key] %}
+{% set language = state.language %}
+<section id="section-{{ section.key }}" class="profile-section" aria-labelledby="title-{{ section.key }}">
+  <header class="section-head">
+    <h2 id="title-{{ section.key }}">{{ section.title }}</h2>
+    {% if section.bilingual %}
+    <nav class="segmented" aria-label="Langue affichée">
+      {% for code, label in (("fr", "FR"), ("en", "EN")) %}
+      <a href="/profil/{{ section.key }}?langue={{ code }}" hx-get="/profil/{{ section.key }}?langue={{ code }}" {{ m.swap(section.key) }}{% if language == code %} aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    {% endif %}
+  </header>
+  {% include "profil/sections/" ~ section.key ~ ".html" %}
+</section>

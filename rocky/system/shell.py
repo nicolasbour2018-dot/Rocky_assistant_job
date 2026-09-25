@@ -142,5 +142,5 @@ def _empty_page(key: str) -> None:
     )
 
 
-for _key in ("today", "applications", "messages", "report", "profile", "system"):
+for _key in ("today", "applications", "messages", "report", "system"):
     _empty_page(_key)
