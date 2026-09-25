@@ -1,0 +1,15 @@
+{
+  "_origin": "Archive A1, job_offers.csv, id 1193 (Adzuna, 23/09/2026) ; employeur retiré, aucun nom de personne.",
+  "_v1": "79,6 % en v1 (matching-v1) : une seule compétence détectée, composante compétences pleine.",
+  "source": "adzuna",
+  "external_id": "1193",
+  "url": "https://www.adzuna.fr/details/1193",
+  "title": "Data Protection Analyst - Freelance",
+  "description": "Job description\nTaux journalier (TJM): 550 Within the Asset Management Data Office team, we are looking for a Data Protection Analyst; He / she will report to the Chief Data Officer and to the Data Office team manager. He / she will be managed, at the daily basis, by a Data Management officer, who is the Data Protection SPOC for France and coordinate the LoD1 network including other Entities around the world. The mission will be performed in the context of the main global project The main following objectives/deliverables will be globally related to the Data Protection roadmap defined in the context of the Globe project or directly related to the current Data Protection framework in place: - To participate to the ROPA / Privacy Assessment migration strategy between some entities impacted by Globe Project. - To coordinate and produce the new version of ROPA at central level and for local entities impacted by Globe Project - To coordinate and produce new Privacy Assessment or updates at central level and for local entities impacted by Globe Project",
+  "location": "8ème Arrondissement, Paris",
+  "country": "France",
+  "contract": "contract",
+  "salary_min": 550.0,
+  "salary_max": 550.0,
+  "salary_currency": "EUR"
+}
