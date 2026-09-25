@@ -1,5 +1,5 @@
 {% set best = score.best %}
-<section class="analysis score" aria-labelledby="score-title">
+<section class="analysis score-detail" aria-labelledby="score-title">
   <h3 id="score-title">Score : {{ best.display }} / 100</h3>
   <ul class="badges">
     {% if best.track_name %}<li class="badge">Piste : {{ best.track_name }}</li>{% endif %}
@@ -32,7 +32,7 @@
       {% for component in best.components %}
       <tr{% if not component.counted %} class="muted"{% endif %}>
         <th scope="row">{{ component_labels[component.code] }}</th>
-        <td>{% if component.counted %}{{ number(component.value * 100) }} %{% else %}—{% endif %}</td>
+        <td>{% if component.counted %}{{ (component.value * 100) | round | int }} %{% else %}—{% endif %}</td>
         <td>{% if component.counted %}{{ number(component.weight) }}{% else %}non compté{% endif %}</td>
         <td>
           {{ component.detail }}
