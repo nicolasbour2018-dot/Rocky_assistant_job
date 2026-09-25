@@ -127,7 +127,7 @@ aucun identifiant interne affiché.
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| C1. Sources | Contrat `JobSource` et registre repris ; connecteurs portés un à un ; APEC avec filtre de lieu et gestion honnête des descriptions incomplètes ; France Travail « en attente d'accès » (D8) ; noms de source normalisés | Chaque connecteur testé sur jeux de données enregistrés ; une panne de source est isolée et visible | 🔄 |
+| C1. Sources | Contrat `JobSource` et registre repris ; connecteurs portés un à un ; APEC avec filtre de lieu et gestion honnête des descriptions incomplètes ; France Travail « en attente d'accès » (D8) ; noms de source normalisés | Chaque connecteur testé sur jeux de données enregistrés ; une panne de source est isolée et visible | ✅ |
 | C2. Import par URL | JSON-LD puis HTML ; erreurs remontées avec leur raison (plus d'exception silencieuse) | Un lien invalide affiche sa raison | ⬜ |
 | C3. Analyse d'annonce | `job_analysis` rapatrié dans `offres` ; compétences via les alias ; critères éliminatoires distincts des préférences ; date limite ; TJM distinct du salaire annuel ; description mise en forme ; résumé de description | Extraction mesurée sur un échantillon de l'archive | ⬜ |
 | C4. Scoring : règles | Fonction pure sans effet de bord (ne modifie ni l'offre ni la base) ; **preuve minimale** (pas de composante compétences pleine sur 1–2 compétences) ; **indice de confiance** affiché ; intitulé comparé aux intitulés des pistes ; détail et preuves par composante ; version des règles ; caractéristiques stockées (D14) | Chaque score s'explique composante par composante ; la « Data Protection Analyst » (79,6 % en v1) ne remonte plus | ⬜ |
@@ -315,6 +315,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C1 → C2, C6)** Compléter une offre incomplète : LinkedIn et Adzuna depuis la page de l'annonce (import d'URL) ;
   APEC refuse son détail (DataDome) : la **lecture assistée** (navigateur visible, déclenchée par l'utilisateur, une
   offre à la fois) reste à trancher avec Nicolas.
+- **(C1 → C3)** Adzuna : un TJM freelance arrive dans `salary_min` (450 pour « Data Analyst - Freelance »), un salaire
+  annuel ailleurs ; aucune période n'est stockée en C1, C3 les distingue.
 - **(C1 → C3)** Apec donne contrat (`typeContrat`, ex. `101888`) et télétravail (`idNomTeletravail`) en **codes
   sans libellé** : laissés vides en C1, à décoder par un référentiel Apec, jamais devinés. Descriptions Wellfound en
   Markdown ; offres Wellfound anciennes encore en ligne (publiée en 2024).

@@ -55,5 +55,5 @@ tests du connecteur, et la date de capture dans `tests/offres/sources/data/READM
 | Welcome to the Jungle | 10 offres par page, **aucun filtre de lieu accepté** (`Unexpected field`), offres du monde entier ; détail complet |
 | LinkedIn | cartes publiques, lieu en texte libre accepté |
 | Wellfound | page `/role/l/<rôle>/<lieu>` servie derrière Cloudflare, sans défi |
-| Adzuna | non capturé : clés absentes du `.env` |
+| Adzuna | API officielle ; description = extrait de 500 caractères ; `utm_source` des liens = identifiant de l'application ; un TJM freelance arrive dans `salary_min` (450) ; catégorie « Unknown » quand elle manque. Première tentative « non configurée » : clés recopiées sans le préfixe `ROCKY_` |
 | France Travail | non capturé : accès en attente (D8) |

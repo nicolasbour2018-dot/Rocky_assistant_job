@@ -1,40 +1,174 @@
 {
+ "mean": 55727.38,
  "__CLASS__": "Adzuna::API::Response::JobSearchResults",
- "count": 2,
- "mean": 45210.5,
  "results": [
   {
+   "location": {
+    "__CLASS__": "Adzuna::API::Response::Location",
+    "area": [
+     "France",
+     "Ile-de-France",
+     "Paris",
+     "8ème Arrondissement"
+    ],
+    "display_name": "8ème Arrondissement, Paris"
+   },
+   "redirect_url": "https://www.adzuna.fr/details/5897779542?utm_medium=api&utm_source=anonymized",
+   "description": "Description du poste Nous recherchons un(e) Data Analyst expérimenté(e) pour rejoindre une équipe Data & Produit au sein d’un environnement digital à grande échelle. Vous interviendrez sur des problématiques stratégiques liées au pricing , avec pour objectif de transformer les données en insights actionnables, d’améliorer les processus de changement de prix et d’identifier de nouvelles opportunités business. Au sein d’une équipe multidisciplinaire composée notamment de Product Managers, Data Sc…",
    "__CLASS__": "Adzuna::API::Response::Job",
-   "id": "4012345678",
-   "adref": "eyJhbGciOiJIUzI1NiJ9.reconstruit",
-   "title": "Data Analyst H/F",
-   "description": "Rattaché(e) au pôle Data, vous analysez les données commerciales avec SQL et Python, et construisez les tableaux de bord…",
-   "redirect_url": "https://www.adzuna.fr/details/4012345678?utm_medium=api&utm_source=application",
-   "created": "2026-09-24T10:12:00Z",
-   "company": {"__CLASS__": "Adzuna::API::Response::Company", "display_name": "Exemple Conseil"},
-   "location": {"__CLASS__": "Adzuna::API::Response::Location", "display_name": "Paris, Ile-de-France", "area": ["France", "Ile-de-France", "Paris"]},
-   "category": {"__CLASS__": "Adzuna::API::Response::Category", "label": "Emplois Informatique", "tag": "it-jobs"},
-   "salary_min": 42000,
-   "salary_max": 48000,
-   "salary_is_predicted": "0",
-   "contract_type": "permanent",
+   "contract_type": "contract",
    "contract_time": "full_time",
-   "latitude": 48.8566,
-   "longitude": 2.3522
+   "latitude": 48.8814,
+   "id": "5897779542",
+   "salary_is_predicted": "0",
+   "longitude": 2.3365,
+   "company": {
+    "display_name": "Collective.work",
+    "__CLASS__": "Adzuna::API::Response::Company"
+   },
+   "title": "Data Analyst Pricing - Freelance",
+   "created": "2026-09-25T04:15:37Z",
+   "adref": "anonymized",
+   "category": {
+    "__CLASS__": "Adzuna::API::Response::Category",
+    "tag": "unknown",
+    "label": "Unknown"
+   }
   },
   {
+   "location": {
+    "display_name": "8ème Arrondissement, Paris",
+    "area": [
+     "France",
+     "Ile-de-France",
+     "Paris",
+     "8ème Arrondissement"
+    ],
+    "__CLASS__": "Adzuna::API::Response::Location"
+   },
+   "redirect_url": "https://www.adzuna.fr/details/5897779422?utm_medium=api&utm_source=anonymized",
+   "description": "Description du poste Dans le cadre d’un projet stratégique au sein d’un grand groupe bancaire, nous recherchons un Consultant Senior Alteryx / Reporting Réglementaire pour accompagner l’industrialisation et la production de nouveaux Supervisory Reportings ESG . La mission combine cadrage projet, analyse fonctionnelle et expertise technique Alteryx . Principales responsabilités : Cadrage du projet Supervisory Reporting ESG : planning, coordination et gestion des adhérences avec les autres projet…",
    "__CLASS__": "Adzuna::API::Response::Job",
-   "id": "4012345679",
-   "title": "Analyste de données",
-   "description": "Mission d'analyse de données pour un acteur de l'énergie…",
-   "redirect_url": "https://www.adzuna.fr/land/ad/4012345679?se=abc&utm_medium=api&utm_source=application&v=1",
-   "created": "2026-09-23T08:00:00Z",
-   "company": {"display_name": "Énergie Exemple"},
-   "location": {"display_name": "Nanterre, Hauts-de-Seine"},
-   "category": {"label": "Emplois Informatique"},
-   "salary_min": 38540.12,
-   "salary_max": 38540.12,
-   "salary_is_predicted": "1"
+   "contract_time": "full_time",
+   "contract_type": "permanent",
+   "latitude": 48.8814,
+   "id": "5897779422",
+   "salary_is_predicted": "0",
+   "longitude": 2.3365,
+   "company": {
+    "display_name": "Collective.work",
+    "__CLASS__": "Adzuna::API::Response::Company"
+   },
+   "title": "Consultant Senior Alteryx / Reporting Réglementaire ESG – Banque - CDI",
+   "adref": "anonymized",
+   "category": {
+    "label": "Unknown",
+    "tag": "unknown",
+    "__CLASS__": "Adzuna::API::Response::Category"
+   },
+   "created": "2026-09-25T04:15:36Z"
+  },
+  {
+   "title": "Analytics Engineer / Data Scientist opérationnel - CDI",
+   "company": {
+    "__CLASS__": "Adzuna::API::Response::Company",
+    "display_name": "Collective.work"
+   },
+   "longitude": 2.3365,
+   "salary_is_predicted": "0",
+   "id": "5897779413",
+   "created": "2026-09-25T04:15:36Z",
+   "adref": "anonymized",
+   "category": {
+    "__CLASS__": "Adzuna::API::Response::Category",
+    "tag": "unknown",
+    "label": "Unknown"
+   },
+   "redirect_url": "https://www.adzuna.fr/details/5897779413?utm_medium=api&utm_source=anonymized",
+   "location": {
+    "__CLASS__": "Adzuna::API::Response::Location",
+    "area": [
+     "France",
+     "Ile-de-France",
+     "Paris",
+     "8ème Arrondissement"
+    ],
+    "display_name": "8ème Arrondissement, Paris"
+   },
+   "latitude": 48.8814,
+   "contract_time": "full_time",
+   "__CLASS__": "Adzuna::API::Response::Job",
+   "contract_type": "permanent",
+   "description": "Description du poste Data & Automatisation Grand groupe international | Data, automatisation, IA et BI | 2 à 4 ans minimum | Bac5 ou équivalent À propos de la mission Pour accompagner la montée en maturité data de ses processus, un grand groupe international recherche un(e) Consultant(e) Data & Automatisation, capable d’intervenir à la fois sur l’ingénierie de données, l’automatisation, la modélisation prédictive et la restitution décisionnelle. Rattaché(e) à une équipe Opérations / Business In…"
+  },
+  {
+   "company": {
+    "display_name": "Collective.work",
+    "__CLASS__": "Adzuna::API::Response::Company"
+   },
+   "title": "Data Analyst - Freelance",
+   "latitude": 48.8814,
+   "description": "Description du poste Taux journalier (TJM): 450 € Contexte / Objectifs Dans un contexte d'accélération des projets DATA, besoin d'un renfort expérimenté au sein de l'équipe DATA pour venir en soutien de la Data Analyst interne. L'objectif est de prendre en charge des projets DATA de bout en bout, les activités de RUN et sécuriser le périmètre. Recherche 1 renfort expérimenté uniquement — pas de dispositif double avec un junior encadré par un expert. Expertises spécifiques (indispensables) Maîtr…",
+   "__CLASS__": "Adzuna::API::Response::Job",
+   "id": "5897779327",
+   "longitude": 2.3365,
+   "salary_is_predicted": "0",
+   "category": {
+    "__CLASS__": "Adzuna::API::Response::Category",
+    "tag": "unknown",
+    "label": "Unknown"
+   },
+   "adref": "anonymized",
+   "created": "2026-09-25T04:15:35Z",
+   "redirect_url": "https://www.adzuna.fr/details/5897779327?utm_medium=api&utm_source=anonymized",
+   "salary_min": 450,
+   "location": {
+    "area": [
+     "France",
+     "Ile-de-France",
+     "Paris",
+     "8ème Arrondissement"
+    ],
+    "__CLASS__": "Adzuna::API::Response::Location",
+    "display_name": "8ème Arrondissement, Paris"
+   },
+   "salary_max": 450,
+   "contract_time": "full_time",
+   "contract_type": "contract"
+  },
+  {
+   "redirect_url": "https://www.adzuna.fr/details/5897779302?utm_medium=api&utm_source=anonymized",
+   "location": {
+    "__CLASS__": "Adzuna::API::Response::Location",
+    "area": [
+     "France",
+     "Ile-de-France",
+     "Paris",
+     "8ème Arrondissement"
+    ],
+    "display_name": "8ème Arrondissement, Paris"
+   },
+   "latitude": 48.8814,
+   "description": "Description du poste Contexte Dans un contexte d'accélération des projets DATA , besoin d'un renfort expérimenté au sein de l'équipe DATA pour venir en soutien de la Data Analyst en interne. L'objectif est de prendre en charge des projets DATA de bout en bout, les activités de RUN et sécuriser le périmètre. Recherche 1 renfort expérimenté uniquement. Missions Mettre en œuvre des outils informatiques, des techniques et des méthodes statistiques pour organiser, synthétiser et traduire efficacemen…",
+   "__CLASS__": "Adzuna::API::Response::Job",
+   "contract_time": "full_time",
+   "contract_type": "contract",
+   "company": {
+    "display_name": "Collective.work",
+    "__CLASS__": "Adzuna::API::Response::Company"
+   },
+   "title": "Data Engineer expérimenté - Freelance",
+   "id": "5897779302",
+   "salary_is_predicted": "0",
+   "longitude": 2.3365,
+   "adref": "anonymized",
+   "created": "2026-09-25T04:15:35Z",
+   "category": {
+    "__CLASS__": "Adzuna::API::Response::Category",
+    "label": "Unknown",
+    "tag": "unknown"
+   }
   }
- ]
+ ],
+ "count": 376
 }

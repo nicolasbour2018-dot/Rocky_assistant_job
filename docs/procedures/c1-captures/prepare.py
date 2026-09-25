@@ -14,6 +14,7 @@ from typing import Any
 DATA = Path(__file__).resolve().parents[3] / "tests" / "offres" / "sources" / "data"
 NEXT_DATA = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S)
 # Challenge URL parameters identify a browser session: never recorded.
+UTM_SOURCE = re.compile(r"utm_source=[^&]*")
 CHALLENGE_PARAMETERS = re.compile(r"\b(initialCid|cid|hash|[bset])=[^&\"]+")
 
 
@@ -45,6 +46,14 @@ def reduced(source: str, name: str, body: str) -> str:
         # Company videos name employees ("Rencontrez Laurent…"): not needed, not kept.
         for key in ("cta_content", "videos"):
             data["job"].pop(key, None)
+        return json.dumps(data, ensure_ascii=False, indent=1)
+    if source == "adzuna":
+        data = json.loads(body)
+        for job in data.get("results", []):
+            # utm_source carries the application identifier; adref is an opaque tracking token.
+            job["redirect_url"] = UTM_SOURCE.sub("utm_source=anonymized", job["redirect_url"])
+            if "adref" in job:
+                job["adref"] = "anonymized"
         return json.dumps(data, ensure_ascii=False, indent=1)
     if source == "wellfound":
         match = NEXT_DATA.search(body)

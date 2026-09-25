@@ -13,7 +13,7 @@ Réponses réelles des plateformes, capturées le **25/09/2026** par `docs/proce
 | `wttj/search.json`, `wttj/detail.json` | capturés ; vidéos de l'entreprise retirées du détail (prénoms de salariés) |
 | `linkedin/search.html` | capturé : cartes publiques pour visiteurs |
 | `wellfound/role-location.html` | capturé : page `/role/l/data-analyst/paris`, réduite à ses données `__NEXT_DATA__` |
-| `adzuna/search.json` | voir la décision C1 (capture avec les clés de Nicolas) |
+| `adzuna/search.json` | capturé dans le conteneur de l'application, avec les clés de Nicolas ; `utm_source` (identifiant de l'application) et `adref` neutralisés |
 | `france_travail/search.json` | **reconstruit** : accès en attente (D8) ; format de l'API Offres d'emploi v2 et ancien test |
 
 Recapturer après un changement de format d'une plateforme : suivre `docs/procedures/c1-captures/README.md`.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 
 import httpx2
@@ -34,7 +35,7 @@ def test_without_keys_the_source_is_not_configured() -> None:
     assert adzuna(Replay({})).availability() is Availability.READY
 
 
-def test_search_sends_title_and_place_and_maps_the_offers() -> None:
+def test_search_sends_title_and_place_and_maps_the_recorded_offers() -> None:
     replay = Replay({SEARCH: json_answer("adzuna/search.json")})
 
     offers = adzuna(replay).search(SearchQuery("Data analyst", "Paris"), 20)
@@ -43,31 +44,53 @@ def test_search_sends_title_and_place_and_maps_the_offers() -> None:
     assert (params["what"], params["where"]) == ("Data analyst", "Paris")
     assert params["results_per_page"] == "20"
     assert params["sort_by"] == "date"
-    first, estimated = offers
+    assert len(offers) == 5
+    first = offers[0]
     assert first.source is SourceCode.ADZUNA
-    assert (first.external_id, first.title) == ("4012345678", "Data Analyst H/F")
+    assert (first.external_id, first.title) == (
+        "5897779542",
+        "Data Analyst Pricing - Freelance",
+    )
     assert (first.company, first.location) == (
-        "Exemple Conseil",
-        "Paris, Ile-de-France",
+        "Collective.work",
+        "8ème Arrondissement, Paris",
     )
-    assert first.contract == "permanent full_time"
-    assert (first.salary_min, first.salary_max, first.salary_period) == (
-        42000.0,
-        48000.0,
-        "year",
-    )
-    assert first.sector == "Emplois Informatique"
-    assert first.published_on == date(2026, 9, 24)
-    assert first.url == "https://www.adzuna.fr/details/4012345678"
+    assert first.contract == "contract full_time"
+    assert first.sector is None  # "Unknown" is a placeholder
+    assert first.published_on == date(2026, 9, 25)
+    # Tracking parameters go, among them the application identifier (utm_source).
+    assert first.url == "https://www.adzuna.fr/details/5897779542"
+    # The API gives a 500-character snippet.
+    assert first.description.endswith("…")
     assert first.description_complete is False
     assert first.incomplete_reason == EXCERPT_REASON
-    # A salary estimated by Adzuna is not a fact of the posting.
+    # A freelance day rate comes as salary_min: kept as a number, without a period (read in C3).
+    freelance = offers[3]
+    assert (freelance.salary_min, freelance.salary_max, freelance.salary_period) == (
+        450.0,
+        450.0,
+        None,
+    )
+
+
+def test_a_salary_estimated_by_adzuna_is_not_kept() -> None:
+    job = {
+        "id": "1",
+        "title": "Analyste",
+        "redirect_url": "https://www.adzuna.fr/details/1",
+        "salary_min": 38540.12,
+        "salary_max": 38540.12,
+        "salary_is_predicted": "1",
+    }
+    replay = Replay({SEARCH: answer(json.dumps({"results": [job]}))})
+
+    estimated = adzuna(replay).search(SearchQuery("Analyste"), 20)[0]
+
     assert (estimated.salary_min, estimated.salary_max, estimated.salary_currency) == (
         None,
         None,
         None,
     )
-    assert estimated.url == "https://www.adzuna.fr/land/ad/4012345679?se=abc&v=1"
 
 
 def test_a_query_without_location_sends_no_place() -> None:

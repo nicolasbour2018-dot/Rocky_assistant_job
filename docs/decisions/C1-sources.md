@@ -46,3 +46,17 @@ d'accès publics → alertes e-mail (E3, repli quand une source ferme) → impor
 | Isolation | La collecte donne un résultat par source : `ok`, `refused`, `failed`, `pending_access`, `not_configured`. Une source en attente ou non configurée n'est pas appelée. Une exception inattendue devient `failed` (« erreur technique dans le connecteur ») **et** sa trace est journalisée | Aucune exception avalée ; les autres sources continuent. |
 | France Travail | `pending_access` tant que `ROCKY_FRANCE_TRAVAIL_ENABLED` n'est pas `true` ; jeu de test reconstruit (aucune capture possible sans accès) | D8. |
 | Dépendances | `httpx2` passe de dev à l'exécution (déjà verrouillé ; `MockTransport` rejoue les jeux enregistrés) ; `beautifulsoup4` pour les pages HTML de LinkedIn et Wellfound (servira à C2). Plus de `requests` | Un seul client HTTP dans le projet. |
+
+## Mesures (25/09/2026)
+
+| Contrôle | Résultat |
+|---|---|
+| Captures réelles (`docs/procedures/c1-captures/`) | Apec, Adzuna, WTTJ, LinkedIn, Wellfound capturés sans refus de recherche ; **détail Apec refusé** (403 DataDome, attendu) ; France Travail reconstruit (accès en attente) |
+| Découvertes des captures | `x-datadome: protected` présent aussi sur les réponses acceptées d'Apec (ce n'est pas un refus) ; WTTJ refuse tout champ de lieu ; `utm_source` des liens Adzuna = identifiant de l'application (retiré des adresses) ; un TJM freelance arrive dans `salary_min` d'Adzuna (aucune période supposée) |
+| Jeux enregistrés | un par connecteur dans `tests/offres/sources/data/` (origine de chaque fichier dans son `README.md`), anonymisés par `prepare.py` |
+| Vérification globale | `docker compose run --rm --build check` vert : 324 tests en 9,8 s ; ruff, mypy strict ; passage GitHub vert |
+| **Panne isolée et visible**, en réel | `rocky-admin sources` sur la piste « Data scientist / IA » du compte d'essai, avec des clés Adzuna volontairement fausses : Adzuna « En panne (HTTP 401) », Apec 40 offres (détail refusé, affiché), WTTJ 20, LinkedIn 39, Wellfound 47, France Travail « En attente d'accès » ; lieu « Eure et Loire » signalé non reconnu par Apec |
+| En tests | panne, refus, exception inattendue (journalisée avec sa trace), source en attente ou non configurée jamais appelée, refus du détail qui arrête la source (`tests/offres/sources/test_usecases.py`) |
+
+Incident de configuration : les clés Adzuna avaient été recopiées dans le fichier de configuration sans le préfixe
+`ROCKY_` ; la source s'affichait donc « non configurée ». Corrigé par Nicolas.

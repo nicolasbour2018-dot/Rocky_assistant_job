@@ -86,9 +86,12 @@ def _offer(item: dict[str, Any]) -> CollectedOffer | None:
         contract=contract or None,
         salary_min=None if predicted else number(item.get("salary_min")),
         salary_max=None if predicted else number(item.get("salary_max")),
+        # No period: a freelance mission gives a day rate here (450), a permanent job a yearly salary (C3).
         salary_currency=None if predicted or item.get("salary_min") is None else "EUR",
-        salary_period=None if predicted or item.get("salary_min") is None else "year",
-        sector=text(category.get("label")),
+        # "Unknown" is Adzuna's placeholder for a missing category, not a sector.
+        sector=None
+        if category.get("label") == "Unknown"
+        else text(category.get("label")),
         published_on=iso_date(item.get("created")),
         # The API documents its description as a snippet of the posting.
         description=text(item.get("description")) or "",
