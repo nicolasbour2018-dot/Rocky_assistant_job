@@ -312,9 +312,13 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   noms entiers). *Tranché par Nicolas (25/09) : règle inchangée ; une variante utile s'ajoute comme alias*
   (« Traitement du langage naturel » alias de NLP).
 - **(C1 → E3)** Indeed/TheirStack n'est pas porté (quota épuisé, API payante) : Indeed arrive par ses alertes e-mail.
-- **(C1 → C2, C6)** Compléter une offre incomplète : LinkedIn et Adzuna depuis la page de l'annonce (import d'URL) ;
-  APEC refuse son détail (DataDome) : la **lecture assistée** (navigateur visible, déclenchée par l'utilisateur, une
-  offre à la fois) reste à trancher avec Nicolas.
+- **(C1 → C2, C7)** **Enrichissement** d'une offre incomplète (APEC refuse son détail, LinkedIn n'en donne pas, Adzuna
+  un extrait). *Tranché par Nicolas (25/09)* : deux voies **coexistantes**, (1) **lecture assistée** : sur son geste,
+  Rocky ouvre la fiche dans un navigateur visible, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte
+  affiché, une offre à la fois, jamais dans la veille automatique ; (2) **description collée** par l'utilisateur.
+  Moteur en C2 (même mécanique que l'import d'URL), geste « Enrichir » dans la fiche de l'offre en C7. Aucun
+  navigateur automatisé pour passer DataDome (Q5). La lecture assistée ne marche que sur le poste (pas de VPS sans
+  écran) : la description collée reste la voie universelle.
 - **(C1 → C3)** Adzuna : un TJM freelance arrive dans `salary_min` (450 pour « Data Analyst - Freelance »), un salaire
   annuel ailleurs ; aucune période n'est stockée en C1, C3 les distingue.
 - **(C1 → C3)** Apec donne contrat (`typeContrat`, ex. `101888`) et télétravail (`idNomTeletravail`) en **codes
