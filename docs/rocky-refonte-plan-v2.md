@@ -121,7 +121,7 @@ aucun identifiant interne affiché.
 | B2. Base et événements | Connexion ; Alembic (première révision) ; journal d'événements en ajout seul | `upgrade` / `downgrade` fonctionnent sur base vide | ✅ |
 | B3. Comptes et sessions | Comptes, SMTP ; sessions D11 ; tout le SQL d'authentification dans l'accès SQL de `system` | Rechargement, URL directe et redémarrage du navigateur gardent la session ; la déconnexion l'invalide | ✅ |
 | B4. Coque web et prototype | FastAPI + Jinja + HTMX ; layout et 7 entrées de navigation ; prototype de l'écran de tri sur données factices | Décision explicite : HTMX confirmé ou plan B (NiceGUI) | ✅ |
-| B5. Profil et pistes | Profil unique FR/EN ; compétences avec alias canoniques (ex. « NLP » = « Traitement du langage naturel (NLP) ») ; pistes (intitulés, mots-clés, lieux) ; réimport du profil de Nicolas depuis l'archive ; édition séparée de l'onboarding ; projets affichés proprement ; activation sans kit anglais | Profil réimporté sans doublons ; au moins 2 pistes définies | 🔄 |
+| B5. Profil et pistes | Profil unique FR/EN ; compétences avec alias canoniques (ex. « NLP » = « Traitement du langage naturel (NLP) ») ; pistes (intitulés, mots-clés, lieux) ; réimport du profil de Nicolas depuis l'archive ; édition séparée de l'onboarding ; projets affichés proprement ; activation sans kit anglais | Profil réimporté sans doublons ; au moins 2 pistes définies | ✅ |
 
 ### C. Offres
 
@@ -308,3 +308,6 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   (`docs/procedures/b5-reimport/`).
 - **(B5 → `system`, LLM)** Le LLM de Rocky passera de Groq à **Gemini 3.5 Flash Lite** (Nicolas, 25/09) : le plan
   (§3, Adaptateurs) et `AGENTS.md` (§7) citent Groq, à corriger quand l'adaptateur LLM naîtra.
+- **(B5 → C3, à décider avec Nicolas)** Un nom « X (Y) » (« Traitement du langage naturel (NLP) ») ne répond qu'à
+  lui-même : « traitement du langage naturel » seul n'est pas reconnu (Q9 compare les noms entiers). Option : le
+  faire répondre aussi à X et à Y. À trancher quand la détection des compétences dans les annonces montrera le besoin.

@@ -235,8 +235,45 @@ def test_a_skill_known_under_another_name_is_refused_on_screen(
     assert "est déjà présent sous « NLP »" in refused.text
     page = section(client.get("/profil").text, "competences")
     assert page.count('class="skill"') == 1
-    assert "aussi : Traitement du langage naturel (NLP)" in page
     assert "Avancé" in page
+    # Aliases are an inner working: never shown in the list, folded in the edit form.
+    assert "Traitement du langage naturel" not in page
+    skill_id = re.search(r"/profil/competences\?modifier=(\d+)", page)
+    assert skill_id
+    form = client.get(f"/profil/competences?modifier={skill_id.group(1)}").text
+    assert '<details class="field-more">' in form
+    assert "Autres noms (alias) · 1" in form
+
+
+def test_each_category_shows_one_line_and_folds_the_rest(client: TestClient) -> None:
+    for name in ("Airflow", "BigQuery", "Docker", "Excel"):
+        client.post(
+            "/profil/competences", data={"label_fr": name, "category": "technical"}
+        )
+    client.post(
+        "/profil/competences",
+        data={"label_fr": "Python", "category": "technical", "is_key": "1"},
+    )
+    client.post(
+        "/profil/competences", data={"label_fr": "Curiosité", "category": "soft"}
+    )
+
+    page = section(client.get("/profil").text, "competences")
+
+    technical, soft = page.split('class="skill-group')[1:3]
+    assert technical.startswith(' folded"')
+    assert "Tout afficher (5)" in technical
+    assert technical.index("Python") < technical.index("Airflow")  # key skills first
+    assert not soft.startswith(" folded")
+    assert "Tout afficher" not in soft
+
+    python_id = re.search(r"modifier=(\d+)[^>]*>\s*<span class=\"key-mark\"", page)
+    assert python_id
+    editing = client.get(
+        f"/profil/competences?modifier={python_id.group(1)}", headers=HTMX
+    ).text
+    assert '<details class="skill-more" open>' in editing
+    assert 'class="item skill-editing"' in editing
 
 
 def test_the_language_switch_shows_english_or_marks_what_is_missing(

@@ -335,9 +335,18 @@ details > summary { cursor: pointer; color: var(--accent); font-weight: 550; }
 .skill-list { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .skill { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1); padding: 2px var(--space-3); border: 1px solid var(--border); border-radius: 999px; }
 .skill a { color: var(--text); font-weight: 550; }
-.skill-list .skill-editing { flex-basis: 100%; }
+.skill-group { display: grid; gap: var(--space-2); }
+.skill-group .group-title { margin-top: 0; }
+/* Folded: one line, whatever the width; "Tout afficher" (a native details) unfolds it, without JavaScript. */
+.skill-group.folded .skill-list { flex-wrap: nowrap; overflow: clip; mask-image: linear-gradient(to right, #000 85%, transparent); }
+.skill-group.folded .skill { flex-shrink: 0; }
+.skill-group.folded:has(.skill-more[open]) .skill-list { flex-wrap: wrap; overflow: visible; mask-image: none; }
+.skill-more summary { font-size: 13px; }
+.skill-more[open] .when-closed, .skill-more:not([open]) .when-open { display: none; }
+.skill-current { border-color: var(--accent); background: var(--accent-soft); }
+.field-more summary { color: var(--muted); font-weight: 500; }
+.field-more[open] summary { margin-bottom: var(--space-2); }
 .key-mark { margin-right: 2px; color: var(--mid); }
-.aliases { color: var(--muted); font-size: 12px; }
 .untranslated { font-style: italic; }
 .archived summary { color: var(--muted); }
 .archived .item-list { margin-top: var(--space-3); }

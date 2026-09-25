@@ -67,6 +67,18 @@ Remarques de Nicolas consignées pour la suite (section 8 du plan) : le CV rég�
 Constat soumis à Nicolas : « traitement du langage naturel » (sans « (NLP) ») n'est pas reconnu comme un nom de
 « NLP » dont l'alias est « Traitement du langage naturel (NLP) » : Q9 compare les noms entiers.
 
-### Validation de Nicolas
+### Validation de Nicolas (25/09/2026)
 
-*(à venir : relecture du fichier, réimport dans le compte d'essai, au moins 2 pistes créées, écran jugé)*
+Nicolas a relu le fichier, l'a importé dans son compte d'essai et a créé ses pistes. Mesure sur la base de
+développement (lecture seule) : **52 compétences, 0 libellé en double, 72 termes uniques, 2 pistes actives prêtes**
+(intitulé et lieu), 7 expériences et formations, 4 projets, un seul `profil.profile_imported`. Critère de sortie tenu.
+
+Retour sur l'écran : « Le reste me plaît beaucoup. » Deux ajustements demandés et faits avant la clôture :
+
+| Demande | Réalisation |
+|---|---|
+| Compétences trop chargées : garder les catégories, mais une seule ligne par catégorie et le reste dans un dépliant | Une ligne par catégorie, compétences clés en premier ; au-delà de 3 compétences, « Tout afficher (N) » (élément `details` natif, sans JavaScript) ; la catégorie de la compétence en cours d'édition est dépliée |
+| Cacher les alias à l'affichage : procédure interne | Alias absents de la liste ; dans le formulaire d'édition, repliés sous « Autres noms (alias) · N », dépliés seulement après un refus |
+
+Question laissée ouverte (sans réponse de Nicolas, règle Q9 inchangée) : faire répondre « X (Y) » aussi à X et à Y.
+Notée en section 8 pour C3, où la détection dans les annonces la rendra utile ou non.
