@@ -337,11 +337,8 @@ details > summary { cursor: pointer; color: var(--accent); font-weight: 550; }
 .skill a { color: var(--text); font-weight: 550; }
 .skill-group { display: grid; gap: var(--space-2); }
 .skill-group .group-title { margin-top: 0; }
-/* Folded: one line, whatever the width; "Tout afficher" (a native details) unfolds it, without JavaScript. */
-.skill-group.folded .skill-list { flex-wrap: nowrap; overflow: clip; mask-image: linear-gradient(to right, #000 85%, transparent); }
-.skill-group.folded .skill { flex-shrink: 0; }
-.skill-group.folded:has(.skill-more[open]) .skill-list { flex-wrap: wrap; overflow: visible; mask-image: none; }
 .skill-more summary { font-size: 13px; }
+.skill-more[open] summary { margin-bottom: var(--space-2); }
 .skill-more[open] .when-closed, .skill-more:not([open]) .when-open { display: none; }
 .skill-current { border-color: var(--accent); background: var(--accent-soft); }
 .field-more summary { color: var(--muted); font-weight: 500; }

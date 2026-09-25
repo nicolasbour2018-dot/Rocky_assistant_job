@@ -26,26 +26,32 @@
 {% if not profile.skills and state.editing != "nouveau" %}
 <p class="empty-note">Aucune compétence pour l'instant. Ajoute ce que tu sais faire : outils, méthodes, savoir-être.</p>
 {% endif %}
-{# One line per category, key skills first; the rest behind "Tout afficher" (Nicolas, B5). #}
+{% macro skill_items(skills, edited) %}
+<ul class="skill-list">
+  {% for skill in skills %}
+  <li class="skill{% if skill == edited %} skill-current{% endif %}">
+    <a href="/profil/competences?modifier={{ skill.id }}" hx-get="/profil/competences?modifier={{ skill.id }}" {{ m.swap(key) }} title="Modifier">
+      {% if skill.content.is_key %}<span class="key-mark" title="Compétence clé">★</span>{% endif %}{{ m.text(skill.label, language) }}</a>
+    {% if skill.content.level %}<span class="muted">· {{ skill_level_labels[skill.content.level] }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{# At most 5 skills shown per category, key skills first; the others behind "Tout afficher" (Nicolas, B5). #}
+{% set shown = 5 %}
 {% for category in choices.categories %}
 {% set group = profile.skills | selectattr("content.category", "equalto", category) | sort(attribute="content.is_key", reverse=True) | list %}
 {% if group %}
 {% set edited = group | selectattr("id", "equalto", state.editing | int(-1)) | first %}
-{% set folded = group | length > 3 %}
-<div class="skill-group{% if folded %} folded{% endif %}">
+{% set others = group[shown:] %}
+<div class="skill-group">
   <h3 class="group-title">{{ skill_category_labels[category] }} <span class="muted">({{ group | length }})</span></h3>
-  <ul class="skill-list">
-    {% for skill in group %}
-    <li class="skill{% if skill == edited %} skill-current{% endif %}">
-      <a href="/profil/competences?modifier={{ skill.id }}" hx-get="/profil/competences?modifier={{ skill.id }}" {{ m.swap(key) }} title="Modifier">
-        {% if skill.content.is_key %}<span class="key-mark" title="Compétence clé">★</span>{% endif %}{{ m.text(skill.label, language) }}</a>
-      {% if skill.content.level %}<span class="muted">· {{ skill_level_labels[skill.content.level] }}</span>{% endif %}
-    </li>
-    {% endfor %}
-  </ul>
-  {% if folded %}
-  <details class="skill-more"{% if edited %} open{% endif %}>
-    <summary><span class="when-closed">Tout afficher ({{ group | length }})</span><span class="when-open">Réduire</span></summary>
+  {{ skill_items(group[:shown], edited) }}
+  {% if others %}
+  <details class="skill-more"{% if edited in others %} open{% endif %}>
+    <summary><span class="when-closed">Tout afficher (+{{ others | length }})</span><span class="when-open">Réduire</span></summary>
+    {{ skill_items(others, edited) }}
   </details>
   {% endif %}
   {% if edited %}<div class="item skill-editing">{{ skill_form("/profil/competences/" ~ edited.id, state.values, state, edited) }}</div>{% endif %}

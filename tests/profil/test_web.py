@@ -245,8 +245,10 @@ def test_a_skill_known_under_another_name_is_refused_on_screen(
     assert "Autres noms (alias) · 1" in form
 
 
-def test_each_category_shows_one_line_and_folds_the_rest(client: TestClient) -> None:
-    for name in ("Airflow", "BigQuery", "Docker", "Excel"):
+def test_each_category_shows_five_skills_and_folds_the_rest(
+    client: TestClient,
+) -> None:
+    for name in ("Airflow", "BigQuery", "Docker", "Excel", "FastAPI", "Git"):
         client.post(
             "/profil/competences", data={"label_fr": name, "category": "technical"}
         )
@@ -260,20 +262,21 @@ def test_each_category_shows_one_line_and_folds_the_rest(client: TestClient) -> 
 
     page = section(client.get("/profil").text, "competences")
 
-    technical, soft = page.split('class="skill-group')[1:3]
-    assert technical.startswith(' folded"')
-    assert "Tout afficher (5)" in technical
-    assert technical.index("Python") < technical.index("Airflow")  # key skills first
-    assert not soft.startswith(" folded")
+    technical, soft = page.split('class="skill-group"')[1:3]
+    shown, folded = technical.split('<details class="skill-more">')
+    assert shown.count('class="skill"') == 5
+    assert shown.index("Python") < shown.index("Airflow")  # key skills first
+    assert "Tout afficher (+2)" in folded
+    assert folded.count('class="skill"') == 2
     assert "Tout afficher" not in soft
 
-    python_id = re.search(r"modifier=(\d+)[^>]*>\s*<span class=\"key-mark\"", page)
-    assert python_id
+    git_id = re.search(r"modifier=(\d+)\"[^>]*>\s*Git</a>", page)
+    assert git_id
     editing = client.get(
-        f"/profil/competences?modifier={python_id.group(1)}", headers=HTMX
-    ).text
-    assert '<details class="skill-more" open>' in editing
-    assert 'class="item skill-editing"' in editing
+        f"/profil/competences?modifier={git_id.group(1)}", headers=HTMX
+    )
+    assert '<details class="skill-more" open>' in editing.text
+    assert 'class="item skill-editing"' in editing.text
 
 
 def test_the_language_switch_shows_english_or_marks_what_is_missing(
