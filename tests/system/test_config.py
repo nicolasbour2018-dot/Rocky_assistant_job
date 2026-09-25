@@ -4,6 +4,7 @@ import pytest
 
 from rocky.system.config import (
     ConfigError,
+    LlmSettings,
     Settings,
     SmtpSettings,
     SourcesSettings,
@@ -24,6 +25,16 @@ def test_load_settings_without_smtp() -> None:
         database_url="postgresql://u@h/db", public_url="http://127.0.0.1:8000"
     )
     assert settings.secure_cookies is False
+
+
+def test_the_language_model_is_optional_with_a_default_model() -> None:
+    assert load_settings(BASE).llm == LlmSettings(api_key=None, model="gemini-3.5-flash-lite")
+
+    settings = load_settings(
+        {**BASE, "ROCKY_GEMINI_API_KEY": " k-1 ", "ROCKY_GEMINI_MODEL": "gemini-autre"}
+    )
+
+    assert settings.llm == LlmSettings(api_key="k-1", model="gemini-autre")
 
 
 def test_https_public_url_makes_cookies_secure() -> None:

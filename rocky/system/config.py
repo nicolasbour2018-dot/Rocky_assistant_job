@@ -20,6 +20,9 @@ FRANCE_TRAVAIL_ENABLED_VAR = "ROCKY_FRANCE_TRAVAIL_ENABLED"
 FRANCE_TRAVAIL_CLIENT_ID_VAR = "ROCKY_FRANCE_TRAVAIL_CLIENT_ID"
 FRANCE_TRAVAIL_CLIENT_SECRET_VAR = "ROCKY_FRANCE_TRAVAIL_CLIENT_SECRET"  # noqa: S105  (variable name)
 RESULTS_PER_QUERY_VAR = "ROCKY_SOURCES_RESULTS_PER_QUERY"
+GEMINI_API_KEY_VAR = "ROCKY_GEMINI_API_KEY"
+GEMINI_MODEL_VAR = "ROCKY_GEMINI_MODEL"
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 DEFAULT_SMTP_PORT = 587
 DEFAULT_RESULTS_PER_QUERY = 20
@@ -61,11 +64,20 @@ class SourcesSettings:
 
 
 @dataclass(frozen=True)
+class LlmSettings:
+    """The language model (C3: summaries only). Without a key, the features that need it say so."""
+
+    api_key: str | None = None
+    model: str = DEFAULT_GEMINI_MODEL
+
+
+@dataclass(frozen=True)
 class Settings:
     database_url: str
     public_url: str
     smtp: SmtpSettings | None = None
     sources: SourcesSettings = SourcesSettings()
+    llm: LlmSettings = LlmSettings()
 
     @property
     def secure_cookies(self) -> bool:
@@ -81,6 +93,10 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         public_url=_public_url(env),
         smtp=_smtp(env),
         sources=load_sources_settings(env),
+        llm=LlmSettings(
+            api_key=_value(env, GEMINI_API_KEY_VAR) or None,
+            model=_value(env, GEMINI_MODEL_VAR) or DEFAULT_GEMINI_MODEL,
+        ),
     )
 
 
