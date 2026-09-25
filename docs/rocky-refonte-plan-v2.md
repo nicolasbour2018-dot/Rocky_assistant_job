@@ -398,6 +398,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C4 → Nicolas, B5)** Préférences du profil réel : aucun mode de télétravail (composante toujours absente), pas de
   « Freelance » (une mission vaut 0 au contrat), pas de TJM minimum, aucun mot exclu dans les pistes (« Stage Data
   Scientist » n'est pas plafonnée).
+  *Résolu (Nicolas, 25/09) : préférences complétées. La mesure C4 a été faite avant : la relancer au début de C5.*
 - **(C4 → après C6)** Lieux structurés : une ville d'Eure-et-Loir ne répond pas à « Eure et Loire » ; un pays absent
   (LinkedIn, Wellfound) est lu comme la France, avec le marqueur « pays non précisé ».
 - **(C4 → profil)** Permis et habilitation absents du profil : une condition bloquante plafonne toujours le score
@@ -405,3 +406,5 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C4 → C3, `system`, à décider avec Nicolas)** Résumé Gemini : « Gemini est en panne (HTTP 503) » à deux essais de
   Nicolas le 25/09 (serveur de Google surchargé, pas une erreur de Rocky). Options : un seul réessai sur 503 (la décision
   C3 dit « aucun réessai ») ; message « surchargé, réessaie dans un instant » plutôt que « en panne ».
+  *Résolu (Nicolas, 25/09) : le projet Google AI Studio était en offre gratuite ; passé sur le compte de facturation,
+  le résumé répond. Rien à changer dans Rocky.*
