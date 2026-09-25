@@ -78,3 +78,6 @@ Procédure et tableaux : `docs/procedures/c4-mesure/` (profil réel de Nicolas, 
 
 Vérifié dans un navigateur (Chromium, instance à part, schéma jetable de `test-db`) : aperçu d'une description
 collée (DPA : 19, sous le seuil) et d'un lien Hellowork réel (69) ; console sans erreur.
+
+**Validation de Nicolas (25/09)** : détail du score lu sur deux annonces réelles importées, « tout est passé nickel ».
+C4 est terminée.
