@@ -261,17 +261,25 @@ _NUMBER_WORDS = {
 }
 _N = r"(\d{1,2}|" + "|".join(_NUMBER_WORDS) + r")"
 _EXPERIENCE = (
-    # "3 à 5 ans", "2-3 ans" (folded "2 3 ans"): the first number is the minimum.
+    # "3 à 5 ans", "2-3 ans" (folded "2 3 ans"), "5ans": the first number is the minimum.
     re.compile(
-        _N
-        + r"(?:(?: a| to| ou)? \d{1,2})? ans? (?:d |de |minimum|min)(?:experience|minimum|professionnelle)?"
+        r"(?<![a-z0-9])"
+        + _N
+        + r"(?:(?: a| to| ou)? \d{1,2})? ?ans? (?:d |de |minimum|min)(?:experience|minimum|professionnelle)?"
     ),
-    re.compile(r"(?:au moins|minimum|at least|minimum of) " + _N + r" (?:ans?|years?)"),
     re.compile(
-        _N
+        r"(?:au moins|minimum|at least|minimum of) "
+        + _N
+        + r" ?(?:ans?|years?)(?![a-z0-9])"
+    ),
+    re.compile(
+        r"(?<![a-z0-9])"
+        + _N
         + r"(?: (?:to|or) \d{1,2})?(?: or more| plus)? years? (?:of )?(?:[a-z]+ ){0,6}experience"
     ),
-    re.compile(_N + r" \d{0,2} ?years? (?:of )?(?:[a-z]+ ){0,6}experience"),
+    re.compile(
+        r"(?<![a-z0-9])" + _N + r" \d{0,2} ?years? (?:of )?(?:[a-z]+ ){0,6}experience"
+    ),
 )
 _EXPERIENCE_WORD = re.compile(r"(?<![a-z0-9])(?:experience|minimum|exp)(?![a-z0-9])")
 

@@ -2,7 +2,7 @@
   "format": "rocky-annotations/1",
   "annotated_by": "Claude, le 25/09/2026, avant l'écriture des règles (conventions : README.md)",
   "corrected": "25/09/2026, après la première mesure : erreurs de lecture seulement (libellés anglais du profil ignorés, deux oublis en français, importances que la convention imposait), détail dans README.md",
-  "checked_by_nicolas": [],
+  "checked_by_nicolas": ["753", "856", "1080", "1035", "944", "451", "649", "70", "32", "1225"],
   "postings": {
     "434": {"contracts": [], "remote": "hybrid", "salary": null, "conditions": [], "experience_years": null, "languages": [],
       "skills": ["SQL", "Rigueur", "Modélisation", "Autonomie", "Gestion des données"], "eliminatory_skills": [], "preferred_skills": []},

@@ -15,7 +15,7 @@ the Jungle 6, Indeed 4, Hellowork 3, Apec 2 → `echantillon.json`.
 
 ## 2. Annotations (`annotations.json`)
 
-Écrites par Claude le 25/09/2026 **avant toute règle**, puis 10 annonces contrôlées par Nicolas (`checked_by_nicolas`).
+Écrites par Claude le 25/09/2026 **avant toute règle** ; 10 annonces contrôlées par Nicolas le 25/09 sans correction (`checked_by_nicolas`).
 Une annotation corrigée après la mesure l'est seulement pour une erreur de lecture, notée ci-dessous.
 
 Profil de référence : les 52 compétences de Nicolas (fichier relu de B5, hors dépôt). Champs et conventions :

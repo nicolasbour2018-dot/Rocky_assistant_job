@@ -13,7 +13,7 @@ from enum import StrEnum
 from rocky.profil.model import Contract, LanguageLevel, RemoteMode
 
 # Changes whenever a rule changes: kept with every analysis, as the scoring keeps its rules version (D14).
-RULES_VERSION = "analyse-2026-09-25"
+RULES_VERSION = "analyse-2026-09-25.2"
 
 
 class Importance(StrEnum):

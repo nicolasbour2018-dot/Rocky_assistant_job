@@ -65,4 +65,8 @@ Hors échantillon (1 263 annonces de l'archive) : 3 ms par annonce ; contrôle d
 et mensuels, conditions et dates limites (« Permis B apprécié » et « Pas de télétravail possible » corrigés).
 Vérification globale : `docker compose run --rm --build check` vert, 557 tests en 13,9 s (22,7 s au total) ; ruff, mypy strict.
 
-En attente : contrôle de 10 annonces par Nicolas (grille locale `~/Developer/rocky-controle-c3.html`) ; essai du résumé réel avec sa clé Gemini.
+| Clôture (25/09/2026) | Résultat |
+|---|---|
+| **Contrôle de Nicolas** | 10 annonces de la grille locale (`~/Developer/rocky-controle-c3.html`, hors dépôt) : « tout paraît juste », aucune correction (`checked_by_nicolas`) |
+| **Résumé réel** | Un appel à `gemini-3.5-flash-lite` depuis le conteneur de l'application (la clé lue par l'application seule) sur l'annonce Hellowork enregistrée : trois puces françaises acceptées par la vérification, **fidèles au texte** (Bac +5, « au moins 5 ans d'expérience dont 3 ans dans la banque », Pôle Data parisien, Agile) ; `responseJsonSchema` accepté par l'API |
+| Constat de cet essai | « 5ans » (sans espace) échappait à la règle d'expérience : corrigé, avec une limite de mot devant le nombre ; règles `analyse-2026-09-25.2`, mesure inchangée |

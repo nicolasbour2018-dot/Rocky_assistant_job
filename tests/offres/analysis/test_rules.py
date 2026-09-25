@@ -453,6 +453,8 @@ def test_the_deduction_thresholds_of_the_decision(
         ("3 à 5 ans d'expérience en tant que Data Scientist.", 3),
         ("Expérience : 2-3 ans minimum en Data Science.", 2),
         ("0 à 3 ans d'expérience en data science.", 0),
+        ("Tu as au moins 5ans d'expérience dont 3 ans dans la banque.", 5),
+        ("Fondée en 2025, ans d'avance sur le marché.", None),
         ("Two or more years of experience in product analytics.", 2),
         (
             "3+ years of data science experience. 5+ years of experience in a related field.",
