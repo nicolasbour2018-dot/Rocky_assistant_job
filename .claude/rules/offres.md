@@ -38,3 +38,16 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
   valeur devinée (un code inconnu reste vide). Une description partielle est gardée, marquée incomplète avec sa raison.
 - Une source n'existe que par `registry.build_sources`. Nouveau connecteur : capture réelle
   (`docs/procedures/c1-captures/`), jeu anonymisé dans `tests/offres/sources/data/<source>/`, tests par `Replay`.
+
+## Import par URL (`rocky/offres/imports/`, décision `docs/decisions/C2-import-url.md`)
+- Un lien donne toujours un `ImportResult` : un aperçu, ou une issue (`invalid`, `refused`, `failed`) avec sa raison.
+  Jamais d'exception avalée ni de lien ignoré en silence (fin de `_import_links`, E3 réutilise `import_link`).
+- Un lien fourni par l'utilisateur ne se lit que par `PublicHttp.get_page` : hôte public vérifié à chaque
+  redirection (anti-SSRF), page HTML, 3 Mo au plus. Un lien n'est jamais journalisé (il peut porter un jeton).
+- Ordre de lecture : JSON-LD `JobPosting` → conteneur connu → texte visible marqué incomplet. `estimatedSalary`
+  n'est pas un fait de l'annonce ; aucun LLM avant C3.
+- Une plateforme dont la fiche est vide pour un simple lecteur implémente `LinkSource` (Apec) ; sinon, page lue.
+- Enrichir une offre : `enriched` (description remplacée seulement par une complète, faits connus jamais écrasés)
+  ou `with_pasted_description`.
+- Les jeux enregistrés viennent de `docs/procedures/c2-captures/` ; aucun nom de personne (recruteur, salarié).
+- Écran : `wants_fragment` (de `system.shell`) décide fragment ou page entière ; la coque boost tous les liens.

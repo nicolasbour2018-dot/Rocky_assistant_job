@@ -6,14 +6,17 @@ protects it with DataDome most of the time: a refusal leaves the offer incomplet
 
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 from typing import Any
+from urllib.parse import urlsplit
 
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import (
     SOURCE_LABELS,
     Availability,
     CollectedOffer,
+    InvalidLinkError,
     QuerySkippedError,
     SearchQuery,
     SourceCode,
@@ -31,6 +34,9 @@ OFFER_PAGE = f"{SEARCH_PAGE}/detail-offre"
 EXCERPT_REASON = (
     "Apec ne donne qu'un extrait de l'annonce dans ses résultats de recherche."
 )
+NO_DETAIL_REASON = "Apec n'a pas donné le détail de cette annonce."
+# Offer numbers as Apec writes them (``179271987W``).
+OFFER_NUMBER = re.compile(r"\d+[A-Z]?")
 MAX_RESULTS = 100
 # When one label names several places (Île-de-France is a region and a "grande région"), the widest wins.
 PLACE_PRIORITY = (
@@ -78,6 +84,27 @@ class ApecSource:
         if not isinstance(data, dict):
             raise SourceFailedError(f"{LABEL} a renvoyé une réponse inattendue.")
         return _completed(offer, data)
+
+    def from_link(self, url: str) -> CollectedOffer:
+        """The offer of an Apec posting page (``…/detail-offre/<numéro>``): the page itself is an empty shell."""
+        path = urlsplit(url).path.rstrip("/")
+        number = path.rsplit("/", 1)[-1] if "/detail-offre/" in path else ""
+        if not OFFER_NUMBER.fullmatch(number):
+            raise InvalidLinkError(
+                f"Ce lien {LABEL} ne désigne pas une annonce (il faut le lien de sa fiche)."
+            )
+        page = f"{OFFER_PAGE}/{number}"
+        return CollectedOffer(
+            source=SourceCode.APEC,
+            external_id=number,
+            url=page,
+            application_url=page,
+            title="",
+            country="France",
+            description="",
+            description_complete=False,
+            incomplete_reason=NO_DETAIL_REASON,
+        )
 
     def _place_id(self, label: str) -> str:
         """Apec identifier of a location label; the reference is asked once per label and per collection."""
@@ -197,8 +224,14 @@ def _completed(offer: CollectedOffer, data: dict[str, Any]) -> CollectedOffer:
     )
     if not description:
         return offer
+    # An offer designated by a link (import, C2) knows nothing yet; the facts found by the search stay as they are.
     return replace(
         offer,
+        title=offer.title or text(data.get("intitule")) or "",
+        company=offer.company
+        or text(data.get("nomCommercial"))
+        or text(data.get("enseigne")),
+        location=offer.location or text(data.get("lieuTexte")),
         description=description,
         description_complete=True,
         incomplete_reason=None,

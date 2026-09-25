@@ -8,11 +8,14 @@ import pytest
 from rocky.offres.sources.apec import (
     DETAIL_URL,
     EXCERPT_REASON,
+    NO_DETAIL_REASON,
+    OFFER_PAGE,
     PLACES_URL,
     SEARCH_URL,
     ApecSource,
 )
 from rocky.offres.sources.model import (
+    InvalidLinkError,
     QuerySkippedError,
     SearchQuery,
     SourceCode,
@@ -172,3 +175,43 @@ def test_the_detail_when_apec_lets_it_through_gives_the_full_description() -> No
     assert completed.description.startswith("Au sein de la Digital Factory")
     assert "- Concevoir des tableaux de bord Power BI" in completed.description
     assert "Profil recherché\nVous maîtrisez SQL" in completed.description
+
+
+def test_a_posting_link_designates_its_offer_still_to_complete() -> None:
+    source = ApecSource(Replay({}).http())
+
+    offer = source.from_link(
+        "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179271987W?xtor=AL"
+    )
+
+    assert offer.source == SourceCode.APEC
+    assert offer.external_id == "179271987W"
+    assert offer.url == f"{OFFER_PAGE}/179271987W"
+    assert offer.description_complete is False
+    assert offer.incomplete_reason == NO_DETAIL_REASON
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "https://www.apec.fr/candidat/recherche-emploi.html/emploi",
+        "https://www.apec.fr/detail-offre/../../admin",
+        "https://www.apec.fr/candidat.html",
+    ],
+)
+def test_a_link_that_is_not_a_posting_is_invalid(link: str) -> None:
+    source = ApecSource(Replay({}).http())
+
+    with pytest.raises(InvalidLinkError, match="ne désigne pas une annonce"):
+        source.from_link(link)
+
+
+def test_an_offer_known_by_its_link_only_takes_its_title_from_the_detail() -> None:
+    replay = Replay({DETAIL: json_answer("apec/detail.json")})
+    source = ApecSource(replay.http())
+
+    completed = source.complete(source.from_link(f"{OFFER_PAGE}/179271987W"))
+
+    assert completed.title == "Data Analyst / BI Analyst – Power BI F/H"
+    assert completed.company == "BRAIN LOGIC"
+    assert completed.description_complete is True

@@ -9,9 +9,16 @@ from pathlib import Path
 
 import httpx2
 
-from rocky.offres.sources.http import PublicHttp
+from rocky.offres.sources.http import PublicHttp, Resolver
 
 DATA = Path(__file__).parent / "data"
+# A global address (not a documentation range, which is not global): no name is ever resolved in the tests.
+PUBLIC_ADDRESS = "93.184.215.14"
+
+
+def public_address(host: str) -> list[str]:
+    return [PUBLIC_ADDRESS]
+
 
 type Route = tuple[str, str]  # (method, path)
 # A fresh response per request: the client takes over the response it receives.
@@ -58,8 +65,13 @@ class Replay:
     routes: dict[Route, Answer]
     requests: list[httpx2.Request] = field(default_factory=list)
 
-    def http(self) -> PublicHttp:
-        return PublicHttp(transport=httpx2.MockTransport(self._handle), pause_seconds=0)
+    def http(self, resolver: Resolver | None = None) -> PublicHttp:
+        """A client on the recorded answers; host names resolve to a public address unless ``resolver`` says."""
+        return PublicHttp(
+            transport=httpx2.MockTransport(self._handle),
+            pause_seconds=0,
+            resolver=resolver or public_address,
+        )
 
     def _handle(self, request: httpx2.Request) -> httpx2.Response:
         self.requests.append(request)

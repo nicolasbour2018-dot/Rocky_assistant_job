@@ -23,6 +23,7 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 ## Écran
 - Chaque section est `#section-<clé>` et se remplace en entier (`outerHTML`). Tout lien ou formulaire d'une section
   déclare `hx-get`/`hx-post`, `hx-target` et `hx-swap` (macros de `templates/profil/macros.html`).
-- `wants_fragment` : une navigation boostée (`HX-Boosted`) reçoit une page entière, jamais un fragment.
+- `wants_fragment` (`rocky/system/shell.py`) : une navigation boostée (`HX-Boosted`) reçoit une page entière,
+  jamais un fragment.
 - Une erreur de saisie demandée par HTMX répond 200 (HTMX n'insère pas les 4xx) ; sans HTMX, 400 et la page entière.
 - La porte d'onboarding ne s'applique qu'aux adresses des entrées de navigation, en GET.

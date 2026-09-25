@@ -128,7 +128,7 @@ aucun identifiant interne affiché.
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
 | C1. Sources | Contrat `JobSource` et registre repris ; connecteurs portés un à un ; APEC avec filtre de lieu et gestion honnête des descriptions incomplètes ; France Travail « en attente d'accès » (D8) ; noms de source normalisés | Chaque connecteur testé sur jeux de données enregistrés ; une panne de source est isolée et visible | ✅ |
-| C2. Import par URL | JSON-LD puis HTML ; erreurs remontées avec leur raison (plus d'exception silencieuse) | Un lien invalide affiche sa raison | ⬜ |
+| C2. Import par URL | JSON-LD puis HTML ; erreurs remontées avec leur raison (plus d'exception silencieuse) | Un lien invalide affiche sa raison | ✅ |
 | C3. Analyse d'annonce | `job_analysis` rapatrié dans `offres` ; compétences via les alias ; critères éliminatoires distincts des préférences ; date limite ; TJM distinct du salaire annuel ; description mise en forme ; résumé de description | Extraction mesurée sur un échantillon de l'archive | ⬜ |
 | C4. Scoring : règles | Fonction pure sans effet de bord (ne modifie ni l'offre ni la base) ; **preuve minimale** (pas de composante compétences pleine sur 1–2 compétences) ; **indice de confiance** affiché ; intitulé comparé aux intitulés des pistes ; détail et preuves par composante ; version des règles ; caractéristiques stockées (D14) | Chaque score s'explique composante par composante ; la « Data Protection Analyst » (79,6 % en v1) ne remonte plus | ⬜ |
 | C5. Scoring : calibrage | Nicolas annote 40–50 annonces de l'archive (pertinente / non, avec motif) ; comparaison des classements ancien vs nouveau ; ajustement des règles | Les annonces jugées pertinentes remontent ; écart chiffré et documenté | ⬜ |
@@ -345,3 +345,20 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(B5 → C3)** Règle de reconnaissance des compétences dans les annonces à trancher en C3 : un nom « X (Y) » ne
   répond qu'à lui-même, et rien ne signale à l'utilisateur qu'un alias manque (alias masqués à l'écran). Une autre
   compétence de cette forme (« Apprentissage automatique (ML) ») aurait le même trou (revue de code du 25/09).
+- **(C2 → §5 VPS)** La vérification anti-SSRF résout l'hôte avant la requête, puis le client HTTP le résout à
+  nouveau : un DNS qui change de réponse entre les deux (*rebinding*) passerait. Sur le VPS, ajouter une règle
+  réseau (pare-feu sortant ou proxy) qui interdit au conteneur de joindre les adresses privées.
+- **(C2 → E3)** Les liens des alertes passent par `import_link` : chaque lien en échec garde sa raison (fin de
+  `_import_links`). Un lien d'alerte porte souvent un jeton de suivi : il n'est jamais journalisé.
+- **(C2 → C7)** Geste « Enrichir » : la lecture assistée (navigateur visible, sur le poste) donne le HTML affiché à
+  `parse_page`, puis `enriched` ; le collage dans la fiche utilise `with_pasted_description`. Le formulaire de
+  collage de l'import crée l'offre depuis le texte seul (lien, intitulé, employeur) : les faits déjà lus d'un
+  aperçu incomplet ne sont pas repris tant que rien n'est enregistré.
+- **(C2 → C6)** Une page importée a pour identifiant son adresse canonique ; la veille garde l'identifiant de la
+  plateforme (numéro LinkedIn, référence WTTJ). La déduplication entre import et veille doit comparer les adresses.
+- **(C2 → C3)** Faits bruts du JSON-LD à interpréter : `employmentType` (`FULL_TIME`, `CONTRACTOR`),
+  `jobLocationType` (`TELECOMMUTE`), période du salaire (`YEAR`, `DAY`), date limite (`deadline`). Les clés
+  `intitule` et `enseigne` du détail Apec viennent d'un jeu reconstruit (Apec refuse son détail) : à vérifier dès
+  qu'une réponse réelle est obtenue.
+- **(C2 → C7, F1)** La coque boost tous les liens (`hx-boost`) : tout écran atteint par un lien doit choisir
+  fragment ou page par `wants_fragment` (`system.shell`), jamais par `is_htmx` seul (bug de C2 trouvé à l'essai).

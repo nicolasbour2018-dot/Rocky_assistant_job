@@ -80,7 +80,7 @@ class CollectionReport:
 class DetailReport:
     offers: tuple[CollectedOffer, ...]
     # Sources whose detail was refused or broken: asked once, then left alone for the rest of the collection.
-    stopped: dict[SourceCode, str] = field(default_factory=dict)
+    stopped: dict[str, str] = field(default_factory=dict)
 
 
 def collect(
@@ -147,10 +147,10 @@ def complete_descriptions(
     A refusal or a broken answer stops asking that source (a challenge can come as an unreadable page, not only as a
     403); a missing page only concerns its offer.
     """
-    detail_sources = {
+    detail_sources: dict[str, DetailSource] = {
         source.code: source for source in sources if isinstance(source, DetailSource)
     }
-    stopped: dict[SourceCode, str] = {}
+    stopped: dict[str, str] = {}
     completed: list[CollectedOffer] = []
     for offer in offers:
         source = detail_sources.get(offer.source)
@@ -164,7 +164,7 @@ def complete_descriptions(
 
 
 def _completed(
-    source: DetailSource, offer: CollectedOffer, stopped: dict[SourceCode, str]
+    source: DetailSource, offer: CollectedOffer, stopped: dict[str, str]
 ) -> CollectedOffer:
     try:
         return source.complete(offer)

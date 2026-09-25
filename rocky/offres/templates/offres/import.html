@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block title %}Importer une annonce · Rocky{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1><span aria-hidden="true">🔎</span> Importer une annonce</h1>
+  <a class="btn btn-ghost" href="/offres">Retour aux offres</a>
+</header>
+<section class="import">
+  <p class="empty-lead">Colle le lien d'une annonce : Rocky lit la page et te montre ce qu'il en a compris.</p>
+  {# A text field, not type="url": the browser would answer an invalid link itself, without Rocky's reason. #}
+  <form method="post" action="/offres/importer" class="edit-form import-form"
+        hx-post="/offres/importer" hx-target="#import-result" hx-swap="innerHTML">
+    <label class="field">Lien de l'annonce
+      <input name="lien" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+             placeholder="https://…" value="{{ link | default('') }}">
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Lire l'annonce</button>
+      <span class="hint import-busy" aria-hidden="true">Lecture de la page…</span>
+    </div>
+  </form>
+  <div id="import-result" aria-live="polite">{% include "offres/import_result.html" %}</div>
+</section>
+{% endblock %}

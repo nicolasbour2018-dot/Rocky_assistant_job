@@ -58,7 +58,7 @@ from rocky.profil.sql import SqlProfileStore
 from rocky.profil.usecases import Clock, ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
-from rocky.system.shell import NAVIGATION, is_htmx, page
+from rocky.system.shell import NAVIGATION, is_htmx, page, wants_fragment
 
 PROFILE_PATH = "/profil"
 ONBOARDING_PATH = "/profil/demarrage"
@@ -186,11 +186,6 @@ def _editor(request: Request, account: Account) -> Iterator[ProfileEditor]:
             account_id=account.id,
             email=account.email,
         )
-
-
-def wants_fragment(request: Request) -> bool:
-    """An explicit HTMX request; a boosted navigation (``HX-Boosted``) wants a whole page."""
-    return is_htmx(request) and request.headers.get("HX-Boosted") != "true"
 
 
 def _error_status(request: Request) -> int:

@@ -25,6 +25,7 @@ from rocky.offres.decisions import (
     make_decision,
     reason_label,
 )
+from rocky.offres.imports import web as imports_web
 from rocky.offres.prototype import (
     VERDICT_SIGNS,
     Catalog,
@@ -62,6 +63,7 @@ def install(app: FastAPI) -> None:
         reason_label=reason_label,
     )
     templates.env.filters["age"] = age
+    imports_web.install(app)
     app.include_router(router)
 
 

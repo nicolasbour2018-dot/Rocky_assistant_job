@@ -100,6 +100,11 @@ def is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
 
 
+def wants_fragment(request: Request) -> bool:
+    """An explicit HTMX request; a boosted navigation (``HX-Boosted``, the layout's ``hx-boost``) wants a whole page."""
+    return is_htmx(request) and request.headers.get("HX-Boosted") != "true"
+
+
 def page(
     request: Request,
     name: str,

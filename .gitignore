@@ -20,3 +20,6 @@ tmp/
 .playwright-cli/
 /test.ipynb
 .playwright-mcp/
+
+# Claude Code worktrees of parallel sessions
+.claude/worktrees/

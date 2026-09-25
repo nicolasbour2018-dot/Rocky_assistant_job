@@ -239,6 +239,14 @@ textarea {
 .facts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; }
 .facts dt { color: var(--muted); font-size: 12px; }
 .facts dd { margin: 0; }
+
+/* Import of a posting link (C2) */
+.import { display: grid; gap: var(--space-4); max-width: 780px; }
+.import-busy { display: none; align-self: center; }
+.htmx-request .import-busy { display: inline; }
+.import-description summary { color: var(--muted); cursor: pointer; }
+.description-text { margin-top: var(--space-2); white-space: pre-line; overflow-wrap: anywhere; }
+.paste-form h3 { margin: 0; }
 .decision-area { padding-top: var(--space-3); border-top: 1px solid var(--border); }
 .current-decision { margin-bottom: var(--space-3); }
 .decision-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2); }

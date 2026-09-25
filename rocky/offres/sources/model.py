@@ -32,6 +32,14 @@ SOURCE_LABELS = {
 }
 
 
+def source_label(name: str) -> str:
+    """Label of a source name: the platform name of a connector, else the host itself."""
+    try:
+        return SOURCE_LABELS[SourceCode(name)]
+    except ValueError:
+        return name
+
+
 class Availability(StrEnum):
     READY = "ready"
     NOT_CONFIGURED = "not_configured"
@@ -48,7 +56,10 @@ class SearchQuery:
 
 @dataclass(frozen=True)
 class CollectedOffer:
-    source: SourceCode
+    """The facts of one posting. ``source`` is a source name: a ``SourceCode`` for a connector, else the host of
+    the posting (``hellowork.com``, see ``rules.source_for_url``)."""
+
+    source: str
     external_id: str
     url: str
     title: str
@@ -68,6 +79,8 @@ class CollectedOffer:
     salary_period: str | None = None
     sector: str | None = None
     published_on: date | None = None
+    # Closing date as published (``validThrough`` of a posting page); the posting analysis also reads the text.
+    deadline: date | None = None
 
 
 class SourceError(Exception):
@@ -88,6 +101,10 @@ class SourceFailedError(SourceError):
 
 class NotFoundError(SourceFailedError):
     """The platform has no page for this address (HTTP 404)."""
+
+
+class InvalidLinkError(SourceError):
+    """A posting link that is not read: malformed, not http(s), or aimed at a non-public address."""
 
 
 class QuerySkippedError(SourceError):
@@ -115,4 +132,18 @@ class DetailSource(Protocol):
 
     def complete(self, offer: CollectedOffer) -> CollectedOffer:
         """The offer with its full description; raises ``SourceRefusedError`` or ``SourceFailedError``."""
+        ...
+
+
+@runtime_checkable
+class LinkSource(DetailSource, Protocol):
+    """A source whose posting pages show nothing to a plain reader (an empty JavaScript shell).
+
+    A link to one of its postings is read through its public detail endpoint instead (import by URL, C2).
+    """
+
+    code: SourceCode
+
+    def from_link(self, url: str) -> CollectedOffer:
+        """The offer a posting link designates, still to complete; raises ``InvalidLinkError``."""
         ...
