@@ -1,0 +1,717 @@
+{
+ "data": [
+  {
+   "name": "EXPERT HAUT NIVEAU ANALYSTE DE DONNEES DATA ANALYST",
+   "status": "published",
+   "remote": "punctual",
+   "reference": "bb42af09-1dc9-4cfe-b686-e8a0489ac1e2",
+   "search_result": {
+    "score": 2.997182
+   },
+   "updated_at": "2026-09-18T22:05:45.856003Z",
+   "slug": "expert-haut-niveau-analyste-de-donnees-data-analyst_paris",
+   "organization": {
+    "name": "Civils de la Défense - Ministère des Armées et des Anciens combattants",
+    "reference": "baJevK",
+    "labels": [],
+    "slug": "ministere-des-armees-fr",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/ocgZ6m_nvaw9ZjiytsA-moLmIHJPTvWXXkqYHk48Ak4/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby83NjA5LzE2NzU3OC85N2QxMTcyNS0yYTc3LTRhMjEtODQyOS02M2JiODJjOWViNjIucG5n",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/cDqBcQS1oWVzPBjsmJf8s4HcRNLKWSk6TACGO9CbZ5g/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby83NjA5LzE2NzU3OC85N2QxMTcyNS0yYTc3LTRhMjEtODQyOS02M2JiODJjOWViNjIucG5n"
+     }
+    },
+    "sectors": [
+     {
+      "name": "IT / Digital",
+      "parent_name": "Conseil / Audit"
+     },
+     {
+      "name": "Cybersécurité",
+      "parent_name": "Tech"
+     },
+     {
+      "name": "Administration publique",
+      "parent_name": "Secteur public et administration"
+     }
+    ],
+    "website_organization": {
+     "slug": "ministere-des-armees-fr"
+    },
+    "nb_employees": 64000,
+    "industry": "IT / Digital, Cybersécurité, Administration publique",
+    "cover_image": {
+     "small": {
+      "url": "https://cdn-images.welcometothejungle.com/2me7ygJRXA_Y_Ih3velOUeG9brEcMbqtqlW3orhiGJs/rs:auto:640::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc"
+     },
+     "url": "https://cdn-images.welcometothejungle.com/BsRJA4SP-l2MaaRLcGUOpgVwtcMb6gUi-Rfjeslz-f0/rs:auto:2000:450:/g:fp:0:0.5/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc",
+     "medium": {
+      "url": "https://cdn-images.welcometothejungle.com/ktosA0g5wX5Rfc0YAd4Q3D_dmiuO96PB7T9siQlFAZY/rs:auto:900::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc"
+     },
+     "large": {
+      "url": "https://cdn-images.welcometothejungle.com/ZLpR1WN4Au20CpQyicDh6ALDG7Z5GYCbnHyhhIGec30/rs:auto:1500::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc"
+     },
+     "social": {
+      "url": "https://cdn-images.welcometothejungle.com/ofCUz2zZTqgrOOWq3LlnNg_VKnsmj2pWrTVwQ5g5pEk/rs:auto:1200:627:/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc"
+     }
+    }
+   },
+   "wk_reference": "CDLDMDAEDAC_Y9AMV6e",
+   "contract_type": "full_time",
+   "published_at": "2026-08-07T22:05:52Z",
+   "office": {
+    "city": "Paris",
+    "latitude": 48.83648,
+    "longitude": 2.27572,
+    "country_code": "FR"
+   },
+   "salary_period": null,
+   "salary_min": null,
+   "salary_max": null,
+   "salary_currency": null,
+   "offices": [
+    {
+     "city": "Paris",
+     "latitude": 48.83648,
+     "longitude": 2.27572,
+     "country_code": "FR"
+    }
+   ],
+   "company_summary": "Protection des citoyens et intérêts français via divers métiers.",
+   "is_bookmarked": false,
+   "experience_min": null,
+   "experience_max": null
+  },
+  {
+   "name": "DNPJ-SDAT-Data Analyst / Analyste de données (junior)",
+   "status": "published",
+   "remote": "no",
+   "reference": "3e0c7516-7e04-4fe7-8f75-4e9e57c5ca24",
+   "search_result": {
+    "score": 2.9873724
+   },
+   "updated_at": "2026-09-24T20:01:59.288107Z",
+   "slug": "dnpj-sdat-data-analyst-analyste-de-donnees-junior_levallois-perret",
+   "organization": {
+    "name": "Ministère de l'Intérieur",
+    "reference": "MjRrM1R",
+    "labels": [],
+    "slug": "maquette-ministere-de-l-interieur",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/pJCKlRI-4iVSO6iTl-TiALV-pbSBT8qN8uD2l6zpefk/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby84ODg3LzE2MTQxNy85MTdjN2U3ZC0zNzQ1LTQ0MTQtYmM4Yy00NDIyZWUwMDAzZTMucG5n",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/jA1icszM_Mzgm_OHE2zvTEUXI41T-CIdrhTkNgoQpkU/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby84ODg3LzE2MTQxNy85MTdjN2U3ZC0zNzQ1LTQ0MTQtYmM4Yy00NDIyZWUwMDAzZTMucG5n"
+     }
+    },
+    "sectors": [
+     {
+      "name": "Administration publique",
+      "parent_name": "Secteur public et administration"
+     }
+    ],
+    "website_organization": {
+     "slug": "ministere-de-l-interieur"
+    },
+    "nb_employees": 303000,
+    "industry": "Administration publique",
+    "cover_image": {
+     "small": {
+      "url": "https://cdn-images.welcometothejungle.com/vtuPH4XGgmnHDYusjg3015VygIABouqLMGd4hZJQpOE/rs:auto:640::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLWQ3OGE5NzVhLWQzMjAtNDc4ZC04NTc4LWRmOWY5OWNkZTE2NC5qcGc"
+     },
+     "url": "https://cdn-images.welcometothejungle.com/e20yIFCZ84p7wQjp0_bqM0Zu_FBqFIzhPONjYhBoux4/rs:auto:2000:450:/g:fp:0:0.5/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLWQ3OGE5NzVhLWQzMjAtNDc4ZC04NTc4LWRmOWY5OWNkZTE2NC5qcGc",
+     "medium": {
+      "url": "https://cdn-images.welcometothejungle.com/xCMb-jznr68mI7bHxfnPmFIlWKkxVnY3dTwnD5SuduE/rs:auto:900::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLWQ3OGE5NzVhLWQzMjAtNDc4ZC04NTc4LWRmOWY5OWNkZTE2NC5qcGc"
+     },
+     "large": {
+      "url": "https://cdn-images.welcometothejungle.com/W4x8pkogXOX9GH4ECoI4W71iVKYVt3BRlbbMOgLS0Gw/rs:auto:1500::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLWQ3OGE5NzVhLWQzMjAtNDc4ZC04NTc4LWRmOWY5OWNkZTE2NC5qcGc"
+     },
+     "social": {
+      "url": "https://cdn-images.welcometothejungle.com/AMtAHr-buHrzvNV1c0Es_yiB7-dcaq-fYbXro7EH1sE/rs:auto:1200:627:/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLWQ3OGE5NzVhLWQzMjAtNDc4ZC04NTc4LWRmOWY5OWNkZTE2NC5qcGc"
+     }
+    }
+   },
+   "wk_reference": "MDL_1PQ3578",
+   "contract_type": "full_time",
+   "published_at": "2026-09-17T20:01:34Z",
+   "office": {
+    "city": "Levallois-Perret",
+    "latitude": 48.89351,
+    "longitude": 2.2896,
+    "country_code": "FR"
+   },
+   "salary_period": null,
+   "salary_min": null,
+   "salary_max": null,
+   "salary_currency": null,
+   "offices": [
+    {
+     "city": "Levallois-Perret",
+     "latitude": 48.89351,
+     "longitude": 2.2896,
+     "country_code": "FR"
+    }
+   ],
+   "company_summary": "Garantir libertés, droits et sécurité des citoyens.",
+   "is_bookmarked": false,
+   "experience_min": null,
+   "experience_max": null
+  },
+  {
+   "name": "Business Analyst/Data Analyst H/F/NB",
+   "status": "published",
+   "remote": "partial",
+   "reference": "7c6486d1-cf27-4620-9655-f262e45dca6f",
+   "search_result": {
+    "score": 2.9723978
+   },
+   "updated_at": "2026-09-24T20:00:12.977181Z",
+   "slug": "business-analyst-data-analyst-h-f-nb_levallois",
+   "organization": {
+    "name": "Keyrus",
+    "reference": "b8y59Po",
+    "labels": [
+     "ecovadis-silver"
+    ],
+    "slug": "keyrus",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/Vw0ePaPHyCK4FLs4B0lXDXLgn0K9LMB_ggwI_WwWo9c/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby82NDQxLzE1NDY5My8wZWQzOGFjNC0yYTMxLTQwNDctOTMxNy0xOWRjMjEwMGJkYWUuanBn",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/7p5cZntQxy2NP9y6Z8BFHib7aC-37mFETOSW6zvJJrg/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby82NDQxLzE1NDY5My8wZWQzOGFjNC0yYTMxLTQwNDctOTMxNy0xOWRjMjEwMGJkYWUuanBn"
+     }
+    },
+    "sectors": [
+     {
+      "name": "Intelligence artificielle / Machine Learning",
+      "parent_name": "Tech"
+     },
+     {
+      "name": "IT / Digital",
+      "parent_name": "Conseil / Audit"
+     },
+     {
+      "name": "Organisation / Management",
+      "parent_name": "Conseil / Audit"
+     }
+    ],
+    "website_organization": {
+     "slug": "keyrus"
+    },
+    "nb_employees": 3000,
+    "industry": "Intelligence artificielle / Machine Learning, IT / Digital, Organisation / Management",
+    "cover_image": {
+     "small": {
+      "url": "https://cdn-images.welcometothejungle.com/ty8ogixWkoMDbrvTaBD0FkHCGY8_BUasa4k9pr60FY8/rs:auto:640::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTk4NmYzYTBkLTc0ZTUtNDQ2YS04YjUxLTQ4MzUzMWIzYWNmZS5qcGc"
+     },
+     "url": "https://cdn-images.welcometothejungle.com/MW8wDnQnvNHhxiHPkdIzZykeTS_sfP6Ib4ibA9lpKp8/rs:auto:2000:450:/g:fp:0:0.47/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTk4NmYzYTBkLTc0ZTUtNDQ2YS04YjUxLTQ4MzUzMWIzYWNmZS5qcGc",
+     "medium": {
+      "url": "https://cdn-images.welcometothejungle.com/rPlzoNNRc6kzpNX6arZOpvdzUIuH-MvAmlYByLkj8Ok/rs:auto:900::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTk4NmYzYTBkLTc0ZTUtNDQ2YS04YjUxLTQ4MzUzMWIzYWNmZS5qcGc"
+     },
+     "large": {
+      "url": "https://cdn-images.welcometothejungle.com/X4gwSMCL0iS58qbpKA7AO390LkXwQ6oILsw_yD8lIJA/rs:auto:1500::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTk4NmYzYTBkLTc0ZTUtNDQ2YS04YjUxLTQ4MzUzMWIzYWNmZS5qcGc"
+     },
+     "social": {
+      "url": "https://cdn-images.welcometothejungle.com/NG14EfyDNYWb8_TTJa-2YNepOTlG1udGIqm7n8tL960/rs:auto:1200:627:/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTk4NmYzYTBkLTc0ZTUtNDQ2YS04YjUxLTQ4MzUzMWIzYWNmZS5qcGc"
+     }
+    }
+   },
+   "wk_reference": "KEYRU_3oZx9j",
+   "contract_type": "full_time",
+   "published_at": "2026-07-24T20:00:14Z",
+   "office": {
+    "city": "Levallois-Perret",
+    "latitude": 48.89833,
+    "longitude": 2.27926,
+    "country_code": "FR"
+   },
+   "salary_period": null,
+   "salary_min": null,
+   "salary_max": null,
+   "salary_currency": null,
+   "offices": [
+    {
+     "city": "Levallois-Perret",
+     "latitude": 48.89833,
+     "longitude": 2.27926,
+     "country_code": "FR"
+    }
+   ],
+   "company_summary": "Solutions Data et IA pour usages innovants et impact opérationnel.",
+   "is_bookmarked": false,
+   "experience_min": null,
+   "experience_max": null
+  },
+  {
+   "name": "Senior Data Analyst (Reporting)",
+   "status": "published",
+   "remote": "punctual",
+   "reference": "c39d1122-47ac-4b56-b218-f1e331d792aa",
+   "search_result": {
+    "score": 2.9678993
+   },
+   "updated_at": "2026-09-18T00:10:21.942283Z",
+   "slug": "senior-data-analyst-reporting_new-york_fcjy33pt",
+   "organization": {
+    "name": "Garner Health",
+    "reference": "PywjjA",
+    "labels": [],
+    "slug": "garner-health",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/fiOBCgZ2JwgMP1kj-_EdYV0n41VHN8M02CXRZFLMUAI/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby8yMjUyLzE3NzQ4Ni9kNDY5NjVmYy1hNjI1LTRhNjAtOWQyNi05ZTU5NDg5ZTM5NTIucG5n",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/0PBEcXApWjM4A1PB8jC5ytoyO3ZZ78ZSOxPJxP8TEtE/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby8yMjUyLzE3NzQ4Ni9kNDY5NjVmYy1hNjI1LTRhNjAtOWQyNi05ZTU5NDg5ZTM5NTIucG5n"
+     }
+    },
+    "sectors": [
+     {
+      "name": "Big Data",
+      "parent_name": "Tech"
+     }
+    ],
+    "website_organization": {
+     "slug": "garner-health"
+    },
+    "nb_employees": 400,
+    "industry": "Big Data",
+    "cover_image": null
+   },
+   "wk_reference": null,
+   "contract_type": "full_time",
+   "published_at": "2026-09-18T00:10:19Z",
+   "office": {
+    "city": "New York",
+    "latitude": null,
+    "longitude": null,
+    "country_code": "US"
+   },
+   "salary_period": "yearly",
+   "salary_min": 167000.0,
+   "salary_max": 210000.0,
+   "salary_currency": "USD",
+   "offices": [
+    {
+     "city": "New York",
+     "latitude": null,
+     "longitude": null,
+     "country_code": "US"
+    }
+   ],
+   "company_summary": "Data-powered doctor search tool.",
+   "is_bookmarked": false,
+   "experience_min": 5.0,
+   "experience_max": 7.0
+  },
+  {
+   "name": "Data Analyst",
+   "status": "published",
+   "remote": "unknown",
+   "reference": "356bf0fb-a946-4205-8d26-2d8db46b2c89",
+   "search_result": {
+    "score": 2.9564981
+   },
+   "updated_at": "2026-09-21T22:05:13.654347Z",
+   "slug": "data-analyst_sant-just-desvern",
+   "organization": {
+    "name": "MSX International",
+    "reference": "UODyqF",
+    "labels": [
+     "qualiopi"
+    ],
+    "slug": "msx-international",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/NoIZ7w4eUGWFPL3HMcLjZRH6MtxKcpIynIJYap9ciuI/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby84MTE3LzE2NTExNS81Y2RkMTYxMS1lOTg0LTQzNjktYjJjYi1iZDNiNGI3NWE1NjkucG5n",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/zgxwmwqXOQtnsltZBdjYmX_unCLLFfkFMQV1wKkQqyI/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby84MTE3LzE2NTExNS81Y2RkMTYxMS1lOTg0LTQzNjktYjJjYi1iZDNiNGI3NWE1NjkucG5n"
+     }
+    },
+    "sectors": [
+     {
+      "name": "Automobile",
+      "parent_name": "Industrie"
+     }
+    ],
+    "website_organization": {
+     "slug": "msx-international"
+    },
+    "nb_employees": 420,
+    "industry": "Automobile",
+    "cover_image": {
+     "small": {
+      "url": "https://cdn-images.welcometothejungle.com/pBpWzBUX8hpXdYeX9P2I9zV6NypO8WtkGawDpVwC-yE/rs:auto:640::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTZkZjM2YmVhLTY4ZmQtNDU3MC05NjFhLWE5ZjE0NjlhNzY0OC5qcGc"
+     },
+     "url": "https://cdn-images.welcometothejungle.com/s2GF4wjhVMej2TNihOdexK_x2U3txpYsWSLgYamQJzw/rs:auto:2000:450:/g:fp:0:0.5/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTZkZjM2YmVhLTY4ZmQtNDU3MC05NjFhLWE5ZjE0NjlhNzY0OC5qcGc",
+     "medium": {
+      "url": "https://cdn-images.welcometothejungle.com/S8HeCCsaCA4GRAERQ1k9eiQzG0TIgH-xGTXstVMNdgk/rs:auto:900::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTZkZjM2YmVhLTY4ZmQtNDU3MC05NjFhLWE5ZjE0NjlhNzY0OC5qcGc"
+     },
+     "large": {
+      "url": "https://cdn-images.welcometothejungle.com/UfU5Jgbb_5aPP7-xrP580j9_xh3BHF5n1RO2Av5B-yw/rs:auto:1500::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTZkZjM2YmVhLTY4ZmQtNDU3MC05NjFhLWE5ZjE0NjlhNzY0OC5qcGc"
+     },
+     "social": {
+      "url": "https://cdn-images.welcometothejungle.com/Fci56i1eol02FpCDVh3wMVvnQ3cguhKx1CmyxFgKkec/rs:auto:1200:627:/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTZkZjM2YmVhLTY4ZmQtNDU3MC05NjFhLWE5ZjE0NjlhNzY0OC5qcGc"
+     }
+    }
+   },
+   "wk_reference": "MI_GKWMdod",
+   "contract_type": "full_time",
+   "published_at": "2026-09-21T22:05:13Z",
+   "office": {
+    "city": "Sant Just Desvern",
+    "latitude": 41.38522,
+    "longitude": 2.07895,
+    "country_code": "ES"
+   },
+   "salary_period": null,
+   "salary_min": null,
+   "salary_max": null,
+   "salary_currency": null,
+   "offices": [
+    {
+     "city": "Sant Just Desvern",
+     "latitude": 41.38522,
+     "longitude": 2.07895,
+     "country_code": "ES"
+    }
+   ],
+   "company_summary": "Services dédiés aux constructeurs automobiles et acteurs de la mobilité.",
+   "is_bookmarked": false,
+   "experience_min": 2.0,
+   "experience_max": 3.0
+  },
+  {
+   "name": "Data Analyst",
+   "status": "published",
+   "remote": "partial",
+   "reference": "48926d7f-fe2e-48ba-9c3a-bdafac9602ea",
+   "search_result": {
+    "score": 2.9564981
+   },
+   "updated_at": "2026-09-11T00:05:10.779362Z",
+   "slug": "data-analyst_austin_5ctuhyrx",
+   "organization": {
+    "name": "Hippo Insurance",
+    "reference": "FWWbPO",
+    "labels": [],
+    "slug": "hippo-insurance",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/qxtslN7zR8QReclvqlnRdG6Gw68VsFpPmntkKFUAux4/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby8zMjI1LzE3NzQ4Ni8zM2MyNzcyNy1iYTA0LTRlZmEtYTM3NC1jNzliYzg1ZDQwNDcucG5n",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/9gm7AcFJROpJmrXNlcMnqnHtJzWoEJghF-foTNWZFtM/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby8zMjI1LzE3NzQ4Ni8zM2MyNzcyNy1iYTA0LTRlZmEtYTM3NC1jNzliYzg1ZDQwNDcucG5n"
+     }
+    },
+    "sectors": [
+     {
+      "name": "Finance",
+      "parent_name": "Banques / Assurances / Finance"
+     }
+    ],
+    "website_organization": {
+     "slug": "hippo-insurance"
+    },
+    "nb_employees": 603,
+    "industry": "Finance",
+    "cover_image": null
+   },
+   "wk_reference": null,
+   "contract_type": "full_time",
+   "published_at": "2026-09-11T00:05:05Z",
+   "office": {
+    "city": "Austin",
+    "latitude": null,
+    "longitude": null,
+    "country_code": "US"
+   },
+   "salary_period": null,
+   "salary_min": null,
+   "salary_max": null,
+   "salary_currency": null,
+   "offices": [
+    {
+     "city": "Austin",
+     "latitude": null,
+     "longitude": null,
+     "country_code": "US"
+    }
+   ],
+   "company_summary": "Digital home insurance provider.",
+   "is_bookmarked": false,
+   "experience_min": 5.0,
+   "experience_max": 7.0
+  },
+  {
+   "name": "Data Analyst",
+   "status": "published",
+   "remote": "unknown",
+   "reference": "5d91735d-1383-4342-ad79-560bf5ffee84",
+   "search_result": {
+    "score": 2.9564981
+   },
+   "updated_at": "2026-09-25T00:07:38.658280Z",
+   "slug": "data-analyst_gb_yschl7b2",
+   "organization": {
+    "name": "Cloudflare",
+    "reference": "n4VFga",
+    "labels": [],
+    "slug": "cloudflare",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/Wp9k_AqmFqUbNA1oxugy5y46FYIMmYO5VQY_MYgFS6g/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby8yMTg1LzE3NzQ4Ni9jZjkzYzdkYS0yOWI4LTRjNzItOWU4Yi1iMTgwYTk2ZjQxYzIucG5n",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/UJXpS_5lNtECTKd3BAskpcx_PRj8c0TG4821SNkSBr8/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby8yMTg1LzE3NzQ4Ni9jZjkzYzdkYS0yOWI4LTRjNzItOWU4Yi1iMTgwYTk2ZjQxYzIucG5n"
+     }
+    },
+    "sectors": [
+     {
+      "name": "Big Data",
+      "parent_name": "Tech"
+     }
+    ],
+    "website_organization": {
+     "slug": "cloudflare"
+    },
+    "nb_employees": 5911,
+    "industry": "Big Data",
+    "cover_image": null
+   },
+   "wk_reference": null,
+   "contract_type": "full_time",
+   "published_at": "2026-09-25T00:07:33Z",
+   "office": {
+    "city": null,
+    "latitude": null,
+    "longitude": null,
+    "country_code": "GB"
+   },
+   "salary_period": null,
+   "salary_min": null,
+   "salary_max": null,
+   "salary_currency": null,
+   "offices": [
+    {
+     "city": null,
+     "latitude": null,
+     "longitude": null,
+     "country_code": "GB"
+    }
+   ],
+   "company_summary": "Web performance and security platform.",
+   "is_bookmarked": false,
+   "experience_min": 3.0,
+   "experience_max": 4.0
+  },
+  {
+   "name": "Data Analyst",
+   "status": "published",
+   "remote": "fulltime",
+   "reference": "df16f590-595f-432c-adbb-538d6a0888c5",
+   "search_result": {
+    "score": 2.9564981
+   },
+   "updated_at": "2026-09-24T22:06:23.606663Z",
+   "slug": "data-analyst",
+   "organization": {
+    "name": "Joko",
+    "reference": "dgqb5P3",
+    "labels": [
+     "test",
+     "bcorp"
+    ],
+    "slug": "joko-1",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/ERCPS3zJDqQaM0ZFpAEMFsF3GfQnYguIStMqiKmqdeo/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby81OTgyLzE1NTYyOS81N2RmM2MyZC00NWQxLTQ0OTMtODIxZi03Yjg0Nzc3NzRlMzkucG5n",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/cXzKssMyVLBm4uGxafy7GnYao_QvQ-LVxkIF20NjsbM/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby81OTgyLzE1NTYyOS81N2RmM2MyZC00NWQxLTQ0OTMtODIxZi03Yjg0Nzc3NzRlMzkucG5n"
+     }
+    },
+    "sectors": [
+     {
+      "name": "Application mobile",
+      "parent_name": "Tech"
+     },
+     {
+      "name": "Intelligence artificielle / Machine Learning",
+      "parent_name": "Tech"
+     },
+     {
+      "name": "FinTech / InsurTech",
+      "parent_name": "Banques / Assurances / Finance"
+     }
+    ],
+    "website_organization": {
+     "slug": "joko"
+    },
+    "nb_employees": 120,
+    "industry": "Application mobile, Intelligence artificielle / Machine Learning, FinTech / InsurTech",
+    "cover_image": {
+     "small": {
+      "url": "https://cdn-images.welcometothejungle.com/liuh0T6uayuxs_euNBSnpiwkTS0slfVZmLqtPDOWuNU/rs:auto:640::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTQ5ZmE4ZDkwLWQ2NDMtNGM4MC05N2M3LTY0ZWZmYjRjYzY0OC5qcGc"
+     },
+     "url": "https://cdn-images.welcometothejungle.com/D5e2GHEGztfgqaYStLAlVYuC2z_yYevSCZN5fc0yRrw/rs:auto:2000:450:/g:fp:0:0.44/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTQ5ZmE4ZDkwLWQ2NDMtNGM4MC05N2M3LTY0ZWZmYjRjYzY0OC5qcGc",
+     "medium": {
+      "url": "https://cdn-images.welcometothejungle.com/GlQgfkObhTUBWvmk5XevkrUgCHx8xyoH8HwdLLeLWP0/rs:auto:900::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTQ5ZmE4ZDkwLWQ2NDMtNGM4MC05N2M3LTY0ZWZmYjRjYzY0OC5qcGc"
+     },
+     "large": {
+      "url": "https://cdn-images.welcometothejungle.com/5WfbsjbNX5szw6Y8Hncy5gKu3RswTu2RfMNF1qOnCLg/rs:auto:1500::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTQ5ZmE4ZDkwLWQ2NDMtNGM4MC05N2M3LTY0ZWZmYjRjYzY0OC5qcGc"
+     },
+     "social": {
+      "url": "https://cdn-images.welcometothejungle.com/CZgqFMxU1w7wVgwzUbB9jCBDJceS71sgkqDHCzjWf70/rs:auto:1200:627:/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTQ5ZmE4ZDkwLWQ2NDMtNGM4MC05N2M3LTY0ZWZmYjRjYzY0OC5qcGc"
+     }
+    }
+   },
+   "wk_reference": "JOKO_NRpX5jo",
+   "contract_type": "full_time",
+   "published_at": "2026-09-21T22:03:31Z",
+   "office": {
+    "city": "Paris",
+    "latitude": 48.86836,
+    "longitude": 2.35548,
+    "country_code": "FR"
+   },
+   "salary_period": "yearly",
+   "salary_min": 48000.0,
+   "salary_max": 84000.0,
+   "salary_currency": "EUR",
+   "offices": [
+    {
+     "city": "Paris",
+     "latitude": 48.86836,
+     "longitude": 2.35548,
+     "country_code": "FR"
+    },
+    {
+     "city": "Barcelona",
+     "latitude": 41.38956,
+     "longitude": 2.16554,
+     "country_code": "ES"
+    }
+   ],
+   "company_summary": "AI shopping app for personalized product recommendations and cash back.",
+   "is_bookmarked": false,
+   "experience_min": null,
+   "experience_max": null
+  },
+  {
+   "name": "Data Analyst",
+   "status": "published",
+   "remote": "unknown",
+   "reference": "56c9ace3-269c-4b69-930c-712861888237",
+   "search_result": {
+    "score": 2.9564981
+   },
+   "updated_at": "2026-09-25T00:13:26.946975Z",
+   "slug": "data-analyst_new-york_cwn5bgcu",
+   "organization": {
+    "name": "Titan",
+    "reference": "7fUx8w",
+    "labels": [],
+    "slug": "titan",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/Y7PN5mJlHP4ieAey34OjdISzMS_c5oz7J4QCd3XJeEo/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby8yMzUwLzE3NzQ4Ni9kOGM0ODc3NC05NzZkLTQ3ZWYtOTZkOC1kOGQzZjE5NWJhMDYucG5n",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/6RfkmB3OgQwjdO8IJvYC5dpHLagPvE_Mkv88ZmlKM3w/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby8yMzUwLzE3NzQ4Ni9kOGM0ODc3NC05NzZkLTQ3ZWYtOTZkOC1kOGQzZjE5NWJhMDYucG5n"
+     }
+    },
+    "sectors": [
+     {
+      "name": "Finance",
+      "parent_name": "Banques / Assurances / Finance"
+     }
+    ],
+    "website_organization": {
+     "slug": "titan"
+    },
+    "nb_employees": 30,
+    "industry": "Finance",
+    "cover_image": null
+   },
+   "wk_reference": null,
+   "contract_type": "full_time",
+   "published_at": "2026-09-25T00:13:09Z",
+   "office": {
+    "city": "New York",
+    "latitude": null,
+    "longitude": null,
+    "country_code": "US"
+   },
+   "salary_period": "yearly",
+   "salary_min": 80000.0,
+   "salary_max": 160000.0,
+   "salary_currency": "USD",
+   "offices": [
+    {
+     "city": "New York",
+     "latitude": null,
+     "longitude": null,
+     "country_code": "US"
+    }
+   ],
+   "company_summary": "Asset management for everyday investors.",
+   "is_bookmarked": false,
+   "experience_min": 1.0,
+   "experience_max": 2.0
+  },
+  {
+   "name": "Data Analyst",
+   "status": "published",
+   "remote": "no",
+   "reference": "921e3b6d-2bc6-41b4-b633-a91be171ccea",
+   "search_result": {
+    "score": 2.9564981
+   },
+   "updated_at": "2026-09-24T22:00:15.987875Z",
+   "slug": "data-analyst_london",
+   "organization": {
+    "name": "Policy Expert",
+    "reference": "Ua1tTa",
+    "labels": [],
+    "slug": "policy-expert",
+    "logo": {
+     "url": "https://cdn-images.welcometothejungle.com/zbYHb5-wf_4GfIYwgZzBjQaX1wSMZawDXRe0npC6XC0/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby85NzA5LzE3Njk3Ni9jYjdjYjY3Ny03ZDIzLTQ4ZTktYThkMS1kMTcyNGUwNjIyZjkucG5n",
+     "thumb": {
+      "url": "https://cdn-images.welcometothejungle.com/v-Lu_wL5wn09FvQZ7veD1aBHZ24osrP0CO_OHStV3Qo/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby85NzA5LzE3Njk3Ni9jYjdjYjY3Ny03ZDIzLTQ4ZTktYThkMS1kMTcyNGUwNjIyZjkucG5n"
+     }
+    },
+    "sectors": [
+     {
+      "name": "Digital",
+      "parent_name": "Publicité / Marketing / Agence"
+     }
+    ],
+    "website_organization": {
+     "slug": "policy-expert"
+    },
+    "nb_employees": null,
+    "industry": "Digital",
+    "cover_image": null
+   },
+   "wk_reference": "PE_g6aKpz",
+   "contract_type": "full_time",
+   "published_at": "2026-09-14T22:00:13Z",
+   "office": {
+    "city": "London",
+    "latitude": 51.51635,
+    "longitude": -0.08109,
+    "country_code": "GB"
+   },
+   "salary_period": null,
+   "salary_min": null,
+   "salary_max": null,
+   "salary_currency": null,
+   "offices": [
+    {
+     "city": "London",
+     "latitude": 51.51635,
+     "longitude": -0.08109,
+     "country_code": "GB"
+    }
+   ],
+   "company_summary": "Proprietary tech and data for reliable insurance products and customer experience.",
+   "is_bookmarked": false,
+   "experience_min": null,
+   "experience_max": null
+  }
+ ],
+ "metadata": {
+  "total": 867,
+  "page": 1,
+  "per_page": 10,
+  "page_count": 87
+ }
+}

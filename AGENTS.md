@@ -129,6 +129,8 @@ docs/
   Règles d'écriture des migrations : `.claude/rules/system.md`.
 - Inviter une personne (seule façon de créer un compte) : `docker compose run --rm app rocky-admin invite <email>` ;
   `--print-link` affiche le lien d'activation au lieu de l'envoyer (aucun e-mail ne part).
+- Diagnostic des sources (vraie collecte, rien n'est écrit) :
+  `docker compose run --rm app rocky-admin sources <email> [--piste <nom>] [--detail]`.
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
 - Sur GitHub : `.github/workflows/verification.yml` exécute la vérification globale à chaque push sur `refonte` et
   sur chaque PR. Une étape n'est terminée que si ce passage est vert aussi.

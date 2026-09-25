@@ -14,7 +14,14 @@ from typing import TextIO
 
 from sqlalchemy import Engine
 
+from rocky.offres.sources.http import PublicHttp
+from rocky.offres.sources.model import JobSource
+from rocky.offres.sources.registry import build_sources
+from rocky.offres.sources.report import report_lines
+from rocky.offres.sources.rules import queries_for_track
+from rocky.offres.sources.usecases import collect, complete_descriptions
 from rocky.profil.import_file import ImportFileError, read_import_file
+from rocky.profil.model import TrackStatus
 from rocky.profil.rules import ProfileInputError
 from rocky.profil.sql import SqlProfileStore
 from rocky.profil.usecases import AlreadyFilled, ProfileEditor
@@ -75,6 +82,58 @@ def import_profile(
     return 0
 
 
+def check_sources(
+    engine: Engine,
+    *,
+    email: str,
+    track_name: str | None,
+    detail: bool,
+    sources: Sequence[JobSource],
+    limit: int,
+    out: TextIO,
+) -> int:
+    """Run a real collection for the active tracks of ``email`` and tell, source by source, what happened.
+
+    Nothing is written: the profile is only read.
+    """
+    try:
+        address = normalize_email(email)
+    except InvalidEmailError as error:
+        out.write(f"{error}\n")
+        return 2
+    with engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(address)
+        if account is None:
+            out.write(f"Aucun compte pour {address}.\n")
+            return 1
+        store = SqlProfileStore(connection)
+        profile_id = store.find_profile_id(account.id)
+        profile = None if profile_id is None else store.load(profile_id)
+    tracks = [
+        track
+        for track in (profile.tracks if profile else ())
+        if track.status is TrackStatus.ACTIVE
+        and (track_name is None or track.name.casefold() == track_name.casefold())
+    ]
+    if not tracks:
+        wanted = f"nommée « {track_name} »" if track_name else "active"
+        out.write(f"Aucune piste {wanted} pour {address}.\n")
+        return 1
+    queries = [
+        query
+        for track in tracks
+        for query in queries_for_track(track.content.titles, track.content.locations)
+    ]
+    names = ", ".join(f"« {track.name} »" for track in tracks)
+    out.write(
+        f"Collecte réelle pour {names} : {len(queries)} requête(s) intitulé × lieu.\n\n"
+    )
+    report = collect(sources, queries, limit)
+    details = complete_descriptions(sources, report.offers) if detail else None
+    out.writelines(f"{line}\n" for line in report_lines(report, details))
+    return 0
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -100,11 +159,37 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     import_parser.add_argument("fichier", type=Path)
     import_parser.add_argument("email")
+    sources_parser = commands.add_parser(
+        "sources",
+        help="lance une vraie collecte pour les pistes actives d'un compte, "
+        "et dit source par source ce qui s'est passé (rien n'est écrit)",
+    )
+    sources_parser.add_argument("email")
+    sources_parser.add_argument("--piste", help="seulement la piste de ce nom")
+    sources_parser.add_argument(
+        "--detail",
+        action="store_true",
+        help="demande aussi le détail des offres incomplètes quand la source en a un",
+    )
     arguments = parser.parse_args(argv)
 
     settings = load_settings()
     engine = create_db_engine(settings.database_url)
     try:
+        if arguments.command == "sources":
+            http = PublicHttp()
+            try:
+                return check_sources(
+                    engine,
+                    email=arguments.email,
+                    track_name=arguments.piste,
+                    detail=arguments.detail,
+                    sources=build_sources(settings.sources, http),
+                    limit=settings.sources.results_per_query,
+                    out=sys.stdout,
+                )
+            finally:
+                http.close()
         if arguments.command == "import-profil":
             return import_profile(
                 engine,

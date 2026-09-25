@@ -1,0 +1,40 @@
+{
+ "__CLASS__": "Adzuna::API::Response::JobSearchResults",
+ "count": 2,
+ "mean": 45210.5,
+ "results": [
+  {
+   "__CLASS__": "Adzuna::API::Response::Job",
+   "id": "4012345678",
+   "adref": "eyJhbGciOiJIUzI1NiJ9.reconstruit",
+   "title": "Data Analyst H/F",
+   "description": "Rattaché(e) au pôle Data, vous analysez les données commerciales avec SQL et Python, et construisez les tableaux de bord…",
+   "redirect_url": "https://www.adzuna.fr/details/4012345678?utm_medium=api&utm_source=application",
+   "created": "2026-09-24T10:12:00Z",
+   "company": {"__CLASS__": "Adzuna::API::Response::Company", "display_name": "Exemple Conseil"},
+   "location": {"__CLASS__": "Adzuna::API::Response::Location", "display_name": "Paris, Ile-de-France", "area": ["France", "Ile-de-France", "Paris"]},
+   "category": {"__CLASS__": "Adzuna::API::Response::Category", "label": "Emplois Informatique", "tag": "it-jobs"},
+   "salary_min": 42000,
+   "salary_max": 48000,
+   "salary_is_predicted": "0",
+   "contract_type": "permanent",
+   "contract_time": "full_time",
+   "latitude": 48.8566,
+   "longitude": 2.3522
+  },
+  {
+   "__CLASS__": "Adzuna::API::Response::Job",
+   "id": "4012345679",
+   "title": "Analyste de données",
+   "description": "Mission d'analyse de données pour un acteur de l'énergie…",
+   "redirect_url": "https://www.adzuna.fr/land/ad/4012345679?se=abc&utm_medium=api&utm_source=application&v=1",
+   "created": "2026-09-23T08:00:00Z",
+   "company": {"display_name": "Énergie Exemple"},
+   "location": {"display_name": "Nanterre, Hauts-de-Seine"},
+   "category": {"label": "Emplois Informatique"},
+   "salary_min": 38540.12,
+   "salary_max": 38540.12,
+   "salary_is_predicted": "1"
+  }
+ ]
+}

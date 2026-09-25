@@ -1,0 +1,564 @@
+{
+ "job": {
+  "wttj_reference": "bb42af09-1dc9-4cfe-b686-e8a0489ac1e2",
+  "company_summary": "Protection des citoyens et intérêts français via divers métiers.",
+  "reference": "CDLDMDAEDAC_Y9AMV6e",
+  "benefits": {
+   "FR": {
+    "categories": [
+     {
+      "benefits": [
+       {
+        "name": {
+         "cs": "1-2 dny home-office",
+         "en": "Between 1-2 days at home",
+         "es": "Hasta 1-2 días de teletrabajo",
+         "fr": "Entre 1-2 jours de télétravail",
+         "sk": "1-2 dni home-office"
+        },
+        "preview_order": 1,
+        "reference": "ac9446d1-f9a9-449d-95fe-4407247b8367"
+       }
+      ],
+      "category_ref": "c6cf668a-a25c-4c0e-ae99-486555ef6ef5",
+      "name": {
+       "cs": "Politika práce na dálku",
+       "en": "Remote work policy",
+       "es": "Política de teletrabajo",
+       "fr": "Politique de télétravail",
+       "sk": "Politika práce na diaľku"
+      }
+     },
+     {
+      "benefits": [
+       {
+        "name": {
+         "cs": "Obědy zajištěny / vybavená kuchyně",
+         "en": "Food service or stocked kitchen",
+         "es": "Restaurante de empresa / Cocina para empleados",
+         "fr": "Restaurant d’entreprise / Cuisine pour les employés",
+         "sk": "Obedy zaistené / vybavená kuchyňa"
+        },
+        "preview_order": 2,
+        "reference": "ded0fea3-8712-4183-9ebb-51500cbfaef6"
+       }
+      ],
+      "category_ref": "6a809853-d5bd-40b7-a737-e9c658ce1513",
+      "name": {
+       "cs": "Život v kancelářu",
+       "en": "Office life",
+       "es": "Vida de oficina",
+       "fr": "Vie au bureau",
+       "sk": "Život v kancelárii"
+      }
+     },
+     {
+      "benefits": [
+       {
+        "name": {
+         "cs": "Zkrácená pracovní doba",
+         "en": "Reduction of working time (RTT)",
+         "es": "Reducción del tiempo de trabajo (RTT)",
+         "fr": "RTT / Jour de repos",
+         "sk": "Skrátená pracovná doba"
+        },
+        "preview_order": null,
+        "reference": "fb8db8e5-d9c6-4c9c-9877-634dc015c3aa"
+       }
+      ],
+      "category_ref": "2773570c-7622-43a3-8b08-be91f7f0ac02",
+      "name": {
+       "cs": "Dovolená",
+       "en": "Vacation & time off",
+       "es": "Vacaciones y ausencias",
+       "fr": "Congés & absences",
+       "sk": "Dovolenka"
+      }
+     },
+     {
+      "benefits": [
+       {
+        "name": {
+         "cs": "Afterworky, Týmové obědy",
+         "en": "Afterworks, Team lunches",
+         "es": "Afterworks, Almuerzos de equipo",
+         "fr": "Afterworks, Déjeuners d'équipe, etc.",
+         "sk": "Afterworky, Tímové obedy"
+        },
+        "preview_order": null,
+        "reference": "cb79dc42-5a6b-421b-bb12-8352e63db573"
+       }
+      ],
+      "category_ref": "d954dcee-5a4e-48ca-8e2a-73cc1d5ca32b",
+      "name": {
+       "cs": "Firemní kultura",
+       "en": "Culture",
+       "es": "Cultura de empresa",
+       "fr": "Culture d'entreprise",
+       "sk": "Firemná kultúra"
+      }
+     },
+     {
+      "benefits": [
+       {
+        "name": {
+         "cs": "Plán profesního rozvoje",
+         "en": "Professional development plan",
+         "es": "Plan de desarrollo profesional",
+         "fr": "Plan de développement professionnel",
+         "sk": "Plán profesionálneho rozvoja"
+        },
+        "preview_order": null,
+        "reference": "8fcb13e0-7767-4890-8cb5-f43296ce7f23"
+       }
+      ],
+      "category_ref": "b126f1fc-743e-4295-b26f-f8be03316ae8",
+      "name": {
+       "cs": "Profesní rozvoj",
+       "en": "Professional development",
+       "es": "Desarrollo profesional",
+       "fr": "Développement professionnel",
+       "sk": "Profesionálny rozvoj"
+      }
+     },
+     {
+      "benefits": [
+       {
+        "name": {
+         "cs": "Péče o dítě, Školka",
+         "en": "Childcare, Nursery",
+         "es": "Cuidado infantil, Guardería",
+         "fr": "Aide à la garde d’enfant, Crèche...",
+         "sk": "Starostlivosť o dieťa, Škôlka"
+        },
+        "preview_order": 4,
+        "reference": "de09d757-a41c-4d14-8bf8-ab3fb48efd46"
+       },
+       {
+        "name": {
+         "cs": "Dovolená při onemocnění dětí",
+         "en": "Sick child leave",
+         "es": "Permiso por hijos enfermos",
+         "fr": "Congés pour enfant malade",
+         "sk": "Dovolenka pri ochorení detí"
+        },
+        "preview_order": null,
+        "reference": "88112835-53ab-460c-a108-71757185f771"
+       }
+      ],
+      "category_ref": "ccc1585c-322a-4a27-8689-31099ad0a772",
+      "name": {
+       "cs": "Podpora rodičů",
+       "en": "Parental benefits",
+       "es": "Prestaciones parentales",
+       "fr": "Parentalité",
+       "sk": "Podpora rodičov"
+      }
+     },
+     {
+      "benefits": [
+       {
+        "name": {
+         "cs": "Posilovna v prostorách kanceláře",
+         "en": "On-site gym",
+         "es": "Gimnasio de oficina",
+         "fr": "Salle de sport dans les locaux",
+         "sk": "Posilňovňa v priestoroch kancelárie"
+        },
+        "preview_order": 6,
+        "reference": "9d4d7727-9e12-420e-9d0b-adb6e9cce641"
+       }
+      ],
+      "category_ref": "c37c5d80-f26e-498a-9e52-79831ec13cef",
+      "name": {
+       "cs": "Zdraví a wellbeing",
+       "en": "Health & wellness",
+       "es": "Salud y bienestar",
+       "fr": "Santé & bien-être",
+       "sk": "Zdravie a wellbeing"
+      }
+     },
+     {
+      "benefits": [
+       {
+        "name": {
+         "cs": "Proplacení nad 50%",
+         "en": "Reimbursement above 50%",
+         "es": "Reembolso superior al 50%",
+         "fr": "Remboursement au delà des 50%",
+         "sk": "Preplatenie nad 50%"
+        },
+        "preview_order": 5,
+        "reference": "4b54bf5f-fd1c-4bfa-be26-e285d5aeb661"
+       },
+       {
+        "name": {
+         "cs": "Parkoviště",
+         "en": "Parking",
+         "es": "Aparcamiento",
+         "fr": "Parking",
+         "sk": "Parkovisko"
+        },
+        "preview_order": null,
+        "reference": "433347cc-86bd-4d99-8067-6e6270a3d833"
+       }
+      ],
+      "category_ref": "0753b080-0729-4c6f-924d-bde72819d06a",
+      "name": {
+       "cs": "Doprava a mobilita",
+       "en": "Transport & mobility",
+       "es": "Transporte y movilidad",
+       "fr": "Transports & mobilité",
+       "sk": "Doprava a mobilita"
+      }
+     }
+    ],
+    "count": 10,
+    "preview": [
+     {
+      "name": {
+       "cs": "1-2 dny home-office",
+       "en": "Between 1-2 days at home",
+       "es": "Hasta 1-2 días de teletrabajo",
+       "fr": "Entre 1-2 jours de télétravail",
+       "sk": "1-2 dni home-office"
+      },
+      "reference": "ac9446d1-f9a9-449d-95fe-4407247b8367"
+     },
+     {
+      "name": {
+       "cs": "Obědy zajištěny / vybavená kuchyně",
+       "en": "Food service or stocked kitchen",
+       "es": "Restaurante de empresa / Cocina para empleados",
+       "fr": "Restaurant d’entreprise / Cuisine pour les employés",
+       "sk": "Obedy zaistené / vybavená kuchyňa"
+      },
+      "reference": "ded0fea3-8712-4183-9ebb-51500cbfaef6"
+     },
+     {
+      "name": {
+       "cs": "Péče o dítě, Školka",
+       "en": "Childcare, Nursery",
+       "es": "Cuidado infantil, Guardería",
+       "fr": "Aide à la garde d’enfant, Crèche...",
+       "sk": "Starostlivosť o dieťa, Škôlka"
+      },
+      "reference": "de09d757-a41c-4d14-8bf8-ab3fb48efd46"
+     },
+     {
+      "name": {
+       "cs": "Proplacení nad 50%",
+       "en": "Reimbursement above 50%",
+       "es": "Reembolso superior al 50%",
+       "fr": "Remboursement au delà des 50%",
+       "sk": "Preplatenie nad 50%"
+      },
+      "reference": "4b54bf5f-fd1c-4bfa-be26-e285d5aeb661"
+     },
+     {
+      "name": {
+       "cs": "Posilovna v prostorách kanceláře",
+       "en": "On-site gym",
+       "es": "Gimnasio de oficina",
+       "fr": "Salle de sport dans les locaux",
+       "sk": "Posilňovňa v priestoroch kancelárie"
+      },
+      "reference": "9d4d7727-9e12-420e-9d0b-adb6e9cce641"
+     }
+    ]
+   }
+  },
+  "skills": [
+   {
+    "name": {
+     "cs": "Komunikační dovednosti",
+     "en": "Communication skills",
+     "es": "Capacidad de comunicación",
+     "fr": "Communication",
+     "sk": "Komunikačné zručnosti"
+    },
+    "reference": "7e7fb132-411c-44c1-b253-f14a140a52a8"
+   }
+  ],
+  "salary_min": null,
+  "slug": "expert-haut-niveau-analyste-de-donnees-data-analyst_paris",
+  "apply_url": "https://choisirleservicepublic.gouv.fr/offre-emploi/expert-haut-niveau-analyste-de-donnees-data-analyst-reference-DEF_19-00069482/",
+  "summary": "",
+  "contract_type": "full_time",
+  "archived_at": null,
+  "tools": [
+   {
+    "name": "Kubernetes",
+    "reference": "37326936-9957-4693-9faf-28aaa7b69038"
+   },
+   {
+    "name": "QlikSense",
+    "reference": "9a59098f-334a-48d7-97ce-ee3de048a686"
+   },
+   {
+    "name": "Docker",
+    "reference": "e4b6970a-5b93-40d5-8189-7641ef89c032"
+   },
+   {
+    "name": "SQL",
+    "reference": "e9255a1d-8071-4a44-a28c-a36d1b925178"
+   },
+   {
+    "name": "Python",
+    "reference": "f7b4954b-0811-423e-83c8-140b519aa616"
+   }
+  ],
+  "office": {
+   "address": "60 Boulevard du Général Martial Valin, 75015 Paris, France",
+   "local_address": "60 Boulevard du Général Martial Valin, 75015 Paris, France",
+   "city": "Paris",
+   "latitude": 48.83648,
+   "longitude": 2.27572,
+   "country_code": "FR",
+   "district": "Paris",
+   "zip_code": "75015",
+   "local_district": "Paris",
+   "local_city": "Paris"
+  },
+  "social_image": "https://imagen.welcometothejungle.com/api/generate-image?data=%7B%22contractType%22%3A%22full_time%22%2C%22coverImage%22%3A%22https%3A%2F%2Fcdn-images.welcometothejungle.com%2FofCUz2zZTqgrOOWq3LlnNg_VKnsmj2pWrTVwQ5g5pEk%2Frs%3Aauto%3A1200%3A627%3A%2Fq%3A85%2FczM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc%22%2C%22logo%22%3A%22https%3A%2F%2Fcdn-images.welcometothejungle.com%2FocgZ6m_nvaw9ZjiytsA-moLmIHJPTvWXXkqYHk48Ak4%2Frs%3Aauto%3A400%3A%3A%2Fq%3A85%2FczM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby83NjA5LzE2NzU3OC85N2QxMTcyNS0yYTc3LTRhMjEtODQyOS02M2JiODJjOWViNjIucG5n%22%2C%22name%22%3A%22EXPERT%20HAUT%20NIVEAU%20ANALYSTE%20DE%20DONNEES%20DATA%20ANALYST%22%2C%22office%22%3A%22Paris%22%2C%22organizationName%22%3A%22Civils%20de%20la%20D%C3%A9fense%20-%20Minist%C3%A8re%20des%20Arm%C3%A9es%20et%20des%20Anciens%20combattants%22%2C%22remote%22%3A%22punctual%22%7D&locale=fr-FR&template-id=wttj-job-og-image&token=3007d414f8f3966fc07eeddb1410e2237ed11bf386a294f3b7db617dae51ed3b",
+  "updated_at": "2026-09-18T22:05:45.856003Z",
+  "profession": {
+   "name": {
+    "cs": "Data/Business Intelligence",
+    "en": "Data / Business Intelligence",
+    "es": "Datos/Inteligencia empresarial",
+    "fr": "Données/Business Intelligence",
+    "sk": "Údaje/obchodné spravodajstvo"
+   },
+   "category": {
+    "cs": "Technika a strojírenství",
+    "en": "Tech & Engineering",
+    "es": "Tecnología e ingeniería",
+    "fr": "Technologie et ingénierie",
+    "sk": "Technika a inžinierstvo"
+   },
+   "sub_category_reference": "data-business-intelligence-yZjY1",
+   "sub_category_name": {
+    "cs": "Data/Business Intelligence",
+    "en": "Data / Business Intelligence",
+    "es": "Datos/Inteligencia empresarial",
+    "fr": "Données/Business Intelligence",
+    "sk": "Údaje/obchodné spravodajstvo"
+   },
+   "category_reference": "tech-engineering-3NjUy",
+   "category_name": {
+    "cs": "Technika a strojírenství",
+    "en": "Tech & Engineering",
+    "es": "Tecnología e ingeniería",
+    "fr": "Technologie et ingénierie",
+    "sk": "Technika a inžinierstvo"
+   }
+  },
+  "organization": {
+   "parity_women": 40,
+   "sectors": [
+    {
+     "name": "IT / Digital",
+     "parent_name": "Conseil / Audit"
+    },
+    {
+     "name": "Cybersécurité",
+     "parent_name": "Tech"
+    },
+    {
+     "name": "Administration publique",
+     "parent_name": "Secteur public et administration"
+    }
+   ],
+   "turnover": null,
+   "media_instagram": "",
+   "video_playlist_provider": "youtube",
+   "media_twitter": "",
+   "reference": "baJevK",
+   "revenue": "",
+   "playlist_id": "PLGEIoDuy_6B-xSxqmR7kLZVUSEDYk-OS1",
+   "media_youtube": "",
+   "jobs_count": 1979,
+   "cover_image": {
+    "small": {
+     "url": "https://cdn-images.welcometothejungle.com/2me7ygJRXA_Y_Ih3velOUeG9brEcMbqtqlW3orhiGJs/rs:auto:640::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc"
+    },
+    "url": "https://cdn-images.welcometothejungle.com/BsRJA4SP-l2MaaRLcGUOpgVwtcMb6gUi-Rfjeslz-f0/rs:auto:2000:450:/g:fp:0:0.5/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc",
+    "medium": {
+     "url": "https://cdn-images.welcometothejungle.com/ktosA0g5wX5Rfc0YAd4Q3D_dmiuO96PB7T9siQlFAZY/rs:auto:900::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc"
+    },
+    "large": {
+     "url": "https://cdn-images.welcometothejungle.com/ZLpR1WN4Au20CpQyicDh6ALDG7Z5GYCbnHyhhIGec30/rs:auto:1500::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc"
+    },
+    "social": {
+     "url": "https://cdn-images.welcometothejungle.com/ofCUz2zZTqgrOOWq3LlnNg_VKnsmj2pWrTVwQ5g5pEk/rs:auto:1200:627:/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy93ZWJzaXRlX29yZ2FuaXphdGlvbi9jb3Zlcl9pbWFnZS93dHRqX2ZyL2ZyLTYxMDY4MWUxLTFjOWUtNDBhYS05OWVlLTcyZDAwYzM5NjNmNS5qcGc"
+    }
+   },
+   "parity_men": 60,
+   "media_pinterest": "",
+   "industry": "IT / Digital, Cybersécurité, Administration publique",
+   "nb_employees": 64000,
+   "gdpr_setting": {
+    "application_message": null,
+    "consent_duration": 2,
+    "privacy_policy_url": null
+   },
+   "default_language": "fr",
+   "automatic_email": true,
+   "media_website_url": "https://www.civils.defense.gouv.fr/",
+   "equality_indexes": null,
+   "creation_year": 2018,
+   "logo": {
+    "url": "https://cdn-images.welcometothejungle.com/ocgZ6m_nvaw9ZjiytsA-moLmIHJPTvWXXkqYHk48Ak4/rs:auto:400::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby83NjA5LzE2NzU3OC85N2QxMTcyNS0yYTc3LTRhMjEtODQyOS02M2JiODJjOWViNjIucG5n",
+    "thumb": {
+     "url": "https://cdn-images.welcometothejungle.com/cDqBcQS1oWVzPBjsmJf8s4HcRNLKWSk6TACGO9CbZ5g/rs:auto:70::/q:85/czM6Ly93dHRqLXByb2R1Y3Rpb24vdXBsb2Fkcy9vcmdhbml6YXRpb24vbG9nby83NjA5LzE2NzU3OC85N2QxMTcyNS0yYTc3LTRhMjEtODQyOS02M2JiODJjOWViNjIucG5n"
+    }
+   },
+   "description": "<p>Vous souhaitez donner du sens à votre carrière ? Rejoignez le ministère des Armées et des Anciens combattants en tant que civil !</p><p>Les Civils de la Défense, ce sont plus de 64 000 femmes et hommes qui contribuent chaque jour, aux côtés des militaires, au fonctionnement du ministère des Armées et des Anciens combattants et à la réussite des missions des forces armées.</p><p>Nous rejoindre, c’est l’opportunité de <strong>contribuer à une mission essentielle au service de la Nation</strong> sans porter l’uniforme, quel que soit son diplôme et son domaine métier.</p><p>C’est <strong>s’engager autrement</strong> pour la protection du territoire, de la population et des intérêts français, tout en bénéficiant de perspectives professionnelles valorisantes et diversifiées.</p><p>De la cyberdéfense à la mécanique, des ressources humaines au nucléaire de Défense, de la santé à l’environnement, avec ou sans diplômes et à tout niveau de responsabilités, le ministère offre plus de 3 500 postes chaque année dans plus de 15 domaines métiers différents et sur plus de 5 000 sites en France métropolitaine et en Outre-mer.</p><p>Visionnez le clip de campagne : <a target=\"_blank\" rel=\"noopener noreferrer\" href=\"http://www.youtube.com/watch?v=uwM_mPd2ePI\">Le ministère des Armées recrute des civils - YouTube</a></p>",
+   "media_linkedin": "civils-de-la-defense",
+   "name": "Civils de la Défense - Ministère des Armées et des Anciens combattants",
+   "expansion_metadata": {
+    "has_enriched_profile": false,
+    "expansion_company_url": null
+   },
+   "media_facebook": "",
+   "labels": [],
+   "headquarter": {
+    "address": "60, Boulevard du Général Martial Valin, Paris",
+    "local_address": null,
+    "city": "Paris",
+    "latitude": 48.83648,
+    "longitude": 2.27572,
+    "country_code": "FR",
+    "district": "Paris",
+    "zip_code": "75015",
+    "local_district": null,
+    "local_city": null
+   },
+   "has_external_ats": true,
+   "website_organization": {
+    "slug": "ministere-des-armees-fr",
+    "i18n_descriptions": {
+     "fr": "<p>Vous souhaitez donner du sens à votre carrière ? Rejoignez le ministère des Armées et des Anciens combattants en tant que civil !</p><p>Les Civils de la Défense, ce sont plus de 64 000 femmes et hommes qui contribuent chaque jour, aux côtés des militaires, au fonctionnement du ministère des Armées et des Anciens combattants et à la réussite des missions des forces armées.</p><p>Nous rejoindre, c’est l’opportunité de <strong>contribuer à une mission essentielle au service de la Nation</strong> sans porter l’uniforme, quel que soit son diplôme et son domaine métier.</p><p>C’est <strong>s’engager autrement</strong> pour la protection du territoire, de la population et des intérêts français, tout en bénéficiant de perspectives professionnelles valorisantes et diversifiées.</p><p>De la cyberdéfense à la mécanique, des ressources humaines au nucléaire de Défense, de la santé à l’environnement, avec ou sans diplômes et à tout niveau de responsabilités, le ministère offre plus de 3 500 postes chaque année dans plus de 15 domaines métiers différents et sur plus de 5 000 sites en France métropolitaine et en Outre-mer.</p><p>Visionnez le clip de campagne : <a target=\"_blank\" rel=\"noopener noreferrer\" href=\"http://www.youtube.com/watch?v=uwM_mPd2ePI\">Le ministère des Armées recrute des civils - YouTube</a></p>"
+    }
+   },
+   "average_age": 47,
+   "profile_type": "standard"
+  },
+  "status": "published",
+  "contract_duration_min": null,
+  "recruitment_process": null,
+  "salary_currency": null,
+  "ats_questions": [],
+  "remote": "punctual",
+  "urls": [
+   {
+    "kind": "canonical",
+    "language": "fr",
+    "href": "https://www.welcometothejungle.com/fr/companies/ministere-des-armees-fr/jobs/expert-haut-niveau-analyste-de-donnees-data-analyst_paris"
+   },
+   {
+    "kind": "alternate",
+    "language": "fr",
+    "href": "https://www.welcometothejungle.com/fr/companies/ministere-des-armees-fr/jobs/expert-haut-niveau-analyste-de-donnees-data-analyst_paris"
+   }
+  ],
+  "company_description": null,
+  "salary_max": null,
+  "description": "<p><b>Vos missions en quelques mots</b><br/><br/>La division, forte d’une quarantaine de personnes (civils et militaires), cherche à optimiser les processus de travail et les échanges entre les différents acteurs grâce à des solutions informatiques adaptées.<br/>Vous êtes l’interface entre des besoins métier complexes et des experts techniques portant des solutions data modernes, avec une vraie liberté pour proposer et industrialiser vos outils.<br/><br/>A ce titre vos missions seront de :<br/>- Transformer des données complexes (budgétaires, opérationnelles, RH, programmes d’armement) en outils clairs qui aident les décideurs militaires à piloter des choix stratégiques;<br/>- Collecter et structurer des données issues de sources variées ;<br/>- Construire des analyses statistiques et prédictives pour éclairer la décision ;<br/>- Développer des tableaux de bord et indicateurs clés (data visualisation) ;<br/>- Automatiser des traitements de données récurrents via scripts et pipelines ;<br/>- Diriger la conception et contribuer à la mise en production des outils sur la plateforme ARTEMIS, en lien avec des spécialistes Docker/Kubernetes.<br/><br/>Ces travaux pourront également s’inscrire dans un écosystème plus large, en lien avec d’autres services de l’État ou partenaires publics.</p>",
+  "application_fields": [
+   {
+    "id": "35062313-13e9-4778-8d25-2eab7cf80b45",
+    "mode": "optional",
+    "name": "cover_letter"
+   },
+   {
+    "id": "eb38f5cd-08c4-4a68-8bad-cea0abe98c4b",
+    "mode": "mandatory",
+    "name": "resume"
+   },
+   {
+    "id": "239721a2-0d0a-4280-a15c-cc74f29d576d",
+    "mode": "disabled",
+    "name": "portfolio"
+   },
+   {
+    "id": "d43638a0-bc9e-405b-9c2b-5c111f5703ed",
+    "mode": "optional",
+    "name": "picture"
+   },
+   {
+    "id": "f6ee5ea5-ffe5-449e-8a54-b9d10cc8ff3e",
+    "mode": "optional",
+    "name": "media_website"
+   },
+   {
+    "id": "1f731a63-db4d-4e50-8d82-89c468af0218",
+    "mode": "optional",
+    "name": "media_linkedin"
+   },
+   {
+    "id": "7bdf6ac2-ad25-439e-a18e-e24967c245bb",
+    "mode": "optional",
+    "name": "media_twitter"
+   },
+   {
+    "id": "f1e94f96-d4d1-4098-904f-10fe4f6a4ece",
+    "mode": "disabled",
+    "name": "media_github"
+   },
+   {
+    "id": "fb138509-3e0d-4fea-9145-9a407716cda5",
+    "mode": "disabled",
+    "name": "media_stackoverflow"
+   },
+   {
+    "id": "c8c8cfcc-59a1-4557-a868-7e9b9ad203df",
+    "mode": "disabled",
+    "name": "media_behance"
+   },
+   {
+    "id": "f5c6a562-e0ca-41de-acb8-d5560556bbc0",
+    "mode": "disabled",
+    "name": "media_dribbble"
+   },
+   {
+    "id": "5cd630d2-1451-436c-b477-898a690bb022",
+    "mode": "disabled",
+    "name": "media_xing"
+   }
+  ],
+  "key_missions": [],
+  "offices": [
+   {
+    "address": "60 Boulevard du Général Martial Valin, 75015 Paris, France",
+    "local_address": "60 Boulevard du Général Martial Valin, 75015 Paris, France",
+    "city": "Paris",
+    "latitude": 48.83648,
+    "longitude": 2.27572,
+    "country_code": "FR",
+    "district": "Paris",
+    "zip_code": "75015",
+    "local_district": "Paris",
+    "local_city": "Paris"
+   }
+  ],
+  "profile": "<p><b>Profil recherché</b><br/><br/>Titulaire d’un master 2 en data, statistiques, informatique décisionnelle ou équivalent, vous justifiez d’une première expérience significative dans l’analyse de données, l’optimisation de processus ou la conduite de projets data. Vous maîtrisez SQL et Python ou R, ainsi que les outils de data visualisation, idéalement QlikSense. Votre capacité d’analyse, votre sens de l’initiative, vos qualités relationnelles et votre aptitude à travailler en lien avec des interlocuteurs techniques comme métiers sont indispensables à l’exercice de ces missions.<br/>Il s’agira d’être moteur dans la conduite du changement au sein de la division plans, programmation et évaluation (PPE), dans le cadre de la définition du besoin d’outils numériques de pilotage décisionnel, d’analyse et de suivi des processus financiers.</p>",
+  "name": "EXPERT HAUT NIVEAU ANALYSTE DE DONNEES DATA ANALYST",
+  "team": null,
+  "featured_page": {
+   "type": "custom",
+   "slug": "/culture-1"
+  },
+  "experience_level": null,
+  "education_level": null,
+  "contract_duration_max": null,
+  "is_default": false,
+  "ats": "external",
+  "recruiter_proposal": null,
+  "start_date": null,
+  "published_at": "2026-08-07T22:05:52Z",
+  "language": "fr",
+  "salary_period": null
+ }
+}

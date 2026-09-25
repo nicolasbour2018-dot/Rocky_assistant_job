@@ -1,0 +1,27 @@
+{
+ "resultats": [
+  {
+   "id": "201ABCD",
+   "intitule": "Data analyst (H/F)",
+   "description": "Vous analysez les données de production et construisez les tableaux de bord de l'équipe.",
+   "dateCreation": "2026-09-20T08:00:00.000Z",
+   "lieuTravail": {"libelle": "75 - PARIS 11", "codePostal": "75011", "commune": "75111"},
+   "entreprise": {"nom": "EXEMPLE CONSEIL"},
+   "typeContrat": "CDI",
+   "typeContratLibelle": "Contrat à durée indéterminée",
+   "salaire": {"libelle": "Annuel de 42000.0 Euros à 48000.0 Euros sur 12.0 mois"},
+   "secteurActiviteLibelle": "Conseil en systèmes et logiciels informatiques",
+   "origineOffre": {"origine": "1", "urlOrigine": "https://candidat.francetravail.fr/offres/recherche/detail/201ABCD"},
+   "contact": {"urlPostulation": "https://exemple-conseil.example/postuler/201ABCD"}
+  },
+  {
+   "id": "201ABCE",
+   "intitule": "Chargé d'études statistiques (H/F)",
+   "lieuTravail": {"libelle": "92 - NANTERRE"},
+   "entreprise": {},
+   "typeContrat": "CDD",
+   "origineOffre": {}
+  }
+ ],
+ "filtresPossibles": []
+}

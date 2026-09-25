@@ -127,7 +127,7 @@ aucun identifiant interne affiché.
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| C1. Sources | Contrat `JobSource` et registre repris ; connecteurs portés un à un ; APEC avec filtre de lieu et gestion honnête des descriptions incomplètes ; France Travail « en attente d'accès » (D8) ; noms de source normalisés | Chaque connecteur testé sur jeux de données enregistrés ; une panne de source est isolée et visible | ⬜ |
+| C1. Sources | Contrat `JobSource` et registre repris ; connecteurs portés un à un ; APEC avec filtre de lieu et gestion honnête des descriptions incomplètes ; France Travail « en attente d'accès » (D8) ; noms de source normalisés | Chaque connecteur testé sur jeux de données enregistrés ; une panne de source est isolée et visible | 🔄 |
 | C2. Import par URL | JSON-LD puis HTML ; erreurs remontées avec leur raison (plus d'exception silencieuse) | Un lien invalide affiche sa raison | ⬜ |
 | C3. Analyse d'annonce | `job_analysis` rapatrié dans `offres` ; compétences via les alias ; critères éliminatoires distincts des préférences ; date limite ; TJM distinct du salaire annuel ; description mise en forme ; résumé de description | Extraction mesurée sur un échantillon de l'archive | ⬜ |
 | C4. Scoring : règles | Fonction pure sans effet de bord (ne modifie ni l'offre ni la base) ; **preuve minimale** (pas de composante compétences pleine sur 1–2 compétences) ; **indice de confiance** affiché ; intitulé comparé aux intitulés des pistes ; détail et preuves par composante ; version des règles ; caractéristiques stockées (D14) | Chaque score s'explique composante par composante ; la « Data Protection Analyst » (79,6 % en v1) ne remonte plus | ⬜ |
@@ -311,3 +311,21 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(B5 → C3)** Un nom « X (Y) » (« Traitement du langage naturel (NLP) ») ne répond qu'à lui-même (Q9 compare les
   noms entiers). *Tranché par Nicolas (25/09) : règle inchangée ; une variante utile s'ajoute comme alias*
   (« Traitement du langage naturel » alias de NLP).
+- **(C1 → E3)** Indeed/TheirStack n'est pas porté (quota épuisé, API payante) : Indeed arrive par ses alertes e-mail.
+- **(C1 → C2, C6)** Compléter une offre incomplète : LinkedIn et Adzuna depuis la page de l'annonce (import d'URL) ;
+  APEC refuse son détail (DataDome) : la **lecture assistée** (navigateur visible, déclenchée par l'utilisateur, une
+  offre à la fois) reste à trancher avec Nicolas.
+- **(C1 → C3)** Apec donne contrat (`typeContrat`, ex. `101888`) et télétravail (`idNomTeletravail`) en **codes
+  sans libellé** : laissés vides en C1, à décoder par un référentiel Apec, jamais devinés. Descriptions Wellfound en
+  Markdown ; offres Wellfound anciennes encore en ligne (publiée en 2024).
+- **(C1 → C4, C6)** Welcome to the Jungle ne filtre pas le lieu (offres de New York, Austin, Londres pour « Data
+  analyst ») ; Wellfound sert une page pour un lieu qu'il ne connaît pas (« Eure et Loire »). Le lieu doit donc peser
+  dans le score ou marquer l'offre, pas seulement la requête.
+- **(C1 → C6)** `collect` déduplique par source seulement ; la déduplication entre sources et le rattachement aux
+  pistes (appeler la collecte piste par piste) sont à faire en C6. Durée mesurée : 48 s pour une piste de 6 requêtes
+  avec détails (pause d'une seconde par site).
+- **(C1 → Nicolas, B5)** Lieu « Eure et Loire » dans les deux pistes : Apec ne connaît qu'« Eure-et-Loir » (requêtes
+  sautées et signalées par `rocky-admin sources`).
+- **(C1 → F1)** État des sources à l'écran ⚙️ Système : reprendre `CollectionReport` et `report_lines`.
+- **(C1 → §5 VPS)** Sur un VPS (IP de centre de données, plusieurs comptes), réévaluer le volume par compte et la
+  tolérance de LinkedIn et Wellfound (Cloudflare) ; la règle d'arrêt reste.

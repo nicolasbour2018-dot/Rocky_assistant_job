@@ -1,0 +1,23 @@
+[
+ {
+  "lieuDisplay": "Damparis - 39",
+  "lieuId": 575328,
+  "lieuType": "FR_COMMUNE",
+  "latitude": 47.0705614,
+  "longitude": 5.4084483,
+  "citycode": "39189",
+  "lieuxParentsIds": [
+   "39",
+   "20071"
+  ]
+ },
+ {
+  "lieuDisplay": "Paris - 75",
+  "lieuId": 75,
+  "lieuType": "FR_DEPARTEMENT",
+  "citycode": "75",
+  "lieuxParentsIds": [
+   "711"
+  ]
+ }
+]

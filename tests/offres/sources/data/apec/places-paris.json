@@ -1,0 +1,50 @@
+[
+ {
+  "lieuDisplay": "Cormeilles-en-Parisis - 95",
+  "lieuId": 596362,
+  "lieuType": "FR_COMMUNE",
+  "latitude": 48.9686543,
+  "longitude": 2.1991951,
+  "citycode": "95176",
+  "lieuxParentsIds": [
+   "95",
+   "711"
+  ]
+ },
+ {
+  "lieuDisplay": "Damparis - 39",
+  "lieuId": 575328,
+  "lieuType": "FR_COMMUNE",
+  "latitude": 47.0705614,
+  "longitude": 5.4084483,
+  "citycode": "39189",
+  "lieuxParentsIds": [
+   "39",
+   "20071"
+  ]
+ },
+ {
+  "lieuDisplay": "Fontenay-en-Parisis - 95",
+  "lieuId": 596378,
+  "lieuType": "FR_COMMUNE",
+  "latitude": 49.0499287,
+  "longitude": 2.4457404,
+  "citycode": "95241",
+  "lieuxParentsIds": [
+   "95",
+   "711"
+  ]
+ },
+ {
+  "lieuDisplay": "Le Touquet-Paris-Plage - 62",
+  "lieuId": 585627,
+  "lieuType": "FR_COMMUNE",
+  "latitude": 50.5087538,
+  "longitude": 1.5988302,
+  "citycode": "62826",
+  "lieuxParentsIds": [
+   "62",
+   "20073"
+  ]
+ }
+]

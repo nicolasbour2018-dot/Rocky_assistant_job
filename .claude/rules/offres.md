@@ -23,3 +23,15 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Chaque route répond aussi sans HTMX (page entière ou redirection).
 - `hx-swap` et `hx-target` s'héritent des ancêtres : tout élément qui cible une zone déclare explicitement son
   `hx-swap` (bug « Revenir » de B4).
+
+## Sources (`rocky/offres/sources/`, décision `docs/decisions/C1-sources.md`)
+- **Ligne rouge (Q5)** : jamais de résolution ni d'esquive d'un défi anti-robot, de session ou compte réutilisé, de
+  proxy, d'imitation d'empreinte TLS, de réessai. Un refus (403, 429, défi Cloudflare) lève `SourceRefusedError` et
+  la source s'arrête pour la collecte. L'en-tête `x-datadome: protected` seul n'est **pas** un refus.
+- Toute requête passe par `PublicHttp` (pause par hôte, aucun réessai) ; aucun autre client HTTP.
+- Une source ne lève que `SourceRefusedError`, `SourceFailedError` ou `QuerySkippedError` ; tout le reste est un bug,
+  isolé et journalisé par `collect`. Les raisons sont en français et ne citent jamais l'URL ni ses paramètres.
+- Faits bruts de l'annonce seulement (textes contrat, télétravail, salaire) ; aucune interprétation (C3), aucune
+  valeur devinée (un code inconnu reste vide). Une description partielle est gardée, marquée incomplète avec sa raison.
+- Une source n'existe que par `registry.build_sources`. Nouveau connecteur : capture réelle
+  (`docs/procedures/c1-captures/`), jeu anonymisé dans `tests/offres/sources/data/<source>/`, tests par `Replay`.
