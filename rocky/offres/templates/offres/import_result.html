@@ -20,6 +20,7 @@
       {% for label, value in facts %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}
     </dl>
     {% endif %}
+    {% if score is defined and score %}{% include "offres/import_score.html" %}{% endif %}
     {% if analysis is defined and analysis %}{% include "offres/import_analysis.html" %}{% endif %}
     {% set description = analysis.description if analysis is defined and analysis else offer.description %}
     <details class="import-description"{% if description | length < 1500 %} open{% endif %}>

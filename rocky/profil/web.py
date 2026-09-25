@@ -38,7 +38,6 @@ from rocky.profil.model import (
     RemoteMode,
     Skill,
     SkillCategory,
-    SkillDraft,
     SkillLevel,
     Track,
     TrackStatus,
@@ -189,10 +188,10 @@ def _editor(request: Request, account: Account) -> Iterator[ProfileEditor]:
         )
 
 
-def skills_of(request: Request, account: Account) -> tuple[SkillDraft, ...]:
-    """The account's skills, for the screens of the other modules (read through the profile use case)."""
+def profile_of(request: Request, account: Account) -> Profile:
+    """The account's profile, for the screens of the other modules (read through the profile use case)."""
     with _editor(request, account) as editor:
-        return tuple(skill.content for skill in editor.profile().skills)
+        return editor.profile()
 
 
 def _error_status(request: Request) -> int:
@@ -303,11 +302,6 @@ def _refused(
     return _render(
         request, profile, key=key, state=state, status_code=_error_status(request)
     )
-
-
-def _read_profile(request: Request, account: Account) -> Profile:
-    with _editor(request, account) as editor:
-        return editor.profile()
 
 
 # Stored values shown in the edit forms
@@ -444,14 +438,14 @@ def _found[T: (Track, Skill, Language, Experience, Project)](
 
 @router.get("", response_class=HTMLResponse)
 def profile_page(request: Request, account: CurrentAccount) -> HTMLResponse:
-    return _render(request, _read_profile(request, account))
+    return _render(request, profile_of(request, account))
 
 
 @router.get("/demarrage", response_class=HTMLResponse)
 def onboarding(
     request: Request, account: CurrentAccount, etape: int = 1
 ) -> HTMLResponse:
-    profile = _read_profile(request, account)
+    profile = profile_of(request, account)
     return _onboarding_page(request, profile, max(1, min(etape, 3)))
 
 
@@ -507,7 +501,7 @@ def onboarding_identity(
                 )
             )
     except ProfileInputError as error:
-        profile = _read_profile(request, account)
+        profile = profile_of(request, account)
         return _onboarding_page(request, profile, 1, form=form, error=str(error))
     return RedirectResponse(f"{ONBOARDING_PATH}?etape=2", status_code=303)
 
@@ -547,7 +541,7 @@ def onboarding_track(request: Request, account: CurrentAccount, form: Form) -> R
         with _editor(request, account) as editor:
             editor.add_track(track)
     except ProfileInputError as error:
-        profile = _read_profile(request, account)
+        profile = profile_of(request, account)
         return _onboarding_page(request, profile, 3, form=form, error=str(error))
     return RedirectResponse(PROFILE_PATH, status_code=303)
 
@@ -569,7 +563,7 @@ def section(
 ) -> Response:
     if key not in SECTION_KEYS:
         return Response(status_code=404)
-    profile = _read_profile(request, account)
+    profile = profile_of(request, account)
     state = SectionState(language="en" if langue == "en" else "fr")
     if modifier is not None:
         stored = _stored_values(profile, key, modifier)
@@ -619,7 +613,7 @@ def _write(
             profile = editor.profile()
     except ProfileInputError as error:
         return _refused(
-            request, _read_profile(request, account), key, editing, form, error
+            request, profile_of(request, account), key, editing, form, error
         )
     return _saved(request, profile, key)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
@@ -17,6 +18,7 @@ from rocky.offres.analysis.model import RULES_VERSION, Salary, SalaryPeriod
 from rocky.offres.imports.rules import VISIBLE_TEXT_REASON
 from rocky.offres.imports.usecases import PASTE_HINT
 from rocky.offres.imports.web import offer_facts, salary_label
+from rocky.offres.scoring.model import RULES_VERSION as SCORE_RULES_VERSION
 from rocky.offres.sources.model import CollectedOffer
 from rocky.system.llm import LlmUnavailableError
 from tests.offres.sources.replay import Answer, Replay, answer
@@ -302,6 +304,33 @@ def test_the_preview_shows_the_analysis_with_the_account_skills(
     assert "Kotlin" not in page  # a skill the posting does not name
     assert f"Règles d'analyse : {RULES_VERSION}." in page
     assert 'hx-post="/offres/importer/resume"' in page
+
+
+def test_the_preview_shows_the_score_component_by_component(
+    client: TestClient,
+) -> None:
+    add_skills(client, "Python", "Hadoop", "Power BI")
+    track = {"name": "Data", "titles": "Data Analyst", "locations": "Paris"}
+    assert client.post("/profil/pistes", data=track).status_code == 303
+
+    page = text_of(
+        client.post("/offres/importer", data={"lien": HELLOWORK}, headers=HTMX).text
+    )
+
+    assert "Score :" in page and "/ 100</h3>" in page
+    assert '<li class="badge">Piste : Data</li>' in page
+    assert '<th scope="row">Intitulé</th><td>100 %</td>' in re.sub(r">\s+<", "><", page)
+    assert "« Data Analyst » figure tel quel dans l'intitulé" in page
+    assert "Paris : dans la zone « Paris »" in page
+    assert f"Règles de score : {SCORE_RULES_VERSION}." in page
+
+
+def test_without_an_active_track_the_score_says_so(client: TestClient) -> None:
+    page = text_of(
+        client.post("/offres/importer", data={"lien": HELLOWORK}, headers=HTMX).text
+    )
+
+    assert "Aucune piste active : ni intitulé ni lieu comparés" in page
 
 
 def test_without_skills_the_analysis_says_where_to_add_them(client: TestClient) -> None:

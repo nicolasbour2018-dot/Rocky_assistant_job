@@ -1,0 +1,77 @@
+{% set best = score.best %}
+<section class="analysis score" aria-labelledby="score-title">
+  <h3 id="score-title">Score : {{ best.display }} / 100</h3>
+  <ul class="badges">
+    {% if best.track_name %}<li class="badge">Piste : {{ best.track_name }}</li>{% endif %}
+    <li class="badge{% if best.confidence.level == 'low' %} badge-warn{% elif best.confidence.level == 'high' %} badge-accent{% endif %}">{{ confidence_labels[best.confidence.level] }}</li>
+    {% if score.threshold_reason %}<li class="badge badge-warn">{{ score.threshold_reason }}</li>{% endif %}
+  </ul>
+
+  {% if best.caps %}
+  <div class="analysis-block">
+    <p class="alert alert-error">Score plafonné à {{ score_cap }} (sans plafond : {{ number(best.uncapped) }}).</p>
+    <ul class="evidence-list">
+      {% for cap in best.caps %}
+      <li><strong>{{ cap.label }}</strong>{% if cap.evidence %} <q>{{ cap.evidence }}</q>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if best.confidence.reasons %}
+  <ul class="score-reasons">
+    {% for reason in best.confidence.reasons %}<li>{{ reason }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <table class="offer-table score-table">
+    <thead>
+      <tr><th scope="col">Composante</th><th scope="col">Valeur</th><th scope="col">Poids</th><th scope="col">Ce qui a été comparé</th></tr>
+    </thead>
+    <tbody>
+      {% for component in best.components %}
+      <tr{% if not component.counted %} class="muted"{% endif %}>
+        <th scope="row">{{ component_labels[component.code] }}</th>
+        <td>{% if component.counted %}{{ number(component.value * 100) }} %{% else %}—{% endif %}</td>
+        <td>{% if component.counted %}{{ number(component.weight) }}{% else %}non compté{% endif %}</td>
+        <td>
+          {{ component.detail }}
+          {% if component.evidence %}
+          <details>
+            <summary>Preuves ({{ component.evidence | length }})</summary>
+            <ul class="evidence-list">
+              {% for item in component.evidence %}<li>{{ item }}</li>{% endfor %}
+            </ul>
+          </details>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if best.gaps %}
+  <div class="analysis-block">
+    <h4>Manques</h4>
+    <ul class="evidence-list">
+      {% for gap in best.gaps %}<li>{{ gap }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if best.notes %}
+  <ul class="score-reasons">
+    {% for note in best.notes %}<li>{{ note }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if score.tracks | length > 1 %}
+  <details>
+    <summary>Score par piste ({{ score.tracks | length }})</summary>
+    <ul class="evidence-list">
+      {% for track in score.tracks %}<li>{{ track.track_name }} : {{ track.display }} / 100</li>{% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+  <p class="hint">Règles de score : {{ score.rules_version }}.</p>
+</section>

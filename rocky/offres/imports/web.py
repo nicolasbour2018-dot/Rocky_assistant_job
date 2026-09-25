@@ -1,8 +1,8 @@
-"""« Importer une annonce » (steps C2, C3): a link gives a preview of the offer and its analysis, or the reason why
-it gives none; the summary by the language model is asked on demand.
+"""« Importer une annonce » (steps C2, C3, C4): a link gives a preview of the offer, its analysis and its score, or the
+reason why it gives none; the summary by the language model is asked on demand.
 
-Nothing is stored (decisions C2 and C3, Q1). The server renders every state; HTMX places the result under the form,
-and requests without HTMX get the whole page.
+Nothing is stored (decisions C2, C3 and C4, Q1 and Q12). The server renders every state; HTMX places the result
+under the form, and requests without HTMX get the whole page.
 """
 
 from __future__ import annotations
@@ -34,6 +34,12 @@ from rocky.offres.imports.model import (
 )
 from rocky.offres.imports.rules import offer_from_paste
 from rocky.offres.imports.usecases import import_link, link_sources
+from rocky.offres.scoring.model import (
+    CAP,
+    COMPONENT_LABELS,
+    CONFIDENCE_LABELS,
+)
+from rocky.offres.scoring.rules import number, score, scoring_profile
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import (
     CollectedOffer,
@@ -47,7 +53,7 @@ from rocky.profil.model import (
     LANGUAGE_NAMES,
     REMOTE_LABELS,
 )
-from rocky.profil.web import skills_of
+from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.llm import GeminiModel, JsonModel
@@ -78,6 +84,10 @@ def install(app: FastAPI) -> None:
         importance_order=IMPORTANCE_ORDER,
         importance_labels=IMPORTANCE_LABELS,
         condition_labels=CONDITION_LABELS,
+        component_labels=COMPONENT_LABELS,
+        confidence_labels=CONFIDENCE_LABELS,
+        score_cap=number(CAP),
+        number=number,
     )
     app.include_router(router)
 
@@ -209,10 +219,14 @@ def summarize_posting(
 def _analysis(
     request: Request, account: Account, preview: ImportPreview
 ) -> dict[str, object]:
-    skills = account_skills(skills_of(request, account))
+    profile = profile_of(request, account)
+    skills = account_skills(skill.content for skill in profile.skills)
+    today = _today(request)
+    analysis = analyze(preview.offer, skills, today=today)
     return {
-        "analysis": analyze(preview.offer, skills, today=_today(request)),
+        "analysis": analysis,
         "has_skills": bool(skills),
+        "score": score(analysis, preview.offer, scoring_profile(profile), today=today),
     }
 
 
