@@ -114,7 +114,7 @@ docs/
 ## 7. Réseau, API et données de test
 
 - Tests : aucun appel réseau ni fournisseur LLM ; utiliser des jeux de données enregistrés et des faux adaptateurs.
-- Appels réels (sources, Gmail, Groq) seulement quand l'étape l'exige, avec l'accord de Nicolas.
+- Appels réels (sources, Gmail, Gemini) seulement quand l'étape l'exige, avec l'accord de Nicolas.
 - Les jeux de test issus de l'archive sont anonymisés si nécessaire et ne contiennent aucun secret.
 
 ## 8. Vérification

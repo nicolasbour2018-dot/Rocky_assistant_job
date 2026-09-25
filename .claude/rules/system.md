@@ -32,6 +32,12 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
   **après** la validation, et un échec d'envoi est affiché.
 - Pas d'inscription publique : un compte naît par `rocky-admin invite`.
 
+## Modèle de langage (`rocky/system/llm.py`, décision `docs/decisions/C3-analyse.md`)
+- Un seul adaptateur (`GeminiModel`, protocole `JsonModel`) : délai borné, aucun réessai, réponse JSON dont l'appelant
+  vérifie la forme ; toute panne est une `LlmUnavailableError` avec sa raison en français.
+- La clé ne figure jamais dans une raison, une URL ni un journal. Sans clé, les fonctions qui en dépendent le disent.
+- Tests : faux modèle ou `MockTransport`, jamais d'appel réel (AGENTS §7).
+
 ## Tests
 - Fixtures de `tests/conftest.py` : `db` (transaction annulée) pour tout test SQL ; `migrated_engine` quand le
   test doit valider ; `empty_engine` pour un schéma vierge. Ne jamais écrire dans le schéma `public` de `test-db`.

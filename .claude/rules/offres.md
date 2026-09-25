@@ -51,3 +51,13 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
   ou `with_pasted_description`.
 - Les jeux enregistrés viennent de `docs/procedures/c2-captures/` ; aucun nom de personne (recruteur, salarié).
 - Écran : `wants_fragment` (de `system.shell`) décide fragment ou page entière ; la coque boost tous les liens.
+
+## Analyse d'annonce (`rocky/offres/analysis/`, décision `docs/decisions/C3-analyse.md`)
+- Tous les faits viennent de règles déterministes (`rules.py`, fonction pure) ; le LLM ne sert qu'au résumé, jamais
+  à un fait ni au score. Toute règle modifiée change `RULES_VERSION`.
+- Chaque fait garde sa phrase-preuve ; une valeur déduite le dit (`period_deduced`). Un code inconnu reste vide.
+- Les faits d'une source se décodent par couple (source, valeur), jamais par la valeur seule.
+- Compétences : termes du compte seulement (`account_skills`, lues par `profil.web.skills_of`), jamais un
+  dictionnaire global ni le SQL de `profil`.
+- Changer une règle : relancer `docs/procedures/c3-mesure/measure.py` ; une baisse se justifie dans la décision.
+  Une annotation ne se corrige que pour une erreur de lecture, notée dans le README de la mesure.

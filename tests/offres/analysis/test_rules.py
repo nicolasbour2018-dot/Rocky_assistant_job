@@ -139,6 +139,17 @@ def test_the_strongest_mention_wins() -> None:
     assert importance(result, "Python") == Importance.ELIMINATORY
 
 
+def test_a_section_title_and_an_english_application_sentence_are_not_requirements() -> (
+    None
+):
+    result = analysis(
+        "Skills And Experience Required\n- Good knowledge of Excel.\n"
+        "If your application is in line with the required profile, you will be contacted."
+    )
+
+    assert result.requirements == ()
+
+
 def test_required_sentences_outside_the_skills_are_kept_but_not_the_application() -> (
     None
 ):
@@ -233,6 +244,7 @@ def test_source_facts_are_decoded_per_source(
     ("text", "expected"),
     [
         ("Contrat à durée indéterminée, statut cadre.", (Contract.PERMANENT,)),
+        ("Location: Paris, France\n\nContract type: Permanent", (Contract.PERMANENT,)),
         ("Taux journalier (TJM) : 450-500.", (Contract.FREELANCE,)),
         ("Une première expérience (stage, alternance ou premier emploi).", ()),
         ("Poste en alternance de 24 mois.", (Contract.APPRENTICESHIP,)),

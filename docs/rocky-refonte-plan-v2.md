@@ -74,7 +74,7 @@ ni de hiérarchie de classes sans besoin réel.
 ### Adaptateurs
 
 Sources d'offres (contrat `JobSource` conservé) · Gmail lecture seule · SQL par module · fichiers PDF · navigateur
-(préremplissage) · LLM (Groq, délais d'attente, sorties structurées validées).
+(préremplissage) · LLM (Gemini, délais d'attente, sorties structurées validées).
 
 ### Modèle de données (esquisse, précisée dans chaque étape)
 
@@ -283,6 +283,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   formulations (`Télétravail`, `partial`, `no`…), quasi-doublons d'une même offre sous deux noms d'employeur
   (« Jems Group » / « JEMS »). La déduplication de C6 doit rapprocher les variantes d'un employeur.
 - **(B4 → C3)** Descriptions contenant du Markdown (`## **…**`) : à mettre en forme.
+  *Résolu en C3 : `formatted_description` (HTML et Markdown en lignes et puces).*
 - **(B4 → C7)** Décisions persistées (`job_decisions`) et journalisées, y compris annulations et changements ;
   suppression de `rocky/offres/prototype.py`, `prototype_offers.json` et de `docs/procedures/b4-prototype/`.
 - **(B4 → C7, VPS)** Une touche frappée pendant l'arrivée d'un fragment HTMX se perd : envoyer les panneaux de motifs
@@ -293,6 +294,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(B5 → C3)** Les compétences et leurs alias sont **propres à chaque compte** (décision B5, Q2) : la détection des
   compétences d'une annonce se fait avec les termes du compte (`skill_terms`, `normalize_term`), pas avec un
   dictionnaire global. L'ancien `SKILL_ALIASES` n'a servi qu'au réimport.
+  *Résolu en C3 : `account_skills`, lues par `profil.web.skills_of` (cas d'usage du profil).*
 - **(B5 → C4)** Caractéristiques disponibles pour le score (D14) : drapeau « clé » et niveau des compétences,
   compétences liées aux expériences et projets (preuves), intitulés, mots-clés et mots exclus des pistes.
 - **(B5 → C6)** Suppression définitive d'une piste : à interdire dès qu'une offre y est rattachée (seul l'archivage
@@ -308,9 +310,12 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   (`docs/procedures/b5-reimport/`).
 - **(B5 → `system`, LLM)** Le LLM de Rocky passera de Groq à **Gemini 3.5 Flash Lite** (Nicolas, 25/09) : le plan
   (§3, Adaptateurs) et `AGENTS.md` (§7) citent Groq, à corriger quand l'adaptateur LLM naîtra.
+  *Résolu en C3 : adaptateur `rocky/system/llm.py` (Gemini), plan §3 et `AGENTS.md` §7 corrigés.*
 - **(B5 → C3)** Un nom « X (Y) » (« Traitement du langage naturel (NLP) ») ne répond qu'à lui-même (Q9 compare les
   noms entiers). *Tranché par Nicolas (25/09) : règle inchangée ; une variante utile s'ajoute comme alias*
   (« Traitement du langage naturel » alias de NLP).
+  *Complété en C3 (Nicolas, Q4) : dans une annonce, « X (Y) » répond aussi à X et à Y ; la comparaison des noms du
+  profil (Q9) ne change pas.*
 - **(C1 → E3)** Indeed/TheirStack n'est pas porté (quota épuisé, API payante) : Indeed arrive par ses alertes e-mail.
 - **(C1 → C2, C7)** **Enrichissement** d'une offre incomplète (APEC refuse son détail, LinkedIn n'en donne pas, Adzuna
   un extrait). *Tranché par Nicolas (25/09)* : deux voies **coexistantes**, (1) **lecture assistée** : sur son geste,
@@ -321,9 +326,11 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   écran) : la description collée reste la voie universelle.
 - **(C1 → C3)** Adzuna : un TJM freelance arrive dans `salary_min` (450 pour « Data Analyst - Freelance »), un salaire
   annuel ailleurs ; aucune période n'est stockée en C1, C3 les distingue.
+  *Résolu en C3 (Q5) : période écrite d'abord, sinon déduite du montant et marquée.*
 - **(C1 → C3)** Apec donne contrat (`typeContrat`, ex. `101888`) et télétravail (`idNomTeletravail`) en **codes
   sans libellé** : laissés vides en C1, à décoder par un référentiel Apec, jamais devinés. Descriptions Wellfound en
   Markdown ; offres Wellfound anciennes encore en ligne (publiée en 2024).
+  *Résolu en C3 (Q8) : référentiel public capturé, table `CONTRACT_LABELS` / `REMOTE_LABELS` vérifiée par un test.*
 - **(C1 → C4, C6)** Welcome to the Jungle ne filtre pas le lieu (offres de New York, Austin, Londres pour « Data
   analyst ») ; Wellfound sert une page pour un lieu qu'il ne connaît pas (« Eure et Loire »). Le lieu doit donc peser
   dans le score ou marquer l'offre, pas seulement la requête.
@@ -345,6 +352,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(B5 → C3)** Règle de reconnaissance des compétences dans les annonces à trancher en C3 : un nom « X (Y) » ne
   répond qu'à lui-même, et rien ne signale à l'utilisateur qu'un alias manque (alias masqués à l'écran). Une autre
   compétence de cette forme (« Apprentissage automatique (ML) ») aurait le même trou (revue de code du 25/09).
+  *Résolu en C3 (Q4) : X et Y répondent dans les annonces, sans alias à ajouter.*
 - **(C2 → §5 VPS)** La vérification anti-SSRF résout l'hôte avant la requête, puis le client HTTP le résout à
   nouveau : un DNS qui change de réponse entre les deux (*rebinding*) passerait. Sur le VPS, ajouter une règle
   réseau (pare-feu sortant ou proxy) qui interdit au conteneur de joindre les adresses privées.
@@ -360,5 +368,18 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `jobLocationType` (`TELECOMMUTE`), période du salaire (`YEAR`, `DAY`), date limite (`deadline`). Les clés
   `intitule` et `enseigne` du détail Apec viennent d'un jeu reconstruit (Apec refuse son détail) : à vérifier dès
   qu'une réponse réelle est obtenue.
+  *Résolu en C3 pour les codes (décodés par source) ; la vérification des clés du détail Apec reste ouverte.*
 - **(C2 → C7, F1)** La coque boost tous les liens (`hx-boost`) : tout écran atteint par un lien doit choisir
   fragment ou page par `wants_fragment` (`system.shell`), jamais par `is_htmx` seul (bug de C2 trouvé à l'essai).
+- **(C3 → C4)** Caractéristiques pour le score (D14) : compétences du compte avec leur importance (éliminatoire, un
+  plus, mentionnée) et leur preuve, conditions, contrats et télétravail dans le vocabulaire des préférences, salaire
+  avec période (comparable à `min_salary_eur` / `min_daily_rate_eur`), expérience, langues ; `RULES_VERSION` à garder
+  avec le score. Une période **déduite** du montant doit peser moins qu'une période écrite.
+- **(C3 → C6, C7)** L'analyse et le résumé ne sont pas enregistrés : à stocker avec l'offre (analyse recalculable,
+  résumé gardé une fois demandé pour ne pas rappeler le modèle).
+- **(C3 → C2, C6)** Import Hellowork : le CDI n'est que dans le titre de la page (le JSON-LD donne `FULL_TIME`) ; lire
+  aussi le `<title>` ou un champ de la page si le contrat manque (3 écarts de la mesure C3).
+- **(C3 → `profil`)** `normalize_term` réduit « C++ » et « C# » à « c » : une compétence de ce nom répondrait à la
+  lettre « C » d'une annonce. À traiter si un compte déclare ces langages.
+- **(C3 → Nicolas)** Résumé réel à essayer : ajouter `ROCKY_GEMINI_API_KEY` au `.env`, relancer l'application
+  (`docker compose up -d --build --wait app`), importer une annonce, « Résumer l'annonce ».

@@ -60,7 +60,8 @@ BEFORE_WINDOW = 150
 AFTER_WINDOW = 130
 # Sentences about applying, not about the job: never a requirement of the posting.
 _APPLICATION = re.compile(
-    r"(?<![a-z0-9])(?:cv|lettre de motivation|candidature|postuler|dossier)(?![a-z0-9])"
+    r"(?<![a-z0-9])(?:cv|lettre de motivation|candidature|postuler|dossier|application|apply|resume"
+    r"|cover letter)(?![a-z0-9])"
 )
 
 # Contracts written in the title or the text (comparison form).
@@ -69,7 +70,7 @@ _CONTRACT_WORDS: tuple[tuple[Contract, re.Pattern[str]], ...] = (
         Contract.PERMANENT,
         re.compile(
             r"(?<![a-z0-9])(?:cdi|contrat a duree indeterminee|permanent contract|contrat permanent"
-            r"|job type permanent|type de contrat permanent|permanent position)(?![a-z0-9])"
+            r"|job type permanent|contract type permanent|type de contrat permanent|permanent position)(?![a-z0-9])"
         ),
     ),
     (
@@ -514,9 +515,13 @@ def _requirements(
         for match in matches
         if match.importance == Importance.ELIMINATORY
     }
+    section_titles = {start for start, _ in posting.headings}
     found: list[str] = []
     for start, end in posting.sentences.spans:
         folded = fold(posting.source[start:end]).text
+        # A section title ("Skills And Experience Required") gives its weight to its lines, it asks nothing itself.
+        if start in section_titles or start < posting.title_length:
+            continue
         if _marker(folded) != Importance.ELIMINATORY or _APPLICATION.search(folded):
             continue
         quote = evidence(posting.source, (start, start), (start, end))
