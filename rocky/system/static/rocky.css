@@ -247,6 +247,15 @@ textarea {
 .import-description summary { color: var(--muted); cursor: pointer; }
 .description-text { margin-top: var(--space-2); white-space: pre-line; overflow-wrap: anywhere; }
 .paste-form h3 { margin: 0; }
+
+/* Analysis of a posting (C3) */
+.analysis { display: grid; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.analysis h3, .analysis h4 { margin: 0; }
+.analysis-block { display: grid; gap: var(--space-2); }
+.evidence-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.evidence-list q { color: var(--muted); font-size: 13px; }
+.skill-group summary { cursor: pointer; font-weight: 550; }
+.summary-list { display: grid; gap: var(--space-1); margin: 0; padding-left: var(--space-4); }
 .decision-area { padding-top: var(--space-3); border-top: 1px solid var(--border); }
 .current-decision { margin-bottom: var(--space-3); }
 .decision-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2); }

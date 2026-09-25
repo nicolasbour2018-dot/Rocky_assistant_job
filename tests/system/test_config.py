@@ -28,7 +28,9 @@ def test_load_settings_without_smtp() -> None:
 
 
 def test_the_language_model_is_optional_with_a_default_model() -> None:
-    assert load_settings(BASE).llm == LlmSettings(api_key=None, model="gemini-3.5-flash-lite")
+    assert load_settings(BASE).llm == LlmSettings(
+        api_key=None, model="gemini-3.5-flash-lite"
+    )
 
     settings = load_settings(
         {**BASE, "ROCKY_GEMINI_API_KEY": " k-1 ", "ROCKY_GEMINI_MODEL": "gemini-autre"}

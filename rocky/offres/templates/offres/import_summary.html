@@ -1,0 +1,9 @@
+{% if summary_result.summary %}
+<h4>Résumé</h4>
+<ul class="summary-list">
+  {% for label, text in summary_result.summary.bullets %}<li><strong>{{ label }} :</strong> {{ text }}</li>{% endfor %}
+</ul>
+<p class="hint">Écrit par le modèle de langage : il résume, il ne décide rien.</p>
+{% else %}
+<p class="alert alert-info">{{ summary_result.reason }}</p>
+{% endif %}

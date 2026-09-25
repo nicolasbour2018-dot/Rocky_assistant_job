@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi import FastAPI
@@ -11,10 +13,12 @@ from fastapi.testclient import TestClient
 from markupsafe import escape
 from sqlalchemy import Engine
 
+from rocky.offres.analysis.model import RULES_VERSION, Salary, SalaryPeriod
 from rocky.offres.imports.rules import VISIBLE_TEXT_REASON
 from rocky.offres.imports.usecases import PASTE_HINT
-from rocky.offres.imports.web import offer_facts
+from rocky.offres.imports.web import offer_facts, salary_label
 from rocky.offres.sources.model import CollectedOffer
+from rocky.system.llm import LlmUnavailableError
 from tests.offres.sources.replay import Answer, Replay, answer
 from tests.system.web_support import HTMX, logged_in, make_app
 
@@ -52,7 +56,30 @@ def app(migrated_engine: Engine, replay: Replay) -> FastAPI:
     app = make_app(migrated_engine)
     app.state.import_http = replay.http
     app.state.import_today = lambda: date(2026, 9, 25)
+    app.state.llm_model = FakeModel(SUMMARY)
     return app
+
+
+SUMMARY = {
+    "missions": "Analyser les données bancaires.",
+    "contexte": "ESN de conseil, client bancaire.",
+    "profil": "Expérience en Big Data.",
+}
+
+
+class FakeModel:
+    def __init__(
+        self, answer: object = None, error: LlmUnavailableError | None = None
+    ) -> None:
+        self._answer = answer
+        self._error = error
+
+    def complete_json(
+        self, instructions: str, prompt: str, schema: Mapping[str, Any]
+    ) -> Any:
+        if self._error is not None:
+            raise self._error
+        return self._answer
 
 
 @pytest.fixture
@@ -220,15 +247,103 @@ def test_the_facts_show_only_what_the_posting_says() -> None:
         description_complete=False,
         location="Paris",
         country="FR",
+        salary_text="A négocier",
         salary_min=45000,
-        salary_max=55000,
-        salary_currency="EUR",
-        salary_period="YEAR",
         published_on=date(2026, 9, 1),
     )
 
+    # Figures are read by the analysis; the preview shows what the source wrote.
     assert offer_facts(offer) == [
         ("Lieu", "Paris, FR"),
-        ("Salaire", "45 000 – 55 000 EUR YEAR"),
+        ("Salaire affiché", "A négocier"),
         ("Publiée le", "01/09/2026"),
     ]
+
+
+@pytest.mark.parametrize(
+    ("salary", "label"),
+    [
+        (
+            Salary(45000, 55000, "EUR", SalaryPeriod.YEARLY, False),
+            "45 000 – 55 000 EUR par an",
+        ),
+        (
+            Salary(450, 450, None, SalaryPeriod.DAILY, True),
+            "450 par jour (TJM) (période déduite du montant)",
+        ),
+    ],
+)
+def test_a_salary_says_its_period_and_whether_it_was_deduced(
+    salary: Salary, label: str
+) -> None:
+    assert salary_label(salary) == label
+
+
+def add_skills(client: TestClient, *labels: str) -> None:
+    for label in labels:
+        response = client.post(
+            "/profil/competences", data={"label_fr": label, "category": "technical"}
+        )
+        assert response.status_code in {200, 303}
+
+
+def test_the_preview_shows_the_analysis_with_the_account_skills(
+    client: TestClient,
+) -> None:
+    add_skills(client, "Python", "Hadoop", "Kotlin")
+
+    page = text_of(
+        client.post("/offres/importer", data={"lien": HELLOWORK}, headers=HTMX).text
+    )
+
+    assert "Analyse de l'annonce" in page
+    assert "<dt>Date limite</dt><dd>08/10/2026</dd>" in page
+    assert ">Python</span>" in page and ">Hadoop</span>" in page
+    assert "Kotlin" not in page  # a skill the posting does not name
+    assert f"Règles d'analyse : {RULES_VERSION}." in page
+    assert 'hx-post="/offres/importer/resume"' in page
+
+
+def test_without_skills_the_analysis_says_where_to_add_them(client: TestClient) -> None:
+    page = text_of(
+        client.post("/offres/importer", data={"lien": HELLOWORK}, headers=HTMX).text
+    )
+
+    assert "Ton profil n'a pas encore de compétences" in page
+
+
+@pytest.mark.parametrize("htmx", [True, False], ids=["htmx", "whole-page"])
+def test_a_summary_is_asked_on_demand(client: TestClient, htmx: bool) -> None:
+    response = client.post(
+        "/offres/importer/resume",
+        data={"intitule": "Data analyst", "texte": "Missions : analyser."},
+        headers=HTMX if htmx else {},
+    )
+    page = text_of(response.text)
+
+    assert response.status_code == 200
+    assert "<strong>Missions :</strong> Analyser les données bancaires." in page
+    assert ("<html" in page) is not htmx
+
+
+def test_an_unavailable_summary_gives_its_reason(
+    app: FastAPI, client: TestClient
+) -> None:
+    app.state.llm_model = FakeModel(
+        error=LlmUnavailableError(
+            "Le modèle de langage n'est pas configuré (clé Gemini absente)."
+        )
+    )
+
+    page = text_of(
+        client.post(
+            "/offres/importer/resume",
+            data={"intitule": "Data analyst", "texte": "Missions."},
+            headers=HTMX,
+        ).text
+    )
+
+    assert (
+        "Résumé indisponible : Le modèle de langage n'est pas configuré (clé Gemini absente)."
+        in page
+    )

@@ -20,9 +20,11 @@
       {% for label, value in facts %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}
     </dl>
     {% endif %}
-    <details class="import-description"{% if offer.description | length < 1500 %} open{% endif %}>
-      <summary>Description ({{ offer.description | length }} caractères)</summary>
-      <div class="description-text">{{ offer.description }}</div>
+    {% if analysis is defined and analysis %}{% include "offres/import_analysis.html" %}{% endif %}
+    {% set description = analysis.description if analysis is defined and analysis else offer.description %}
+    <details class="import-description"{% if description | length < 1500 %} open{% endif %}>
+      <summary>Description ({{ description | length }} caractères)</summary>
+      <div class="description-text">{{ description }}</div>
     </details>
     <p><a href="{{ offer.url }}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce d'origine</a></p>
     <p class="hint">Aperçu seulement : l'offre n'est pas encore ajoutée à tes offres (elle le sera avec la veille).</p>
@@ -32,3 +34,4 @@
   {% endif %}
 {% endif %}
 {% if paste is defined and paste %}{% include "offres/import_paste.html" %}{% endif %}
+{% if summary_result is defined and summary_result %}{% include "offres/import_summary.html" %}{% endif %}

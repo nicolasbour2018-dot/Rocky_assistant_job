@@ -1,7 +1,8 @@
-"""« Importer une annonce » (step C2): a link gives a preview of the offer or the reason why it gives none.
+"""« Importer une annonce » (steps C2, C3): a link gives a preview of the offer and its analysis, or the reason why
+it gives none; the summary by the language model is asked on demand.
 
-Nothing is stored (decision C2, Q1). The server renders every state; HTMX places the result under the form, and
-requests without HTMX get the whole page.
+Nothing is stored (decisions C2 and C3, Q1). The server renders every state; HTMX places the result under the form,
+and requests without HTMX get the whole page.
 """
 
 from __future__ import annotations
@@ -14,9 +15,20 @@ from fastapi import APIRouter, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from rocky.offres.analysis.model import (
+    CONDITION_LABELS,
+    IMPORTANCE_LABELS,
+    SALARY_PERIOD_LABELS,
+    Importance,
+    PostingAnalysis,
+    Salary,
+)
+from rocky.offres.analysis.rules import account_skills, analyze
+from rocky.offres.analysis.usecases import summarize
 from rocky.offres.imports.model import (
     METHOD_LABELS,
     ImportOutcome,
+    ImportPreview,
     ImportResult,
     InvalidPasteError,
 )
@@ -29,45 +41,95 @@ from rocky.offres.sources.model import (
     source_label,
 )
 from rocky.offres.sources.registry import build_sources
+from rocky.profil.model import (
+    CONTRACT_LABELS,
+    LANGUAGE_LEVEL_LABELS,
+    LANGUAGE_NAMES,
+    REMOTE_LABELS,
+)
+from rocky.profil.web import skills_of
+from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.llm import GeminiModel, JsonModel
 from rocky.system.shell import page, wants_fragment
 
 PAGE = "offres/import.html"
 RESULT = "offres/import_result.html"
+SUMMARY = "offres/import_summary.html"
 # Outcomes after which pasting the posting text is the way on (an invalid link is corrected instead).
 PASTE_OUTCOMES = {ImportOutcome.REFUSED, ImportOutcome.FAILED}
+IMPORTANCE_ORDER = (Importance.ELIMINATORY, Importance.PREFERRED, Importance.DETECTED)
 
 router = APIRouter(prefix="/offres/importer")
 
 
 def install(app: FastAPI) -> None:
-    # Replaced by the tests: the recorded pages, and a fixed day.
+    # Replaced by the tests: the recorded pages, a fixed day, a fake language model.
     app.state.import_http = PublicHttp
     app.state.import_today = lambda: datetime.now(UTC).date()
+    app.state.llm_model = GeminiModel(app.state.settings.llm)
     templates: Jinja2Templates = app.state.templates
     templates.env.globals.update(
         method_labels=METHOD_LABELS,
         source_label=source_label,
         offer_facts=offer_facts,
+        analysis_facts=analysis_facts,
         paste_outcomes=PASTE_OUTCOMES,
+        importance_order=IMPORTANCE_ORDER,
+        importance_labels=IMPORTANCE_LABELS,
+        condition_labels=CONDITION_LABELS,
     )
     app.include_router(router)
 
 
 def offer_facts(offer: CollectedOffer) -> list[tuple[str, str]]:
-    """The facts of the preview that are known, as published (their interpretation is the posting analysis, C3)."""
+    """The facts of the preview that are known, as published."""
     place = ", ".join(part for part in (offer.location, offer.country) if part)
     facts = [
         ("Employeur", offer.company),
         ("Lieu", place),
-        ("Contrat", offer.contract),
-        ("Télétravail", offer.remote),
-        ("Salaire", _salary(offer)),
         ("Secteur", offer.sector),
+        ("Salaire affiché", offer.salary_text),
         ("Publiée le", _day(offer.published_on)),
-        ("Date limite", _day(offer.deadline)),
     ]
     return [(label, value) for label, value in facts if value]
+
+
+def analysis_facts(analysis: PostingAnalysis) -> list[tuple[str, str]]:
+    """The facts read by the analysis, in the words of the profile."""
+    languages = ", ".join(
+        LANGUAGE_NAMES.get(need.code, need.code)
+        + (f" ({LANGUAGE_LEVEL_LABELS[need.level]})" if need.level else "")
+        for need in analysis.languages
+    )
+    facts = [
+        (
+            "Contrat",
+            ", ".join(CONTRACT_LABELS[contract] for contract in analysis.contracts),
+        ),
+        ("Télétravail", REMOTE_LABELS[analysis.remote] if analysis.remote else None),
+        ("Salaire", salary_label(analysis.salary) if analysis.salary else None),
+        ("Date limite", _day(analysis.deadline)),
+        (
+            "Expérience demandée",
+            f"{analysis.experience.years} an(s) minimum"
+            if analysis.experience
+            else None,
+        ),
+        ("Langues demandées", languages),
+    ]
+    return [(label, value) for label, value in facts if value]
+
+
+def salary_label(salary: Salary) -> str:
+    """ "45 000 – 55 000 EUR par an (période déduite du montant)"."""
+    bounds = sorted({salary.minimum, salary.maximum})
+    amount = " – ".join(f"{value:,.0f}".replace(",", " ") for value in bounds)
+    period = SALARY_PERIOD_LABELS[salary.period]
+    deduced = " (période déduite du montant)" if salary.period_deduced else ""
+    return (
+        " ".join(part for part in (amount, salary.currency, period) if part) + deduced
+    )
 
 
 @router.get("", response_class=HTMLResponse)
@@ -80,14 +142,15 @@ def import_posting(
     request: Request, account: CurrentAccount, lien: Annotated[str, Form()] = ""
 ) -> HTMLResponse:
     new_http: Callable[[], PublicHttp] = request.app.state.import_http
-    today: Callable[[], date] = request.app.state.import_today
     http = new_http()
     try:
         sources = link_sources(build_sources(request.app.state.settings.sources, http))
-        result = import_link(lien, http, sources, today=today())
+        result = import_link(lien, http, sources, today=_today(request))
     finally:
         http.close()
     context: dict[str, object] = {"link": lien, "result": result}
+    if result.preview is not None:
+        context.update(_analysis(request, account, result.preview))
     if result.outcome in PASTE_OUTCOMES or (
         result.preview is not None and not result.preview.offer.description_complete
     ):
@@ -122,7 +185,40 @@ def import_pasted(
         return _paste_error(request, paste, error.reason)
     except InvalidPasteError as error:
         return _paste_error(request, paste, str(error))
-    return _render(request, {"link": lien, "result": ImportResult.ok(preview)})
+    context: dict[str, object] = {"link": lien, "result": ImportResult.ok(preview)}
+    context.update(_analysis(request, account, preview))
+    return _render(request, context)
+
+
+@router.post("/resume", response_class=HTMLResponse)
+def summarize_posting(
+    request: Request,
+    account: CurrentAccount,
+    intitule: Annotated[str, Form()] = "",
+    texte: Annotated[str, Form()] = "",
+) -> HTMLResponse:
+    """The summary of the posting shown in the preview; one call to the language model, on demand (Q7)."""
+    model: JsonModel = request.app.state.llm_model
+    context = {"summary_result": summarize(intitule, texte, model)}
+    if wants_fragment(request):
+        templates: Jinja2Templates = request.app.state.templates
+        return templates.TemplateResponse(request, SUMMARY, context)
+    return page(request, PAGE, active="offers", context=context)
+
+
+def _analysis(
+    request: Request, account: Account, preview: ImportPreview
+) -> dict[str, object]:
+    skills = account_skills(skills_of(request, account))
+    return {
+        "analysis": analyze(preview.offer, skills, today=_today(request)),
+        "has_skills": bool(skills),
+    }
+
+
+def _today(request: Request) -> date:
+    today: Callable[[], date] = request.app.state.import_today
+    return today()
 
 
 def _paste_error(request: Request, paste: dict[str, str], reason: str) -> HTMLResponse:
@@ -141,20 +237,6 @@ def _render(
         )
     return page(
         request, PAGE, active="offers", status_code=status_code, context=context
-    )
-
-
-def _salary(offer: CollectedOffer) -> str | None:
-    if offer.salary_text:
-        return offer.salary_text
-    bounds = sorted(
-        {value for value in (offer.salary_min, offer.salary_max) if value is not None}
-    )
-    if not bounds:
-        return None
-    amount = " – ".join(f"{value:,.0f}".replace(",", " ") for value in bounds)
-    return " ".join(
-        part for part in (amount, offer.salary_currency, offer.salary_period) if part
     )
 
 

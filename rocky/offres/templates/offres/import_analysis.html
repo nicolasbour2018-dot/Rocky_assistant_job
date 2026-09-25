@@ -1,0 +1,64 @@
+<section class="analysis" aria-labelledby="analysis-title">
+  <h3 id="analysis-title">Analyse de l'annonce</h3>
+
+  {% set read = analysis_facts(analysis) %}
+  {% if read %}
+  <dl class="facts">
+    {% for label, value in read %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}
+  </dl>
+  {% endif %}
+
+  {% if analysis.conditions %}
+  <div class="analysis-block">
+    <h4>Conditions éliminatoires</h4>
+    <ul class="evidence-list">
+      {% for condition in analysis.conditions %}
+      <li><strong>{{ condition_labels[condition.kind] }}</strong> <q>{{ condition.evidence }}</q></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="analysis-block">
+    <h4>Tes compétences dans l'annonce</h4>
+    {% if not has_skills %}
+    <p class="hint">Ton profil n'a pas encore de compétences : ajoute-les dans <a href="/profil">👤 Profil &amp; kit</a> pour les retrouver ici.</p>
+    {% elif not analysis.skills %}
+    <p class="hint">Aucune de tes compétences n'est nommée dans l'annonce.</p>
+    {% else %}
+    {% for importance in importance_order %}
+    {% set matches = analysis.skills_of(importance) %}
+    {% if matches %}
+    <details class="skill-group"{% if importance != "detected" %} open{% endif %}>
+      <summary>{{ importance_labels[importance] }} ({{ matches | length }})</summary>
+      <ul class="evidence-list">
+        {% for match in matches %}
+        <li><span class="badge{% if importance == 'eliminatory' %} badge-warn{% elif importance == 'preferred' %} badge-accent{% endif %}">{{ match.skill }}</span> <q>{{ match.evidence }}</q></li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  {% if analysis.requirements %}
+  <div class="analysis-block">
+    <h4>Autres exigences de l'annonce</h4>
+    <ul class="evidence-list">
+      {% for requirement in analysis.requirements %}<li><q>{{ requirement }}</q></li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div id="summary" class="analysis-block" aria-live="polite">
+    <form method="post" action="/offres/importer/resume"
+          hx-post="/offres/importer/resume" hx-target="#summary" hx-swap="innerHTML">
+      <input type="hidden" name="intitule" value="{{ offer.title }}">
+      <input type="hidden" name="texte" value="{{ analysis.description }}">
+      <button type="submit" class="btn">Résumer l'annonce</button>
+      <span class="hint">Trois phrases par le modèle de langage, sur ta demande.</span>
+    </form>
+  </div>
+  <p class="hint">Règles d'analyse : {{ analysis.rules_version }}.</p>
+</section>

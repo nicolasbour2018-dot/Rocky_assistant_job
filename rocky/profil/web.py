@@ -38,6 +38,7 @@ from rocky.profil.model import (
     RemoteMode,
     Skill,
     SkillCategory,
+    SkillDraft,
     SkillLevel,
     Track,
     TrackStatus,
@@ -186,6 +187,12 @@ def _editor(request: Request, account: Account) -> Iterator[ProfileEditor]:
             account_id=account.id,
             email=account.email,
         )
+
+
+def skills_of(request: Request, account: Account) -> tuple[SkillDraft, ...]:
+    """The account's skills, for the screens of the other modules (read through the profile use case)."""
+    with _editor(request, account) as editor:
+        return tuple(skill.content for skill in editor.profile().skills)
 
 
 def _error_status(request: Request) -> int:
