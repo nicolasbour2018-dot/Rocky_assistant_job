@@ -36,6 +36,28 @@ Cas notés à l'annotation : « LLM » de l'annonce 32 est un diplôme de droit 
 lit des noms, pas un sens ; aucune annonce de l'échantillon n'écrit de date limite dans son texte (la date limite est
 couverte par les tests).
 
+### Corrections après la première mesure (25/09/2026)
+
+Chaque écart a été relu avec sa phrase-preuve. Corrigées dans `annotations.json` (champ `corrected`) : les seules
+**erreurs de lecture**, que la convention ci-dessus tranchait déjà.
+- Libellés **anglais** des compétences du profil, ignorés à l'annotation (« Data management », « Rigor »,
+  « Modeling », « Data analysis », « Automation », « artificial intelligence »…) : 18 annonces.
+- Deux oublis en français : « la rigueur d'un cabinet » (768), « gestion des données » (70).
+- Importances imposées par la convention : « essential » de Qair couvre aussi « rigor » et « Autonomy » (451) ;
+  « Compétences indispensables … Data Analysis » (753) ; « Qualités requises … intelligence artificielle » (657) ;
+  bloc « Bonus » de Tremendous (794) ; « constitue un atout important » (622).
+
+Corrigés dans **les règles**, l'annotation restant inchangée : tiret de liste « , - Capacité » non vu comme une
+coupure (Agile faussement éliminatoire, 940) ; « is a plus » hors de la fenêtre (450) ; « 2-3 ans minimum » lu 3 ;
+« visa sponsorship » trop loin de sa négation (649) ; « leader français … professionnelle » pris pour une langue
+(445) ; « stage, alternance ou premier emploi » pris pour un contrat (575). Hors échantillon : « Permis B apprécié »
+compté comme condition, « Pas de télétravail possible » lu hybride.
+
+Écarts restants, assumés : le modèle à remplir de Scalian (« ouvert aux freelances oui/non », 1030) ; Plotly dans un
+bloc d'atouts sans ponctuation (1035) ; alternatives « 8 ans OU 5 ans avec un master » (1072, la règle garde le plus
+exigeant) ; « 10 à 15 ans de CDI » sans le mot expérience (70) ; contrat des offres Hellowork (1225, 1226, 940) que
+l'import C2 ne récupère pas (le JSON-LD donne `FULL_TIME`, le CDI n'est que dans le titre de la page).
+
 ## 3. Mesurer
 
 ```sh
