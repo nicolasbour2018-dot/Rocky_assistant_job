@@ -308,6 +308,6 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   (`docs/procedures/b5-reimport/`).
 - **(B5 → `system`, LLM)** Le LLM de Rocky passera de Groq à **Gemini 3.5 Flash Lite** (Nicolas, 25/09) : le plan
   (§3, Adaptateurs) et `AGENTS.md` (§7) citent Groq, à corriger quand l'adaptateur LLM naîtra.
-- **(B5 → C3, à décider avec Nicolas)** Un nom « X (Y) » (« Traitement du langage naturel (NLP) ») ne répond qu'à
-  lui-même : « traitement du langage naturel » seul n'est pas reconnu (Q9 compare les noms entiers). Option : le
-  faire répondre aussi à X et à Y. À trancher quand la détection des compétences dans les annonces montrera le besoin.
+- **(B5 → C3)** Un nom « X (Y) » (« Traitement du langage naturel (NLP) ») ne répond qu'à lui-même (Q9 compare les
+  noms entiers). *Tranché par Nicolas (25/09) : règle inchangée ; une variante utile s'ajoute comme alias*
+  (« Traitement du langage naturel » alias de NLP).

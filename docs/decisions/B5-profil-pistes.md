@@ -80,5 +80,5 @@ Retour sur l'écran : « Le reste me plaît beaucoup. » Deux ajustements demand
 | Compétences trop chargées : garder les catégories, 5 compétences par catégorie et le reste dans un dépliant | 5 compétences au plus par catégorie, clés en premier, qui passent à la ligne ; les autres dans « Tout afficher (+N) » (élément `details` natif, sans JavaScript), déplié si la compétence en cours d'édition s'y trouve. Première version mal comprise (toutes les compétences forcées sur une ligne visuelle : défilement latéral) corrigée à la demande de Nicolas |
 | Cacher les alias à l'affichage : procédure interne | Alias absents de la liste ; dans le formulaire d'édition, repliés sous « Autres noms (alias) · N », dépliés seulement après un refus |
 
-Question laissée ouverte (sans réponse de Nicolas, règle Q9 inchangée) : faire répondre « X (Y) » aussi à X et à Y.
-Notée en section 8 pour C3, où la détection dans les annonces la rendra utile ou non.
+Nom « X (Y) » : « traitement du langage naturel » seul ne répond pas à « Traitement du langage naturel (NLP) ».
+Tranché par Nicolas : règle Q9 inchangée, la variante s'ajoute comme alias de NLP.
