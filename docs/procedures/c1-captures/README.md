@@ -32,6 +32,19 @@ Par défaut : « Data analyst » à Paris, 5 offres par source, puis un détail 
 l'état de chaque source. **Au premier refus d'une source (HTTP 403, 429, défi), on s'arrête et on en parle à
 Nicolas** avant toute autre tentative (règle d'arrêt, Q5).
 
+### Référentiels Apec (C3)
+
+Les codes de contrat et de télétravail d'Apec (`typeContrat`, `idNomTeletravail`) se lisent avec ses listes
+publiques `referentielstatique` (adresse trouvée dans le script public de l'application apec.fr). Deux requêtes :
+
+```sh
+uv run python docs/procedures/c1-captures/apec_referentiel.py ~/rocky-captures-apec
+```
+
+Copier les deux fichiers dans `tests/offres/sources/data/apec/` (`referentiel-type-contrat.json`,
+`referentiel-teletravail.json`) et mettre à jour `CONTRACT_LABELS` et `REMOTE_LABELS` d'`apec.py` : un test vérifie
+qu'ils correspondent. Mesuré le 25/09/2026 : 11 contrats, 4 modes de télétravail, aucun refus.
+
 ## 2. Préparer les jeux de test
 
 ```sh

@@ -7,6 +7,7 @@ protects it with DataDome most of the time: a refusal leaves the offer incomplet
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import replace
 from typing import Any
 from urllib.parse import urlsplit
@@ -29,12 +30,35 @@ LABEL = SOURCE_LABELS[SourceCode.APEC]
 SEARCH_URL = "https://www.apec.fr/cms/webservices/rechercheOffre"
 PLACES_URL = "https://www.apec.fr/cms/webservices/autocompletion/lieuautocomplete"
 DETAIL_URL = "https://www.apec.fr/cms/webservices/offre/public"
+# Labels of Apec's codes (contract, remote work), as the apec.fr pages read them (C3, Q8).
+REFERENCE_URL = "https://www.apec.fr/cms/webservices/referentielstatique/presentations/code/{code}/visuels"
 SEARCH_PAGE = "https://www.apec.fr/candidat/recherche-emploi.html/emploi"
 OFFER_PAGE = f"{SEARCH_PAGE}/detail-offre"
 EXCERPT_REASON = (
     "Apec ne donne qu'un extrait de l'annonce dans ses résultats de recherche."
 )
 NO_DETAIL_REASON = "Apec n'a pas donné le détail de cette annonce."
+# Labels of Apec's codes, from its public reference lists captured on 25/09/2026 (docs/procedures/c1-captures/
+# apec_referentiel.py, tests/offres/sources/data/apec/referentiel-*.json). A code missing here stays empty.
+CONTRACT_LABELS = {
+    101888: "CDI",
+    101887: "CDD",
+    20053: "Alternance",
+    597137: "CDD - Alternance - Contrat d'apprentissage",
+    597138: "CDD - Alternance - Contrat de professionnalisation",
+    597139: "CDI - Alternance - Contrat d'apprentissage",
+    597140: "CDI - Alternance - Contrat de professionnalisation",
+    101930: "Intérim",
+    597141: "CDI interimaire",
+    101889: "Mission d'intérim",
+    597171: "Stage",
+}
+REMOTE_LABELS = {
+    20766: "Ponctuel autorisé",
+    20765: "Partiel possible",
+    20767: "Total possible",
+    20949: "Non autorisé",
+}
 # Offer numbers as Apec writes them (``179271987W``).
 OFFER_NUMBER = re.compile(r"\d+[A-Z]?")
 MAX_RESULTS = 100
@@ -202,12 +226,23 @@ def _offer(item: dict[str, Any]) -> CollectedOffer | None:
         company=text(item.get("nomCommercial")),
         location=text(item.get("lieuTexte")),
         country="France",
+        contract=_label(CONTRACT_LABELS, item.get("typeContrat")),
+        remote=_label(REMOTE_LABELS, item.get("idNomTeletravail")),
         salary_text=text(item.get("salaireTexte")),
         published_on=iso_date(item.get("datePublication")),
         description=text(item.get("texteOffre")) or "",
         description_complete=False,
         incomplete_reason=EXCERPT_REASON,
     )
+
+
+def _label(labels: Mapping[int, str], code: object) -> str | None:
+    """The label of an Apec code (a number, sometimes sent as text); ``None`` for a code nobody knows."""
+    if isinstance(code, str) and code.isdigit():
+        code = int(code)
+    if isinstance(code, bool) or not isinstance(code, int):
+        return None
+    return labels.get(code)
 
 
 def _completed(offer: CollectedOffer, data: dict[str, Any]) -> CollectedOffer:

@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 
 import httpx2
 import pytest
 
 from rocky.offres.sources.apec import (
+    CONTRACT_LABELS,
     DETAIL_URL,
     EXCERPT_REASON,
     NO_DETAIL_REASON,
     OFFER_PAGE,
     PLACES_URL,
+    REMOTE_LABELS,
     SEARCH_URL,
     ApecSource,
 )
@@ -21,7 +24,7 @@ from rocky.offres.sources.model import (
     SourceCode,
     SourceRefusedError,
 )
-from tests.offres.sources.replay import Replay, answer, json_answer
+from tests.offres.sources.replay import Replay, answer, json_answer, recorded_json
 
 SEARCH = ("POST", httpx2.URL(SEARCH_URL).path)
 PLACES = ("GET", httpx2.URL(PLACES_URL).path)
@@ -64,6 +67,40 @@ def test_search_filters_on_apec_location_and_maps_the_recorded_offers() -> None:
     assert first.description_complete is False
     assert first.incomplete_reason == EXCERPT_REASON
     assert offers[2].salary_text == "50 - 80 k€ brut annuel"
+    # Apec's codes (101888, 20765) read with its reference lists.
+    assert (first.contract, first.remote) == ("CDI", "Partiel possible")
+
+
+def test_an_unknown_apec_code_stays_empty() -> None:
+    search = recorded_json("apec/search.json")
+    assert isinstance(search, dict)
+    search["resultats"][0]["typeContrat"] = 999999
+    search["resultats"][0]["idNomTeletravail"] = "inconnu"
+    replay = Replay({SEARCH: answer(json.dumps(search))})
+
+    first = ApecSource(replay.http()).search(SearchQuery("Data analyst"), 1)[0]
+
+    assert (first.contract, first.remote) == (None, None)
+
+
+@pytest.mark.parametrize(
+    ("name", "labels"),
+    [
+        ("apec/referentiel-type-contrat.json", CONTRACT_LABELS),
+        ("apec/referentiel-teletravail.json", REMOTE_LABELS),
+    ],
+)
+def test_the_code_labels_are_the_recorded_reference_lists(
+    name: str, labels: dict[int, str]
+) -> None:
+    entries = recorded_json(name)
+    assert isinstance(entries, list)
+
+    assert {
+        entry["idNomenclature"]: entry["libelle"]
+        for entry in entries
+        if entry["indicateurValidite"]
+    } == labels
 
 
 def test_a_location_is_resolved_once_per_collection() -> None:

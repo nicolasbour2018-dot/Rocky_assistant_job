@@ -10,6 +10,7 @@ Réponses réelles des plateformes, capturées le **25/09/2026** par `docs/proce
 | `apec/search.json` | capturé : recherche filtrée sur Paris (`lieux: ["75"]`) |
 | `apec/detail-refused.json` | capturé : refus DataDome du détail (HTTP 403), paramètres de session anonymisés |
 | `apec/detail.json` | **reconstruit** : Apec a refusé tout détail pendant la capture ; clés reprises de l'ancien `apec_detail.py` |
+| `apec/referentiel-type-contrat.json`, `apec/referentiel-teletravail.json` | capturés le 25/09/2026 (C3) : libellés des codes de contrat et de télétravail (`apec_referentiel.py`) ; les tables `CONTRACT_LABELS` et `REMOTE_LABELS` d'`apec.py` doivent leur correspondre |
 | `wttj/search.json`, `wttj/detail.json` | capturés ; vidéos de l'entreprise retirées du détail (prénoms de salariés) |
 | `linkedin/search.html` | capturé : cartes publiques pour visiteurs |
 | `wellfound/role-location.html` | capturé : page `/role/l/data-analyst/paris`, réduite à ses données `__NEXT_DATA__` |

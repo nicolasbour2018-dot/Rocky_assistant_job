@@ -161,6 +161,11 @@ _SOURCE_REMOTE: Mapping[tuple[str, str], RemoteMode] = {
     ("wttj", "punctual"): RemoteMode.HYBRID,
     ("wttj", "no"): RemoteMode.ON_SITE,
     ("wellfound", "remote"): RemoteMode.FULL_REMOTE,
+    # Labels of Apec's reference list (rocky/offres/sources/apec.py), in comparison form.
+    ("apec", "ponctuel autorise"): RemoteMode.HYBRID,
+    ("apec", "partiel possible"): RemoteMode.HYBRID,
+    ("apec", "total possible"): RemoteMode.FULL_REMOTE,
+    ("apec", "non autorise"): RemoteMode.ON_SITE,
 }
 
 # Salary: an amount of money near a salary word; its period written around it, else deduced (Q5).
@@ -556,32 +561,31 @@ def _contracts(offer: CollectedOffer, posting: _Posting) -> tuple[Contract, ...]
 
 
 def _source_contracts(offer: CollectedOffer) -> set[Contract]:
-    found: set[Contract] = set()
-    for token in re.split(r"[\s,/]+", offer.contract or ""):
-        if not token:
-            continue
-        decoded = _SOURCE_CONTRACTS.get(
-            (offer.source, token.lower())
-        ) or _JSON_LD_CONTRACTS.get(token)
-        if decoded is None:
-            folded = normalize_term(token)
-            decoded = next(
-                (
-                    contract
-                    for contract, pattern in _CONTRACT_WORDS
-                    if pattern.fullmatch(folded)
-                ),
-                None,
-            )
-        if decoded is not None:
-            found.add(decoded)
+    """Codes of the source (``full_time`` at WTTJ, ``CONTRACTOR`` in JSON-LD), else its label read as a title
+    ("CDI", "Stage", "CDI - Alternance - Contrat d'apprentissage" at Apec)."""
+    raw = offer.contract or ""
+    found = {
+        decoded
+        for token in re.split(r"[\s,/]+", raw)
+        if token
+        and (
+            decoded := _SOURCE_CONTRACTS.get((offer.source, token.lower()))
+            or _JSON_LD_CONTRACTS.get(token)
+        )
+    }
+    label = normalize_term(raw)
+    found.update(
+        contract
+        for contract, pattern in (*_CONTRACT_WORDS, *_TITLE_ONLY)
+        if pattern.search(label)
+    )
     return found
 
 
 def _remote(offer: CollectedOffer, posting: _Posting) -> RemoteMode | None:
     """The source's fact when it is known, else the text: a denial first ("pas de télétravail possible"), then
     hybrid, which wins over a full-remote mention (often about the company, not the job)."""
-    decoded = _SOURCE_REMOTE.get((offer.source, (offer.remote or "").strip().lower()))
+    decoded = _SOURCE_REMOTE.get((offer.source, normalize_term(offer.remote or "")))
     if decoded is not None:
         return decoded
     text = _NOT_FULL_REMOTE.sub(" ", posting.folded.text)

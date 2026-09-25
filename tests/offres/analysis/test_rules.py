@@ -211,6 +211,13 @@ def test_the_title_names_the_contract_before_the_text_and_the_source() -> None:
         ("site.example", "FULL_TIME", ()),  # JSON-LD: a working time, not a contract
         ("site.example", "CONTRACTOR", (Contract.FREELANCE,)),
         ("apec", "CDI", (Contract.PERMANENT,)),
+        ("apec", "Stage", (Contract.INTERNSHIP,)),
+        (
+            "apec",
+            "CDI - Alternance - Contrat d'apprentissage",
+            (Contract.PERMANENT, Contract.APPRENTICESHIP),
+        ),
+        ("apec", "Mission d'intérim", (Contract.TEMPORARY,)),
         ("wellfound", "contract", (Contract.FREELANCE,)),
     ],
 )
@@ -250,6 +257,16 @@ def test_contracts_written_in_the_text(
             RemoteMode.FULL_REMOTE,
         ),
         ("Rejoignez-nous.", {"source": "wttj", "remote": "unknown"}, None),
+        (
+            "Rejoignez-nous.",
+            {"source": "apec", "remote": "Partiel possible"},
+            RemoteMode.HYBRID,
+        ),
+        (
+            "Rejoignez-nous.",
+            {"source": "apec", "remote": "Non autorisé"},
+            RemoteMode.ON_SITE,
+        ),
         (
             "Rejoignez-nous.",
             {"remote": "TELECOMMUTE"},
