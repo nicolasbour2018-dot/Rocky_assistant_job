@@ -7,6 +7,8 @@ titles alone meanwhile.
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from typing import Any
 
 from rocky.offres.sources.http import PublicHttp
@@ -18,13 +20,16 @@ from rocky.offres.sources.model import (
     SourceCode,
     SourceFailedError,
 )
-from rocky.offres.sources.rules import iso_date, text
+from rocky.offres.sources.rules import as_mapping, iso_date, number, text
 
 LABEL = SOURCE_LABELS[SourceCode.FRANCE_TRAVAIL]
 TOKEN_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire"  # noqa: S105  (an address)
 SEARCH_URL = "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search"
 SCOPE = "api_offresdemploiv2 o2dsoffre"
 MAX_RESULTS = 150
+# Seconds; France Travail gives about 1500 in expires_in.
+DEFAULT_TOKEN_LIFETIME = 1200.0
+TOKEN_MARGIN = 60.0
 
 
 class FranceTravailSource:
@@ -38,12 +43,15 @@ class FranceTravailSource:
         enabled: bool,
         client_id: str | None,
         client_secret: str | None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._http = http
         self._enabled = enabled
         self._client_id = client_id
         self._client_secret = client_secret
+        self._clock = clock
         self._token: str | None = None
+        self._token_expires_at = 0.0
 
     def availability(self) -> Availability:
         if not self._enabled:
@@ -72,8 +80,8 @@ class FranceTravailSource:
         return [offer for offer in offers if offer is not None][:limit]
 
     def _access_token(self) -> str:
-        """A short-lived token, asked once per collection."""
-        if self._token is None:
+        """A short-lived token, asked again a minute before it expires (the watch keeps its sources)."""
+        if self._token is None or self._clock() >= self._token_expires_at:
             if not self._client_id or not self._client_secret:
                 raise SourceFailedError(f"Les identifiants {LABEL} sont absents.")
             data = self._http.post_form(
@@ -89,7 +97,9 @@ class FranceTravailSource:
             token = text(data.get("access_token")) if isinstance(data, dict) else None
             if token is None:
                 raise SourceFailedError(f"{LABEL} n'a pas délivré de jeton d'accès.")
+            lifetime = number(data.get("expires_in")) or DEFAULT_TOKEN_LIFETIME
             self._token = token
+            self._token_expires_at = self._clock() + lifetime - TOKEN_MARGIN
         return self._token
 
 
@@ -98,7 +108,7 @@ def _offer(item: dict[str, Any]) -> CollectedOffer | None:
     if identifier is None or title is None:
         return None
     company, place, origin, salary, contact = (
-        _mapping(item.get(key))
+        as_mapping(item.get(key))
         for key in ("entreprise", "lieuTravail", "origineOffre", "salaire", "contact")
     )
     url = (
@@ -126,7 +136,3 @@ def _offer(item: dict[str, Any]) -> CollectedOffer | None:
         if description
         else f"{LABEL} ne donne pas la description de cette offre.",
     )
-
-
-def _mapping(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}

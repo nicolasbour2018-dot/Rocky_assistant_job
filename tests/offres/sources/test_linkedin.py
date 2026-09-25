@@ -3,14 +3,20 @@ from __future__ import annotations
 from datetime import date
 
 import httpx2
+import pytest
 
 from rocky.offres.sources.linkedin import (
     NO_DESCRIPTION_REASON,
     SEARCH_URL,
     LinkedInSource,
 )
-from rocky.offres.sources.model import SearchQuery, SourceCode
-from tests.offres.sources.replay import Replay, html_answer
+from rocky.offres.sources.model import (
+    SearchQuery,
+    SourceCode,
+    SourceFailedError,
+    SourceRefusedError,
+)
+from tests.offres.sources.replay import Replay, answer, html_answer
 
 SEARCH = ("GET", httpx2.URL(SEARCH_URL).path)
 
@@ -47,3 +53,30 @@ def test_a_query_without_location_searches_france() -> None:
 
     assert replay.params()["location"] == "France"
     assert len(offers) == 4
+
+
+def test_an_empty_answer_is_no_result() -> None:
+    replay = Replay({SEARCH: answer("", content_type="text/html")})
+
+    assert LinkedInSource(replay.http()).search(SearchQuery("Data analyst"), 20) == []
+
+
+def test_a_sign_in_wall_is_a_refusal_not_zero_offers() -> None:
+    wall = '<html><body><form action="https://www.linkedin.com/uas/login-submit"></form></body></html>'
+    replay = Replay({SEARCH: answer(wall, content_type="text/html")})
+
+    with pytest.raises(SourceRefusedError, match="demande de se connecter"):
+        LinkedInSource(replay.http()).search(SearchQuery("Data analyst"), 20)
+
+
+def test_a_page_without_cards_is_a_visible_failure() -> None:
+    replay = Replay(
+        {
+            SEARCH: answer(
+                "<html><body><ul></ul></body></html>", content_type="text/html"
+            )
+        }
+    )
+
+    with pytest.raises(SourceFailedError, match="page sans liste d'offres"):
+        LinkedInSource(replay.http()).search(SearchQuery("Data analyst"), 20)

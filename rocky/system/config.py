@@ -80,7 +80,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         database_url=_required(env, DATABASE_URL_VAR),
         public_url=_public_url(env),
         smtp=_smtp(env),
-        sources=_sources(env),
+        sources=load_sources_settings(env),
     )
 
 
@@ -119,7 +119,9 @@ def _smtp(env: Mapping[str, str]) -> SmtpSettings | None:
     )
 
 
-def _sources(env: Mapping[str, str]) -> SourcesSettings:
+def load_sources_settings(environ: Mapping[str, str] | None = None) -> SourcesSettings:
+    """The job source settings alone (no database needed: used by the capture procedure too)."""
+    env = os.environ if environ is None else environ
     return SourcesSettings(
         adzuna_app_id=_value(env, ADZUNA_APP_ID_VAR) or None,
         adzuna_app_key=_value(env, ADZUNA_APP_KEY_VAR) or None,

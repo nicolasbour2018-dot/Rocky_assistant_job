@@ -8,7 +8,6 @@ import pytest
 from rocky.offres.sources.model import SearchQuery
 from rocky.offres.sources.rules import (
     html_to_text,
-    is_truncated,
     iso_date,
     number,
     queries_for_track,
@@ -88,8 +87,6 @@ def test_conversions() -> None:
     assert unix_date("jamais") is None
     assert number("42000.5") == 42000.5
     assert number(True) is None
-    assert is_truncated("…des outils informatiq...") is True
-    assert is_truncated("Une annonce complète.") is False
 
 
 def test_html_to_text_keeps_paragraphs_and_list_items() -> None:

@@ -18,7 +18,7 @@ from rocky.offres.sources.model import SourceCode, SourceError
 from rocky.offres.sources.registry import build_sources
 from rocky.offres.sources.model import SearchQuery
 from rocky.offres.sources.usecases import collect, complete_descriptions
-from rocky.system.config import SourcesSettings, load_settings
+from rocky.system.config import load_sources_settings
 
 KEPT_HEADERS = ("content-type", "x-datadome", "cf-mitigated")
 
@@ -69,10 +69,8 @@ def main() -> int:
     arguments = parser.parse_args()
     out: Path = arguments.out
     out.mkdir(parents=True, exist_ok=True)
-    try:
-        settings = load_settings().sources
-    except Exception:  # noqa: BLE001  (outside the container: no database settings, keys absent)
-        settings = SourcesSettings()
+    # Sources only: a capture needs no database, and a wrong source variable stops it (ConfigError).
+    settings = load_sources_settings()
     recorder = RecordingTransport(out)
     http = PublicHttp(transport=recorder, pause_seconds=2.0)
     sources = [

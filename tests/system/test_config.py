@@ -8,6 +8,7 @@ from rocky.system.config import (
     SmtpSettings,
     SourcesSettings,
     load_settings,
+    load_sources_settings,
 )
 
 BASE = {
@@ -132,3 +133,9 @@ def test_load_settings_reads_the_sources() -> None:
 def test_results_per_query_must_be_positive(value: str) -> None:
     with pytest.raises(ConfigError, match="ROCKY_SOURCES_RESULTS_PER_QUERY"):
         load_settings({**BASE, "ROCKY_SOURCES_RESULTS_PER_QUERY": value})
+
+
+def test_source_settings_load_without_database_settings() -> None:
+    assert load_sources_settings({"ROCKY_ADZUNA_APP_ID": "id"}).adzuna_app_id == "id"
+    with pytest.raises(ConfigError, match="ROCKY_SOURCES_RESULTS_PER_QUERY"):
+        load_sources_settings({"ROCKY_SOURCES_RESULTS_PER_QUERY": "abc"})

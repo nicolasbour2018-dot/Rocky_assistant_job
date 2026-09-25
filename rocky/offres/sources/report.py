@@ -56,8 +56,8 @@ def report_lines(
             f"{f' ({count})' if count > 1 else ''} : {reason}"
             for reason, count in reasons.items()
         )
-        if detail and outcome.source in detail.refused:
-            lines.append(f"  détail refusé : {detail.refused[outcome.source]}")
+        if detail and outcome.source in detail.stopped:
+            lines.append(f"  détail arrêté : {detail.stopped[outcome.source]}")
     return lines
 
 

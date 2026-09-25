@@ -335,3 +335,13 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C1 → F1)** État des sources à l'écran ⚙️ Système : reprendre `CollectionReport` et `report_lines`.
 - **(C1 → §5 VPS)** Sur un VPS (IP de centre de données, plusieurs comptes), réévaluer le volume par compte et la
   tolérance de LinkedIn et Wellfound (Cloudflare) ; la règle d'arrêt reste.
+- **(C1 → C6)** Une panne sur une requête (erreur 5xx, délai dépassé, référentiel de lieux Apec indisponible) arrête
+  les requêtes suivantes de la source ; les offres déjà reçues sont gardées. Choix de C1 (pas de réessai, un site en
+  erreur est probablement en panne) : la veille partielle de C6 dira s'il faut plutôt poursuivre et marquer les
+  requêtes en échec (revue de code du 25/09).
+- **(B5 → F2)** Le script de réimport (`docs/procedures/b5-reimport/extract_profile.py`) ne fusionne que
+  « Traitement du langage naturel (NLP) » dans NLP : l'alias « Traitement du langage naturel » décidé le 25/09 n'y
+  est pas. Au réimport dans le compte réel, l'ajouter au fichier relu ou au script (revue de code du 25/09).
+- **(B5 → C3)** Règle de reconnaissance des compétences dans les annonces à trancher en C3 : un nom « X (Y) » ne
+  répond qu'à lui-même, et rien ne signale à l'utilisateur qu'un alias manque (alias masqués à l'écran). Une autre
+  compétence de cette forme (« Apprentissage automatique (ML) ») aurait le même trou (revue de code du 25/09).

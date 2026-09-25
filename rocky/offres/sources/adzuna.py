@@ -14,7 +14,7 @@ from rocky.offres.sources.model import (
     SourceCode,
     SourceFailedError,
 )
-from rocky.offres.sources.rules import iso_date, number, text
+from rocky.offres.sources.rules import as_mapping, iso_date, number, text
 
 LABEL = SOURCE_LABELS[SourceCode.ADZUNA]
 SEARCH_URL = "https://api.adzuna.com/v1/api/jobs/fr/search/1"
@@ -65,7 +65,7 @@ def _offer(item: dict[str, Any]) -> CollectedOffer | None:
         return None
     url = without_tracking(redirect)
     company, place, category = (
-        _mapping(item.get(key)) for key in ("company", "location", "category")
+        as_mapping(item.get(key)) for key in ("company", "location", "category")
     )
     # Adzuna estimates a salary when the posting has none: an estimate is not a fact of the posting.
     predicted = str(item.get("salary_is_predicted") or "0") == "1"
@@ -109,7 +109,3 @@ def without_tracking(url: str) -> str:
         if not key.startswith("utm_")
     ]
     return urlunsplit(parts._replace(query=urlencode(kept)))
-
-
-def _mapping(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}

@@ -87,3 +87,11 @@ def test_a_page_without_its_data_fails_readably() -> None:
 )
 def test_slug(value: str, expected: str) -> None:
     assert slug(value) == expected
+
+
+def test_page_data_without_search_results_is_a_visible_failure() -> None:
+    data = '{"props": {"pageProps": {"apolloState": {"data": {"ROOT_QUERY": {"talent": {}}}}}}}'
+    html = f'<script id="__NEXT_DATA__" type="application/json">{data}</script>'
+
+    with pytest.raises(SourceFailedError, match="n'a pas fourni de données d'offres"):
+        parse_page(html)

@@ -16,6 +16,7 @@ from rocky.offres.sources.model import (
     CollectedOffer,
     DetailSource,
     JobSource,
+    NotFoundError,
     QuerySkippedError,
     SearchQuery,
     SourceCode,
@@ -78,8 +79,8 @@ class CollectionReport:
 @dataclass(frozen=True)
 class DetailReport:
     offers: tuple[CollectedOffer, ...]
-    # Sources that refused their detail: asked once, then left alone for the rest of the collection.
-    refused: dict[SourceCode, str] = field(default_factory=dict)
+    # Sources whose detail was refused or broken: asked once, then left alone for the rest of the collection.
+    stopped: dict[SourceCode, str] = field(default_factory=dict)
 
 
 def collect(
@@ -141,40 +142,45 @@ def _collect_one(
 def complete_descriptions(
     sources: Sequence[JobSource], offers: Sequence[CollectedOffer]
 ) -> DetailReport:
-    """Ask the public detail of each incomplete offer whose source has one; a refusal stops that source."""
+    """Ask the public detail of each incomplete offer whose source has one.
+
+    A refusal or a broken answer stops asking that source (a challenge can come as an unreadable page, not only as a
+    403); a missing page only concerns its offer.
+    """
     detail_sources = {
         source.code: source for source in sources if isinstance(source, DetailSource)
     }
-    refused: dict[SourceCode, str] = {}
+    stopped: dict[SourceCode, str] = {}
     completed: list[CollectedOffer] = []
     for offer in offers:
         source = detail_sources.get(offer.source)
         if offer.description_complete or source is None:
             completed.append(offer)
-        elif offer.source in refused:
-            completed.append(replace(offer, incomplete_reason=refused[offer.source]))
+        elif offer.source in stopped:
+            completed.append(replace(offer, incomplete_reason=stopped[offer.source]))
         else:
-            completed.append(_completed(source, offer, refused))
-    return DetailReport(tuple(completed), refused)
+            completed.append(_completed(source, offer, stopped))
+    return DetailReport(tuple(completed), stopped)
 
 
 def _completed(
-    source: DetailSource, offer: CollectedOffer, refused: dict[SourceCode, str]
+    source: DetailSource, offer: CollectedOffer, stopped: dict[SourceCode, str]
 ) -> CollectedOffer:
     try:
         return source.complete(offer)
     except SourceRefusedError as error:
         reason = f"{error.reason} La description complète se lit sur l'annonce."
-        refused[offer.source] = reason
-        return replace(offer, incomplete_reason=reason)
+    except NotFoundError as error:
+        return replace(offer, incomplete_reason=f"Détail introuvable : {error.reason}")
     except SourceFailedError as error:
-        return replace(offer, incomplete_reason=f"Détail illisible : {error.reason}")
+        reason = f"Détail illisible : {error.reason}"
     except Exception:
         logger.exception(
             "detail of %s offer %s failed unexpectedly", offer.source, offer.external_id
         )
-        return replace(
-            offer,
-            incomplete_reason="Erreur technique pendant la lecture du détail "
-            "(trace dans le journal de l'application).",
+        reason = (
+            "Erreur technique pendant la lecture du détail "
+            "(trace dans le journal de l'application)."
         )
+    stopped[offer.source] = reason
+    return replace(offer, incomplete_reason=reason)

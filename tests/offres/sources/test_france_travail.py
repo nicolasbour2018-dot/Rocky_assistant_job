@@ -90,3 +90,31 @@ def test_a_refused_token_fails_without_quoting_the_credentials() -> None:
 
     assert error.value.reason == "France Travail a répondu par une erreur (HTTP 401)."
     assert "secret" not in error.value.reason
+
+
+def test_the_token_is_asked_again_before_it_expires() -> None:
+    now = [0.0]
+    replay = Replay(
+        {
+            TOKEN: answer('{"access_token": "t", "expires_in": 1499}'),
+            SEARCH: json_answer("france_travail/search.json"),
+        }
+    )
+    france_travail = FranceTravailSource(
+        replay.http(),
+        enabled=True,
+        client_id="client",
+        client_secret="secret",
+        clock=lambda: now[0],
+    )
+
+    france_travail.search(SearchQuery("Data analyst"), 20)
+    now[0] = 1450.0  # less than a minute before the expiry (1499 s)
+    france_travail.search(SearchQuery("Data analyst"), 20)
+
+    assert [request.method for request in replay.requests] == [
+        "POST",
+        "GET",
+        "POST",
+        "GET",
+    ]

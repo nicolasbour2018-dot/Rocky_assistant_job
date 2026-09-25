@@ -35,7 +35,8 @@ BROWSER_HEADERS = {
         "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"
     ),
 }
-REFUSAL_STATUSES = {403, 429}
+# 999: the status LinkedIn gives to the automated clients it refuses.
+REFUSAL_STATUSES = {403, 429, 999}
 DEFAULT_TIMEOUT_SECONDS = 20.0
 DEFAULT_PAUSE_SECONDS = 1.0
 

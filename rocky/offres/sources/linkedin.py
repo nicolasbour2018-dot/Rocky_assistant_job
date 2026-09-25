@@ -16,6 +16,8 @@ from rocky.offres.sources.model import (
     CollectedOffer,
     SearchQuery,
     SourceCode,
+    SourceFailedError,
+    SourceRefusedError,
 )
 from rocky.offres.sources.rules import iso_date, text
 
@@ -56,7 +58,21 @@ class LinkedInSource:
 
 
 def parse_cards(html: str) -> list[CollectedOffer]:
-    """Offers of a page of public cards, read from their semantic classes rather than their layout."""
+    """Offers of a page of public cards, read from their semantic classes rather than their layout.
+
+    An empty answer is "no result". A page without any card is not: a sign-in wall is a refusal, anything else a
+    changed page, never a silent "0 offers".
+    """
+    if not html.strip():
+        return []
+    if "base-search-card" not in html:
+        if "authwall" in html or "uas/login" in html:
+            raise SourceRefusedError(
+                f"Refusé par {LABEL} : la plateforme demande de se connecter."
+            )
+        raise SourceFailedError(
+            f"{LABEL} a renvoyé une page sans liste d'offres (page modifiée ?)."
+        )
     offers: list[CollectedOffer] = []
     for card in BeautifulSoup(html, "html.parser").select("div.base-search-card"):
         offer = _offer(card)

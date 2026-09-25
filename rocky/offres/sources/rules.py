@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 from datetime import UTC, date, datetime
+from typing import Any
 from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup, Tag
@@ -88,6 +89,11 @@ def text(value: object) -> str | None:
     return cleaned or None
 
 
+def as_mapping(value: object) -> dict[str, Any]:
+    """A JSON object of an API answer, or an empty one when the field is missing or of another type."""
+    return value if isinstance(value, dict) else {}
+
+
 def number(value: object) -> float | None:
     """A number given by an API (int, float or numeric string), ``None`` otherwise."""
     if isinstance(value, bool) or value is None:
@@ -120,11 +126,6 @@ def unix_date(value: object) -> date | None:
         return datetime.fromtimestamp(seconds, tz=UTC).date()
     except (OverflowError, OSError, ValueError):
         return None
-
-
-def is_truncated(description: str) -> bool:
-    """A search excerpt ends with an ellipsis: it is not the full description."""
-    return description.rstrip().endswith(("...", "…"))
 
 
 def html_to_text(value: object) -> str:

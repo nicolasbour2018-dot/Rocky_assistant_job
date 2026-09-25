@@ -21,7 +21,7 @@ from rocky.offres.sources.model import (
     SourceCode,
     SourceFailedError,
 )
-from rocky.offres.sources.rules import text, unix_date
+from rocky.offres.sources.rules import as_mapping, text, unix_date
 from rocky.profil.rules import normalize_term
 
 LABEL = SOURCE_LABELS[SourceCode.WELLFOUND]
@@ -82,13 +82,16 @@ def parse_page(html: str) -> list[CollectedOffer]:
             for key, value in queries.items()
             if key.startswith(RESULTS_KEY) and isinstance(value, dict)
         ),
-        {},
+        None,
     )
+    if results is None:
+        # A page with no result still has the key (with no startup): without it, the page changed.
+        raise SourceFailedError(f"{LABEL} n'a pas fourni de données d'offres.")
     offers: list[CollectedOffer] = []
     for startup_ref in results.get("startups") or []:
-        startup = state.get(str(_mapping(startup_ref).get("__ref")), {})
+        startup = state.get(str(as_mapping(startup_ref).get("__ref")), {})
         for job_ref in startup.get("highlightedJobListings") or []:
-            item = state.get(str(_mapping(job_ref).get("__ref")), {})
+            item = state.get(str(as_mapping(job_ref).get("__ref")), {})
             offer = _offer(item, text(startup.get("name")))
             if offer is not None:
                 offers.append(offer)
@@ -120,7 +123,3 @@ def _offer(item: dict[str, Any], company: str | None) -> CollectedOffer | None:
         description_complete=bool(description),
         incomplete_reason=None if description else NO_DESCRIPTION_REASON,
     )
-
-
-def _mapping(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}

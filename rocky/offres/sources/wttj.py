@@ -19,7 +19,7 @@ from rocky.offres.sources.model import (
     SourceCode,
     SourceFailedError,
 )
-from rocky.offres.sources.rules import html_to_text, iso_date, number, text
+from rocky.offres.sources.rules import as_mapping, html_to_text, iso_date, number, text
 
 LABEL = SOURCE_LABELS[SourceCode.WTTJ]
 WEBSITE = "https://www.welcometothejungle.com"
@@ -93,11 +93,11 @@ def _offer(item: dict[str, Any]) -> CollectedOffer | None:
     reference, title, slug = (
         text(item.get(key)) for key in ("reference", "name", "slug")
     )
-    organization = _mapping(item.get("organization"))
+    organization = as_mapping(item.get("organization"))
     organization_slug = text(organization.get("slug"))
     if reference is None or title is None or slug is None or organization_slug is None:
         return None
-    office = _mapping(item.get("office"))
+    office = as_mapping(item.get("office"))
     url = f"{WEBSITE}/fr/companies/{organization_slug}/jobs/{slug}"
     return CollectedOffer(
         source=SourceCode.WTTJ,
@@ -147,7 +147,3 @@ def _completed(offer: CollectedOffer, detail: dict[str, Any]) -> CollectedOffer:
         incomplete_reason=None,
         application_url=text(detail.get("apply_url")) or offer.application_url,
     )
-
-
-def _mapping(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}

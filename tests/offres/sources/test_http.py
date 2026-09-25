@@ -22,7 +22,7 @@ def get(replay: Replay) -> object:
     return replay.http().get_json("Exemple", URL, params={"app_key": KEY})
 
 
-@pytest.mark.parametrize("status", [403, 429])
+@pytest.mark.parametrize("status", [403, 429, 999])
 def test_a_refusal_status_is_a_refusal_and_is_never_retried(status: int) -> None:
     replay = Replay({ROUTE: answer(status=status)})
 

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 
 import pytest
 
 from rocky.offres.sources.model import (
     Availability,
     CollectedOffer,
+    NotFoundError,
     QuerySkippedError,
     SearchQuery,
     SourceCode,
@@ -169,7 +171,7 @@ def test_details_complete_incomplete_offers_of_sources_that_have_one() -> None:
 
     assert wttj.completed == ["w1"]
     assert [kept.description_complete for kept in report.offers] == [True, True, False]
-    assert report.refused == {}
+    assert report.stopped == {}
 
 
 def test_a_refused_detail_stops_asking_that_source() -> None:
@@ -184,29 +186,61 @@ def test_a_refused_detail_stops_asking_that_source() -> None:
     assert apec.completed == ["a0"]
     reason = "Refusé par Apec : la plateforme bloque (HTTP 403). La description complète se lit sur l'annonce."
     assert [kept.incomplete_reason for kept in report.offers] == [reason] * 3
-    assert report.refused == {SourceCode.APEC: reason}
+    assert report.stopped == {SourceCode.APEC: reason}
 
 
-def test_a_failed_detail_keeps_the_offer_and_goes_on(
+def test_a_broken_detail_also_stops_asking_that_source() -> None:
+    # A challenge can come as an unreadable 200 page rather than a 403: never asked again for each offer.
+    def unreadable(found_offer: CollectedOffer) -> CollectedOffer:
+        raise SourceFailedError("Apec a renvoyé une réponse illisible.")
+
+    apec = FakeDetailSource(SourceCode.APEC, lambda query: [], detail=unreadable)
+    offers = [offer(SourceCode.APEC, f"a{index}", complete=False) for index in range(3)]
+
+    report = complete_descriptions([apec], offers)
+
+    assert apec.completed == ["a0"]
+    reason = "Détail illisible : Apec a renvoyé une réponse illisible."
+    assert [kept.incomplete_reason for kept in report.offers] == [reason] * 3
+    assert report.stopped == {SourceCode.APEC: reason}
+
+
+def test_a_missing_detail_only_concerns_its_offer() -> None:
+    def gone(found_offer: CollectedOffer) -> CollectedOffer:
+        if found_offer.external_id == "w0":
+            raise NotFoundError(
+                "Welcome to the Jungle n'a pas de page à cette adresse (HTTP 404)."
+            )
+        return replace(found_offer, description="Détail.", description_complete=True)
+
+    wttj = FakeDetailSource(SourceCode.WTTJ, lambda query: [], detail=gone)
+    offers = [offer(SourceCode.WTTJ, f"w{index}", complete=False) for index in range(2)]
+
+    report = complete_descriptions([wttj], offers)
+
+    assert wttj.completed == ["w0", "w1"]
+    assert report.offers[0].incomplete_reason == (
+        "Détail introuvable : Welcome to the Jungle n'a pas de page à cette adresse (HTTP 404)."
+    )
+    assert report.offers[1].description_complete is True
+    assert report.stopped == {}
+
+
+def test_an_unexpected_detail_error_is_logged_and_stops_that_source(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    def failing(found_offer: CollectedOffer) -> CollectedOffer:
-        if found_offer.external_id == "w0":
-            raise SourceFailedError(
-                "Welcome to the Jungle ne répond pas (délai dépassé)."
-            )
+    def crashing(found_offer: CollectedOffer) -> CollectedOffer:
         raise TypeError("unexpected")
 
-    wttj = FakeDetailSource(SourceCode.WTTJ, lambda query: [], detail=failing)
+    wttj = FakeDetailSource(SourceCode.WTTJ, lambda query: [], detail=crashing)
     offers = [offer(SourceCode.WTTJ, f"w{index}", complete=False) for index in range(2)]
 
     with caplog.at_level(logging.ERROR):
         report = complete_descriptions([wttj], offers)
 
-    assert wttj.completed == ["w0", "w1"]
-    assert report.offers[0].incomplete_reason == (
-        "Détail illisible : Welcome to the Jungle ne répond pas (délai dépassé)."
+    assert wttj.completed == ["w0"]
+    assert all(
+        (kept.incomplete_reason or "").startswith("Erreur technique")
+        for kept in report.offers
     )
-    assert report.offers[1].incomplete_reason is not None
-    assert report.offers[1].incomplete_reason.startswith("Erreur technique")
     assert "TypeError: unexpected" in caplog.text

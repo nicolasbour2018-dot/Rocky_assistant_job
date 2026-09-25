@@ -26,8 +26,11 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 
 ## Sources (`rocky/offres/sources/`, décision `docs/decisions/C1-sources.md`)
 - **Ligne rouge (Q5)** : jamais de résolution ni d'esquive d'un défi anti-robot, de session ou compte réutilisé, de
-  proxy, d'imitation d'empreinte TLS, de réessai. Un refus (403, 429, défi Cloudflare) lève `SourceRefusedError` et
-  la source s'arrête pour la collecte. L'en-tête `x-datadome: protected` seul n'est **pas** un refus.
+  proxy, d'imitation d'empreinte TLS, de réessai. Un refus (403, 429, 999 de LinkedIn, défi Cloudflare, mur de
+  connexion) lève `SourceRefusedError` et la source s'arrête pour la collecte. L'en-tête `x-datadome: protected` seul
+  n'est **pas** un refus. Détail : un refus ou une réponse illisible arrête le détail de la source, un 404 non.
+- Jamais de « 0 offre » silencieux : une page sans la structure attendue (aucune carte, clé de données absente) est
+  une panne (`SourceFailedError`) ; seule une réponse vide ou une liste vide vaut « aucun résultat ».
 - Toute requête passe par `PublicHttp` (pause par hôte, aucun réessai) ; aucun autre client HTTP.
 - Une source ne lève que `SourceRefusedError`, `SourceFailedError` ou `QuerySkippedError` ; tout le reste est un bug,
   isolé et journalisé par `collect`. Les raisons sont en français et ne citent jamais l'URL ni ses paramètres.

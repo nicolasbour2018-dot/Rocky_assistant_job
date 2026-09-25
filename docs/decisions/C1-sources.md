@@ -43,6 +43,7 @@ d'accès publics → alertes e-mail (E3, repli quand une source ferme) → impor
 | Faits bruts | Contrat, télétravail et salaire gardés en texte source, plus les bornes numériques quand l'API les donne | Leur interprétation (TJM ≠ salaire, codes de contrat) est l'objet de C3. |
 | Noms de source | Codes stockés `apec`, `adzuna`, `wttj`, `linkedin`, `wellfound`, `france_travail` ; libellés à l'affichage. Une URL hors connecteur donne son hôte sans `www` (`hellowork.com`), jamais l'URL entière | Règle B4 (codes anglais, libellés français) ; réutilisé par C2 et E3. |
 | Erreurs | `SourceRefused` (protection) distinct de `SourceFailed` (panne) ; les messages ne recopient jamais l'URL ni ses paramètres (clés Adzuna) | Un refus n'appelle pas la même réaction qu'une panne ; aucun secret affiché. |
+| Détail | Un refus **ou** une réponse illisible arrête le détail de la source pour la collecte (un défi peut arriver en page 200 illisible) ; un 404 ne concerne que son offre. Ajouté après la revue de code du 25/09 | Q5 : pas de requêtes répétées vers un site qui se protège. |
 | Isolation | La collecte donne un résultat par source : `ok`, `refused`, `failed`, `pending_access`, `not_configured`. Une source en attente ou non configurée n'est pas appelée. Une exception inattendue devient `failed` (« erreur technique dans le connecteur ») **et** sa trace est journalisée | Aucune exception avalée ; les autres sources continuent. |
 | France Travail | `pending_access` tant que `ROCKY_FRANCE_TRAVAIL_ENABLED` n'est pas `true` ; jeu de test reconstruit (aucune capture possible sans accès) | D8. |
 | Dépendances | `httpx2` passe de dev à l'exécution (déjà verrouillé ; `MockTransport` rejoue les jeux enregistrés) ; `beautifulsoup4` pour les pages HTML de LinkedIn et Wellfound (servira à C2). Plus de `requests` | Un seul client HTTP dans le projet. |
@@ -60,3 +61,13 @@ d'accès publics → alertes e-mail (E3, repli quand une source ferme) → impor
 
 Incident de configuration : les clés Adzuna avaient été recopiées dans le fichier de configuration sans le préfixe
 `ROCKY_` ; la source s'affichait donc « non configurée ». Corrigé par Nicolas.
+
+### Revue de code (25/09/2026, `/code-review 6aa75ba..HEAD`)
+
+Dix constats, tous vérifiés ; neuf corrigés avec un test chacun : détail arrêté après une réponse illisible (plus
+seulement après un refus) ; HTTP 999 de LinkedIn compté comme refus ; page LinkedIn sans carte (mur de connexion ou
+page modifiée) et page Wellfound sans résultats signalées au lieu de « 0 offre » ; lieu Apec inconnu mémorisé (plus
+redemandé pour chaque intitulé) ; jeton France Travail renouvelé avant expiration ; aide `as_mapping` partagée ; code
+mort retiré ; script de capture qui n'avale plus d'erreur de configuration (`load_sources_settings`). Le dixième
+(une panne sur une requête arrête les suivantes de la source) est un choix de C1, renvoyé à C6 (plan, section 8).
+Vérification globale : 334 tests verts.

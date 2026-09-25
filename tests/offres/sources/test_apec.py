@@ -94,6 +94,20 @@ def test_an_unknown_location_is_skipped_with_its_reason() -> None:
     assert all(request.url.path == PLACES[1] for request in replay.requests)
 
 
+def test_an_unknown_location_is_asked_once_for_all_the_job_titles() -> None:
+    replay = Replay({PLACES: answer("[]")})
+    source = ApecSource(replay.http())
+
+    for title in ("Data analyst", "Data scientist", "BI analyst"):
+        with pytest.raises(QuerySkippedError, match="Eure et Loire"):
+            source.search(SearchQuery(title, "Eure et Loire"), 20)
+
+    assert [replay.params(i)["q"] for i in range(len(replay.requests))] == [
+        "Eure et Loire",
+        "Eure et Loire -",
+    ]
+
+
 def test_an_ambiguous_location_is_skipped_and_asks_for_the_department() -> None:
     places = (
         '[{"lieuDisplay": "Saint-Denis - 93", "lieuId": 1, "lieuType": "FR_COMMUNE"},'

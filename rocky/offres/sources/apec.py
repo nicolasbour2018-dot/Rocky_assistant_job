@@ -48,7 +48,8 @@ class ApecSource:
 
     def __init__(self, http: PublicHttp) -> None:
         self._http = http
-        self._places: dict[str, str] = {}
+        # Label (as a term) → Apec identifier, or the reason why Apec cannot use it.
+        self._places: dict[str, str | QuerySkippedError] = {}
 
     def availability(self) -> Availability:
         return Availability.READY
@@ -87,8 +88,15 @@ class ApecSource:
                 # The reference answers four names at most, in alphabetical order: "Paris" only comes out
                 # of "Paris -" ("Paris - 75"), after "Cormeilles-en-Parisis - 95" and the like.
                 candidates = self._matching_places(label, f"{label} -")
-            self._places[key] = _chosen_place(label, candidates)
-        return self._places[key]
+            try:
+                self._places[key] = _chosen_place(label, candidates)
+            except QuerySkippedError as skipped:
+                # Every job title of the track would ask again for the same answer.
+                self._places[key] = skipped
+        place = self._places[key]
+        if isinstance(place, QuerySkippedError):
+            raise QuerySkippedError(place.reason)
+        return place
 
     def _matching_places(self, label: str, search: str) -> list[dict[str, Any]]:
         data = self._http.get_json(
