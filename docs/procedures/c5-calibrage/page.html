@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Annotation C5</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #dddbd5;
+    --accent: #2f5d8a; --yes: #2e7d4f; --maybe: #b07a12; --no: #b3402f; --focus: #2f5d8a33;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --panel: #1f1f1d; --ink: #ecebe7; --muted: #a09e98; --line: #34332f;
+      --accent: #7fb0e0; --yes: #6cc596; --maybe: #e2b04a; --no: #ec8171; --focus: #7fb0e033;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 1; background: var(--bg); border-bottom: 1px solid var(--line);
+           padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header strong { font-size: 15px; }
+  .progress { flex: 1; min-width: 140px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress div { height: 100%; background: var(--accent); width: 0; }
+  main { max-width: 1180px; margin: 0 auto; padding: 16px; display: grid; gap: 16px;
+         grid-template-columns: minmax(0, 1fr) 360px; align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  section, aside { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  aside { position: sticky; top: 64px; max-height: calc(100vh - 80px); overflow-y: auto; }
+  @media (max-width: 860px) { aside { position: static; max-height: none; } }
+  h1 { font-size: 20px; line-height: 1.3; margin: 0 0 6px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+  .facts span:empty { display: none; }
+  .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 14px; }
+  button { font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line);
+           border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+  button:focus-visible { outline: 3px solid var(--focus); }
+  .levels button[aria-pressed="true"][data-level="oui"] { background: var(--yes); border-color: var(--yes); color: #fff; }
+  .levels button[aria-pressed="true"][data-level="examiner"] { background: var(--maybe); border-color: var(--maybe); color: #fff; }
+  .levels button[aria-pressed="true"][data-level="non"] { background: var(--no); border-color: var(--no); color: #fff; }
+  .reasons { display: grid; gap: 4px; margin-bottom: 12px; }
+  .reason { display: grid; grid-template-columns: 1fr 34px 34px; gap: 4px; align-items: center; font-size: 14px; }
+  .reason button { padding: 1px 0; }
+  .reason button[aria-pressed="true"][data-sign="+"] { background: var(--yes); border-color: var(--yes); color: #fff; }
+  .reason button[aria-pressed="true"][data-sign="-"] { background: var(--no); border-color: var(--no); color: #fff; }
+  textarea { width: 100%; min-height: 70px; font: inherit; color: inherit; background: var(--bg);
+             border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  .nav { display: flex; gap: 6px; margin-top: 10px; }
+  .nav button { flex: 1; }
+  .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .error { color: var(--no); font-size: 14px; min-height: 1.4em; margin-top: 6px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 4px 0 10px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <strong>Annotation C5</strong>
+  <span id="position"></span>
+  <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+  <span id="done"></span>
+  <button id="export">Télécharger annotations.json</button>
+  <label><button id="import-button" type="button">Reprendre un fichier</button>
+    <input id="import" type="file" accept="application/json" hidden></label>
+</header>
+<main>
+  <section>
+    <h1 id="title"></h1>
+    <div class="facts">
+      <span id="company"></span><span id="place"></span><span id="contract"></span><span id="remote"></span>
+      <span id="salary"></span><span id="source"></span>
+    </div>
+    <div class="text" id="text"></div>
+  </section>
+  <aside>
+    <p class="hint">Postulerais-je, avec mon profil et mes préférences d'aujourd'hui ? Ignorer l'ancienneté de
+      l'annonce. Touches : 1 Oui · 2 À examiner · 3 Non · → suivante · ← précédente.</p>
+    <div class="levels">
+      <button data-level="oui" aria-pressed="false">Oui</button>
+      <button data-level="examiner" aria-pressed="false">À examiner</button>
+      <button data-level="non" aria-pressed="false">Non</button>
+    </div>
+    <div class="reasons" id="reasons"></div>
+    <textarea id="comment" placeholder="Commentaire (obligatoire avec « Autre »)"></textarea>
+    <div class="error" id="error" role="alert"></div>
+    <div class="nav">
+      <button id="previous">← Précédente</button>
+      <button id="next" class="primary">Suivante →</button>
+    </div>
+  </aside>
+</main>
+<script type="application/json" id="data">__DATA__</script>
+<script>
+"use strict";
+const data = JSON.parse(document.getElementById("data").textContent);
+const storageKey = `rocky-c5-annotations-${data.seed}`;
+const $ = (id) => document.getElementById(id);
+let answers = {};  // position (1-based) → {position, id, level, reasons: {code: "+" | "-"}, comment}
+let position = 1;
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+    if (saved) { answers = saved.answers || {}; position = saved.position || 1; }
+  } catch (error) { console.error(error); }
+}
+function save() {
+  try { localStorage.setItem(storageKey, JSON.stringify({answers, position})); }
+  catch (error) { $("error").textContent = "Enregistrement local impossible : pense à télécharger le fichier."; }
+}
+function current() {
+  const id = data.order[position - 1];
+  return answers[position] || {position, id, level: null, reasons: {}, comment: ""};
+}
+function problem(answer) {
+  const signs = Object.values(answer.reasons);
+  if (!answer.level) return "Choisis Oui, À examiner ou Non.";
+  if (!signs.length) return "Coche au moins un motif (+ ou −).";
+  if (answer.level === "oui" && !signs.includes("+")) return "Un Oui demande au moins un motif +.";
+  if (answer.level === "non" && !signs.includes("-")) return "Un Non demande au moins un motif −.";
+  if (answer.reasons.autre && !answer.comment.trim()) return "« Autre » demande un commentaire.";
+  return null;
+}
+function render() {
+  const answer = current();
+  const posting = data.postings[answer.id];
+  $("position").textContent = `${position} / ${data.order.length}`;
+  const complete = Object.values(answers).filter((item) => !problem(item)).length;
+  $("done").textContent = `${complete} faites`;
+  $("bar").style.width = `${100 * complete / data.order.length}%`;
+  for (const field of ["title", "company", "place", "contract", "remote", "salary", "source", "text"]) {
+    $(field).textContent = posting[field] || "";
+  }
+  if (posting.url) {
+    const link = document.createElement("a");
+    link.href = posting.url; link.target = "_blank"; link.rel = "noopener"; link.textContent = "annonce d'origine";
+    $("source").textContent = `${posting.source} · `; $("source").append(link);
+  }
+  document.querySelectorAll(".levels button").forEach((button) =>
+    button.setAttribute("aria-pressed", String(button.dataset.level === answer.level)));
+  document.querySelectorAll(".reason button").forEach((button) =>
+    button.setAttribute("aria-pressed", String(answer.reasons[button.dataset.code] === button.dataset.sign)));
+  $("comment").value = answer.comment;
+  $("error").textContent = "";
+  $("previous").disabled = position === 1;
+  $("next").textContent = position === data.order.length ? "Terminer" : "Suivante →";
+  window.scrollTo(0, 0);
+}
+function update(change) {
+  const answer = current();
+  change(answer);
+  answers[position] = answer;
+  save();
+  render();
+}
+function move(step) {
+  if (step > 0) {
+    const error = problem(current());
+    if (error) { $("error").textContent = error; return; }
+  }
+  const target = position + step;
+  if (target < 1) return;
+  if (target > data.order.length) {
+    const missing = data.order.map((_, index) => index + 1).filter((p) => !answers[p] || problem(answers[p]));
+    $("error").textContent = missing.length
+      ? `Annonces incomplètes : ${missing.join(", ")}.` : "Tout est fait : télécharge annotations.json.";
+    return;
+  }
+  position = target;
+  save();
+  render();
+}
+function exportFile() {
+  const list = Object.values(answers).sort((a, b) => a.position - b.position);
+  const blob = new Blob([JSON.stringify({seed: data.seed, exported_at: new Date().toISOString(), answers: list}, null, 1) + "\n"],
+                        {type: "application/json"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob); link.download = "annotations.json"; link.click();
+  URL.revokeObjectURL(link.href);
+}
+function importFile(file) {
+  file.text().then((text) => {
+    const imported = JSON.parse(text);
+    if (imported.seed !== data.seed) throw new Error("Ce fichier vient d'un autre échantillon.");
+    answers = Object.fromEntries(imported.answers.map((item) => [item.position, item]));
+    save(); render();
+  }).catch((error) => { $("error").textContent = `Import impossible : ${error.message}`; });
+}
+
+for (const [code, label] of Object.entries(data.reasons)) {
+  const row = document.createElement("div");
+  row.className = "reason";
+  const name = document.createElement("span");
+  name.textContent = label;
+  row.append(name);
+  for (const [sign, text, title] of [["+", "+", "attire"], ["-", "−", "rebute"]]) {
+    const button = document.createElement("button");
+    button.dataset.code = code; button.dataset.sign = sign; button.textContent = text;
+    button.title = `${label} : ${title}`; button.setAttribute("aria-label", `${label} ${title}`);
+    button.addEventListener("click", () => update((answer) => {
+      if (answer.reasons[code] === sign) delete answer.reasons[code]; else answer.reasons[code] = sign;
+    }));
+    row.append(button);
+  }
+  $("reasons").append(row);
+}
+document.querySelectorAll(".levels button").forEach((button) =>
+  button.addEventListener("click", () => update((answer) => { answer.level = button.dataset.level; })));
+$("comment").addEventListener("input", () => {
+  const answer = current(); answer.comment = $("comment").value; answers[position] = answer; save();
+});
+$("previous").addEventListener("click", () => move(-1));
+$("next").addEventListener("click", () => move(1));
+$("export").addEventListener("click", exportFile);
+$("import-button").addEventListener("click", () => $("import").click());
+$("import").addEventListener("change", (event) => { if (event.target.files[0]) importFile(event.target.files[0]); });
+document.addEventListener("keydown", (event) => {
+  if (event.target === $("comment")) return;
+  const level = {"1": "oui", "2": "examiner", "3": "non"}[event.key];
+  if (level) update((answer) => { answer.level = level; });
+  if (event.key === "ArrowRight") move(1);
+  if (event.key === "ArrowLeft") move(-1);
+});
+load();
+render();
+</script>
+</body>
+</html>

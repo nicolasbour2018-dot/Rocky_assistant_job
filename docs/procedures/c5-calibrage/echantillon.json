@@ -1,0 +1,312 @@
+{
+  "seed": 20260928,
+  "sample": [
+    {
+      "id": "10",
+      "source": "LinkedIn",
+      "stratum": 80
+    },
+    {
+      "id": "54",
+      "source": "LinkedIn",
+      "stratum": 80
+    },
+    {
+      "id": "446",
+      "source": "Indeed",
+      "stratum": 80
+    },
+    {
+      "id": "451",
+      "source": "Indeed",
+      "stratum": 80
+    },
+    {
+      "id": "608",
+      "source": "Adzuna",
+      "stratum": 80
+    },
+    {
+      "id": "751",
+      "source": "Adzuna",
+      "stratum": 80
+    },
+    {
+      "id": "764",
+      "source": "Adzuna",
+      "stratum": 80
+    },
+    {
+      "id": "879",
+      "source": "Wellfound",
+      "stratum": 80
+    },
+    {
+      "id": "945",
+      "source": "LinkedIn",
+      "stratum": 80
+    },
+    {
+      "id": "1041",
+      "source": "LinkedIn",
+      "stratum": 80
+    },
+    {
+      "id": "1076",
+      "source": "Adzuna",
+      "stratum": 80
+    },
+    {
+      "id": "1159",
+      "source": "Indeed",
+      "stratum": 80
+    },
+    {
+      "id": "1161",
+      "source": "Welcome to the Jungle",
+      "stratum": 80
+    },
+    {
+      "id": "1190",
+      "source": "Wellfound",
+      "stratum": 80
+    },
+    {
+      "id": "1244",
+      "source": "Indeed",
+      "stratum": 80
+    },
+    {
+      "id": "32",
+      "source": "Wellfound",
+      "stratum": 60
+    },
+    {
+      "id": "39",
+      "source": "Adzuna",
+      "stratum": 60
+    },
+    {
+      "id": "83",
+      "source": "LinkedIn",
+      "stratum": 60
+    },
+    {
+      "id": "638",
+      "source": "LinkedIn",
+      "stratum": 60
+    },
+    {
+      "id": "846",
+      "source": "Adzuna",
+      "stratum": 60
+    },
+    {
+      "id": "880",
+      "source": "Wellfound",
+      "stratum": 60
+    },
+    {
+      "id": "990",
+      "source": "Adzuna",
+      "stratum": 60
+    },
+    {
+      "id": "1022",
+      "source": "hellowork.com",
+      "stratum": 60
+    },
+    {
+      "id": "1071",
+      "source": "Wellfound",
+      "stratum": 60
+    },
+    {
+      "id": "1074",
+      "source": "Wellfound",
+      "stratum": 60
+    },
+    {
+      "id": "1075",
+      "source": "Adzuna",
+      "stratum": 60
+    },
+    {
+      "id": "1082",
+      "source": "Adzuna",
+      "stratum": 60
+    },
+    {
+      "id": "1225",
+      "source": "hellowork.com",
+      "stratum": 60
+    },
+    {
+      "id": "1241",
+      "source": "Indeed",
+      "stratum": 60
+    },
+    {
+      "id": "1243",
+      "source": "Indeed",
+      "stratum": 60
+    },
+    {
+      "id": "14",
+      "source": "LinkedIn",
+      "stratum": 40
+    },
+    {
+      "id": "38",
+      "source": "Welcome to the Jungle",
+      "stratum": 40
+    },
+    {
+      "id": "101",
+      "source": "Adzuna",
+      "stratum": 40
+    },
+    {
+      "id": "180",
+      "source": "Adzuna",
+      "stratum": 40
+    },
+    {
+      "id": "404",
+      "source": "Adzuna",
+      "stratum": 40
+    },
+    {
+      "id": "409",
+      "source": "Adzuna",
+      "stratum": 40
+    },
+    {
+      "id": "434",
+      "source": "Adzuna",
+      "stratum": 40
+    },
+    {
+      "id": "534",
+      "source": "Adzuna",
+      "stratum": 40
+    },
+    {
+      "id": "794",
+      "source": "Wellfound",
+      "stratum": 40
+    },
+    {
+      "id": "925",
+      "source": "Adzuna",
+      "stratum": 40
+    },
+    {
+      "id": "1023",
+      "source": "hellowork.com",
+      "stratum": 40
+    },
+    {
+      "id": "1058",
+      "source": "LinkedIn",
+      "stratum": 40
+    },
+    {
+      "id": "77",
+      "source": "Wellfound",
+      "stratum": 0
+    },
+    {
+      "id": "91",
+      "source": "Adzuna",
+      "stratum": 0
+    },
+    {
+      "id": "94",
+      "source": "Adzuna",
+      "stratum": 0
+    },
+    {
+      "id": "99",
+      "source": "Adzuna",
+      "stratum": 0
+    },
+    {
+      "id": "100",
+      "source": "Adzuna",
+      "stratum": 0
+    },
+    {
+      "id": "399",
+      "source": "Adzuna",
+      "stratum": 0
+    },
+    {
+      "id": "877",
+      "source": "Wellfound",
+      "stratum": 0
+    },
+    {
+      "id": "1052",
+      "source": "Adzuna",
+      "stratum": 0
+    }
+  ],
+  "order": [
+    "794",
+    "879",
+    "764",
+    "1243",
+    "1075",
+    "1041",
+    "1074",
+    "1241",
+    "91",
+    "409",
+    "1161",
+    "1023",
+    "1190",
+    "945",
+    "38",
+    "925",
+    "638",
+    "404",
+    "83",
+    "877",
+    "990",
+    "1058",
+    "608",
+    "846",
+    "751",
+    "1076",
+    "1159",
+    "446",
+    "880",
+    "1071",
+    "1082",
+    "54",
+    "180",
+    "399",
+    "14",
+    "99",
+    "32",
+    "434",
+    "1244",
+    "451",
+    "534",
+    "101",
+    "1052",
+    "94",
+    "77",
+    "100",
+    "10",
+    "1225",
+    "39",
+    "1022",
+    "1058",
+    "434",
+    "1074",
+    "1161",
+    "99"
+  ]
+}
