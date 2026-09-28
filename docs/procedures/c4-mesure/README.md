@@ -14,10 +14,98 @@ docker compose run --rm --build -T \
   app python /procedures/c4-mesure/measure.py --archive /archive/rocky-v1-20260924 --profile-id 1
 ```
 
-Profil 1 : le profil de Nicolas réimporté en B5 (52 compétences, dont 13 clés et 11 prouvées), ses deux pistes actives
-(« Data analyst », « Data scientist / IA », lieux Paris, Île-de-France, « Eure et Loire », aucun mot exclu) et ses
-préférences (CDI, CDD, VIE ; aucun mode de télétravail ; 35 000 € minimum ; pas de TJM). Chaque annonce de l'archive
-devient l'offre que donnerait la nouvelle collecte (conversion de `c3-mesure/measure.py`, plus le lieu et le pays).
+Profil 1 : le profil de Nicolas réimporté en B5 (52 compétences, dont 13 clés et 11 prouvées) et ses deux pistes
+actives (« Data analyst », « Data scientist / IA », lieux Paris, Île-de-France, « Eure et Loire », aucun mot exclu).
+Ses préférences diffèrent d'une mesure à l'autre (voir chaque section). Chaque annonce de l'archive devient l'offre que
+donnerait la nouvelle collecte (conversion de `c3-mesure/measure.py`, plus le lieu et le pays). La date de référence
+reste le 25/09/2026 (`TODAY`) pour que les mesures restent comparables.
+
+## Résultats du 28/09/2026 (règles `score-2026-09-25.1`, profil complété) — point de départ de C5
+
+Mêmes règles, même archive, même date de référence ; seules les préférences du profil ont changé (Nicolas, 25/09) :
+contrats CDI, CDD, **Freelance**, VIE ; télétravail **sur site, hybride et complet** ; 35 000 € minimum ; **TJM
+minimum 350 €**. Les pistes n'ont toujours aucun mot exclu.
+
+### Échantillon C3 (40 annonces, dont la 1193)
+
+| Id | Source | Intitulé | v1 | C4 25/09 | C4 28/09 | Piste | Confiance | Plafond |
+|---|---|---|---|---|---|---|---|---|
+| 1035 | Adzuna | Marketing Data Scientist Consultant | 62.5 | 100 | 100 | Data scientist / IA | medium |  |
+| 451 | Indeed | Data Analyst – Power Markets M/F | 60.2 | 100 | 100 | Data analyst | high |  |
+| 753 | Adzuna | Data Analyst Technico-Fonctionnel (F/H) - Freela | 53.3 | 73 | 85 | Data analyst | medium |  |
+| 575 | LinkedIn | Data scientist-e / Data ingénieur-e | 59.9 | 82 | 82 | Data scientist / IA | medium |  |
+| 1042 | LinkedIn | DATA SCIENTIST H/F | 72.6 | 80 | 80 | Data scientist / IA | medium |  |
+| 879 | Wellfound | Data Scientist | 74.6 | 76 | 77 | Data scientist / IA | medium |  |
+| 856 | Adzuna | Data Scientist - Solutions Front (H/F) | 63.9 | 77 | 77 | Data scientist / IA | medium |  |
+| 1245 | Indeed | Data analyst - Lutte Contre La Fraude H/F | 45.2 | 76 | 76 | Data analyst | low |  |
+| 768 | LinkedIn | Data Analyst Senior H/F | 55.8 | 74 | 75 | Data analyst | medium |  |
+| 7 | LinkedIn | Data Analyst / CDI / H/F | 54.6 | 72 | 73 | Data analyst | low |  |
+| 450 | Indeed | Confirmed Data Analyst - Demand | 48.0 | 71 | 73 | Data analyst | low |  |
+| 794 | Wellfound | Senior Data Analyst, GTM | 42.9 | 69 | 71 | Data analyst | low |  |
+| 1155 | LinkedIn | 🦊 Data Scientist (CDI) | 63.5 | 70 | 70 | Data scientist / IA | low |  |
+| 1064 | Welcome to the Jungle | Data Scientist | 44.6 | 67 | 69 | Data scientist / IA | low |  |
+| 944 | LinkedIn | Data Scientist | 71.6 | 67 | 69 | Data scientist / IA | low |  |
+| 173 | Adzuna | Data Analyst | 65.5 | 66 | 66 | Data analyst | low |  |
+| 1225 | hellowork.com | Data Scientist Sénior - Expert Rag H/F | 81.1 | 66 | 66 | Data scientist / IA | medium |  |
+| 940 | hellowork.com | Data Scientist - Domaine Lcb - Ft H/F | 88.0 | 64 | 64 | Data scientist / IA | low |  |
+| 775 | Welcome to the Jungle | Data Analyst Marketing | 41.1 | 60 | 62 | Data analyst | low |  |
+| 461 | Wellfound | Data Analyst | 53.3 | 58 | 61 | Data analyst | low |  |
+| 792 | Wellfound | Senior Data Analyst | 30.6 | 55 | 58 | Data analyst | low |  |
+| 32 | Wellfound | Data Analyst – AI Legal Training | 73.8 | 41 | 57 | Data analyst | low |  |
+| 49 | LinkedIn | Data Analyst F/H | 62.9 | 56 | 56 | Data analyst | low |  |
+| 434 | Adzuna | Business Analyst Data - MDM Informatica - Servic | 79.2 | 53 | 56 | Data analyst | low |  |
+| 65 | Welcome to the Jungle | Chef de projet Data (H/F) | 49.5 | 53 | 56 | Data analyst | medium |  |
+| 176 | Adzuna | Data Engineer Databricks F/H | 55.5 | 55 | 55 | Data analyst | low |  |
+| 1072 | Wellfound | Principal Data Scientist | 57.4 | 48 | 51 | Data scientist / IA | low |  |
+| 1158 | Indeed | Data Scientist / Risk Analyst – Risque Crédit (H | 81.8 | 49 | 49 | Data scientist / IA | low |  |
+| 1080 | Adzuna | Stage Data Scientist - Paris (H/F/X) | 61.4 | 43 | 46 | Data scientist / IA | low |  |
+| 445 | LinkedIn | CHARGE(E) DE PROJETS Data & Pilotage de la perfo | 66.1 | 42 | 46 | Data analyst | low |  |
+| 1193 | Adzuna | Data Protection Analyst - Freelance | 79.6 | 29 | 44 | Data analyst | low |  |
+| 861 | Welcome to the Jungle | Data Scientist | 86.2 | 36 | 40 | Data scientist / IA | low |  |
+| 622 | Apec | Développeur Python / DevOps GCP F/H | 58.5 | 35 | 40 | Data analyst | medium |  |
+| 70 | Apec | Data analyst F/H | 30.6 | 30 | 30 | Data analyst | low | Bloquant : Habilitation |
+| 453 | Welcome to the Jungle | Senior Business Intelligence Analyst | 39.3 | 20 | 25 | Data analyst | low |  |
+| 1226 | hellowork.com | Ingénieur IA - Llmops H/F | 73.6 | 24 | 24 | Data scientist / IA | low |  |
+| 1030 | Adzuna | Sourcing Transformation Digitale IDF SBR | 78.1 | 12 | 24 | Data analyst | low |  |
+| 657 | Welcome to the Jungle | Project Manager DATA / IA  F/H | 71.9 | 17 | 21 | Data analyst | low |  |
+| 222 | Adzuna | Médecin Généraliste F/H - Corbeil-Essonnes 91100 | — | 18 | 18 | Data analyst | low |  |
+| 649 | Wellfound | Head of Talent Acquisition | 72.0 | 7 | 13 | Data analyst | low | Bloquant : Nationalité ou droit au travail |
+
+24 annonces sur 40 montent (de +1 à +16), 16 ne bougent pas, aucune ne baisse ; aucune confiance ne change.
+
+### Ensemble des annonces notées en v1
+
+404 annonces (mêmes annonces qu'au 25/09) :
+
+| Mesure | 25/09 | 28/09 |
+|---|---|---|
+| Corrélation de rang (Spearman) v1 / C4 | 0,08 | 0,10 |
+| C4 ≥ 50 (v1 ≥ 50 : 332) | 264 | 292 |
+| Moyenne C4 (v1 : 63,7) | 58,7 | 60,9 |
+| 20 premières communes avec la v1 | 0 | 0 |
+| Confiance haute / moyenne / faible | 10 / 131 / 263 | 15 / 126 / 263 |
+| Plafonnées | 13 | 13 |
+| Scores à 100 parmi les 20 premières | 19 | 20 |
+
+Les 20 premières sont les mêmes qu'au 25/09, sauf deux missions freelance qui entrent (97 « Data Scientist Junior -
+Freelance », 1076 « DATA SCIENTIST EXPÉRIMENTÉ – IA GÉNÉRATIVE - Freelance », toutes deux à 100) à la place de 54
+et 449.
+
+### Lecture
+
+- **Critère de sortie de C4 toujours tenu, marge réduite** : la « Data Protection Analyst » (1193) passe de 29 à
+  **44** (< 50), confiance faible. Détail : compétences 0,05 (0,21 point de preuve), intitulé 0,5 (mots séparés), puis
+  contrat 1 (Freelance désormais recherché), lieu 1 (Paris), salaire 1 (550 €/jour ≥ 350 €) ; télétravail, expérience
+  et langues sans information, donc écartées et les autres renormalisées. Trois composantes logistiques pleines
+  suffisent à la porter à 44.
+- **Les composantes logistiques pèsent sans preuve de métier** : la « Sourcing Transformation Digitale » (1030) a
+  compétences 0 et intitulé 0, mais contrat et lieu pleins : elle passe de 12 à **24**. La « Data Analyst – AI Legal
+  Training » (32) gagne 16 points (41 → 57) par le contrat (Freelance) et le télétravail complet, avec 0,7 point de
+  preuve.
+- **Le télétravail n'apporte plus d'information** : les trois modes étant acceptés, la composante vaut 1 dès que
+  l'annonce en parle ; elle relève le score sans rien distinguer.
+- Les écarts du 25/09 (confiance faible pour 65 % des annonces, saturation à 100, corrélation quasi nulle avec la v1)
+  sont inchangés : ils viennent des règles, pas des préférences.
 
 ## Résultats du 25/09/2026 (règles `score-2026-09-25.1`)
 

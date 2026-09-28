@@ -399,6 +399,13 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   « Freelance » (une mission vaut 0 au contrat), pas de TJM minimum, aucun mot exclu dans les pistes (« Stage Data
   Scientist » n'est pas plafonnée).
   *Résolu (Nicolas, 25/09) : préférences complétées. La mesure C4 a été faite avant : la relancer au début de C5.*
+  *Mesure relancée le 28/09 (`docs/procedures/c4-mesure/`, point de départ de C5) : la 1193 passe de 29 à 44 (< 50) ;
+  Spearman v1 / C4 0,10 ; confiance faible toujours pour 263 annonces sur 404. Les pistes n'ont toujours aucun mot
+  exclu (« Stage Data Scientist » à 46, non plafonnée).*
+- **(C4 → C5)** Composantes logistiques sans preuve de métier (mesure du 28/09) : quand compétences et intitulé sont
+  faibles, contrat, lieu et salaire pleins, renormalisés faute d'autres informations, portent le score (1193 à 44,
+  1030 « Sourcing » à 24 avec compétences et intitulé à 0). Le télétravail, les trois modes étant acceptés, vaut 1 dès
+  que l'annonce en parle sans rien distinguer.
 - **(C4 → après C6)** Lieux structurés : une ville d'Eure-et-Loir ne répond pas à « Eure et Loire » ; un pays absent
   (LinkedIn, Wellfound) est lu comme la France, avec le marqueur « pays non précisé ».
 - **(C4 → profil)** Permis et habilitation absents du profil : une condition bloquante plafonne toujours le score
