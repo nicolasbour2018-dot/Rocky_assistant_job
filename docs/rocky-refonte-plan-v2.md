@@ -417,6 +417,11 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   Nicolas passe par les mots exclus de chaque piste (décision C5, Q23).
 - **(C5 → `offres`, analyse)** Secteur ou domaine de l'annonce (« Financement structuré », « Cash management ») : aucune
   composante ne le lit ; motif « secteur » cité 10 fois dans les annotations C5 (décision C5, Q15).
+- **(C5 → C7, puis recalibrage)** Les règles `score-2026-09-29.2` sont un point de départ (décision C5, Q29) : les
+  décisions réelles de Nicolas à l'écran Offres (C7, étiquettes D14) serviront à les affiner. Directions relevées : le
+  contrôle reste à parité avec la v1 sans la dépasser (annonces au bon intitulé mais pauvres en compétences du profil,
+  haut du classement saturé à 100) ; une annonce qui demande surtout des compétences absentes du profil (751,
+  « Financement structuré ») reste haute, faute de lire le poids de ces compétences dans l'annonce (Q30).
 - **(C4 → après C6)** Lieux structurés : une ville d'Eure-et-Loir ne répond pas à « Eure et Loire » ; un pays absent
   (LinkedIn, Wellfound) est lu comme la France, avec le marqueur « pays non précisé ».
 - **(C4 → profil)** Permis et habilitation absents du profil : une condition bloquante plafonne toujours le score

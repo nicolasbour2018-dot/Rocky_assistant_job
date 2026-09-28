@@ -182,6 +182,39 @@ support Cash Management », « Analyste OSINT », « Prompt Engineer ») ; 70 es
 750 par le mot exclu « chef ». Aucune n'est descendue à cause d'une règle de la version 1 : elles étaient déjà sous le
 seuil avec la référence, sauf 750 (choix de Nicolas, Q23).
 
+### Mesure finale (29/09/2026) : `score-2026-09-29.2`, profil complété
+
+Profil après les ajustements de Nicolas (Q23, Q26) : mots exclus des deux pistes senior, lead, staff, principal, head,
+chef, expert, directeur, manager, stage ; intitulés ajoutés « Analyste OSINT » et « Consultant data » (Data analyst),
+« Prompt engineer » (Data scientist / IA).
+
+| | Cible | v1 | Référence | Finale | |
+|---|---|---|---|---|---|
+| AUC pertinente / Non | ≥ 0,80 | 0,52 | 0,75 | **0,94** | ✅ |
+| Non dans les 10 premières | 0 | 7 | 3 | **1** (751) | ❌ accepté (Q30) |
+| Oui au-dessus du seuil 50 | 12 / 12 | 12 | 12 | **12** | ✅ |
+| Pertinentes au-dessus | ≥ 19 / 21 | 18 | 20 | **20** | ✅ |
+| Non au-dessus | ≤ 9 / 29 | 25 | 20 | **5** | ✅ |
+| Contrôle (30) : rang médian | ≤ 25 % | 26 % | 34 % | **27 %** | ❌ accepté (Q29) |
+| Contrôle : premier quart | ≥ 17 | 15 | 13 | **14** | ❌ accepté (Q29) |
+| Contrôle : au-dessus du seuil | ≥ 27 | 28 | 26 | **28** | ✅ |
+
+Stabilité : 4 doublons sur 5. Seuil gardé à 50 (Q31). Les deux candidatures du contrôle sous le seuil sont plafonnées
+par des choix de Nicolas : 70 (habilitation exigée), 750 (mot exclu « chef »).
+
+## 4. Relecture (Q21)
+
+```sh
+docker compose run --rm --build -T \
+  -v "$PWD/backups:/archive:ro" -v "$PWD/docs/procedures:/procedures:ro" -v "$PWD/../rocky-c5-annotation:/out" \
+  app python /procedures/c5-calibrage/review.py --archive /archive/rocky-v1-20260924 --profile-id 1 --out /out
+open ../rocky-c5-annotation/relecture.html
+```
+
+Hors des annonces annotées : les 20 premières des 404, les 10 juste sous le seuil et les candidatures du contrôle sous
+le seuil, cette fois **avec** le score et son détail. Pour chacune : place juste, trop haute ou trop basse, et un
+commentaire ; « Télécharger relecture.json » exporte les verdicts, copiés dans ce dossier.
+
 ## Corrections d'annotation
 
 - **751** (« Business Analyst Data Financement Structuré », 29/09) : motif « métier − » retiré, erreur de Nicolas ;

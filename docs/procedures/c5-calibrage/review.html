@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relecture C5</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #dddbd5;
+    --accent: #2f5d8a; --good: #2e7d4f; --warn: #b07a12; --bad: #b3402f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --panel: #1f1f1d; --ink: #ecebe7; --muted: #a09e98; --line: #34332f;
+      --accent: #7fb0e0; --good: #6cc596; --warn: #e2b04a; --bad: #ec8171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 1; background: var(--bg); border-bottom: 1px solid var(--line);
+           padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header span { color: var(--muted); }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  h2 { font-size: 17px; margin: 24px 0 8px; }
+  article { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px;
+            margin-bottom: 10px; }
+  .head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .score { font-size: 22px; font-weight: 700; min-width: 44px; }
+  .title { font-weight: 600; flex: 1; min-width: 200px; }
+  .meta { color: var(--muted); font-size: 14px; }
+  .caps { color: var(--bad); font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+  td { border-top: 1px solid var(--line); padding: 3px 6px; vertical-align: top; }
+  td:first-child { white-space: nowrap; color: var(--muted); }
+  td:nth-child(2) { white-space: nowrap; text-align: right; }
+  details summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+  .text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; margin-top: 6px; }
+  .verdict { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  button { font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line);
+           border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button[aria-pressed="true"][data-verdict="juste"] { background: var(--good); border-color: var(--good); color: #fff; }
+  button[aria-pressed="true"][data-verdict="trop_haut"] { background: var(--warn); border-color: var(--warn); color: #fff; }
+  button[aria-pressed="true"][data-verdict="trop_bas"] { background: var(--bad); border-color: var(--bad); color: #fff; }
+  input[type="text"] { flex: 1; min-width: 180px; font: inherit; color: inherit; background: var(--bg);
+                       border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+  .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <strong>Relecture C5</strong>
+  <span id="version"></span>
+  <span id="done"></span>
+  <button id="export" class="primary">Télécharger relecture.json</button>
+</header>
+<main id="main"></main>
+<script type="application/json" id="data">__DATA__</script>
+<script>
+"use strict";
+const data = JSON.parse(document.getElementById("data").textContent);
+const storageKey = `rocky-c5-relecture-${data.rules_version}`;
+const labels = {skills: "Compétences", title: "Intitulé", contract: "Contrat", location: "Lieu", remote: "Télétravail",
+                salary: "Salaire", experience: "Expérience", languages: "Langues"};
+const confidence = {high: "confiance haute", medium: "confiance moyenne", low: "confiance faible"};
+let verdicts = {};
+try { verdicts = JSON.parse(localStorage.getItem(storageKey) || "{}"); } catch (error) { console.error(error); }
+function save() {
+  try { localStorage.setItem(storageKey, JSON.stringify(verdicts)); } catch (error) { console.error(error); }
+  const total = Object.keys(data.postings).length;
+  document.getElementById("done").textContent = `${Object.values(verdicts).filter((v) => v.verdict).length} / ${total} relues`;
+}
+function element(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+document.getElementById("version").textContent = `règles ${data.rules_version}`;
+const main = document.getElementById("main");
+for (const [group, ids] of Object.entries(data.groups)) {
+  main.append(element("h2", `${group} (${ids.length})`));
+  for (const id of ids) {
+    const posting = data.postings[id];
+    const card = element("article");
+    const head = element("div", undefined, "head");
+    head.append(element("span", String(posting.score), "score"), element("span", posting.title, "title"));
+    card.append(head);
+    card.append(element("div", [posting.company, posting.place, posting.source, posting.track,
+                                confidence[posting.confidence]].filter(Boolean).join(" · "), "meta"));
+    if (posting.caps.length) card.append(element("div", `Plafond : ${posting.caps.join(" ; ")}`, "caps"));
+    const table = element("table");
+    for (const component of posting.components) {
+      const row = element("tr");
+      row.append(element("td", labels[component.code] || component.code),
+                 element("td", component.value === null ? "—" : `${component.value} × ${component.weight}`),
+                 element("td", component.detail));
+      table.append(row);
+    }
+    card.append(table);
+    if (posting.gaps.length) card.append(element("div", `Manques : ${posting.gaps.join(" ; ")}`, "meta"));
+    const more = element("details");
+    more.append(element("summary", "Texte de l'annonce"));
+    if (posting.url) {
+      const link = element("a", "annonce d'origine"); link.href = posting.url; link.target = "_blank"; link.rel = "noopener";
+      more.append(link);
+    }
+    more.append(element("div", posting.text, "text"));
+    card.append(more);
+    const verdict = element("div", undefined, "verdict");
+    for (const [code, text] of [["juste", "Place juste"], ["trop_haut", "Trop haute"], ["trop_bas", "Trop basse"]]) {
+      const button = element("button", text);
+      button.dataset.verdict = code;
+      button.setAttribute("aria-pressed", String(verdicts[id]?.verdict === code));
+      button.addEventListener("click", () => {
+        verdicts[id] = {...(verdicts[id] || {}), verdict: code};
+        verdict.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+        save();
+      });
+      verdict.append(button);
+    }
+    const comment = element("input");
+    comment.type = "text"; comment.placeholder = "Commentaire (facultatif)"; comment.value = verdicts[id]?.comment || "";
+    comment.addEventListener("input", () => { verdicts[id] = {...(verdicts[id] || {}), comment: comment.value}; save(); });
+    verdict.append(comment);
+    card.append(verdict);
+    main.append(card);
+  }
+}
+document.getElementById("export").addEventListener("click", () => {
+  const list = Object.entries(data.groups).flatMap(([group, ids]) => ids.map((id) => ({
+    group, id, score: data.postings[id].score, verdict: verdicts[id]?.verdict || null, comment: verdicts[id]?.comment || ""})));
+  const blob = new Blob([JSON.stringify({rules_version: data.rules_version, answers: list}, null, 1) + "\n"],
+                        {type: "application/json"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob); link.download = "relecture.json"; link.click();
+  URL.revokeObjectURL(link.href);
+});
+save();
+</script>
+</body>
+</html>

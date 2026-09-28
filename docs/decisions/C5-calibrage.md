@@ -79,6 +79,14 @@ ramenées dans la même proportion : ≥ 19 dans le premier quart, ≥ 31 au-des
 | Q27 | Annonce 751 | Motif « métier − » retiré (erreur de Nicolas, Q18) ; l'étiquette Non reste, pour des compétences demandées absentes du profil et le secteur. |
 | Q28 | Savoir-être | Une compétence de catégorie « Savoir-être » compte **×0,5** dans les points de preuve : presque toutes les annonces en citent ; règle valable pour tout compte. |
 
+### Point d'arrêt (Q20, grill avec Nicolas, 29/09, après deux versions de règles)
+
+| # | Sujet | Décision |
+|---|---|---|
+| Q29 | Contrôle | **Écart accepté et documenté**, la cible n'est pas réécrite : sur les 30 candidatures, `score-2026-09-29.2` fait 27 % · 14 · 28 (rang médian · premier quart · au-dessus du seuil), la v1 26 % · 15 · 28 ; l'intention de Q14 (parité avec la v1) est tenue, les chiffres (≤ 25 % · ≥ 17 · ≥ 27) ne le sont pas pour les deux premiers. Ces règles sont un **point de départ** : elles seront affinées sur les décisions réelles de Nicolas (C7, étiquettes D14). |
+| Q30 | Annonce 751 | **Limite acceptée** : sa non-pertinence dépend du poids des compétences de finance dans l'annonce, que l'analyse ne voit pas (elle ne lit que les termes du profil). Direction d'amélioration notée en section 8. |
+| Q31 | Seuil | **50** : seul seuil qui tient à la fois les cibles Q13 et le contrôle au-dessus du seuil (à 61, lu sur la courbe, 2 Non au-dessus au lieu de 5, mais le contrôle tombe à 21 sur 30). |
+
 ### Limites de la mesure
 
 - **Annotateur unique et subjectif** : c'est voulu (Q1, les étiquettes D14 sont les décisions de Nicolas), mais les
