@@ -16,7 +16,7 @@ from typing import Any
 from rocky.offres.analysis.model import Importance
 from rocky.profil.model import LanguageLevel, Preferences, SkillLevel
 
-RULES_VERSION = "score-2026-09-25.1"
+RULES_VERSION = "score-2026-09-29.1"
 
 
 class ComponentCode(StrEnum):
@@ -84,6 +84,9 @@ OUT_OF_ZONE_HYBRID = 0.5
 ABROAD = 0.0
 ABROAD_FULL_REMOTE = 0.5
 FRANCE_NAMES = frozenset({"france", "fr", "fra"})
+# Sources that neither filter the place nor give the country (plan §8, C1 → C4): a posting of theirs without a country,
+# outside every track location, is presumed abroad (C5, Q24).
+PRESUMED_ABROAD_SOURCES = frozenset({"wellfound"})
 
 # Salary (Q8): a period deduced from the amount weighs this share of the weight.
 DEDUCED_PERIOD_FACTOR = 0.5
@@ -92,7 +95,7 @@ EURO = "EUR"
 # Languages (Q23): a language of the profile at a lower level than asked.
 LOWER_LANGUAGE_LEVEL = 0.5
 
-# Caps and threshold (Q5, Q6, Q14, Q18).
+# Caps and threshold (Q5, Q6, Q14, Q18; abroad: C5, Q24).
 CAP = 30.0
 THRESHOLD = 50
 
@@ -104,6 +107,7 @@ MANY_ABSENT = 3
 class CapKind(StrEnum):
     EXCLUDED_WORD = "excluded_word"
     CONDITION = "condition"
+    ABROAD = "abroad"
 
 
 class ConfidenceLevel(StrEnum):

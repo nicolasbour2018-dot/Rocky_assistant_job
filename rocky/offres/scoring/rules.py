@@ -38,6 +38,7 @@ from rocky.offres.scoring.model import (
     OUT_OF_ZONE,
     OUT_OF_ZONE_HYBRID,
     PARTIAL_TITLE_FACTOR,
+    PRESUMED_ABROAD_SOURCES,
     REQUIREMENT_PENALTY,
     RULES_VERSION,
     SCATTERED_TITLE,
@@ -238,8 +239,10 @@ def _shared(
 
 def _track_score(shared: _Shared, track: ScoringTrack | None) -> TrackScore:
     title, title_features = _title(shared, track)
-    location, location_unknown, location_notes = _location(shared, track)
+    location, location_unknown, location_notes, abroad = _location(shared, track)
     caps, word_notes, word_features = _excluded_words(shared, track)
+    if abroad is not None:
+        caps = (*caps, abroad)
     components = (
         shared.skills,
         title,
@@ -492,8 +495,8 @@ def _remote(analysis: PostingAnalysis, profile: ScoringProfile) -> Component:
 
 def _location(
     shared: _Shared, track: ScoringTrack | None
-) -> tuple[Component, bool, tuple[str, ...]]:
-    """The place component, whether the place is unknown (confidence), and notes to show."""
+) -> tuple[Component, bool, tuple[str, ...], Cap | None]:
+    """The place component, whether the place is unknown (confidence), notes to show, and the cap abroad (C5, Q24)."""
     weight = WEIGHTS[ComponentCode.LOCATION]
     offer, remote = shared.offer, shared.analysis.remote
     place = (offer.location or "").strip()
@@ -508,9 +511,23 @@ def _location(
             ),
             False,
             (),
+            None,
         )
-    if country and country not in FRANCE_NAMES:
+    abroad = bool(country) and country not in FRANCE_NAMES
+    presumed = not country and offer.source in PRESUMED_ABROAD_SOURCES
+    zone = _zone(
+        track,
+        ", ".join(part for part in (place, offer.country or "") if part),
+        in_france=not (abroad or presumed),
+    )
+    if (abroad or presumed) and zone is None:
         where = ", ".join(part for part in (place, offer.country or "") if part)
+        if presumed:
+            where = f"{where + ', ' if where else ''}pays non précisé par la source"
+            label = "Hors de France présumé : pays non précisé par la source"
+        else:
+            label = f"Hors de France : {where}"
+        cap = Cap(CapKind.ABROAD, label, where)
         if remote == RemoteMode.FULL_REMOTE:
             return (
                 Component(
@@ -522,6 +539,7 @@ def _location(
                 ),
                 False,
                 (),
+                cap,
             )
         return (
             Component(
@@ -532,6 +550,7 @@ def _location(
             ),
             False,
             (),
+            cap,
         )
     if remote == RemoteMode.FULL_REMOTE:
         return (
@@ -544,6 +563,7 @@ def _location(
             ),
             False,
             (),
+            None,
         )
     if not place:
         return (
@@ -552,6 +572,7 @@ def _location(
             ),
             True,
             (),
+            None,
         )
     if not track.locations:
         return (
@@ -563,23 +584,20 @@ def _location(
             ),
             False,
             (),
+            None,
         )
-    folded_place = fold(place).text
-    for location in track.locations:
-        folded = fold(location).text
-        if folded and (
-            folded in FRANCE_NAMES or term_pattern(folded).search(folded_place)
-        ):
-            return (
-                Component(
-                    ComponentCode.LOCATION,
-                    IN_ZONE,
-                    weight,
-                    f"{place} : dans la zone « {location} »",
-                ),
-                False,
-                (),
-            )
+    if zone is not None:
+        return (
+            Component(
+                ComponentCode.LOCATION,
+                IN_ZONE,
+                weight,
+                f"{place} : dans la zone « {zone} »",
+            ),
+            False,
+            (),
+            None,
+        )
     hybrid = remote == RemoteMode.HYBRID
     notes = () if country else ("Pays non précisé : l'offre est lue comme en France",)
     return (
@@ -592,7 +610,26 @@ def _location(
         ),
         False,
         notes,
+        None,
     )
+
+
+def _zone(track: ScoringTrack, place: str, *, in_france: bool) -> str | None:
+    """The track location that covers the place (a city, a region, a country), or None.
+
+    A location named "France" covers the whole country, never a posting abroad.
+    """
+    folded_place = fold(place).text
+    for location in track.locations:
+        folded = fold(location).text
+        if not folded:
+            continue
+        if folded in FRANCE_NAMES:
+            if in_france:
+                return location
+        elif folded_place and term_pattern(folded).search(folded_place):
+            return location
+    return None
 
 
 # Salary (Q8, Q24).

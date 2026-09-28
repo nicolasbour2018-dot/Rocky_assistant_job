@@ -54,6 +54,32 @@ Critère de sortie : « Les annonces jugées pertinentes remontent ; écart chif
 | Q20 | Cibles non atteintes | Point d'arrêt avec Nicolas après **3 versions** de règles : continuer, accepter l'écart documenté ou reporter en section 8. |
 | Q21 | Validation | Nicolas relit, sur la version calibrée, les 20 premières, les 10 juste sous le seuil et les candidatures de contrôle restées sous le seuil. |
 
+### Première version des règles (grill avec Nicolas, 29/09, après la mesure de référence)
+
+| # | Sujet | Décision |
+|---|---|---|
+| Q22 | Préférence ou règle | Une **préférence personnelle** (séniorité refusée, secteur) va dans le **profil** ; une **règle** ne code que ce qui vaut pour tout compte. Garde-fou contre le biais d'un annotateur unique : les règles restent justes pour un autre utilisateur (alpha-testeurs, D15). |
+| Q23 | Séniorité | Premier motif de Non (18 sur 29), souvent bloquante au recrutement (Nicolas). **Exception à Q17** : Nicolas complète les mots exclus de ses deux pistes (la piste « Data scientist / IA », sans mot exclu, contournait le plafond « senior » de l'autre). Un réglage « niveau visé » du profil est noté en section 8. |
+| Q24 | Étranger | Une annonce **hors de France**, connue ou **présumée** (pays absent sur une source qui ne filtre pas le lieu : Wellfound), est **plafonnée** (« Hors de France »), en télétravail complet aussi (droit au travail : visa américain, par exemple), sauf si un lieu de la piste couvre ce pays ou cette ville. |
+| Q25 | Version 1 | Q23 (profil), Q24 (règle) et la correction C3 des fausses exigences de langue ; mesurée avant toute règle plus risquée (intitulé à 0, poids du contrat, du lieu et du salaire). |
+
+Rappel (Nicolas, 29/09) : un Non n'est pas une annonce « non pertinente pour le profil » mais une annonce où il ne
+postulerait pas, souvent pour un **motif bloquant** (visa, séniorité). La faire passer sous le seuil par un plafond ne
+la jette pas : elle reste conservée avec son motif (invariant « aucune offre n'est jetée »).
+
+Contrôle ajusté (Nicolas, 29/09, après Q24) : 860 (New York) et 917 (Londres), plafonnées par Q24, sortent du
+contrôle, l'étranger étant désormais bloquant pour Nicolas. Le contrôle compte 34 candidatures ; les cibles Q14 sont
+ramenées dans la même proportion : ≥ 19 dans le premier quart, ≥ 31 au-dessus du seuil, rang médian ≤ 25 %.
+
+### Limites de la mesure
+
+- **Annotateur unique et subjectif** : c'est voulu (Q1, les étiquettes D14 sont les décisions de Nicolas), mais les
+  règles ne doivent pas coder ses goûts (Q22).
+- **Constance** : 4 doublons sur 5 identiques ; le jugement évolue aussi dans le temps (Nicolas a postulé en v1 à un
+  « Adjoint chef de bureau – Data analyst » du contrôle et étiquette Non une annonce de même intitulé, 608).
+- **Petit échantillon** (50) : le contrôle vérifie que le réglage vaut au-delà.
+- **Contrôle biaisé** vers la v1 : les candidatures ont été choisies parmi ce que la v1 montrait.
+
 ## Décisions techniques
 
 | Sujet | Décision | Raison |

@@ -160,6 +160,15 @@ def test_required_sentences_outside_the_skills_are_kept_but_not_the_application(
     assert result.requirements == ("Expérience impérative sur Informatica MDM.",)
 
 
+def test_a_required_language_is_not_a_requirement_outside_the_profile() -> None:
+    result = analysis(
+        "Anglais indispensable. Language Skills: Complete fluency in English is mandatory."
+    )
+
+    assert result.requirements == ()
+    assert [need.code for need in result.languages] == ["en"]
+
+
 # Conditions.
 
 
@@ -480,6 +489,8 @@ def test_experience_asked(text: str, years: int | None) -> None:
         ("Langues : Aucune langue attendue", {}),
         ("Rexel est le leader français de la distribution professionnelle.", {}),
         ("Des prestations dont bénéficient des millions de Français.", {}),
+        ("Anglais indispensable.", {"en": None}),
+        ("English (Required)", {"en": None}),
     ],
 )
 def test_languages_asked(text: str, expected: dict[str, LanguageLevel | None]) -> None:

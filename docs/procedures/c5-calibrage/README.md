@@ -131,7 +131,40 @@ au-dessus du seuil (≤ 9 visé) et 3 Non dans les 10 premières. Les 20 Non au-
 
 ## Versions de règles
 
-_À compléter : une ligne par `RULES_VERSION`, avec le motif compté qui justifie chaque changement et sa mesure._
+| Version | Changement | Motif compté qui le justifie |
+|---|---|---|
+| `score-2026-09-29.1` + `analyse-2026-09-29.1` | Plafond « Hors de France » (connu, ou présumé pour une annonce Wellfound sans pays hors des lieux des pistes), levé si un lieu de la piste couvre le pays ou la ville (Q24) ; une phrase de langue n'est plus une exigence hors profil, « Anglais indispensable » devient un besoin de langue | condition − × 10 et lieu − × 8 sur les Non ; 21 exigences hors profil sur 118 étaient des phrases de langue |
+| Profil (exception Q23) | Mots exclus des deux pistes : senior, lead, staff, principal, head, chef, expert, directeur, manager (un par ligne ; « sénior » se confond avec « senior ») | séniorité − × 18 sur les Non |
+
+Contrôle ajusté (Nicolas, 29/09) : 860 (New York) et 917 (Londres) en sortent, l'étranger étant désormais bloquant
+pour lui ; 34 candidatures, cibles ramenées dans la même proportion (≥ 19 dans le premier quart, ≥ 31 au-dessus du
+seuil). La mesure de la v1 et de la référence est recalculée sur ces 34.
+
+### Mesure de la version 1 (29/09/2026)
+
+| Ordre (50 annonces) | AUC pertinente / Non | Non dans les 10 premières |
+|---|---|---|
+| v1 | 0,52 | 7 |
+| Référence | 0,75 | 3 |
+| **Version 1** | **0,92** ✅ | **1** ❌ (751, « Business Analyst Data Financement Structuré ») |
+
+| Seuil 50 | Oui au-dessus | Pertinentes au-dessus | Non au-dessus |
+|---|---|---|---|
+| Référence | 12 / 12 | 20 / 21 | 20 / 29 |
+| **Version 1** | **12 / 12** ✅ | **20 / 21** ✅ | **6 / 29** ✅ |
+
+| Contrôle (34) | Rang médian (part devant) | Premier quart | Au-dessus du seuil |
+|---|---|---|---|
+| v1 | 23 % | 18 | 32 |
+| Référence | 38 % | 13 | 26 |
+| **Version 1** | **28 %** ❌ | **15** ❌ | **25** ❌ |
+| Cible | ≤ 25 % | ≥ 19 | ≥ 31 |
+
+Les 9 candidatures sous le seuil : 7 sont des métiers hors des intitulés des pistes (intitulé à 0 ou 0,25 :
+« Consultant Data Analytics », « Quantitative consultant », « BPCE », « Responsable IA & Data », « Business Analysis
+support Cash Management », « Analyste OSINT », « Prompt Engineer ») ; 70 est plafonnée par une habilitation exigée ;
+750 par le mot exclu « chef ». Aucune n'est descendue à cause d'une règle de la version 1 : elles étaient déjà sous le
+seuil avec la référence, sauf 750 (choix de Nicolas, Q23).
 
 ## Corrections d'annotation
 

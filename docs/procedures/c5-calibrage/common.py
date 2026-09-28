@@ -20,6 +20,8 @@ HERE = Path(__file__).parent
 # Same reference date as the C4 measure, so the measures stay comparable.
 TODAY = date(2026, 9, 25)
 PROFILE_ID = "1"
+# Applications Nicolas would not make today (decision C5, after Q24): New York and London, abroad being blocking.
+LEFT_CONTROL = frozenset({"860", "917"})
 
 
 @cache
@@ -65,7 +67,7 @@ def load_archive(archive: Path) -> Archive:
             row["job_id"]
             for row in csv.DictReader(file)
             if row["profile_id"] == PROFILE_ID and row["status"] != "RETIRÉE"
-        )
+        ) - LEFT_CONTROL
     return Archive(rows=rows, v1=v1, control=control)
 
 

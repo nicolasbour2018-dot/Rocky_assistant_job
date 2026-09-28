@@ -517,7 +517,8 @@ def _heading_before(posting: _Posting, position: int) -> str | None:
 def _requirements(
     posting: _Posting, matches: tuple[SkillMatch, ...]
 ) -> tuple[str, ...]:
-    """Required sentences that name none of the account's skills ("Expérience impérative sur Informatica")."""
+    """Required sentences that name none of the account's skills nor a language ("Expérience impérative sur
+    Informatica")."""
     covered = {
         match.evidence
         for match in matches
@@ -531,6 +532,9 @@ def _requirements(
         if start in section_titles or start < posting.title_length:
             continue
         if _marker(folded) != Importance.ELIMINATORY or _APPLICATION.search(folded):
+            continue
+        # "Anglais indispensable": the languages component compares it with the profile (C5, Q15).
+        if _LANGUAGE_NAME.search(folded):
             continue
         quote = evidence(posting.source, (start, start), (start, end))
         if quote not in covered and quote not in found:
@@ -778,7 +782,9 @@ def _languages(posting: _Posting) -> tuple[LanguageNeed, ...]:
         window = text[
             max(0, match.start() - LANGUAGE_WINDOW) : match.end() + LANGUAGE_WINDOW
         ]
-        if code in found or not _LANGUAGE_CUE.search(window):
+        if code in found or not (
+            _LANGUAGE_CUE.search(window) or _ELIMINATORY.search(window)
+        ):
             continue
         span = posting.folded.source_span(match.start(), match.end())
         level_match = _LEVEL.search(window)

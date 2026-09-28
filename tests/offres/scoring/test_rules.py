@@ -359,6 +359,71 @@ def test_a_track_location_named_france_covers_the_whole_country() -> None:
     assert value(scored(profile=profile), ComponentCode.LOCATION) == 1.0
 
 
+# Abroad (C5, Q24).
+
+
+@pytest.mark.parametrize("remote", [RemoteMode.HYBRID, RemoteMode.FULL_REMOTE])
+def test_a_posting_abroad_is_capped(remote: RemoteMode) -> None:
+    result = scored(analysis(remote=remote), offer(location="New York", country="US"))
+
+    assert result.display <= CAP
+    assert [(cap.kind, cap.label) for cap in result.caps] == [
+        (CapKind.ABROAD, "Hors de France : New York, US")
+    ]
+
+
+def test_a_track_location_covering_the_country_lifts_the_abroad_cap() -> None:
+    profile = replace(PROFILE, tracks=(replace(DATA, locations=("Canada",)),))
+    result = scored(
+        collected=offer(location="Toronto", country="Canada"), profile=profile
+    )
+
+    assert value(result, ComponentCode.LOCATION) == 1.0
+    assert result.caps == ()
+
+
+def test_a_track_location_named_france_does_not_cover_a_posting_abroad() -> None:
+    profile = replace(PROFILE, tracks=(replace(DATA, locations=("France",)),))
+    result = scored(collected=offer(location="Austin", country="US"), profile=profile)
+
+    assert value(result, ComponentCode.LOCATION) == 0.0
+    assert [cap.kind for cap in result.caps] == [CapKind.ABROAD]
+
+
+@pytest.mark.parametrize(
+    ("location", "remote"),
+    [("Toronto", RemoteMode.HYBRID), (None, RemoteMode.FULL_REMOTE)],
+)
+def test_a_countryless_posting_of_a_source_without_place_filter_is_presumed_abroad(
+    location: str | None, remote: RemoteMode
+) -> None:
+    result = scored(
+        analysis(remote=remote),
+        offer(source="wellfound", location=location, country=None),
+    )
+
+    assert result.display <= CAP
+    assert [cap.label for cap in result.caps] == [
+        "Hors de France présumé : pays non précisé par la source"
+    ]
+
+
+def test_a_countryless_posting_of_that_source_in_a_track_location_stays_in_france() -> (
+    None
+):
+    result = scored(collected=offer(source="wellfound", location="Paris", country=None))
+
+    assert value(result, ComponentCode.LOCATION) == 1.0
+    assert result.caps == ()
+
+
+def test_a_countryless_posting_of_another_source_is_still_read_as_france() -> None:
+    result = scored(collected=offer(location="Toronto", country=None))
+
+    assert result.caps == ()
+    assert "Pays non précisé : l'offre est lue comme en France" in result.notes
+
+
 # Salary (Q8, Q24).
 
 

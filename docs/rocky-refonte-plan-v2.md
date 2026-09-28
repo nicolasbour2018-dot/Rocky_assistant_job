@@ -409,6 +409,14 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C5 → `profil`)** L'écran de profil laisse créer deux compétences qui ne diffèrent que par un espace ou la casse
   (« ML Flow » / « MLFlow », « HuggingFace » / « hugging face », vus le 28/09 et fusionnés à la main par Nicolas) :
   une annonce ne répond qu'à l'une des deux. Proposer l'alias quand le nom replié correspond à une compétence existante.
+- **(C5 → `profil`)** Le champ « Mots exclus » (et les autres listes des pistes) attend une valeur par ligne, sans le
+  dire : « senior, lead, staff… » saisi sur une ligne devient un seul terme, qui ne se trouve dans aucun intitulé
+  (29/09). Son aide dit « les annonces qui les contiennent sont écartées », faux depuis C4 : un mot exclu dans
+  l'intitulé plafonne le score, dans la description il est seulement signalé.
+- **(C5 → `profil`)** Séniorité : un réglage « niveau visé » (junior, confirmé, senior) serait la bonne forme ; en C5,
+  Nicolas passe par les mots exclus de chaque piste (décision C5, Q23).
+- **(C5 → `offres`, analyse)** Secteur ou domaine de l'annonce (« Financement structuré », « Cash management ») : aucune
+  composante ne le lit ; motif « secteur » cité 10 fois dans les annotations C5 (décision C5, Q15).
 - **(C4 → après C6)** Lieux structurés : une ville d'Eure-et-Loir ne répond pas à « Eure et Loire » ; un pays absent
   (LinkedIn, Wellfound) est lu comme la France, avec le marqueur « pays non précisé ».
 - **(C4 → profil)** Permis et habilitation absents du profil : une condition bloquante plafonne toujours le score
