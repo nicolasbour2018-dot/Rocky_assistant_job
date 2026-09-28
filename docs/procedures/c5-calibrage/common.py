@@ -20,8 +20,10 @@ HERE = Path(__file__).parent
 # Same reference date as the C4 measure, so the measures stay comparable.
 TODAY = date(2026, 9, 25)
 PROFILE_ID = "1"
-# Applications Nicolas would not make today (decision C5, after Q24): New York and London, abroad being blocking.
-LEFT_CONTROL = frozenset({"860", "917"})
+# Applications Nicolas would not make today (decision C5): 860 New York and 917 London, abroad being blocking (Q24);
+# 272 "Quantitative consultant", 432 "BPCE", 655 "Responsable IA & Data", 752 "Business Analysis support Cash
+# Management", jobs he no longer aims at (Q26).
+LEFT_CONTROL = frozenset({"860", "917", "272", "432", "655", "752"})
 
 
 @cache

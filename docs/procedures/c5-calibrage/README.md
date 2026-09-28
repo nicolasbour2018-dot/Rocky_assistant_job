@@ -136,9 +136,25 @@ au-dessus du seuil (≤ 9 visé) et 3 Non dans les 10 premières. Les 20 Non au-
 | `score-2026-09-29.1` + `analyse-2026-09-29.1` | Plafond « Hors de France » (connu, ou présumé pour une annonce Wellfound sans pays hors des lieux des pistes), levé si un lieu de la piste couvre le pays ou la ville (Q24) ; une phrase de langue n'est plus une exigence hors profil, « Anglais indispensable » devient un besoin de langue | condition − × 10 et lieu − × 8 sur les Non ; 21 exigences hors profil sur 118 étaient des phrases de langue |
 | Profil (exception Q23) | Mots exclus des deux pistes : senior, lead, staff, principal, head, chef, expert, directeur, manager (un par ligne ; « sénior » se confond avec « senior ») | séniorité − × 18 sur les Non |
 
+| `score-2026-09-29.2` | Un savoir-être (catégorie « Savoir-être » du profil) compte ×0,5 dans les points de preuve (Q28) | compétences − × 18 sur les Non ; leurs compétences trouvées viennent à 55 % des catégories métier et savoir-être (39 % pour les pertinentes) ; 751 remplissait sa composante avec Autonomie, Pédagogie, Rigueur |
+
 Contrôle ajusté (Nicolas, 29/09) : 860 (New York) et 917 (Londres) en sortent, l'étranger étant désormais bloquant
 pour lui ; 34 candidatures, cibles ramenées dans la même proportion (≥ 19 dans le premier quart, ≥ 31 au-dessus du
 seuil). La mesure de la v1 et de la référence est recalculée sur ces 34.
+
+Puis (Q26, jugé sur l'intitulé seul avant toute nouvelle mesure) : 272 « Quantitative consultant », 432 « BPCE », 655
+« Responsable IA & Data » (niveau du poste) et 752 « Business Analysis support Cash Management » (management
+éliminatoire) sortent ; 55 « Consultant Data Analytics », 853 « Analyste OSINT » et 942 « Prompt Engineer » restent,
+leurs métiers entrant dans les pistes. **30 candidatures ; cibles : rang médian ≤ 25 %, ≥ 17 dans le premier quart,
+≥ 27 au-dessus du seuil.**
+
+### Mesure de la version 2 (29/09/2026, avant les intitulés ajoutés aux pistes)
+
+| | AUC | Non dans les 10 premières | Seuil : Oui · pertinentes · Non au-dessus | Contrôle (30) : rang médian · premier quart · au-dessus |
+|---|---|---|---|---|
+| v1 | 0,52 | 7 | 12 · 18 · 25 | 26 % · 15 · 28 |
+| Référence | 0,75 | 3 | 12 · 20 · 20 | 34 % · 13 · 26 |
+| `score-2026-09-29.2` | **0,93** | 1 (751, à 86) | 12 · 20 · 6 | 26 % · 14 · 25 |
 
 ### Mesure de la version 1 (29/09/2026)
 
@@ -168,4 +184,7 @@ seuil avec la référence, sauf 750 (choix de Nicolas, Q23).
 
 ## Corrections d'annotation
 
-_Aucune._
+- **751** (« Business Analyst Data Financement Structuré », 29/09) : motif « métier − » retiré, erreur de Nicolas ;
+  l'étiquette Non reste. Ce qui la rend non pertinente : des compétences demandées absentes du profil (« compétences
+  − ») et le secteur. L'analyse n'y trouve que des compétences génériques (Autonomie, Pédagogie, Rigueur, Gestion de
+  projet, Gestion des données, Modélisation ; Spark et SQL en « un plus ») et aucune exigence hors profil.

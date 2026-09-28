@@ -42,6 +42,7 @@ from rocky.offres.scoring.model import (
     REQUIREMENT_PENALTY,
     RULES_VERSION,
     SCATTERED_TITLE,
+    SOFT_SKILL_FACTOR,
     UNPROVEN_SKILL_FACTOR,
     WEIGHTS,
     Cap,
@@ -67,6 +68,7 @@ from rocky.profil.model import (
     LanguageLevel,
     Profile,
     RemoteMode,
+    SkillCategory,
     TrackStatus,
 )
 
@@ -97,6 +99,7 @@ def scoring_profile(profile: Profile) -> ScoringProfile:
                 is_key=skill.content.is_key,
                 proven=skill.id in proven,
                 level=skill.content.level,
+                soft=skill.content.category == SkillCategory.SOFT,
             )
             for skill in profile.skills
         ),
@@ -286,7 +289,7 @@ def _merge(components: Iterable[Component]) -> float:
     return round(100 * sum(value * weight for value, weight in counted) / total, 2)
 
 
-# Skills (Q2, Q3, Q26).
+# Skills (Q2, Q3, Q26; soft skills: C5, Q28).
 
 
 def _skills(
@@ -302,12 +305,14 @@ def _skills(
             IMPORTANCE_POINTS[match.importance]
             * (KEY_SKILL_FACTOR if skill.is_key else 1.0)
             * (1.0 if skill.proven else UNPROVEN_SKILL_FACTOR)
+            * (SOFT_SKILL_FACTOR if skill.soft else 1.0)
         )
         points += value
         qualities = [
             IMPORTANCE_LABELS[match.importance].lower(),
             *(["clé"] if skill.is_key else []),
             "prouvée" if skill.proven else "non prouvée",
+            *(["savoir-être"] if skill.soft else []),
         ]
         evidence.append(
             f"{match.skill} ({', '.join(qualities)}, {number(value)} pt) : "
@@ -319,6 +324,7 @@ def _skills(
                 "importance": match.importance.value,
                 "key": skill.is_key,
                 "proven": skill.proven,
+                "soft": skill.soft,
                 "level": skill.level.value if skill.level else None,
                 "points": round(value, 4),
             }

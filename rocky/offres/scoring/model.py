@@ -16,7 +16,7 @@ from typing import Any
 from rocky.offres.analysis.model import Importance
 from rocky.profil.model import LanguageLevel, Preferences, SkillLevel
 
-RULES_VERSION = "score-2026-09-29.1"
+RULES_VERSION = "score-2026-09-29.2"
 
 
 class ComponentCode(StrEnum):
@@ -70,6 +70,8 @@ IMPORTANCE_POINTS = {
 }
 KEY_SKILL_FACTOR = 1.5
 UNPROVEN_SKILL_FACTOR = 0.7
+# A soft skill ("Rigueur", "Autonomie") is named by most postings: it proves less (C5, Q28).
+SOFT_SKILL_FACTOR = 0.5
 FULL_EVIDENCE = 4.0
 REQUIREMENT_PENALTY = 1.0
 
@@ -134,6 +136,7 @@ class ProfileSkill:
     is_key: bool = False
     proven: bool = False
     level: SkillLevel | None = None
+    soft: bool = False
 
 
 @dataclass(frozen=True)

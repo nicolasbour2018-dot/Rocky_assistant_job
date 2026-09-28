@@ -184,6 +184,17 @@ def test_importance_key_flag_and_proof_weigh_a_skill() -> None:
     assert value(unproven, ComponentCode.SKILLS) == pytest.approx(0.7 / 4)
 
 
+def test_a_soft_skill_proves_half() -> None:
+    profile = replace(
+        PROFILE,
+        skills=(*PROFILE.skills, ProfileSkill("Rigueur", proven=True, soft=True)),
+    )
+    result = scored(analysis(skills=(match("Rigueur"),)), profile=profile)
+
+    assert value(result, ComponentCode.SKILLS) == pytest.approx(0.5 / 4)
+    assert "savoir-être" in result.component(ComponentCode.SKILLS).evidence[0]
+
+
 def test_a_requirement_outside_the_profile_costs_one_point_and_is_a_gap() -> None:
     result = scored(analysis(requirements=("Expérience impérative sur Informatica.",)))
 
@@ -607,10 +618,14 @@ def test_the_score_goes_through_json_unchanged() -> None:
 
 
 def test_scoring_profile_reads_proof_active_tracks_and_jobs() -> None:
-    def skill(skill_id: int, label: str, *, key: bool = False) -> Skill:
-        return Skill(
-            skill_id, SkillDraft(Text(label), SkillCategory.TECHNICAL, is_key=key)
-        )
+    def skill(
+        skill_id: int,
+        label: str,
+        *,
+        key: bool = False,
+        category: SkillCategory = SkillCategory.TECHNICAL,
+    ) -> Skill:
+        return Skill(skill_id, SkillDraft(Text(label), category, is_key=key))
 
     def experience(
         kind: ExperienceKind, skill_ids: tuple[int, ...]
@@ -633,7 +648,12 @@ def test_scoring_profile_reads_proof_active_tracks_and_jobs() -> None:
             Track(2, TrackStatus.PAUSED, TrackDraft("Pause")),
             Track(3, TrackStatus.ARCHIVED, TrackDraft("Ancienne")),
         ),
-        skills=(skill(1, "Python", key=True), skill(2, "SQL"), skill(3, "Tableau")),
+        skills=(
+            skill(1, "Python", key=True),
+            skill(2, "SQL"),
+            skill(3, "Tableau"),
+            skill(4, "Rigueur", category=SkillCategory.SOFT),
+        ),
         languages=(Language(1, LanguageDraft("en", LanguageLevel.C1)),),
         experiences=(
             experience(ExperienceKind.JOB, (1,)),
@@ -645,10 +665,11 @@ def test_scoring_profile_reads_proof_active_tracks_and_jobs() -> None:
     result = scoring_profile(profile)
 
     assert [track.name for track in result.tracks] == ["Data"]
-    assert [(s.label, s.is_key, s.proven) for s in result.skills] == [
-        ("Python", True, True),
-        ("SQL", False, True),
-        ("Tableau", False, False),
+    assert [(s.label, s.is_key, s.proven, s.soft) for s in result.skills] == [
+        ("Python", True, True, False),
+        ("SQL", False, True, False),
+        ("Tableau", False, False, False),
+        ("Rigueur", False, False, True),
     ]
     assert result.jobs == (Job(date(2020, 1, 1), None, frozenset({"Python"})),)
     assert result.languages == (("en", LanguageLevel.C1),)

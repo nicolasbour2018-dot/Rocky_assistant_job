@@ -71,6 +71,14 @@ Contrôle ajusté (Nicolas, 29/09, après Q24) : 860 (New York) et 917 (Londres)
 contrôle, l'étranger étant désormais bloquant pour Nicolas. Le contrôle compte 34 candidatures ; les cibles Q14 sont
 ramenées dans la même proportion : ≥ 19 dans le premier quart, ≥ 31 au-dessus du seuil, rang médian ≤ 25 %.
 
+### Deuxième version (grill avec Nicolas, 29/09, après la mesure de la version 1)
+
+| # | Sujet | Décision |
+|---|---|---|
+| Q26 | Candidatures hors des pistes | Jugées par Nicolas sur l'intitulé seul, **avant** toute nouvelle mesure : 272 « Quantitative consultant », 432 « BPCE », 655 « Responsable IA & Data » (niveau du poste) et 752 « Business Analysis support Cash Management » (management éliminatoire) sortent du contrôle ; 55 « Consultant Data Analytics » et 853 « Analyste OSINT » (piste Data analyst), 942 « Prompt Engineer » (piste Data scientist / IA) restent, leurs métiers entrant dans les intitulés des pistes (profil, Q22). Contrôle : 30 candidatures ; cibles Q14 dans la même proportion : ≥ 17 dans le premier quart, ≥ 27 au-dessus du seuil, rang médian ≤ 25 %. |
+| Q27 | Annonce 751 | Motif « métier − » retiré (erreur de Nicolas, Q18) ; l'étiquette Non reste, pour des compétences demandées absentes du profil et le secteur. |
+| Q28 | Savoir-être | Une compétence de catégorie « Savoir-être » compte **×0,5** dans les points de preuve : presque toutes les annonces en citent ; règle valable pour tout compte. |
+
 ### Limites de la mesure
 
 - **Annotateur unique et subjectif** : c'est voulu (Q1, les étiquettes D14 sont les décisions de Nicolas), mais les
