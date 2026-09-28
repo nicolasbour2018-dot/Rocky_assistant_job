@@ -406,6 +406,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   faibles, contrat, lieu et salaire pleins, renormalisés faute d'autres informations, portent le score (1193 à 44,
   1030 « Sourcing » à 24 avec compétences et intitulé à 0). Le télétravail, les trois modes étant acceptés, vaut 1 dès
   que l'annonce en parle sans rien distinguer.
+- **(C5 → `profil`)** L'écran de profil laisse créer deux compétences qui ne diffèrent que par un espace ou la casse
+  (« ML Flow » / « MLFlow », « HuggingFace » / « hugging face », vus le 28/09 et fusionnés à la main par Nicolas) :
+  une annonce ne répond qu'à l'une des deux. Proposer l'alias quand le nom replié correspond à une compétence existante.
 - **(C4 → après C6)** Lieux structurés : une ville d'Eure-et-Loir ne répond pas à « Eure et Loire » ; un pays absent
   (LinkedIn, Wellfound) est lu comme la France, avec le marqueur « pays non précisé ».
 - **(C4 → profil)** Permis et habilitation absents du profil : une condition bloquante plafonne toujours le score
