@@ -95,6 +95,40 @@ Trois classements sur les mêmes étiquettes : v1, référence (`reference.json`
 
 Le profil figé améliore le contrôle par rapport au 28/09 matin (42 %, 12, 28), sans combler l'écart avec la v1.
 
+### Annotations (29/09/2026) : mesure de référence
+
+Nicolas a annoté les 55 annonces à l'aveugle (sans ouvrir `echantillon.json` ni `reference.json`) : 50 annonces,
+**Oui 12, À examiner 9, Non 29**. Stabilité : 4 doublons sur 5 identiques (1058 : Non puis À examiner).
+
+| Ordre (50 annonces) | AUC pertinente / Non | Pertinentes dans les 10 premières | Non dans les 10 premières |
+|---|---|---|---|
+| v1 | 0,52 | 3 | 7 |
+| Référence `score-2026-09-25.1` | 0,75 | 7 | 3 |
+| **Cible (Q12)** | **≥ 0,80** | — | **0** |
+
+| Seuil 50 | Oui au-dessus | Pertinentes au-dessus | Non au-dessus |
+|---|---|---|---|
+| v1 | 12 / 12 | 18 / 21 | 25 / 29 |
+| Référence | 12 / 12 | 20 / 21 | 20 / 29 |
+| **Cible (Q13)** | **12 / 12** | **≥ 19 / 21** | **≤ 9 / 29** |
+
+Motifs − des 29 Non : séniorité 18, compétences 18, métier 11, condition bloquante 10, lieu 8, secteur 3, contrat 1,
+salaire 1, piste 1.
+
+Sur les annotations, la référence C4 classe déjà nettement mieux que la v1 (0,75 contre 0,52), alors que sur le
+contrôle la v1 reste devant ; mais le contrôle a été choisi parmi ce que la v1 montrait. Écarts à la cible : 20 Non
+au-dessus du seuil (≤ 9 visé) et 3 Non dans les 10 premières. Les 20 Non au-dessus de 50 se rangent en trois familles
+(causes vérifiées sur le détail des composantes) :
+
+- **Mot exclu contourné par l'autre piste** (794, 404, 1058, 1225) : « senior » plafonne la piste « Data analyst » à
+  30, mais la piste « Data scientist / IA », sans mot exclu, l'emporte (51 à 72).
+- **Étranger lu comme la France** (1190 Toronto, 879 San Francisco, 880 Miami, 32 Alaska, 794 New York, 1071
+  Bangalore, 1074) : Wellfound ne donne pas le pays ; le pays absent est lu comme la France et le télétravail complet
+  rend le lieu neutre (66 à 90).
+- **Séniorité et métier portés par l'intitulé** (608 « Adjoint chef de bureau », 846 « Chef de section », 990 « Expert
+  haut niveau », 1082 « Lead développeur », 1074 « Staff ») : l'expérience pèse 3 et vaut 1 dès que les années liées
+  aux compétences de l'annonce suffisent ; un intitulé à 0 (1082) laisse encore 67.
+
 ## Versions de règles
 
 _À compléter : une ligne par `RULES_VERSION`, avec le motif compté qui justifie chaque changement et sa mesure._
