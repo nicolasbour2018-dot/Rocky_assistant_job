@@ -72,3 +72,9 @@ Pas de panne simulée en plus par une fausse clé Adzuna (prévue au plan) : la 
 Limites connues, notées au plan (section 8) : refus 429 de LinkedIn dès la première veille ; 350 offres incomplètes sur
 517 ; un import qui écrirait la même offre au même instant qu'une veille heurterait la contrainte d'unicité (erreur
 visible, cas rare).
+
+## Clôture (Nicolas, 29/09)
+
+Veilles réelles lancées par Nicolas (bandeau à 9 h 12, puis `rocky-admin veille` après la pause LinkedIn de la décision
+C1, Q7) : la dernière est **terminée**, 475 offres dont 10 nouvelles (les autres reconnues), LinkedIn 140 offres sans
+refus, 0 offre sans score ni piste. **Étape validée par Nicolas.** Suite : C7 (écran Offres).
