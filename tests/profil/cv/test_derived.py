@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 import json
 from collections.abc import Mapping
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -64,6 +64,22 @@ def designed() -> bytes:
     return designed_cv()
 
 
+@dataclass
+class Shared:
+    """One import of the designed CV, read by several tests: a derivation draws two 300 dpi layers."""
+
+    root: Path
+    result: ImportedCv
+    model: ReaderModel
+
+
+@pytest.fixture(scope="module")
+def shared(designed: bytes, tmp_path_factory: pytest.TempPathFactory) -> Shared:
+    root = tmp_path_factory.mktemp("import")
+    model = ReaderModel()
+    return Shared(root, imported(designed, root, model), model)
+
+
 def imported(pdf: bytes, root: Path, model: ReaderModel | None = None) -> ImportedCv:
     return import_cv(
         pdf,
@@ -85,9 +101,9 @@ def stored(
 
 
 def test_the_template_reproduces_the_design_outside_its_text_regions(
-    designed: bytes, tmp_path: Path
+    designed: bytes, shared: Shared
 ) -> None:
-    result = imported(designed, tmp_path)
+    result, tmp_path = shared.result, shared.root
 
     assert result.template_refusal is None
     assert result.warnings == ()
@@ -133,9 +149,9 @@ def test_the_template_reproduces_the_design_outside_its_text_regions(
 
 
 def test_the_english_cv_writes_the_translated_titles_again(
-    designed: bytes, tmp_path: Path
+    designed: bytes, shared: Shared
 ) -> None:
-    files, proposals, _ = stored(tmp_path, imported(designed, tmp_path))
+    files, proposals, _ = stored(shared.root, shared.result)
     english = cv_content(preview_profile(proposals), "en", TODAY)
     assert (
         english.missing
@@ -152,9 +168,9 @@ def test_the_english_cv_writes_the_translated_titles_again(
 
 
 def test_french_titles_stay_in_the_layer_and_are_read_as_words(
-    designed: bytes, tmp_path: Path
+    designed: bytes, shared: Shared
 ) -> None:
-    files, proposals, _ = stored(tmp_path, imported(designed, tmp_path))
+    files, proposals, _ = stored(shared.root, shared.result)
 
     document = render_derived(
         files, cv_content(preview_profile(proposals), "fr", TODAY), None
@@ -194,13 +210,9 @@ def test_lines_left_without_rubric_refuse_the_template_but_keep_the_proposals(
 
 
 def test_only_the_texts_reach_the_model_never_the_file(
-    designed: bytes, tmp_path: Path
+    designed: bytes, shared: Shared
 ) -> None:
-    model = ReaderModel()
-
-    imported(designed, tmp_path, model)
-
-    (prompt,) = model.prompts
+    (prompt,) = shared.model.prompts
     assert "CAMILLE MARTIN" in prompt
     assert "%PDF" not in prompt
     assert prompt.count("\n[") == len(read_page(designed).blocks)
@@ -270,9 +282,9 @@ def test_a_title_on_two_lines_is_translated_whole_then_spread_over_them() -> Non
 
 
 def test_the_photo_shows_its_round_frame_not_its_whole_image(
-    designed: bytes, tmp_path: Path
+    designed: bytes, shared: Shared
 ) -> None:
-    files, _, _ = stored(tmp_path, imported(designed, tmp_path))
+    files, _, _ = stored(shared.root, shared.result)
     photo = json.loads(files[TEMPLATE_FILE])["photo"]
 
     # The fixture shows a 140 × 140 pt disc of a 140 × 170 pt image.
@@ -294,9 +306,9 @@ def test_a_page_that_is_one_picture_gives_no_template_but_its_proposals(
 
 
 def test_the_cv_carries_no_transparency_mask_that_some_readers_draw_black(
-    designed: bytes, tmp_path: Path
+    designed: bytes, shared: Shared
 ) -> None:
-    files, proposals, photo = stored(tmp_path, imported(designed, tmp_path))
+    files, proposals, photo = stored(shared.root, shared.result)
 
     document = render_derived(
         files,
