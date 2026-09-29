@@ -62,13 +62,17 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Changer une règle : relancer `docs/procedures/c3-mesure/measure.py` ; une baisse se justifie dans la décision.
   Une annotation ne se corrige que pour une erreur de lecture, notée dans le README de la mesure.
 
-## Score (`rocky/offres/scoring/`, décision `docs/decisions/C4-scoring.md`)
+## Score (`rocky/offres/scoring/`, décisions `docs/decisions/C4-scoring.md` et `C5-calibrage.md`)
 - `score` est une fonction pure : elle lit l'analyse C3, l'offre et `ScoringProfile`, n'écrit rien et ne relit jamais le
   texte. Le LLM n'intervient jamais dans le score.
 - Un score par piste active ; chaque composante dit ce qu'elle a comparé (`detail`) et ses preuves. Une composante sans
-  information est laissée de côté (`value=None`), jamais devinée.
+  information garde `value=None`, jamais devinée (sa part dans le score : ci-dessous).
 - Tous les paramètres (poids, points, plafond, seuil, confiance) sont des constantes de `model.py`, calibrées en C5 ;
   toute modification change `RULES_VERSION`. Les `features` ne contiennent que des valeurs JSON (D14).
 - Le profil se lit par `profil.web.profile_of` puis `scoring_profile`, jamais par le SQL de `profil`.
-- Changer une règle : relancer `docs/procedures/c4-mesure/measure.py` et justifier l'écart dans la décision.
+- Composante `value=None` : l'annonce ne dit rien → compte `ABSENT_VALUE` ; rien à comparer (aucune préférence, rien
+  demandé, télétravail complet) → `neutral=True`, retirée. Tout nouveau cas `None` choisit explicitement l'un des deux.
+- Une préférence personnelle va dans le profil (mots exclus, lieux, intitulés), jamais dans une règle (C5, Q22).
+- Changer une règle : relancer `docs/procedures/c4-mesure/measure.py` et `docs/procedures/c5-calibrage/measure.py`
+  (annotations aveugles et contrôle), et justifier l'écart dans la décision.
 - `.score` est la pastille de note du prototype (hauteur fixe) : le détail du score utilise `.score-detail`.

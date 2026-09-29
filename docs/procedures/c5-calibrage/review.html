@@ -53,7 +53,7 @@
   <strong>Relecture C5</strong>
   <span id="version"></span>
   <span id="done"></span>
-  <button id="export" class="primary">Télécharger relecture.json</button>
+  <button id="export" class="primary">Télécharger la relecture</button>
 </header>
 <main id="main"></main>
 <script type="application/json" id="data">__DATA__</script>
@@ -134,7 +134,7 @@ document.getElementById("export").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify({rules_version: data.rules_version, answers: list}, null, 1) + "\n"],
                         {type: "application/json"});
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob); link.download = "relecture.json"; link.click();
+  link.href = URL.createObjectURL(blob); link.download = `relecture-${data.rules_version}.json`; link.click();
   URL.revokeObjectURL(link.href);
 });
 save();

@@ -1,0 +1,229 @@
+{
+ "rules_version": "score-2026-09-29.3",
+ "answers": [
+  {
+   "group": "Les 20 premières",
+   "id": "1115",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "expérience trop haute / pb de séniorité"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "858",
+   "score": 98,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "97",
+   "score": 98,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "612",
+   "score": 97,
+   "verdict": "trop_haut",
+   "comment": ""
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "840",
+   "score": 97,
+   "verdict": "trop_haut",
+   "comment": "expérience trop haute / pb de séniorité"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "467",
+   "score": 96,
+   "verdict": "trop_haut",
+   "comment": "pas d'information sur l'expérience"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "847",
+   "score": 96,
+   "verdict": "trop_haut",
+   "comment": "pas d'information sur l'expérience"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "406",
+   "score": 96,
+   "verdict": "trop_haut",
+   "comment": "pas d'information sur l'expérience"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "174",
+   "score": 94,
+   "verdict": "trop_haut",
+   "comment": "expérience trop haute / pb de séniorité"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "2",
+   "score": 93,
+   "verdict": "trop_haut",
+   "comment": "pas d'information sur l'expérience, salaire"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "3",
+   "score": 93,
+   "verdict": "trop_haut",
+   "comment": "pas d'information sur l'expérience, salaire"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "924",
+   "score": 91,
+   "verdict": "trop_haut",
+   "comment": "expérience trop haute et manque d'infos contractuelles, lieu, salaire"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "918",
+   "score": 90,
+   "verdict": "trop_haut",
+   "comment": "expérience trop haute et manque d'infos contractuelles, salaire"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "452",
+   "score": 90,
+   "verdict": "trop_haut",
+   "comment": "expérience trop haute et manque d'infos salaire"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1228",
+   "score": 90,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1035",
+   "score": 90,
+   "verdict": "trop_haut",
+   "comment": "expérience trop haute et manque d'infos contractuelles, contrat, salaire"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1051",
+   "score": 89,
+   "verdict": "juste",
+   "comment": "manque d'infos contractuelles, lieu, salaire, expérience mais beaucoup de compétences et Junior inscrit dans l'intitulé"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1054",
+   "score": 89,
+   "verdict": "juste",
+   "comment": "manque d'infos contractuelles, lieu, salaire, expérience mais beaucoup de compétences et Junior inscrit dans l'intitulé"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1060",
+   "score": 89,
+   "verdict": "juste",
+   "comment": "manque d'infos contractuelles, lieu, salaire, expérience mais beaucoup de compétences et Junior inscrit dans l'intitulé"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "4",
+   "score": 88,
+   "verdict": "juste",
+   "comment": "manque d'infos contractuelles, lieu, salaire, expérience mais beaucoup de compétences et Junior inscrit dans l'intitulé"
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "438",
+   "score": 49,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "1231",
+   "score": 49,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "1250",
+   "score": 49,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "11",
+   "score": 48,
+   "verdict": "trop_bas",
+   "comment": "analyste données = data analyst "
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "297",
+   "score": 47,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "1237",
+   "score": 47,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "622",
+   "score": 46,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "760",
+   "score": 46,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "614",
+   "score": 45,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "1193",
+   "score": 45,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Candidatures du contrôle sous le seuil",
+   "id": "70",
+   "score": 30,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Candidatures du contrôle sous le seuil",
+   "id": "750",
+   "score": 30,
+   "verdict": "juste",
+   "comment": ""
+  }
+ ]
+}

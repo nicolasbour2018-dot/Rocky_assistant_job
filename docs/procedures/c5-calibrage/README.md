@@ -240,7 +240,8 @@ open ../rocky-c5-annotation/relecture.html
 
 Hors des annonces annotées : les 20 premières des 404, les 10 juste sous le seuil et les candidatures du contrôle sous
 le seuil, cette fois **avec** le score et son détail. Pour chacune : place juste, trop haute ou trop basse, et un
-commentaire ; « Télécharger relecture.json » exporte les verdicts, copiés dans ce dossier.
+commentaire ; « Télécharger la relecture » exporte les verdicts (`relecture-<version des règles>.json` ; la première,
+faite sur `score-2026-09-29.2`, est `relecture.json`), copiés dans ce dossier.
 
 ## Corrections d'annotation
 

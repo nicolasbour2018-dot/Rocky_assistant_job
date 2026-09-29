@@ -95,6 +95,31 @@ ramenées dans la même proportion : ≥ 19 dans le premier quart, ≥ 31 au-des
 | Q33 | Intitulé partiel | Une partie seulement des mots d'un intitulé de piste (« Data » sans « analyst ») vaut **0** ; tous les mots présents mais séparés gardent 0,5 (« Data Science Analyst », au contrôle). |
 | Q34 | Compétences implicites | 438 (« compétences pas toutes explicites mais accessibles ») : limite de l'analyse, qui ne lit que les termes du profil ; notée en section 8, pas de règle. |
 
+### Clôture (grill avec Nicolas, 29/09, après sa relecture de la version 3)
+
+| # | Sujet | Décision |
+|---|---|---|
+| Q35 | Point d'arrêt | **C5 close avec `score-2026-09-29.3`**, écart documenté. Relecture de la version 3 : 13 des 20 premières encore jugées trop hautes, pour la séniorité (8 : aucun emploi du profil n'est lié à une compétence technique, l'expérience pertinente vient de « Modélisation », « Data Visualisation », « Gestion de projet » et vaut 1 dès 3 ans demandés ; poids 3) ou faute d'information sur l'expérience (5). Simulée, une 4e version (expérience technique seule, poids 8) n'en retire que 3 : les leviers (profil, règle, « niveau visé ») sont notés en section 8, à calibrer sur les décisions réelles (C7). |
+| Q36 | « Analyste données » | Équivalent français de « Data analyst » (annonce 11, relue trop basse) : Nicolas l'ajoute aux intitulés de sa piste après la dernière mesure (profil, Q22). |
+
+## Validation et mesures de sortie
+
+Critère de sortie : « Les annonces jugées pertinentes remontent ; écart chiffré et documenté. » Procédure et tableaux :
+`docs/procedures/c5-calibrage/README.md`.
+
+| Mesure (règles `score-2026-09-29.3`, profil figé de C5) | Cible | v1 | Référence C4 | Sortie C5 |
+|---|---|---|---|---|
+| AUC pertinente / Non (50 annotations à l'aveugle) | ≥ 0,80 | 0,52 | 0,75 | **0,94** ✅ |
+| Non dans les 10 premières | 0 | 7 | 3 | **1** (751, accepté Q30) |
+| Oui · pertinentes · Non au-dessus du seuil 50 | 12 · ≥ 19 · ≤ 9 | 12 · 18 · 25 | 12 · 20 · 20 | **12 · 20 · 5** ✅ |
+| Contrôle (30 candidatures) : rang médian · premier quart · au-dessus | ≤ 25 % · ≥ 17 · ≥ 27 | 26 % · 15 · 28 | 34 % · 13 · 26 | **26 % · 14 · 28** (écart accepté Q29) |
+| Annonces à 100 parmi les 404 | — | — | 23 | **1** |
+| « Data Protection Analyst » (1193), critère de C4 | < 50 | 79,6 | 44 | **45** ✅ |
+
+Relectures de Nicolas (Q21), sur 32 annonces non annotées chaque fois : version 2 → 20 premières justes 3, trop
+hautes 17 (d'où la version 3) ; version 3 → 20 premières justes 7, trop hautes 13 (Q35), 10 juste sous le seuil
+justes 9, contrôle sous le seuil justes 2 sur 2. Stabilité de l'annotation : 4 doublons sur 5.
+
 ### Limites de la mesure
 
 - **Annotateur unique et subjectif** : c'est voulu (Q1, les étiquettes D14 sont les décisions de Nicolas), mais les
