@@ -38,9 +38,11 @@ from sqlalchemy.exc import IntegrityError
 from rocky.profil import model
 from rocky.profil.model import (
     Contract,
+    CvLayout,
     Experience,
     ExperienceDraft,
     ExperienceKind,
+    Hobby,
     Language,
     LanguageDraft,
     LanguageLevel,
@@ -53,6 +55,7 @@ from rocky.profil.model import (
     Skill,
     SkillCategory,
     SkillDraft,
+    SkillGroup,
     SkillLevel,
     Track,
     TrackDraft,
@@ -100,9 +103,6 @@ profiles = Table(
     Column("phone", Text),
     Column("city", Text),
     Column("postal_code", Text),
-    Column("linkedin_url", Text),
-    Column("github_url", Text),
-    Column("portfolio_url", Text),
     Column("headline_fr", Text),
     Column("headline_en", Text),
     Column("contracts", _list(), nullable=False, server_default=_empty_list()),
@@ -115,11 +115,57 @@ profiles = Table(
     Column(
         "updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()
     ),
+    Column("title_fr", Text),
+    Column("title_en", Text),
+    Column("birth_date", Date),
+    Column("show_age", Boolean, nullable=False, server_default=text("false")),
+    Column("photo_path", Text),
+    Column("photo_sha256", Text),
     UniqueConstraint("account_id"),
     CheckConstraint(_all_in("contracts", Contract), name="contracts"),
     CheckConstraint(_all_in("remote_modes", RemoteMode), name="remote_modes"),
     CheckConstraint("min_salary_eur > 0", name="min_salary_positive"),
     CheckConstraint("min_daily_rate_eur > 0", name="min_daily_rate_positive"),
+    CheckConstraint(
+        "(photo_path IS NULL) = (photo_sha256 IS NULL)", name="photo_complete"
+    ),
+)
+
+# Public links of the profile, in order (decision D2, Q8).
+profile_links = Table(
+    "profile_links",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("profile_id", BigInteger, ForeignKey("profiles.id"), nullable=False),
+    Column("position", Integer, nullable=False),
+    Column("label", Text, nullable=False),
+    Column("url", Text, nullable=False),
+    UniqueConstraint("profile_id", "position"),
+)
+
+hobbies = Table(
+    "hobbies",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("profile_id", BigInteger, ForeignKey("profiles.id"), nullable=False),
+    Column("position", Integer, nullable=False),
+    Column("label_fr", Text, nullable=False),
+    Column("label_en", Text),
+    Column("in_cv", Boolean, nullable=False, server_default=text("true")),
+    UniqueConstraint("profile_id", "position"),
+)
+
+# Groups of technical skills of the CV (decision D2, Q9).
+skill_groups = Table(
+    "skill_groups",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("profile_id", BigInteger, ForeignKey("profiles.id"), nullable=False),
+    Column("position", Integer, nullable=False),
+    Column("name_fr", Text, nullable=False),
+    Column("name_en", Text),
+    UniqueConstraint("profile_id", "id"),
+    UniqueConstraint("profile_id", "position"),
 )
 
 search_tracks = Table(
@@ -153,10 +199,21 @@ skills = Table(
     Column("level", Text),
     Column("is_key", Boolean, nullable=False, server_default=text("false")),
     _created(),
+    # Place in the master CV (decision D2, Q9, Q10): see ``CvLayout``.
+    Column("group_id", BigInteger),
+    Column("cv_position", Integer),
     # The pair lets skill_terms and the link tables check that a skill belongs to their profile.
     UniqueConstraint("profile_id", "id"),
     CheckConstraint(_in("category", SkillCategory), name="category"),
     CheckConstraint(_in("level", SkillLevel), name="level"),
+    CheckConstraint(
+        "(category = 'technical' AND (group_id IS NULL) = (cv_position IS NULL)) "
+        "OR (category <> 'technical' AND group_id IS NULL)",
+        name="cv_placement",
+    ),
+    ForeignKeyConstraint(
+        ["profile_id", "group_id"], ["skill_groups.profile_id", "skill_groups.id"]
+    ),
     Index("ix_skills_profile_id", "profile_id"),
 )
 
@@ -226,8 +283,29 @@ projects = Table(
     Column("stack", _list(), nullable=False, server_default=_empty_list()),
     Column("url", Text),
     _created(),
+    Column("cv_position", Integer),
     UniqueConstraint("profile_id", "id"),
     Index("ix_projects_profile_id", "profile_id"),
+)
+
+# CV templates of a profile, each an immutable bundle of the files root (decision D2, Q16, Q24).
+cv_templates = Table(
+    "cv_templates",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("profile_id", BigInteger, ForeignKey("profiles.id"), nullable=False),
+    Column("path", Text, nullable=False),
+    Column("sha256", Text, nullable=False),
+    Column("name", Text, nullable=False),
+    Column("active", Boolean, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    UniqueConstraint("profile_id", "sha256"),
+    Index(
+        "uq_cv_templates_one_active",
+        "profile_id",
+        unique=True,
+        postgresql_where=text("active"),
+    ),
 )
 
 
@@ -305,7 +383,7 @@ class SqlProfileStore:
         return Profile(
             id=row.id,
             account_id=row.account_id,
-            identity=_identity(row),
+            identity=_identity(row, self._profile_links(profile_id)),
             preferences=Preferences(
                 contracts=tuple(Contract(c) for c in row.contracts),
                 remote_modes=tuple(RemoteMode(m) for m in row.remote_modes),
@@ -321,6 +399,12 @@ class SqlProfileStore:
             languages=self._languages(profile_id),
             experiences=self._experiences(profile_id),
             projects=self._projects(profile_id),
+            photo=(
+                model.StoredPhoto(row.photo_path, row.photo_sha256)
+                if row.photo_path
+                else None
+            ),
+            cv=self._cv_layout(profile_id),
         )
 
     def save_identity(
@@ -334,12 +418,93 @@ class SqlProfileStore:
             phone=identity.phone,
             city=identity.city,
             postal_code=identity.postal_code,
-            linkedin_url=identity.linkedin_url,
-            github_url=identity.github_url,
-            portfolio_url=identity.portfolio_url,
             headline_fr=identity.headline.fr or None,
             headline_en=identity.headline.en,
+            title_fr=identity.title.fr or None,
+            title_en=identity.title.en,
+            birth_date=identity.birth_date,
+            show_age=identity.show_age,
         )
+        self._conn.execute(
+            delete(profile_links).where(profile_links.c.profile_id == profile_id)
+        )
+        if identity.links:
+            self._conn.execute(
+                insert(profile_links),
+                [
+                    {
+                        "profile_id": profile_id,
+                        "position": position,
+                        "label": link.label,
+                        "url": link.url,
+                    }
+                    for position, link in enumerate(identity.links)
+                ],
+            )
+
+    def save_photo(
+        self, profile_id: int, photo: model.StoredPhoto | None, now: datetime
+    ) -> None:
+        self._update_profile(
+            profile_id,
+            now,
+            photo_path=photo.path if photo else None,
+            photo_sha256=photo.sha256 if photo else None,
+        )
+
+    def save_cv_layout(self, profile_id: int, layout: CvLayout) -> None:
+        """Positions rewritten from scratch: the layout is small and always replaced whole."""
+        self._conn.execute(
+            update(skills)
+            .where(skills.c.profile_id == profile_id)
+            .values(group_id=None, cv_position=None)
+        )
+        self._conn.execute(
+            update(projects)
+            .where(projects.c.profile_id == profile_id)
+            .values(cv_position=None)
+        )
+        self._conn.execute(
+            delete(skill_groups).where(skill_groups.c.profile_id == profile_id)
+        )
+        for group_position, group in enumerate(layout.groups):
+            group_id = self._conn.execute(
+                insert(skill_groups)
+                .values(
+                    profile_id=profile_id,
+                    position=group_position,
+                    name_fr=group.name.fr,
+                    name_en=group.name.en,
+                )
+                .returning(skill_groups.c.id)
+            ).scalar_one()
+            for position, skill_id in enumerate(group.skill_ids):
+                self._update_owned(
+                    skills,
+                    profile_id,
+                    skill_id,
+                    group_id=group_id,
+                    cv_position=position,
+                )
+        for position, skill_id in enumerate(layout.transversal):
+            self._update_owned(skills, profile_id, skill_id, cv_position=position)
+        for position, project_id in enumerate(layout.projects):
+            self._update_owned(projects, profile_id, project_id, cv_position=position)
+        self._conn.execute(delete(hobbies).where(hobbies.c.profile_id == profile_id))
+        if layout.hobbies:
+            self._conn.execute(
+                insert(hobbies),
+                [
+                    {
+                        "profile_id": profile_id,
+                        "position": position,
+                        "label_fr": hobby.label.fr,
+                        "label_en": hobby.label.en,
+                        "in_cv": hobby.in_cv,
+                    }
+                    for position, hobby in enumerate(layout.hobbies)
+                ],
+            )
 
     def save_preferences(
         self, profile_id: int, preferences: Preferences, now: datetime
@@ -665,6 +830,53 @@ class SqlProfileStore:
             for row in rows
         )
 
+    def _cv_layout(self, profile_id: int) -> CvLayout:
+        placed = self._conn.execute(
+            select(skills.c.id, skills.c.group_id, skills.c.cv_position)
+            .where(skills.c.profile_id == profile_id)
+            .where(skills.c.cv_position.is_not(None))
+            .order_by(skills.c.cv_position, skills.c.id)
+        ).all()
+        groups = self._conn.execute(
+            select(skill_groups)
+            .where(skill_groups.c.profile_id == profile_id)
+            .order_by(skill_groups.c.position)
+        ).all()
+        project_ids = self._conn.execute(
+            select(projects.c.id)
+            .where(projects.c.profile_id == profile_id)
+            .where(projects.c.cv_position.is_not(None))
+            .order_by(projects.c.cv_position, projects.c.id)
+        ).scalars()
+        hobby_rows = self._conn.execute(
+            select(hobbies)
+            .where(hobbies.c.profile_id == profile_id)
+            .order_by(hobbies.c.position)
+        )
+        return CvLayout(
+            groups=tuple(
+                SkillGroup(
+                    name=model.Text(group.name_fr, group.name_en),
+                    skill_ids=tuple(s.id for s in placed if s.group_id == group.id),
+                )
+                for group in groups
+            ),
+            transversal=tuple(s.id for s in placed if s.group_id is None),
+            projects=tuple(int(project_id) for project_id in project_ids),
+            hobbies=tuple(
+                Hobby(model.Text(row.label_fr, row.label_en), row.in_cv)
+                for row in hobby_rows
+            ),
+        )
+
+    def _profile_links(self, profile_id: int) -> tuple[model.Link, ...]:
+        rows = self._conn.execute(
+            select(profile_links.c.label, profile_links.c.url)
+            .where(profile_links.c.profile_id == profile_id)
+            .order_by(profile_links.c.position)
+        )
+        return tuple(model.Link(row.label, row.url) for row in rows)
+
     def _links(
         self, table: Table, owner: str, profile_id: int
     ) -> dict[int, tuple[int, ...]]:
@@ -723,17 +935,18 @@ class SqlProfileStore:
         return result.rowcount == 1
 
 
-def _identity(row: Row[Any]) -> model.Identity:
+def _identity(row: Row[Any], links: tuple[model.Link, ...]) -> model.Identity:
     return model.Identity(
         full_name=row.full_name or "",
         contact_email=row.contact_email,
         phone=row.phone,
         city=row.city,
         postal_code=row.postal_code,
-        linkedin_url=row.linkedin_url,
-        github_url=row.github_url,
-        portfolio_url=row.portfolio_url,
+        links=links,
         headline=model.Text(row.headline_fr or "", row.headline_en),
+        title=model.Text(row.title_fr or "", row.title_en),
+        birth_date=row.birth_date,
+        show_age=row.show_age,
     )
 
 

@@ -6,7 +6,9 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime
 from itertools import count
 
+from rocky.profil.cv.layout import remove_skill
 from rocky.profil.model import (
+    CvLayout,
     Experience,
     ExperienceDraft,
     Identity,
@@ -19,6 +21,7 @@ from rocky.profil.model import (
     ProjectDraft,
     Skill,
     SkillDraft,
+    StoredPhoto,
     Track,
     TrackDraft,
     TrackStatus,
@@ -38,6 +41,8 @@ class _Profile:
     languages: dict[int, Language] = field(default_factory=dict)
     experiences: dict[int, Experience] = field(default_factory=dict)
     projects: dict[int, Project] = field(default_factory=dict)
+    photo: StoredPhoto | None = None
+    cv: CvLayout = field(default_factory=CvLayout)
 
 
 class InMemoryProfileStore:
@@ -80,10 +85,20 @@ class InMemoryProfileStore:
             languages=tuple(p.languages.values()),
             experiences=tuple(p.experiences.values()),
             projects=tuple(p.projects.values()),
+            photo=p.photo,
+            cv=p.cv,
         )
 
     def save_identity(self, profile_id: int, identity: Identity, now: datetime) -> None:
         self.profiles[profile_id].identity = identity
+
+    def save_photo(
+        self, profile_id: int, photo: StoredPhoto | None, now: datetime
+    ) -> None:
+        self.profiles[profile_id].photo = photo
+
+    def save_cv_layout(self, profile_id: int, layout: CvLayout) -> None:
+        self.profiles[profile_id].cv = layout
 
     def save_preferences(
         self, profile_id: int, preferences: Preferences, now: datetime
@@ -165,6 +180,7 @@ class InMemoryProfileStore:
             return False
         self._forget_terms(skill_id)
         p = self.profiles[profile_id]
+        p.cv = remove_skill(p.cv, skill_id)
         for experience_id, experience in p.experiences.items():
             kept = tuple(s for s in experience.content.skill_ids if s != skill_id)
             p.experiences[experience_id] = Experience(
@@ -244,7 +260,13 @@ class InMemoryProfileStore:
         return True
 
     def delete_project(self, profile_id: int, project_id: int) -> bool:
-        return self.profiles[profile_id].projects.pop(project_id, None) is not None
+        p = self.profiles[profile_id]
+        if p.projects.pop(project_id, None) is None:
+            return False
+        p.cv = replace(
+            p.cv, projects=tuple(i for i in p.cv.projects if i != project_id)
+        )
+        return True
 
     def append_event(self, event: NewEvent) -> None:
         self.events.append(event)

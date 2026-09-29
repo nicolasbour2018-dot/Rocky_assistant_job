@@ -6,6 +6,7 @@ import pytest
 
 from rocky.profil.model import (
     Contract,
+    Link,
     OnboardingState,
     RemoteMode,
     SkillCategory,
@@ -16,8 +17,10 @@ from rocky.profil.model import (
 )
 from rocky.profil.rules import (
     ProfileInputError,
+    age_on,
     clean_lines,
     is_ready,
+    link_icon,
     make_experience,
     make_identity,
     make_language,
@@ -165,8 +168,44 @@ def test_identity_needs_a_name_and_valid_links() -> None:
 
     with pytest.raises(ProfileInputError, match="nom"):
         make_identity(full_name="")
-    with pytest.raises(ProfileInputError, match="LinkedIn"):
-        make_identity(full_name="N", linkedin_url="linkedin.com/in/n")
+    with pytest.raises(ProfileInputError, match=r"linkedin\.com/in/n"):
+        make_identity(full_name="N", links="linkedin.com/in/n")
+
+
+def test_links_are_named_after_known_sites_unless_labelled() -> None:
+    identity = make_identity(
+        full_name="N",
+        links=(
+            "https://www.linkedin.com/in/n\n"
+            "\n"
+            "https://huggingface.co/n\n"
+            "Mon site | https://n.example.fr\n"
+            "https://huggingface.co/n\n"
+        ),
+    )
+
+    assert identity.links == (
+        Link("LinkedIn", "https://www.linkedin.com/in/n"),
+        Link("Hugging Face", "https://huggingface.co/n"),
+        Link("Mon site", "https://n.example.fr"),
+    )
+    assert [link_icon(link.url) for link in identity.links] == [
+        "linkedin",
+        "huggingface",
+        None,
+    ]
+
+
+def test_the_age_needs_a_birth_date_and_is_computed_on_a_given_day() -> None:
+    identity = make_identity(full_name="N", birth_date="1989-03-15", show_age=True)
+
+    assert identity.birth_date == date(1989, 3, 15)
+    assert age_on(date(1989, 3, 15), date(2026, 3, 14)) == 36
+    assert age_on(date(1989, 3, 15), date(2026, 3, 15)) == 37
+    with pytest.raises(ProfileInputError, match="date de naissance"):
+        make_identity(full_name="N", show_age=True)
+    with pytest.raises(ProfileInputError, match="AAAA-MM-JJ"):
+        make_identity(full_name="N", birth_date="15/03/1989")
     with pytest.raises(ProfileInputError, match="e-mail de contact"):
         make_identity(full_name="N", contact_email="nicolas")
 

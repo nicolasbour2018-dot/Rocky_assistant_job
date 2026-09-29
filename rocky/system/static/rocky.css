@@ -471,3 +471,10 @@ body.auth { display: grid; place-items: center; min-height: 100vh; padding: var(
 }
 .watch-banner p { margin: 0; }
 .watch-reason { display: block; font-size: 13px; opacity: 0.85; }
+
+/* Master CV (profile, section « kit », D2): ordered lists with small gesture buttons. */
+.btn-mini { padding: 0 var(--space-2); min-height: 1.75rem; font-size: 0.85em; }
+.cv-order { display: grid; gap: var(--space-1); margin: var(--space-2) 0; padding-left: 1.5em; }
+.cv-order li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.cv-order li > span:first-child { margin-right: auto; }
+.cv-photo { width: 7rem; height: 7rem; border-radius: 50%; object-fit: cover; display: block; margin-bottom: var(--space-2); }

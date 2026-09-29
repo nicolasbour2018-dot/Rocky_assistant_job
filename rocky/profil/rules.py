@@ -10,6 +10,7 @@ import unicodedata
 from collections.abc import Iterable, Sequence
 from datetime import date
 from enum import StrEnum
+from urllib.parse import urlsplit
 
 from rocky.profil.model import (
     LANGUAGE_NAMES,
@@ -19,6 +20,7 @@ from rocky.profil.model import (
     Identity,
     LanguageDraft,
     LanguageLevel,
+    Link,
     OnboardingState,
     Preferences,
     Profile,
@@ -36,6 +38,7 @@ from rocky.profil.model import (
 NAME_MAX_LENGTH = 80
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MONTH_PATTERN = re.compile(r"^(?P<year>\d{4})-(?P<month>\d{2})$")
+MIN_BIRTH_YEAR = 1900
 _NOT_ALPHANUMERIC = re.compile(r"[^0-9a-z]+")
 
 
@@ -101,11 +104,13 @@ def make_identity(
     phone: str | None = None,
     city: str | None = None,
     postal_code: str | None = None,
-    linkedin_url: str | None = None,
-    github_url: str | None = None,
-    portfolio_url: str | None = None,
+    links: str | Iterable[str] = (),
     headline_fr: str | None = None,
     headline_en: str | None = None,
+    title_fr: str | None = None,
+    title_en: str | None = None,
+    birth_date: str | date | None = None,
+    show_age: bool = False,
 ) -> Identity:
     name = optional(full_name)
     if name is None:
@@ -113,24 +118,89 @@ def make_identity(
     email = optional(contact_email)
     if email is not None and not EMAIL_PATTERN.fullmatch(email):
         raise ProfileInputError("L'e-mail de contact n'est pas une adresse valide.")
+    born = _birth_date(birth_date)
+    if show_age and born is None:
+        raise ProfileInputError("Indique ta date de naissance pour afficher ton âge.")
     return Identity(
         full_name=name,
         contact_email=email,
         phone=optional(phone),
         city=optional(city),
         postal_code=optional(postal_code),
-        linkedin_url=_url(linkedin_url, "LinkedIn"),
-        github_url=_url(github_url, "GitHub"),
-        portfolio_url=_url(portfolio_url, "portfolio"),
+        links=make_links(links),
         headline=Text(optional_block(headline_fr) or "", optional_block(headline_en)),
+        title=Text(optional(title_fr) or "", optional(title_en)),
+        birth_date=born,
+        show_age=show_age,
     )
+
+
+# Known sites: their name when the user gives none, and the icon of the CV (decision D2, Q8).
+KNOWN_SITES = {
+    "linkedin.com": ("LinkedIn", "linkedin"),
+    "github.com": ("GitHub", "github"),
+    "huggingface.co": ("Hugging Face", "huggingface"),
+}
+
+
+def make_links(values: str | Iterable[str]) -> tuple[Link, ...]:
+    """One link per line, ``URL`` or ``Libellé | URL``; each URL once, in the order given."""
+    lines = values.splitlines() if isinstance(values, str) else values
+    links: list[Link] = []
+    for line in lines:
+        label, _, url = line.rpartition("|")
+        address = _url(url, "")
+        if address is None:
+            continue
+        if any(link.url == address for link in links):
+            continue
+        links.append(Link(optional(label) or _site(address)[0], address))
+    return tuple(links)
+
+
+def link_icon(url: str) -> str | None:
+    """``linkedin``, ``github``, ``huggingface`` for a known site, else None."""
+    return _site(url)[1]
+
+
+def _site(url: str) -> tuple[str, str | None]:
+    host = (urlsplit(url).hostname or "").removeprefix("www.")
+    for domain, (name, icon) in KNOWN_SITES.items():
+        if host == domain or host.endswith(f".{domain}"):
+            return name, icon
+    return host or url, None
 
 
 def _url(value: str | None, name: str) -> str | None:
     url = optional(value)
     if url is not None and not url.startswith(("https://", "http://")):
-        raise ProfileInputError(f"Le lien {name} doit commencer par https://.")
+        what = f"Le lien {name}" if name else f"Le lien « {url} »"
+        raise ProfileInputError(f"{what} doit commencer par https://.")
     return url
+
+
+def _birth_date(value: str | date | None) -> date | None:
+    if value is None or isinstance(value, date):
+        born = value
+    else:
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            born = date.fromisoformat(text)
+        except ValueError:
+            raise ProfileInputError(
+                "La date de naissance doit être une date (AAAA-MM-JJ)."
+            ) from None
+    if born is not None and born.year < MIN_BIRTH_YEAR:
+        raise ProfileInputError("La date de naissance semble erronée.")
+    return born
+
+
+def age_on(birth_date: date, today: date) -> int:
+    """Completed years on ``today``."""
+    before_birthday = (today.month, today.day) < (birth_date.month, birth_date.day)
+    return today.year - birth_date.year - before_birthday
 
 
 def make_preferences(

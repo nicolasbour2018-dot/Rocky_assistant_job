@@ -1,4 +1,115 @@
-<div class="empty-state compact">
-  <p class="empty-lead">Ton CV et ta lettre, en français et en anglais, construits à partir de ce profil.</p>
-  <p class="muted">Ils arrivent à l'étape D2 de la refonte, avec la vérification de ton CV.</p>
+{% import "profil/macros.html" as m %}
+{% set key = "kit" %}
+{% set cv = profile.cv %}
+{# One gesture on the master CV = one small form (decision D2, Q10); the section is swapped whole. #}
+{% macro gesture(name, label, fields, title="") -%}
+{{ m.form_open(key, "/profil/cv/" ~ name, "inline-form") }}{% for field, value in fields.items() %}<input type="hidden" name="{{ field }}" value="{{ value }}">{% endfor %}<button type="submit" class="btn btn-ghost btn-mini"{% if title %} title="{{ title }}" aria-label="{{ title }}"{% endif %}>{{ label }}</button></form>
+{%- endmacro %}
+{% macro name_form(name, index=none) -%}
+{{ m.form_open(key, "/profil/cv/" ~ name) }}
+  {{ m.error(state) }}
+  {% if index is not none %}<input type="hidden" name="index" value="{{ index }}">{% endif %}
+  <div class="form-grid">
+    {{ m.input("name_fr", "En français", state.values, required=True) }}
+    {{ m.input("name_en", "En anglais", state.values, hint="Facultatif") }}
+  </div>
+  {{ m.actions(key, state) }}
+</form>
+{%- endmacro %}
+{% macro label_of(skill_id) %}{% set skill = skills_by_id.get(skill_id) %}{{ (skill.label.get(language) or skill.label.fr) if skill else "" }}{% endmacro %}
+{% macro add_select(ids, fields, action_label) -%}
+{% if ids %}
+{{ m.form_open(key, "/profil/cv/competence-placer", "inline-form") }}
+  {% for field, value in fields.items() %}<input type="hidden" name="{{ field }}" value="{{ value }}">{% endfor %}
+  <select name="id" aria-label="Compétence à ajouter">{% for skill_id in ids %}<option value="{{ skill_id }}">{{ label_of(skill_id) }}</option>{% endfor %}</select>
+  <button type="submit" class="btn btn-ghost btn-mini">{{ action_label }}</button>
+</form>
+{% endif %}
+{%- endmacro %}
+
+{% set placed = cv.groups | map(attribute="skill_ids") | sum(start=()) %}
+{% set free_technical = profile.skills | selectattr("content.category", "equalto", "technical") | rejectattr("id", "in", placed) | map(attribute="id") | list %}
+{% set free_transversal = profile.skills | rejectattr("content.category", "equalto", "technical") | rejectattr("id", "in", cv.transversal) | map(attribute="id") | list %}
+
+<p class="section-lead">Ce qui figure dans ton CV maître, et dans quel ordre. Tes expériences et formations y sont toutes, par date.</p>
+{% if state.error and state.editing in ("", "photo") %}{{ m.error(state) }}{% endif %}
+
+<div class="two-columns">
+  <div>
+    <h3 class="group-title">Photo</h3>
+    {% if profile.photo %}<img class="cv-photo" src="/profil/cv/photo?v={{ profile.photo.sha256[:12] }}" alt="Ta photo de CV">{% else %}<p class="muted small">Aucune photo : elle est facultative.</p>{% endif %}
+    <form method="post" action="/profil/photo" enctype="multipart/form-data" hx-post="/profil/photo" hx-encoding="multipart/form-data" {{ m.swap(key) }} class="inline-form">
+      <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required aria-label="Photo">
+      <button type="submit" class="btn btn-ghost btn-mini">{{ "Remplacer" if profile.photo else "Téléverser" }}</button>
+    </form>
+    {% if profile.photo %}{{ m.form_open(key, "/profil/photo/retirer", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Retirer la photo</button></form>{% endif %}
+  </div>
+  <div>
+    <h3 class="group-title">Loisirs</h3>
+    <ol class="cv-order">
+      {% for hobby in cv.hobbies %}{% set index = loop.index0 %}
+      <li{% if not hobby.in_cv %} class="muted"{% endif %}>
+        {% if state.editing == "loisir-" ~ index %}{{ name_form("loisir-modifier", index) }}{% else %}
+        <span>{{ m.text(hobby.label, language) }}{% if not hobby.in_cv %} <span class="badge badge-muted">hors CV</span>{% endif %}</span>
+        {{ gesture("loisir-monter", "↑", {"index": index}, "Monter") }}{{ gesture("loisir-descendre", "↓", {"index": index}, "Descendre") }}
+        {{ gesture("loisir-basculer", "Retirer du CV" if hobby.in_cv else "Mettre dans le CV", {"index": index}) }}
+        {{ m.link(key, "Modifier", "?modifier=loisir-" ~ index ~ "&langue=" ~ language, "btn btn-ghost btn-mini") }}
+        {{ gesture("loisir-retirer", "Supprimer", {"index": index}) }}
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% if state.editing == "nouveau-loisir" %}{{ name_form("loisir-ajouter") }}{% else %}{{ m.link(key, "+ Ajouter un loisir", "?modifier=nouveau-loisir&langue=" ~ language, "btn btn-ghost") }}{% endif %}
+  </div>
+</div>
+
+<h3 class="group-title">Compétences techniques, par groupe</h3>
+{% if not cv.groups and state.editing != "nouveau-groupe" %}<p class="muted small">Crée un groupe (« Langages et Data », « Data Science et IA »…) pour y ranger tes compétences techniques.</p>{% endif %}
+<ol class="item-list">
+  {% for group in cv.groups %}{% set index = loop.index0 %}
+  <li class="item">
+    {% if state.editing == "groupe-" ~ index %}{{ name_form("groupe-renommer", index) }}{% else %}
+    <div class="item-head">
+      <h4>{{ m.text(group.name, language) }}</h4>
+      <div class="item-actions">
+        {{ gesture("groupe-monter", "↑", {"index": index}, "Monter le groupe") }}{{ gesture("groupe-descendre", "↓", {"index": index}, "Descendre le groupe") }}
+        {{ m.link(key, "Renommer", "?modifier=groupe-" ~ index ~ "&langue=" ~ language, "btn btn-ghost btn-mini") }}
+        {{ gesture("groupe-retirer", "Retirer", {"index": index}, "Retirer le groupe : ses compétences sortent du CV") }}
+      </div>
+    </div>
+    {% endif %}
+    <ol class="cv-order">
+      {% for skill_id in group.skill_ids %}
+      <li><span>{{ label_of(skill_id) }}</span>{{ gesture("competence-monter", "↑", {"id": skill_id}, "Monter") }}{{ gesture("competence-descendre", "↓", {"id": skill_id}, "Descendre") }}{{ gesture("competence-placer", "✕", {"id": skill_id, "group": "retirer"}, "Retirer du CV") }}</li>
+      {% endfor %}
+    </ol>
+    {{ add_select(free_technical, {"group": index}, "Ajouter au groupe") }}
+  </li>
+  {% endfor %}
+</ol>
+{% if state.editing == "nouveau-groupe" %}{{ name_form("groupe-ajouter") }}{% else %}{{ m.link(key, "+ Ajouter un groupe", "?modifier=nouveau-groupe&langue=" ~ language, "btn btn-ghost") }}{% endif %}
+
+<div class="two-columns">
+  <div>
+    <h3 class="group-title">Compétences transversales</h3>
+    <ol class="cv-order">
+      {% for skill_id in cv.transversal %}
+      <li><span>{{ label_of(skill_id) }}</span>{{ gesture("competence-monter", "↑", {"id": skill_id}, "Monter") }}{{ gesture("competence-descendre", "↓", {"id": skill_id}, "Descendre") }}{{ gesture("competence-placer", "✕", {"id": skill_id, "group": "retirer"}, "Retirer du CV") }}</li>
+      {% else %}<li class="muted small">Aucune pour l'instant.</li>
+      {% endfor %}
+    </ol>
+    {{ add_select(free_transversal, {"group": "0"}, "Ajouter au CV") }}
+  </div>
+  <div>
+    <h3 class="group-title">Projets</h3>
+    <ol class="cv-order">
+      {% for project_id in cv.projects %}{% set project = profile.projects | selectattr("id", "equalto", project_id) | first %}
+      <li><span>{{ m.text(project.content.name, language) }}</span>{{ gesture("projet-monter", "↑", {"id": project_id}, "Monter") }}{{ gesture("projet-descendre", "↓", {"id": project_id}, "Descendre") }}{{ gesture("projet-basculer", "✕", {"id": project_id}, "Retirer du CV") }}</li>
+      {% else %}<li class="muted small">Aucun projet dans le CV.</li>
+      {% endfor %}
+    </ol>
+    {% for project in profile.projects if project.id not in cv.projects %}
+    <p class="small">{{ m.text(project.content.name, language) }} {{ gesture("projet-basculer", "Ajouter au CV", {"id": project.id}) }}</p>
+    {% endfor %}
+  </div>
 </div>

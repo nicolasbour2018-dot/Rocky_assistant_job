@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import io
 import re
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy import Engine
 
 from rocky.offres.model import Origin
@@ -142,7 +145,7 @@ def test_the_page_shows_every_section(client: TestClient) -> None:
     assert page.status_code == 200
     for key in ("pistes", "competences", "langues", "parcours", "projets", "identite"):
         assert f'id="section-{key}"' in page.text
-    assert "étape D2" in section(page.text, "kit")
+    assert "CV maître" in section(page.text, "kit")
     assert "Facultatif" in section(page.text, "projets")
 
 
@@ -433,3 +436,108 @@ def test_a_track_with_offers_is_archived_not_deleted_on_screen(
         refused.text.replace("&#39;", "'")
     )
     assert "Data analyst" in section(client.get("/profil").text, "pistes")
+
+
+# Master CV (section « kit », decision D2)
+
+
+def png(side: int) -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGB", (side, side), "teal").save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+@pytest.fixture
+def files_client(migrated_engine: Engine, tmp_path: Path) -> TestClient:
+    return logged_in(make_app(migrated_engine, storage_root=tmp_path), migrated_engine)[
+        0
+    ]
+
+
+def test_a_group_is_created_filled_and_ordered_in_place(client: TestClient) -> None:
+    for name in ("Python", "SQL"):
+        client.post(
+            "/profil/competences",
+            data={"label_fr": name, "category": "technical"},
+            headers=HTMX,
+        )
+    created = client.post(
+        "/profil/cv/groupe-ajouter",
+        data={"name_fr": "Langages et Data", "name_en": "Languages and data"},
+        headers=HTMX,
+    )
+    assert created.status_code == 200
+    kit = section(created.text, "kit")
+    assert "Langages et Data" in kit
+    options = {
+        label: value
+        for value, label in re.findall(r'<option value="(\d+)">([^<]+)</option>', kit)
+    }
+
+    for name in ("Python", "SQL"):
+        client.post(
+            "/profil/cv/competence-placer",
+            data={"id": options[name], "group": "0"},
+            headers=HTMX,
+        )
+    moved = client.post(
+        "/profil/cv/competence-monter", data={"id": options["SQL"]}, headers=HTMX
+    )
+
+    kit = section(moved.text, "kit")
+    assert kit.index("SQL") < kit.index("Python")
+
+
+def test_a_refused_gesture_says_why_in_the_section(client: TestClient) -> None:
+    client.post("/profil/cv/groupe-ajouter", data={"name_fr": "Data"}, headers=HTMX)
+
+    refused = client.post(
+        "/profil/cv/groupe-ajouter", data={"name_fr": "DATA"}, headers=HTMX
+    )
+
+    assert refused.status_code == 200
+    assert "existe déjà" in section(refused.text, "kit")
+    assert client.post("/profil/cv/inconnu", data={}, headers=HTMX).status_code == 404
+
+
+def test_a_photo_is_uploaded_served_and_removed(files_client: TestClient) -> None:
+    content = png(300)
+
+    uploaded = files_client.post(
+        "/profil/photo",
+        files={"photo": ("moi.png", content, "image/png")},
+        headers=HTMX,
+    )
+
+    assert uploaded.status_code == 200
+    assert 'class="cv-photo"' in section(uploaded.text, "kit")
+    served = files_client.get("/profil/cv/photo")
+    assert served.content == content
+    assert served.headers["content-type"] == "image/png"
+    files_client.post("/profil/photo/retirer", headers=HTMX)
+    assert files_client.get("/profil/cv/photo").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [(b"not an image", "pas une image"), (png(40), "trop petite")],
+)
+def test_a_wrong_photo_is_refused(
+    files_client: TestClient, content: bytes, message: str
+) -> None:
+    refused = files_client.post(
+        "/profil/photo", files={"photo": ("x.png", content, "image/png")}, headers=HTMX
+    )
+
+    assert message in section(refused.text, "kit")
+    assert files_client.get("/profil/cv/photo").status_code == 404
+
+
+def test_without_storage_the_photo_says_it_is_not_configured(
+    client: TestClient,
+) -> None:
+    refused = client.post(
+        "/profil/photo", files={"photo": ("x.png", png(300), "image/png")}, headers=HTMX
+    )
+
+    assert "ROCKY_STORAGE_ROOT" in section(refused.text, "kit")

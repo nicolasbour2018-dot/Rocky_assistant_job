@@ -6,10 +6,18 @@ from datetime import date
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import Connection, func, insert, select
+from sqlalchemy import Connection, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 
-from rocky.profil.model import SkillCategory, TrackStatus
+from rocky.profil.model import (
+    CvLayout,
+    Hobby,
+    SkillCategory,
+    SkillGroup,
+    StoredPhoto,
+    Text,
+    TrackStatus,
+)
 from rocky.profil.rules import (
     make_experience,
     make_identity,
@@ -23,6 +31,7 @@ from rocky.profil.sql import (
     SqlProfileStore,
     experience_skills,
     profiles,
+    skill_groups,
     skill_terms,
     skills,
 )
@@ -221,3 +230,81 @@ def test_asking_for_the_onboarding_does_not_create_a_profile(db: Connection) -> 
 
     assert editor.needs_onboarding()
     assert store.find_profile_id(account_id) is None
+
+
+# Master CV (decision D2)
+
+
+def test_links_photo_and_master_cv_round_trip(db: Connection) -> None:
+    editor = new_editor(db)
+    editor.save_identity(
+        make_identity(
+            full_name="Nicolas",
+            links="https://github.com/n\nhttps://huggingface.co/n",
+            title_fr="Data Scientist",
+            birth_date="1989-03-15",
+            show_age=True,
+        )
+    )
+    editor.save_photo(StoredPhoto("comptes/1/photos/abc.jpg", "abc"))
+    python = editor.add_skill(make_skill(label_fr="Python", category="technical"))
+    sql = editor.add_skill(make_skill(label_fr="SQL", category="technical"))
+    curiosity = editor.add_skill(make_skill(label_fr="Curiosité", category="soft"))
+    project = editor.add_project(make_project(name_fr="Rocky"))
+    layout = CvLayout(
+        groups=(
+            SkillGroup(Text("Data", "Data"), (sql, python)),
+            SkillGroup(Text("Vide")),
+        ),
+        transversal=(curiosity,),
+        projects=(project,),
+        hobbies=(Hobby(Text("Échecs", "Chess")), Hobby(Text("Piano"), in_cv=False)),
+    )
+
+    editor.save_cv_layout(layout)
+    profile = editor.profile()
+
+    assert [link.label for link in profile.identity.links] == ["GitHub", "Hugging Face"]
+    assert profile.identity.title == Text("Data Scientist")
+    assert profile.identity.birth_date == date(1989, 3, 15)
+    assert profile.identity.show_age
+    assert profile.photo == StoredPhoto("comptes/1/photos/abc.jpg", "abc")
+    assert profile.cv == layout
+
+    editor.save_cv_layout(CvLayout())  # replaced whole, groups included
+    assert editor.profile().cv == CvLayout()
+
+
+def test_the_database_refuses_a_technical_skill_in_the_cv_without_group(
+    db: Connection,
+) -> None:
+    editor = new_editor(db)
+    python = editor.add_skill(make_skill(label_fr="Python", category="technical"))
+
+    with pytest.raises(IntegrityError, match="ck_skills_cv_placement"):
+        db.execute(update(skills).where(skills.c.id == python).values(cv_position=0))
+
+
+def test_the_database_refuses_the_group_of_another_profile(db: Connection) -> None:
+    first, second = new_editor(db), new_editor(db)
+    first.save_cv_layout(CvLayout(groups=(SkillGroup(Text("Data")),)))
+    group_id = db.execute(
+        select(skill_groups.c.id).where(skill_groups.c.profile_id == first.profile().id)
+    ).scalar_one()
+    python = second.add_skill(make_skill(label_fr="Python", category="technical"))
+
+    with pytest.raises(IntegrityError, match="fk_skills_profile_id_skill_groups"):
+        db.execute(
+            update(skills)
+            .where(skills.c.id == python)
+            .values(group_id=group_id, cv_position=0)
+        )
+
+
+def test_a_skill_of_a_group_can_be_deleted(db: Connection) -> None:
+    editor = new_editor(db)
+    python = editor.add_skill(make_skill(label_fr="Python", category="technical"))
+    editor.save_cv_layout(CvLayout(groups=(SkillGroup(Text("Data"), (python,)),)))
+
+    assert editor.delete_skill(python)
+    assert editor.profile().cv.groups == (SkillGroup(Text("Data")),)

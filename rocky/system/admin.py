@@ -6,6 +6,7 @@ Run in the application container: ``docker compose run --rm app rocky-admin <com
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -30,6 +31,7 @@ from rocky.offres.watch.model import (
 from rocky.offres.watch.service import WatchService, public_sources
 from rocky.offres.watch.usecases import active_tracks
 from rocky.profil.import_file import ImportFileError, read_import_file
+from rocky.profil.import_file import export_profile as export_file
 from rocky.profil.model import TrackStatus
 from rocky.profil.rules import ProfileInputError
 from rocky.profil.sql import SqlProfileStore
@@ -88,6 +90,30 @@ def import_profile(
         f"{count} {COUNT_LABELS[key]}" for key, count in result.counts.items()
     )
     out.write(f"Profil importé pour {address} : {summary}.\n")
+    return 0
+
+
+def export_profile(engine: Engine, *, email: str, out: TextIO, err: TextIO) -> int:
+    """Write the profile of ``email`` as a profile file (JSON) on ``out``; read only (decision D2, Q18)."""
+    try:
+        address = normalize_email(email)
+    except InvalidEmailError as error:
+        err.write(f"{error}\n")
+        return 2
+    with engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(address)
+        store = SqlProfileStore(connection)
+        profile_id = None if account is None else store.find_profile_id(account.id)
+        if profile_id is None:
+            err.write(f"Aucun profil pour {address}.\n")
+            return 1
+        profile = store.load(profile_id)
+        connection.rollback()
+    json.dump(export_file(profile), out, ensure_ascii=False, indent=2)
+    out.write("\n")
+    err.write(
+        f"Profil de {address} exporté (la photo et les gabarits de CV n'y sont pas).\n"
+    )
     return 0
 
 
@@ -218,6 +244,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     import_parser.add_argument("fichier", type=Path)
     import_parser.add_argument("email")
+    export_parser = commands.add_parser(
+        "export-profil",
+        help="écrit le profil d'un compte au format des fichiers de profil "
+        "(sortie standard : rediriger vers un fichier)",
+    )
+    export_parser.add_argument("email")
     sources_parser = commands.add_parser(
         "sources",
         help="lance une vraie collecte pour les pistes actives d'un compte, "
@@ -269,6 +301,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             finally:
                 http.close()
+        if arguments.command == "export-profil":
+            return export_profile(
+                engine, email=arguments.email, out=sys.stdout, err=sys.stderr
+            )
         if arguments.command == "import-profil":
             return import_profile(
                 engine,

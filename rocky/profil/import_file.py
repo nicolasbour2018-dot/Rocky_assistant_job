@@ -1,7 +1,8 @@
-"""Reviewed profile files (``rocky-admin import-profil``): JSON read and validated field by field.
+"""Profile files (``rocky-admin import-profil`` / ``export-profil``): JSON read and validated field by field.
 
 Every problem is reported with the path of its field (``skills[3].category``), all at once, so that one review
-fixes them all. Unknown keys are refused: a misspelt key would otherwise be silently ignored.
+fixes them all. Unknown keys are refused: a misspelt key would otherwise be silently ignored. ``export_profile``
+writes what ``parse_import`` reads (decision D2, Q18): the photo and the CV templates are files, not in it.
 """
 
 from __future__ import annotations
@@ -12,12 +13,17 @@ from pathlib import Path
 from typing import Any
 
 from rocky.profil.model import (
+    Hobby,
     Identity,
+    ImportedCv,
     ImportedExperience,
     ImportedProfile,
     ImportedProject,
+    ImportedSkillGroup,
     Preferences,
+    Profile,
     SkillDraft,
+    Text,
     TrackDraft,
 )
 from rocky.profil.rules import (
@@ -30,6 +36,7 @@ from rocky.profil.rules import (
     make_skill,
     make_track,
 )
+from rocky.system.events import JsonValue
 
 FORMAT = "rocky-profil/1"
 TOP_KEYS = {
@@ -42,6 +49,13 @@ TOP_KEYS = {
     "experiences",
     "projects",
     "tracks",
+    "cv",
+}
+# Before D2, identity had one field per link: still read, as links.
+LEGACY_LINKS = {
+    "linkedin_url": "LinkedIn",
+    "github_url": "GitHub",
+    "portfolio_url": "Portfolio",
 }
 
 
@@ -92,6 +106,7 @@ def parse_import(data: object) -> ImportedProfile:
     experiences = reader.items("experiences", root.get("experiences", []), _experience)
     projects = reader.items("projects", root.get("projects", []), _project)
     tracks = reader.items("tracks", root.get("tracks", []), _track)
+    cv = reader.build("cv", root["cv"], _cv) if "cv" in root else None
     if reader.problems or identity is None:
         raise ImportFileError(reader.problems)
     return ImportedProfile(
@@ -102,6 +117,7 @@ def parse_import(data: object) -> ImportedProfile:
         experiences=tuple(experiences),
         projects=tuple(projects),
         tracks=tuple(tracks),
+        cv=cv,
     )
 
 
@@ -177,26 +193,34 @@ def _text(reader: _Reader, value: object, path: str) -> tuple[str, str | None]:
 
 
 def _identity(reader: _Reader, value: object, path: str) -> Identity:
+    plain = ("full_name", "contact_email", "phone", "city", "postal_code")
     names = {
-        key: key
-        for key in (
-            "full_name",
-            "contact_email",
-            "phone",
-            "city",
-            "postal_code",
-            "linkedin_url",
-            "github_url",
-            "portfolio_url",
-        )
+        **{key: key for key in plain},
+        **{key: key for key in LEGACY_LINKS},
+        "links": "links",
+        "headline": "headline",
+        "title": "title",
+        "birth_date": "birth_date",
+        "show_age": "show_age",
     }
-    found = reader.fields(value, path, {**names, "headline": "headline"})
-    headline = found.pop("headline", None)
-    if headline is not None:
-        found["headline_fr"], found["headline_en"] = _text(
-            reader, headline, f"{path}.headline"
-        )
-    return make_identity(**{"full_name": "", **found})
+    found = reader.fields(value, path, names)
+    links = [
+        f"{label} | {found.pop(key)}"
+        for key, label in LEGACY_LINKS.items()
+        if found.get(key)
+    ]
+    for key in LEGACY_LINKS:
+        found.pop(key, None)
+    listed = found.pop("links", [])
+    if not isinstance(listed, list) or not all(isinstance(v, str) for v in listed):
+        reader.fail(f"{path}.links", "doit être une liste de « Libellé | URL ».")
+        raise _RecordedError
+    for key in ("headline", "title"):
+        if key in found:
+            found[f"{key}_fr"], found[f"{key}_en"] = _text(
+                reader, found.pop(key), f"{path}.{key}"
+            )
+    return make_identity(**{"full_name": "", **found, "links": [*links, *listed]})
 
 
 def _preferences(reader: _Reader, value: object, path: str) -> Preferences:
@@ -276,8 +300,165 @@ def _track(reader: _Reader, value: object, path: str) -> TrackDraft:
     )
 
 
+def _cv(reader: _Reader, value: object, path: str) -> ImportedCv:
+    found = reader.fields(
+        value,
+        path,
+        {k: k for k in ("groups", "transversal", "projects", "hobbies")},
+    )
+    groups = reader.items(f"{path}.groups", found.get("groups", []), _group)
+    hobbies = reader.items(f"{path}.hobbies", found.get("hobbies", []), _hobby)
+    return ImportedCv(
+        groups=tuple(groups),
+        transversal=_names(reader, found.get("transversal", []), f"{path}.transversal"),
+        projects=_names(reader, found.get("projects", []), f"{path}.projects"),
+        hobbies=tuple(hobbies),
+    )
+
+
+def _group(reader: _Reader, value: object, path: str) -> ImportedSkillGroup:
+    found = reader.fields(value, path, {"name": "name", "skills": "skills"})
+    french, english = _text(reader, found.get("name"), f"{path}.name")
+    if not french.strip():
+        reader.fail(f"{path}.name", "le nom français est obligatoire.")
+        raise _RecordedError
+    return ImportedSkillGroup(
+        Text(french.strip(), (english or "").strip() or None),
+        _names(reader, found.get("skills", []), f"{path}.skills"),
+    )
+
+
+def _hobby(reader: _Reader, value: object, path: str) -> Hobby:
+    found = reader.fields(value, path, {"label": "label", "in_cv": "in_cv"})
+    french, english = _text(reader, found.get("label"), f"{path}.label")
+    in_cv = found.get("in_cv", True)
+    if not isinstance(in_cv, bool):
+        reader.fail(f"{path}.in_cv", "vaut true ou false.")
+        raise _RecordedError
+    if not french.strip():
+        reader.fail(f"{path}.label", "le nom français est obligatoire.")
+        raise _RecordedError
+    return Hobby(Text(french.strip(), (english or "").strip() or None), in_cv)
+
+
 def _names(reader: _Reader, value: object, path: str) -> tuple[str, ...]:
     if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
         reader.fail(path, "doit être une liste de noms de compétences.")
         raise _RecordedError
     return tuple(value)
+
+
+def export_profile(profile: Profile) -> dict[str, JsonValue]:
+    """The profile as a file ``parse_import`` reads back: skills and projects named, never by id."""
+    labels = {skill.id: skill.label.fr for skill in profile.skills}
+    projects = {project.id: project.content.name.fr for project in profile.projects}
+    identity = profile.identity
+    return {
+        "format": FORMAT,
+        "identity": _drop_empty(
+            {
+                "full_name": identity.full_name,
+                "contact_email": identity.contact_email,
+                "phone": identity.phone,
+                "city": identity.city,
+                "postal_code": identity.postal_code,
+                "links": [f"{link.label} | {link.url}" for link in identity.links],
+                "headline": _export_text(identity.headline),
+                "title": _export_text(identity.title),
+                "birth_date": (
+                    identity.birth_date.isoformat() if identity.birth_date else None
+                ),
+                "show_age": identity.show_age,
+            }
+        ),
+        "preferences": {
+            "contracts": [c.value for c in profile.preferences.contracts],
+            "remote_modes": [m.value for m in profile.preferences.remote_modes],
+            "min_salary_eur": profile.preferences.min_salary_eur,
+            "min_daily_rate_eur": profile.preferences.min_daily_rate_eur,
+        },
+        "skills": [
+            _drop_empty(
+                {
+                    "label": _export_text(skill.label),
+                    "aliases": list(skill.content.aliases),
+                    "category": skill.content.category.value,
+                    "level": skill.content.level.value if skill.content.level else None,
+                    "is_key": skill.content.is_key,
+                }
+            )
+            for skill in profile.skills
+        ],
+        "languages": [
+            {"code": item.content.code, "level": item.content.level.value}
+            for item in profile.languages
+        ],
+        "experiences": [
+            _drop_empty(
+                {
+                    "kind": item.content.kind.value,
+                    "title": _export_text(item.content.title),
+                    "organisation": item.content.organisation,
+                    "place": item.content.place,
+                    "start": item.content.start.strftime("%Y-%m"),
+                    "end": item.content.end.strftime("%Y-%m")
+                    if item.content.end
+                    else None,
+                    "bullets": {
+                        "fr": list(item.content.bullets_fr),
+                        "en": list(item.content.bullets_en),
+                    },
+                    "skills": [labels[s] for s in item.content.skill_ids],
+                }
+            )
+            for item in profile.experiences
+        ],
+        "projects": [
+            _drop_empty(
+                {
+                    "name": _export_text(item.content.name),
+                    "problem": _export_text(item.content.problem),
+                    "work": _export_text(item.content.work),
+                    "results": _export_text(item.content.results),
+                    "stack": list(item.content.stack),
+                    "url": item.content.url,
+                    "skills": [labels[s] for s in item.content.skill_ids],
+                }
+            )
+            for item in profile.projects
+        ],
+        "tracks": [
+            {
+                "name": track.content.name,
+                "titles": list(track.content.titles),
+                "keywords": list(track.content.keywords),
+                "excluded_keywords": list(track.content.excluded_keywords),
+                "locations": list(track.content.locations),
+            }
+            for track in profile.tracks
+        ],
+        "cv": {
+            "groups": [
+                {
+                    "name": _export_text(group.name),
+                    "skills": [labels[s] for s in group.skill_ids],
+                }
+                for group in profile.cv.groups
+            ],
+            "transversal": [labels[s] for s in profile.cv.transversal],
+            "projects": [projects[p] for p in profile.cv.projects],
+            "hobbies": [
+                {"label": _export_text(hobby.label), "in_cv": hobby.in_cv}
+                for hobby in profile.cv.hobbies
+            ],
+        },
+    }
+
+
+def _export_text(text: Text) -> dict[str, JsonValue]:
+    return {"fr": text.fr, "en": text.en}
+
+
+def _drop_empty(values: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Absent fields rather than nulls: the file stays short to review."""
+    return {key: value for key, value in values.items() if value is not None}

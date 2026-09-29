@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
@@ -18,9 +19,16 @@ from tests.system.auth.fakes import FakeClock, FakeHasher, RecordingMailer
 PASSWORD = "un mot de passe solide"
 
 
-def make_app(engine: Engine, mailer: RecordingMailer | None = None) -> FastAPI:
+def make_app(
+    engine: Engine,
+    mailer: RecordingMailer | None = None,
+    *,
+    storage_root: Path | None = None,
+) -> FastAPI:
     settings = Settings(
-        database_url="postgresql://unused", public_url="http://testserver"
+        database_url="postgresql://unused",
+        public_url="http://testserver",
+        storage_root=storage_root,
     )
     return create_app(
         settings,

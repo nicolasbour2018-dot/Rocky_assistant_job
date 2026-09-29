@@ -150,16 +150,34 @@ NO_TEXT = Text("")
 
 
 @dataclass(frozen=True)
+class Link:
+    """A public link of the profile (LinkedIn, GitHub, Hugging Face, portfolio…), in the order of the list."""
+
+    label: str
+    url: str
+
+
+@dataclass(frozen=True)
 class Identity:
     full_name: str = ""
     contact_email: str | None = None
     phone: str | None = None
     city: str | None = None
     postal_code: str | None = None
-    linkedin_url: str | None = None
-    github_url: str | None = None
-    portfolio_url: str | None = None
+    links: tuple[Link, ...] = ()
+    # The profile paragraph at the top of the CV (written by the B5 import), and the short title (decision D2, Q8).
     headline: Text = NO_TEXT
+    title: Text = NO_TEXT
+    birth_date: date | None = None
+    show_age: bool = False
+
+
+@dataclass(frozen=True)
+class StoredPhoto:
+    """The photo of the CV, stored under the files root (decision D2, Q7)."""
+
+    path: str
+    sha256: str
 
 
 @dataclass(frozen=True)
@@ -258,6 +276,34 @@ class Project:
 
 
 @dataclass(frozen=True)
+class Hobby:
+    label: Text
+    in_cv: bool = True
+
+
+@dataclass(frozen=True)
+class SkillGroup:
+    """A group of technical skills of the CV (« Langages et Data »), holding its skills in CV order (Q9)."""
+
+    name: Text
+    skill_ids: tuple[int, ...] = ()
+
+
+@dataclass(frozen=True)
+class CvLayout:
+    """Choice and order of the master CV (decision D2, Q9, Q10): what is not listed stays out of the CV.
+
+    Technical skills appear through their group; soft and business skills in ``transversal``; experiences and
+    education are always shown, by date.
+    """
+
+    groups: tuple[SkillGroup, ...] = ()
+    transversal: tuple[int, ...] = ()
+    projects: tuple[int, ...] = ()
+    hobbies: tuple[Hobby, ...] = ()
+
+
+@dataclass(frozen=True)
 class OnboardingState:
     completed_at: datetime | None = None
     deferred_at: datetime | None = None
@@ -277,6 +323,8 @@ class Profile:
     languages: tuple[Language, ...] = ()
     experiences: tuple[Experience, ...] = ()
     projects: tuple[Project, ...] = ()
+    photo: StoredPhoto | None = None
+    cv: CvLayout = CvLayout()
 
     def skill(self, skill_id: int) -> Skill | None:
         return next((s for s in self.skills if s.id == skill_id), None)
@@ -315,6 +363,14 @@ class ProfileStore(Protocol):
     def save_preferences(
         self, profile_id: int, preferences: Preferences, now: datetime
     ) -> None: ...
+
+    def save_photo(
+        self, profile_id: int, photo: StoredPhoto | None, now: datetime
+    ) -> None: ...
+
+    def save_cv_layout(self, profile_id: int, layout: CvLayout) -> None:
+        """Replace the whole layout; the caller has checked it against the profile."""
+        ...
 
     def mark_onboarding_completed(self, profile_id: int, now: datetime) -> None: ...
 
@@ -406,3 +462,20 @@ class ImportedProfile:
     experiences: tuple[ImportedExperience, ...] = ()
     projects: tuple[ImportedProject, ...] = ()
     tracks: tuple[TrackDraft, ...] = ()
+    cv: ImportedCv | None = None
+
+
+@dataclass(frozen=True)
+class ImportedSkillGroup:
+    name: Text
+    skills: tuple[str, ...] = ()  # names of technical skills of the file, in CV order
+
+
+@dataclass(frozen=True)
+class ImportedCv:
+    """The master CV of an import file: skills and projects named, not yet identified."""
+
+    groups: tuple[ImportedSkillGroup, ...] = ()
+    transversal: tuple[str, ...] = ()
+    projects: tuple[str, ...] = ()  # French names of projects of the file
+    hobbies: tuple[Hobby, ...] = ()

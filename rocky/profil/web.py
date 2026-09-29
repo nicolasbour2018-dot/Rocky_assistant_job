@@ -6,7 +6,8 @@ a time (``#section-<key>``); without HTMX, every route answers a whole page or a
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Iterator, Mapping
+import mimetypes
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date
@@ -17,8 +18,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Connection, Engine
 from starlette.concurrency import run_in_threadpool
-from starlette.datastructures import FormData
+from starlette.datastructures import FormData, UploadFile
 
+from rocky.profil.cv import layout
+from rocky.profil.cv.photo import MAX_BYTES as PHOTO_MAX_BYTES
+from rocky.profil.cv.photo import photo_suffix
 from rocky.profil.model import (
     CONTRACT_LABELS,
     EXPERIENCE_KIND_LABELS,
@@ -29,6 +33,7 @@ from rocky.profil.model import (
     SKILL_LEVEL_LABELS,
     TRACK_STATUS_LABELS,
     Contract,
+    CvLayout,
     Experience,
     ExperienceKind,
     Language,
@@ -39,6 +44,8 @@ from rocky.profil.model import (
     Skill,
     SkillCategory,
     SkillLevel,
+    StoredPhoto,
+    Text,
     Track,
     TrackStatus,
 )
@@ -53,11 +60,13 @@ from rocky.profil.rules import (
     make_track,
     missing_for_ready,
     needs_onboarding,
+    optional,
 )
 from rocky.profil.sql import SqlProfileStore
 from rocky.profil.usecases import Clock, ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.files import FileError, FileStore
 from rocky.system.shell import NAVIGATION, is_htmx, page, wants_fragment
 
 PROFILE_PATH = "/profil"
@@ -80,7 +89,7 @@ SECTIONS = (
     Section("parcours", "Expériences & formations", bilingual=True),
     Section("projets", "Projets", bilingual=True),
     Section("identite", "Identité & préférences", bilingual=True),
-    Section("kit", "Kit de candidature"),
+    Section("kit", "CV & kit de candidature", bilingual=True),
 )
 SECTION_KEYS = {section.key: section for section in SECTIONS}
 
@@ -220,8 +229,13 @@ def _error_status(request: Request) -> int:
     return 200 if is_htmx(request) else 400
 
 
-async def _form(request: Request) -> FormData:
-    return await request.form()
+async def _form(request: Request) -> AsyncIterator[FormData]:
+    """The submitted form; its uploaded files are closed once the answer is sent."""
+    form = await request.form()
+    try:
+        yield form
+    finally:
+        await form.close()
 
 
 Form = Annotated[FormData, Depends(_form)]
@@ -402,11 +416,13 @@ def _identity_values(profile: Profile) -> dict[str, Any]:
         "phone": identity.phone,
         "city": identity.city,
         "postal_code": identity.postal_code,
-        "linkedin_url": identity.linkedin_url,
-        "github_url": identity.github_url,
-        "portfolio_url": identity.portfolio_url,
+        "links": [f"{link.label} | {link.url}" for link in identity.links],
         "headline_fr": identity.headline.fr,
         "headline_en": identity.headline.en,
+        "title_fr": identity.title.fr,
+        "title_en": identity.title.en,
+        "birth_date": identity.birth_date.isoformat() if identity.birth_date else None,
+        "show_age": "1" if identity.show_age else None,
     }
 
 
@@ -423,7 +439,7 @@ def _preferences_values(profile: Profile) -> dict[str, Any]:
 def _stored_values(profile: Profile, key: str, editing: str) -> dict[str, Any] | None:
     """Values of the item being edited; None when it does not exist in this profile."""
     item_id = int(editing) if editing.isdigit() else None
-    if editing != NEW and item_id is None and key != "identite":
+    if editing != NEW and item_id is None and key not in ("identite", "kit"):
         return None
     finders: dict[str, Callable[[], dict[str, Any] | None]] = {
         "pistes": lambda: _found(profile.tracks, item_id, _track_values),
@@ -438,9 +454,28 @@ def _stored_values(profile: Profile, key: str, editing: str) -> dict[str, Any] |
             if editing == "preferences"
             else None
         ),
+        "kit": lambda: _kit_values(profile, editing),
     }
     finder = finders.get(key)
     return None if finder is None else finder()
+
+
+def _kit_values(profile: Profile, editing: str) -> dict[str, Any] | None:
+    """Edited in place: ``groupe-<index>``, ``loisir-<index>``; added: ``nouveau-groupe``, ``nouveau-loisir``."""
+    kind, _, index = editing.partition("-")
+    if editing in ("nouveau-groupe", "nouveau-loisir"):
+        return {}
+    items: tuple[Any, ...] = (
+        profile.cv.groups
+        if kind == "groupe"
+        else profile.cv.hobbies
+        if kind == "loisir"
+        else ()
+    )
+    if not index.isdigit() or int(index) >= len(items):
+        return None
+    text = items[int(index)].name if kind == "groupe" else items[int(index)].label
+    return {"name_fr": text.fr, "name_en": text.en}
 
 
 def _found[T: (Track, Skill, Language, Experience, Project)](
@@ -514,11 +549,13 @@ def onboarding_identity(
                     city=_text(form, "city"),
                     postal_code=_text(form, "postal_code"),
                     phone=current.phone,
-                    linkedin_url=current.linkedin_url,
-                    github_url=current.github_url,
-                    portfolio_url=current.portfolio_url,
+                    links=[f"{link.label} | {link.url}" for link in current.links],
                     headline_fr=current.headline.fr,
                     headline_en=current.headline.en,
+                    title_fr=current.title.fr,
+                    title_en=current.title.en,
+                    birth_date=current.birth_date,
+                    show_age=current.show_age,
                 )
             )
     except ProfileInputError as error:
@@ -897,13 +934,15 @@ def _save_identity(editor: ProfileEditor, form: FormData) -> bool:
                     "phone",
                     "city",
                     "postal_code",
-                    "linkedin_url",
-                    "github_url",
-                    "portfolio_url",
+                    "links",
                     "headline_fr",
                     "headline_en",
+                    "title_fr",
+                    "title_en",
+                    "birth_date",
                 )
-            }
+            },
+            show_age=bool(_text(form, "show_age")),
         )
     )
     return True
@@ -931,3 +970,126 @@ def save_identity(request: Request, account: CurrentAccount, form: Form) -> Resp
 @router.post("/preferences", response_class=HTMLResponse)
 def save_preferences(request: Request, account: CurrentAccount, form: Form) -> Response:
     return _write(request, account, form, "identite", "preferences", _save_preferences)
+
+
+# Master CV (section « kit », decision D2, Q7, Q9, Q10)
+
+
+def _files(request: Request) -> FileStore:
+    root = request.app.state.settings.storage_root
+    if root is None:
+        raise ProfileInputError(
+            "Le stockage des fichiers n'est pas configuré (ROCKY_STORAGE_ROOT)."
+        )
+    return FileStore(root)
+
+
+@router.post("/photo", response_class=HTMLResponse)
+def upload_photo(request: Request, account: CurrentAccount, form: Form) -> Response:
+    def change(editor: ProfileEditor, form: FormData) -> bool:
+        upload = form.get("photo")
+        content = (
+            upload.file.read(PHOTO_MAX_BYTES + 1)
+            if isinstance(upload, UploadFile)
+            else b""
+        )
+        suffix = photo_suffix(content)
+        # Stored before the commit: an unused file of its own hash harms nothing.
+        stored = _files(request).put_file(account.id, "photos", content, suffix)
+        editor.save_photo(StoredPhoto(stored.path, stored.sha256))
+        return True
+
+    return _write(request, account, form, "kit", "photo", change)
+
+
+@router.post("/photo/retirer", response_class=HTMLResponse)
+def remove_photo(request: Request, account: CurrentAccount, form: Form) -> Response:
+    return _write(
+        request, account, form, "kit", "photo", lambda e, _: _saved_photo(e, None)
+    )
+
+
+def _saved_photo(editor: ProfileEditor, photo: StoredPhoto | None) -> bool:
+    editor.save_photo(photo)
+    return True
+
+
+@router.get("/cv/photo")
+def photo(request: Request, account: CurrentAccount) -> Response:
+    stored = profile_of(request, account).photo
+    if stored is None:
+        return Response(status_code=404)
+    try:
+        content = _files(request).read_file(stored.path, stored.sha256)
+    except (FileError, ProfileInputError):
+        return Response(status_code=404)
+    kind = mimetypes.guess_type(stored.path)[0] or "application/octet-stream"
+    return Response(content, media_type=kind, headers={"Cache-Control": "private"})
+
+
+@router.post("/cv/{gesture}", response_class=HTMLResponse)
+def cv_gesture(
+    request: Request, account: CurrentAccount, form: Form, gesture: str
+) -> Response:
+    if gesture not in CV_GESTURES:
+        return Response(status_code=404)
+
+    def change(editor: ProfileEditor, form: FormData) -> bool:
+        profile = editor.profile()
+        editor.save_cv_layout(CV_GESTURES[gesture](profile, form))
+        return True
+
+    return _write(request, account, form, "kit", _cv_editing(gesture, form), change)
+
+
+def _cv_editing(gesture: str, form: FormData) -> str:
+    """The form to show again when a gesture is refused."""
+    if gesture == "groupe-ajouter":
+        return "nouveau-groupe"
+    if gesture == "loisir-ajouter":
+        return "nouveau-loisir"
+    if gesture in ("groupe-renommer", "loisir-modifier"):
+        return f"{gesture.partition('-')[0]}-{_text(form, 'index')}"
+    return ""
+
+
+def _int(form: FormData, name: str) -> int:
+    value = _text(form, name)
+    return int(value) if value.lstrip("-").isdigit() else -1
+
+
+def _name(form: FormData) -> Text:
+    return Text(
+        optional(_text(form, "name_fr")) or "", optional(_text(form, "name_en"))
+    )
+
+
+def _placement(profile: Profile, form: FormData) -> CvLayout:
+    target = _text(form, "group")
+    group_index = None if target in ("", "retirer") else max(_int(form, "group"), 0)
+    return layout.place_skill(profile.cv, profile, _int(form, "id"), group_index)
+
+
+CV_GESTURES: dict[str, Callable[[Profile, FormData], CvLayout]] = {
+    "groupe-ajouter": lambda p, f: layout.add_group(p.cv, _name(f)),
+    "groupe-renommer": lambda p, f: layout.rename_group(
+        p.cv, _int(f, "index"), _name(f)
+    ),
+    "groupe-retirer": lambda p, f: layout.remove_group(p.cv, _int(f, "index")),
+    "groupe-monter": lambda p, f: layout.move_group(p.cv, _int(f, "index"), -1),
+    "groupe-descendre": lambda p, f: layout.move_group(p.cv, _int(f, "index"), 1),
+    "competence-placer": _placement,
+    "competence-monter": lambda p, f: layout.move_skill(p.cv, _int(f, "id"), -1),
+    "competence-descendre": lambda p, f: layout.move_skill(p.cv, _int(f, "id"), 1),
+    "projet-basculer": lambda p, f: layout.toggle_project(p.cv, _int(f, "id")),
+    "projet-monter": lambda p, f: layout.move_project(p.cv, _int(f, "id"), -1),
+    "projet-descendre": lambda p, f: layout.move_project(p.cv, _int(f, "id"), 1),
+    "loisir-ajouter": lambda p, f: layout.add_hobby(p.cv, _name(f)),
+    "loisir-modifier": lambda p, f: layout.update_hobby(
+        p.cv, _int(f, "index"), _name(f)
+    ),
+    "loisir-basculer": lambda p, f: layout.toggle_hobby(p.cv, _int(f, "index")),
+    "loisir-retirer": lambda p, f: layout.remove_hobby(p.cv, _int(f, "index")),
+    "loisir-monter": lambda p, f: layout.move_hobby(p.cv, _int(f, "index"), -1),
+    "loisir-descendre": lambda p, f: layout.move_hobby(p.cv, _int(f, "index"), 1),
+}

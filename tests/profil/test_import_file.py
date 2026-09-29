@@ -7,8 +7,17 @@ from typing import Any
 
 import pytest
 
-from rocky.profil.import_file import ImportFileError, parse_import, read_import_file
+from rocky.profil.import_file import (
+    ImportFileError,
+    export_profile,
+    parse_import,
+    read_import_file,
+)
 from rocky.profil.model import Contract, ExperienceKind, LanguageLevel, SkillLevel
+from rocky.profil.rules import ProfileInputError
+from rocky.profil.usecases import ProfileEditor
+from tests.profil.fakes import InMemoryProfileStore
+from tests.system.auth.fakes import FakeClock
 
 
 def valid_file() -> dict[str, Any]:
@@ -130,3 +139,65 @@ def test_a_file_is_read_as_utf8(tmp_path: Path) -> None:
     path.write_text(json.dumps(valid_file(), ensure_ascii=False), encoding="utf-8")
 
     assert read_import_file(path).skills[1].label.fr == "Curiosité"
+
+
+def cv_file() -> dict[str, Any]:
+    data = valid_file()
+    data["identity"] = {
+        **data["identity"],
+        "linkedin_url": "https://www.linkedin.com/in/n",
+        "links": ["https://huggingface.co/n"],
+        "title": {"fr": "Data Scientist", "en": "Data Scientist"},
+        "birth_date": "1989-03-15",
+        "show_age": True,
+    }
+    data["cv"] = {
+        "groups": [{"name": {"fr": "IA", "en": "AI"}, "skills": ["NLP"]}],
+        "transversal": ["Curiosité"],
+        "projects": [data["projects"][0]["name"]["fr"]],
+        "hobbies": [
+            {"label": {"fr": "Échecs", "en": "Chess"}},
+            {"label": {"fr": "Piano"}, "in_cv": False},
+        ],
+    }
+    return data
+
+
+def test_the_master_cv_and_the_old_link_fields_are_read() -> None:
+    imported = parse_import(cv_file())
+
+    assert [link.label for link in imported.identity.links] == [
+        "LinkedIn",
+        "Hugging Face",
+    ]
+    assert imported.identity.show_age
+    assert imported.cv is not None
+    assert imported.cv.groups[0].skills == ("NLP",)
+    assert [hobby.in_cv for hobby in imported.cv.hobbies] == [True, False]
+
+
+def test_an_exported_profile_is_imported_back_identical() -> None:
+    first = ProfileEditor(
+        InMemoryProfileStore(), clock=FakeClock(), account_id=1, email="n@example.fr"
+    )
+    first.import_profile(parse_import(cv_file()))
+    exported = export_profile(first.profile())
+
+    second = ProfileEditor(
+        InMemoryProfileStore(), clock=FakeClock(), account_id=2, email="n@example.fr"
+    )
+    second.import_profile(parse_import(json.loads(json.dumps(exported))))
+
+    assert export_profile(second.profile()) == exported
+    assert second.profile().cv.hobbies == first.profile().cv.hobbies
+
+
+def test_a_cv_naming_an_unknown_project_is_refused() -> None:
+    data = cv_file()
+    data["cv"]["projects"] = ["Inconnu"]
+    store = InMemoryProfileStore()
+
+    with pytest.raises(ProfileInputError, match="Inconnu"):
+        ProfileEditor(
+            store, clock=FakeClock(), account_id=1, email="n@example.fr"
+        ).import_profile(parse_import(data))

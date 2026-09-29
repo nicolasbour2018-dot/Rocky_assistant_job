@@ -16,6 +16,15 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   refuse de lier la compétence d'un autre profil.
 - Pistes : pas de suppression définitive d'une piste à laquelle une offre est rattachée (garde à ajouter en C6).
 
+## CV maître (décision `docs/decisions/D2-cv-rendu.md`)
+- Choix et ordre du CV : un seul objet `CvLayout`, réécrit en entier par `save_cv_layout` après `check_layout` ;
+  chaque geste de l'écran est une fonction pure de `rocky/profil/cv/layout.py`. Pas d'événement (aucun score ne bouge).
+- Une compétence technique est dans le CV par son groupe, les autres par leur seule position : la base le garantit
+  (`ck_skills_cv_placement`). Un changement de catégorie retire la compétence du CV.
+- `headline` = paragraphe de profil (import B5), `title` = titre court ; les liens sont une liste (`profile_links`).
+- Dépôt public : ni photo, ni gabarit dérivé, ni rendu du CV d'une vraie personne dans Git ; tests sur données fictives.
+- Un fichier de compte (photo, gabarit) passe par `system.files.FileStore` (chemin relatif, hash vérifié à la lecture).
+
 ## Journal
 - Seulement ce qui explique un changement de score ou de veille : pistes, compétences, préférences, import,
   onboarding terminé. Pas les corrections de texte. Une modification sans changement n'écrit rien.

@@ -10,7 +10,7 @@ from uuid import uuid4
 from sqlalchemy import Engine
 
 from rocky.profil.sql import SqlProfileStore
-from rocky.system.admin import import_profile
+from rocky.system.admin import export_profile, import_profile
 from rocky.system.auth.sql import SqlAuthStore
 from tests.system.auth.fakes import FakeClock
 
@@ -120,3 +120,36 @@ def test_an_unknown_account_is_reported(
 
     assert code == 1
     assert "Aucun compte pour personne@example.fr" in output
+
+
+def test_an_imported_profile_is_exported_as_a_file_that_imports_again(
+    migrated_engine: Engine, tmp_path: Path
+) -> None:
+    email = account(migrated_engine)
+    run(migrated_engine, write(tmp_path, PROFILE), email)
+    out, err = io.StringIO(), io.StringIO()
+
+    code = export_profile(migrated_engine, email=email, out=out, err=err)
+
+    assert code == 0
+    exported = json.loads(out.getvalue())
+    assert exported["format"] == "rocky-profil/1"
+    assert [skill["label"]["fr"] for skill in exported["skills"]] == [
+        "Data Visualisation",
+        "NLP",
+    ]
+    assert "photo" in err.getvalue()
+    other = account(migrated_engine)
+    assert run(migrated_engine, write(tmp_path, exported), other)[0] == 0
+
+
+def test_exporting_an_account_without_profile_says_so(migrated_engine: Engine) -> None:
+    out, err = io.StringIO(), io.StringIO()
+
+    code = export_profile(
+        migrated_engine, email=account(migrated_engine), out=out, err=err
+    )
+
+    assert code == 1
+    assert out.getvalue() == ""
+    assert "Aucun profil" in err.getvalue()

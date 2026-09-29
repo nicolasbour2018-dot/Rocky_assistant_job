@@ -14,14 +14,16 @@
         {{ m.input("phone", "Téléphone", state.values, "tel") }}
         {{ m.input("city", "Ville", state.values) }}
         {{ m.input("postal_code", "Code postal", state.values) }}
-        {{ m.input("linkedin_url", "LinkedIn", state.values, "url") }}
-        {{ m.input("github_url", "GitHub", state.values, "url") }}
-        {{ m.input("portfolio_url", "Portfolio", state.values, "url") }}
+        {{ m.input("birth_date", "Date de naissance", state.values, "date", hint="Facultatif") }}
+        <label class="field field-check"><input type="checkbox" name="show_age" value="1"{% if state.values.has("show_age", "1") %} checked{% endif %}> Afficher mon âge sur le CV</label>
       </div>
       <div class="form-grid">
-        {{ m.lines("headline_fr", "Accroche en français", state.values, "Quelques lignes en tête de CV", 4) }}
+        {{ m.input("title_fr", "Titre du CV en français", state.values, hint="Court : « Data Scientist »") }}
+        {{ m.input("title_en", "Titre du CV en anglais", state.values, hint="Facultatif") }}
+        {{ m.lines("headline_fr", "Accroche en français", state.values, "Quelques lignes en tête de CV ; **mot** en gras", 4) }}
         {{ m.lines("headline_en", "Accroche en anglais", state.values, "Facultatif", 4) }}
       </div>
+      {{ m.lines("links", "Liens", state.values, "Un par ligne : https://… ou « Libellé | https://… »", 4) }}
       {{ m.actions(key, state) }}
     </form>
     {% else %}
@@ -29,9 +31,11 @@
       <div><dt>Nom</dt><dd>{{ identity.full_name or "—" }}</dd></div>
       <div><dt>Contact</dt><dd>{{ identity.contact_email or "—" }}{% if identity.phone %} · {{ identity.phone }}{% endif %}</dd></div>
       <div><dt>Ville</dt><dd>{{ identity.city or "—" }}{% if identity.postal_code %} ({{ identity.postal_code }}){% endif %}</dd></div>
-      {% for label, url in (("LinkedIn", identity.linkedin_url), ("GitHub", identity.github_url), ("Portfolio", identity.portfolio_url)) %}
-      {% if url %}<div><dt>{{ label }}</dt><dd><a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a></dd></div>{% endif %}
+      {% if identity.birth_date %}<div><dt>Naissance</dt><dd>{{ identity.birth_date.strftime("%d/%m/%Y") }}{% if identity.show_age %} · âge affiché sur le CV{% endif %}</dd></div>{% endif %}
+      {% for link in identity.links %}
+      <div><dt>{{ link.label }}</dt><dd><a href="{{ link.url }}" target="_blank" rel="noopener">{{ link.url }}</a></dd></div>
       {% endfor %}
+      <div><dt>Titre</dt><dd>{{ m.text(identity.title, language) or "—" }}</dd></div>
       <div><dt>Accroche</dt><dd class="prose">{{ m.text(identity.headline, language) or "—" }}</dd></div>
     </dl>
     {{ m.link(key, "Modifier l'identité", "?modifier=identite&langue=" ~ language) }}

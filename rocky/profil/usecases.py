@@ -11,9 +11,12 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
 
+from rocky.profil.cv.layout import check_layout, remove_skill
 from rocky.profil.model import (
+    CvLayout,
     ExperienceDraft,
     Identity,
+    ImportedCv,
     ImportedProfile,
     LanguageDraft,
     Preferences,
@@ -22,6 +25,8 @@ from rocky.profil.model import (
     ProjectDraft,
     SkillCategory,
     SkillDraft,
+    SkillGroup,
+    StoredPhoto,
     TrackDraft,
     TrackInUseError,
     TrackStatus,
@@ -103,6 +108,20 @@ class ProfileEditor:
                 "min_daily_rate_eur": preferences.min_daily_rate_eur,
             },
         )
+
+    def save_photo(self, photo: StoredPhoto | None) -> None:
+        """The file is already stored (``system.files``); the profile only points to it."""
+        profile = self.profile()
+        if photo != profile.photo:
+            self._store.save_photo(profile.id, photo, self._clock())
+
+    # Master CV (decision D2, Q9, Q10): no event, it moves no score.
+
+    def save_cv_layout(self, layout: CvLayout) -> None:
+        profile = self.profile()
+        check_layout(profile, layout)
+        if layout != profile.cv:
+            self._store.save_cv_layout(profile.id, layout)
 
     def defer_onboarding(self) -> None:
         profile = self.profile()
@@ -210,6 +229,9 @@ class ProfileEditor:
         terms = self._free_terms(profile.id, skill, except_skill=skill_id)
         if skill == current.content:
             return True
+        if skill.category is not current.content.category:
+            # A skill changing category leaves the CV: its place (group or transversal list) no longer fits.
+            self._store.save_cv_layout(profile.id, remove_skill(profile.cv, skill_id))
         self._store.update_skill(profile.id, skill_id, skill, terms)
         self._event("profil.skill_updated", "skill", skill_id, _skill(skill))
         return True
@@ -333,11 +355,18 @@ class ProfileEditor:
             self._store.add_experience(
                 profile.id, replace(experience.content, skill_ids=linked)
             )
+        project_ids: dict[str, int] = {}
         for project in imported.projects:
             linked = _resolve(skill_ids, project.skills)
-            self._store.add_project(
-                profile.id, replace(project.content, skill_ids=linked)
+            project_ids[normalize_term(project.content.name.fr)] = (
+                self._store.add_project(
+                    profile.id, replace(project.content, skill_ids=linked)
+                )
             )
+        if imported.cv is not None:
+            layout = _imported_layout(imported.cv, skill_ids, project_ids)
+            check_layout(self.profile(), layout)
+            self._store.save_cv_layout(profile.id, layout)
         for track in imported.tracks:
             self._check_track_name(self.profile(), track.name, except_track=None)
             self._store.add_track(profile.id, track, now)
@@ -394,6 +423,28 @@ def _check_skills(profile: Profile, skill_ids: Iterable[int]) -> None:
         raise ProfileInputError(
             "Une des compétences liées n'existe pas dans ton profil."
         )
+
+
+def _imported_layout(
+    cv: ImportedCv, skill_ids: Mapping[str, int], project_ids: Mapping[str, int]
+) -> CvLayout:
+    projects = []
+    for name in cv.projects:
+        project_id = project_ids.get(normalize_term(name))
+        if project_id is None:
+            raise ProfileInputError(
+                f"Le projet « {name} » du CV ne figure pas parmi les projets du fichier."
+            )
+        projects.append(project_id)
+    return CvLayout(
+        groups=tuple(
+            SkillGroup(group.name, _resolve(skill_ids, group.skills))
+            for group in cv.groups
+        ),
+        transversal=_resolve(skill_ids, cv.transversal),
+        projects=tuple(projects),
+        hobbies=cv.hobbies,
+    )
 
 
 def _resolve(skill_ids: Mapping[str, int], names: Iterable[str]) -> tuple[int, ...]:
