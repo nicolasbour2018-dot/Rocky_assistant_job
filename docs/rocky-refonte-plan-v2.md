@@ -140,7 +140,7 @@ aucun identifiant interne affiché.
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
 | D1. Dossier et statuts | Étapes (préparée, préremplie, envoyée, suivie…) ; transitions et **annulation dans une seule transaction** ; prochaine action datée, différable | Une panne injectée pendant l'annulation ne laisse aucun état contradictoire | ✅ |
-| D2. CV maître et rendu | CV structuré FR/EN ; gabarit HTML/CSS → PDF (Playwright) ; listes déterministes ; fin du verrou Canva (SHA-256, coordonnées pixels) et de LibreOffice ; « Vérifier mon CV » (ATS V3 porté) | CV FR et EN validés visuellement par Nicolas ; parsing du PDF vérifié | ⬜ |
+| D2. CV maître et rendu | CV structuré FR/EN ; gabarit HTML/CSS → PDF (Playwright) ; listes déterministes ; fin du verrou Canva (SHA-256, coordonnées pixels) et de LibreOffice ; « Vérifier mon CV » (ATS V3 porté) ; import d'un CV PDF et **gabarit par compte déduit du CV importé**, gabarit neutre à défaut (décision D2) | CV FR et EN validés visuellement par Nicolas ; parsing du PDF vérifié ; le gabarit déduit du CV Canva de Nicolas le reproduit à l'identique (mesure Q17) ; un PDF image est refusé avec sa raison et se rabat sur le gabarit neutre | 🔄 |
 | D3. Ciblage et traduction | Sélection et ordre des éléments selon l'annonce ; traduction champ par champ avec glossaire et validation | CV anglais ciblé sans ressaisie | ⬜ |
 | D4. Lettre et message | Même moteur ; storytelling de préparation ; ton des prompts revu (pas de jugement dévalorisant sur la reconversion) | Lettres FR et EN validées sur 3 annonces réelles | ⬜ |
 | D5. Révisions et envoi | Chaque génération dans un chemin immuable avec hash, vérifié au téléchargement ; préremplissage navigateur porté (confirmation avant) ; confirmation d'envoi au retour avec date et canal | Deux générations → deux PDF distincts récupérables ; l'envoi est lié à la révision exacte | ⬜ |
@@ -154,6 +154,7 @@ aucun identifiant interne affiché.
 | E2. Classification | 3 étages : expéditeur → domaine exact de l'employeur (plus de sous-chaîne) → LLM pour l'ambigu ; confiance réelle (plus de valeurs constantes) ; preuve : règle, extrait, auteur | 100 % des décisions ont une preuve lisible ; le digest Quora n'est plus rattaché à « French bee » ; jeu de test issu de l'archive | ⬜ |
 | E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | ⬜ |
 | E4. Décisions et écran | Transition de candidature appliquée dans la même transaction que la décision ; « ce qui a bougé depuis ta dernière visite » ; correction humaine → nouvelle règle ; corrections conservées comme jeu étiqueté | Aucun changement de statut ne passe inaperçu | ⬜ |
+| E5. Lecture assistée | Sur le geste de l'utilisateur, Rocky ouvre la fiche d'une offre incomplète dans un navigateur visible sur le poste, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte affiché (`parse_page`, `enriched`) ; geste « Enrichir » dans la fiche de l'offre ; jamais dans la veille automatique (décision C1, Q6 ; étape ajoutée par la décision D2, Q3) | Une offre Apec incomplète enrichie depuis sa fiche | ⬜ |
 
 ### F. Bascule
 
@@ -481,6 +482,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   est déjà expliqué) ; laissé tel quel en C7 (Q14).
 - **(C7 → D2)** Lecture assistée d'une offre incomplète (navigateur visible sur le poste, décision C1, Q6) : reportée,
   Playwright arrive en D2. En C7, seule la description collée enrichit une offre (Q5).
+  *Tranché en D2 (Nicolas, Q3) : hors D2 (autre logique métier), nouvelle étape E5 avant F1 ; Playwright est disponible
+  depuis D2 pour le rendu PDF.*
 - **(C7 → recalibrage)** Les décisions réelles (étiquettes D14 avec la copie du score) sont la matière des leviers
   notés en C5 (séniorité, compétences hors profil, plafonds).
 - **(C7)** « Vue aussi sur … » : chaque offre d'un doublon se décide séparément (Q4) ; copier la décision sur l'autre
@@ -512,3 +515,6 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D1 → E4, F1)** L'accusé de réception est un fait du dossier, pas une étape (D1, Q1) : à enregistrer par E. Un
   passage automatique à « Sans réponse » après un délai sans message, et toute transition automatique, passent par
   `automatic_transition_allowed` (jamais en arrière, jamais hors d'une issue).
+- **(D2 → F2, §5 VPS)** Le dépôt GitHub est **public** et n'a **aucune licence**. Aucune dépendance AGPL n'est ajoutée
+  (décision D2, Q25) ; choisir une licence avant d'ouvrir Rocky à d'autres utilisateurs. Les données personnelles
+  (photo, gabarits dérivés, rendus de CV) ne sont jamais versionnées.
