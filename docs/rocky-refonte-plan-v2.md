@@ -139,7 +139,7 @@ aucun identifiant interne affiché.
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| D1. Dossier et statuts | Étapes (préparée, préremplie, envoyée, suivie…) ; transitions et **annulation dans une seule transaction** ; prochaine action datée, différable | Une panne injectée pendant l'annulation ne laisse aucun état contradictoire | ⬜ |
+| D1. Dossier et statuts | Étapes (préparée, préremplie, envoyée, suivie…) ; transitions et **annulation dans une seule transaction** ; prochaine action datée, différable | Une panne injectée pendant l'annulation ne laisse aucun état contradictoire | 🔄 |
 | D2. CV maître et rendu | CV structuré FR/EN ; gabarit HTML/CSS → PDF (Playwright) ; listes déterministes ; fin du verrou Canva (SHA-256, coordonnées pixels) et de LibreOffice ; « Vérifier mon CV » (ATS V3 porté) | CV FR et EN validés visuellement par Nicolas ; parsing du PDF vérifié | ⬜ |
 | D3. Ciblage et traduction | Sélection et ordre des éléments selon l'annonce ; traduction champ par champ avec glossaire et validation | CV anglais ciblé sans ressaisie | ⬜ |
 | D4. Lettre et message | Même moteur ; storytelling de préparation ; ton des prompts revu (pas de jugement dévalorisant sur la reconversion) | Lettres FR et EN validées sur 3 annonces réelles | ⬜ |
@@ -501,3 +501,14 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C7, à trancher à la revue)** Motif « autre » de l'essai : « date de candidature dépassée ». Une annonce dont la date
   limite est passée pourrait être signalée à l'écran (la date limite est déjà lue par l'analyse C3), voire écartée par
   une règle (auteur `rule`, Q2) ; ou un motif « date limite dépassée » ajouté à « Écarté ».
+- **(D1 → `offres`)** La touche `u` de l'écran Offres annule la dernière décision du compte, y compris l'« Intéressé »
+  écrit par « Préparer la candidature » : le dossier reste alors ouvert sur une offre revenue à sa décision d'avant.
+  Pas d'état contradictoire (le dossier ne dépend pas de la décision après sa création), mais le signal D14 est
+  retiré. Si cela gêne à l'usage : exclure de `u` les décisions portant `application_started`, ou prévenir.
+- **(D1 → D6)** La date limite de l'offre (lue par l'analyse C3) pourrait borner l'échéance proposée (« Finir le
+  dossier », « Envoyer la candidature ») ; non utilisée en D1. Dans la fiche d'offre, après « Préparer », seule la
+  liste des offres est rafraîchie (`offers-changed`) : la ligne « Décision : … » de la fiche et les compteurs
+  attendent le prochain affichage. Le changement d'étape de la liste brute passe par un menu et un bouton.
+- **(D1 → E4, F1)** L'accusé de réception est un fait du dossier, pas une étape (D1, Q1) : à enregistrer par E. Un
+  passage automatique à « Sans réponse » après un délai sans message, et toute transition automatique, passent par
+  `automatic_transition_allowed` (jamais en arrière, jamais hors d'une issue).
