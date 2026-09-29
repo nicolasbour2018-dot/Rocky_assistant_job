@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 import pytest
 
 from rocky.offres.decisions import (
+    APPLICATION_STARTED,
     MAX_REASON_KEYS,
     OTHER,
     OTHER_KEY,
@@ -14,6 +15,7 @@ from rocky.offres.decisions import (
     DecisionRow,
     DecisionValue,
     InvalidDecisionError,
+    application_decision,
     effective_decisions,
     make_decision,
     reason_key,
@@ -117,3 +119,27 @@ def test_cancelling_again_goes_further_back_until_nothing_is_left() -> None:
 
 def test_labels_are_french_display_only() -> None:
     assert reason_label(DecisionValue.REJECTED, "too_senior") == "trop senior"
+
+
+def test_preparing_an_application_adds_its_automatic_reason_first() -> None:
+    decision = application_decision(["skills_match", "target_job"])
+
+    assert decision == Decision(
+        DecisionValue.INTERESTED, (APPLICATION_STARTED, "skills_match", "target_job")
+    )
+    assert reason_label(DecisionValue.INTERESTED, APPLICATION_STARTED) == (
+        "candidature préparée"
+    )
+
+
+def test_preparing_an_application_needs_a_chosen_reason() -> None:
+    with pytest.raises(InvalidDecisionError):
+        application_decision([])
+    with pytest.raises(InvalidDecisionError):
+        application_decision(["other"])
+    # The automatic reason is never ticked: the triage panel and its keys do not change (D1, Q8).
+    with pytest.raises(InvalidDecisionError):
+        application_decision([APPLICATION_STARTED])
+    assert APPLICATION_STARTED not in {
+        reason.code for reasons in REASONS.values() for reason in reasons
+    }

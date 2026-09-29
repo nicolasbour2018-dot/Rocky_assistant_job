@@ -16,6 +16,8 @@ from datetime import datetime
 from enum import StrEnum
 
 OTHER = "other"
+# Set by « Préparer la candidature » (D1, Q8), never ticked in the triage panel.
+APPLICATION_STARTED = "application_started"
 # Keyboard key of "other" in the reasons panel; the other reasons take 1–9 by rank.
 OTHER_KEY = "0"
 MAX_REASON_KEYS = 9
@@ -97,6 +99,12 @@ REASONS: dict[DecisionValue, tuple[Reason, ...]] = {
 }
 
 
+# Reasons that a gesture sets by itself: known to the labels, absent from the panels (their keys 1–9 never move).
+AUTOMATIC_REASONS: dict[DecisionValue, tuple[Reason, ...]] = {
+    DecisionValue.INTERESTED: (Reason(APPLICATION_STARTED, "candidature préparée"),),
+}
+
+
 class InvalidDecisionError(ValueError):
     """The decision cannot be recorded as given; the message is shown to the user."""
 
@@ -121,7 +129,8 @@ class DecisionRow:
 
 
 def reason_label(value: DecisionValue, code: str) -> str:
-    return next(reason.label for reason in REASONS[value] if reason.code == code)
+    reasons = (*REASONS[value], *AUTOMATIC_REASONS.get(value, ()))
+    return next(reason.label for reason in reasons if reason.code == code)
 
 
 def reason_key(code: str, rank: int) -> str:
@@ -147,6 +156,13 @@ def make_decision(
     if OTHER in codes and text is None:
         raise InvalidDecisionError("Précise le motif « autre ».")
     return Decision(decision_value, codes, text)
+
+
+def application_decision(reasons: Iterable[str], note: str | None = None) -> Decision:
+    """« Intéressé » written by « Préparer la candidature » (D1, Q8): the reasons chosen (at least one, as in the
+    triage), led by ``application_started``."""
+    chosen = make_decision(DecisionValue.INTERESTED, reasons, note)
+    return Decision(chosen.value, (APPLICATION_STARTED, *chosen.reasons), chosen.note)
 
 
 def _standing(rows: Iterable[DecisionRow]) -> list[DecisionRow]:

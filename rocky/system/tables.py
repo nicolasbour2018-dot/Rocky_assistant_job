@@ -6,6 +6,7 @@ between declared tables and migrations.
 
 from __future__ import annotations
 
+from rocky.candidatures.sql import application_changes, applications
 from rocky.offres.sql import (
     job_decisions,
     job_offers,
@@ -32,6 +33,8 @@ from rocky.system.events import events
 __all__ = [
     "account_tokens",
     "accounts",
+    "application_changes",
+    "applications",
     "events",
     "experience_skills",
     "experiences",

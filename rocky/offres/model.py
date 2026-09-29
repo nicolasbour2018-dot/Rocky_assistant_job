@@ -53,6 +53,16 @@ class StoredOffer:
 
 
 @dataclass(frozen=True)
+class OfferHeading:
+    """What another module shows of an offer (the applications, D1)."""
+
+    id: int
+    title: str
+    company: str | None
+    location: str | None
+
+
+@dataclass(frozen=True)
 class Recorded:
     """What ``record_offer`` did: a new offer, or a known one completed (Q7), and its score."""
 

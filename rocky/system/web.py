@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Engine
 
+from rocky.candidatures import web as candidatures_web
 from rocky.offres import web as offres_web
 from rocky.offres.watch.model import RESCORE_EVERY, WATCH_HOUR
 from rocky.offres.watch.service import WatchService
@@ -32,6 +33,7 @@ PURGE_HOUR = time(4, 0)
 # Each module keeps its templates next to its code; names are prefixed by the module ("offres/…").
 TEMPLATE_DIRS = [
     Path(__file__).parent / "templates",
+    candidatures_web.TEMPLATES,
     Path(offres_web.__file__).parent / "templates",
     Path(profil_web.__file__).parent / "templates",
 ]
@@ -80,6 +82,7 @@ def create_app(
     app.include_router(shell.router)
     offres_web.install(app)
     profil_web.install(app)
+    candidatures_web.install(app)
     _plan(app, engine, clock)
 
     @app.get("/health")

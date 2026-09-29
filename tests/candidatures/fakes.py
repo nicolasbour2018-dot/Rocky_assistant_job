@@ -1,0 +1,111 @@
+"""In-memory adapters of the applications (D1): the store and the decisions of ``offres``."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import UTC, date, datetime
+
+from rocky.candidatures.model import Application, Change, NewChange
+from rocky.offres.decisions import Author, Decision, DecisionValue
+from rocky.system.events import NewEvent
+
+NOW = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
+TODAY = date(2026, 9, 29)
+
+
+@dataclass
+class FakeStore:
+    applications: list[Application] = field(default_factory=list)
+    rows: list[Change] = field(default_factory=list)
+    events: list[NewEvent] = field(default_factory=list)
+
+    def application_for_offer(
+        self, account_id: int, offer_id: int, now: datetime
+    ) -> Application:
+        for application in self.applications:
+            if (application.account_id, application.offer_id) == (account_id, offer_id):
+                return application
+        application = Application(len(self.applications) + 1, account_id, offer_id)
+        self.applications.append(application)
+        return application
+
+    def locked_application(
+        self, account_id: int, application_id: int
+    ) -> Application | None:
+        return next(
+            (
+                application
+                for application in self.applications
+                if application.id == application_id
+                and application.account_id == account_id
+            ),
+            None,
+        )
+
+    def changes(self, application_id: int) -> list[Change]:
+        return [row for row in self.rows if row.application_id == application_id]
+
+    def insert_change(
+        self,
+        account_id: int,
+        application_id: int,
+        change: NewChange,
+        *,
+        author: Author,
+        now: datetime,
+    ) -> Change:
+        row = Change(
+            id=len(self.rows) + 1,
+            application_id=application_id,
+            kind=change.kind,
+            author=author,
+            changed_at=now,
+            stage=change.stage,
+            next_action=change.next_action,
+            decision_id=change.decision_id,
+            cancels=change.cancels,
+        )
+        self.rows.append(row)
+        return row
+
+    def append_event(self, event: NewEvent) -> None:
+        self.events.append(event)
+
+    @property
+    def event_types(self) -> list[str]:
+        return [event.type for event in self.events]
+
+
+@dataclass
+class FakeOffers:
+    """The decisions of the offers: the value in force of each offer, and what was recorded or cancelled."""
+
+    in_force: dict[int, DecisionValue] = field(default_factory=dict)
+    recorded: list[tuple[int, Decision]] = field(default_factory=list)
+    cancelled: list[int] = field(default_factory=list)
+    # The value each decision replaced, to restore it when the decision is cancelled.
+    replaced: dict[int, DecisionValue | None] = field(default_factory=dict)
+
+    def decision_in_force(self, account_id: int, offer_id: int) -> DecisionValue | None:
+        return self.in_force.get(offer_id)
+
+    def record_interested(
+        self, account_id: int, offer_id: int, decision: Decision, now: datetime
+    ) -> int:
+        self.recorded.append((offer_id, decision))
+        decision_id = 100 + len(self.recorded)
+        self.replaced[decision_id] = self.in_force.get(offer_id)
+        self.in_force[offer_id] = decision.value
+        return decision_id
+
+    def cancel(self, account_id: int, decision_id: int, now: datetime) -> bool:
+        if decision_id in self.cancelled:
+            return False
+        self.cancelled.append(decision_id)
+        offer_id = self.recorded[decision_id - 101][0]
+        previous = self.replaced[decision_id]
+        if previous is None:
+            self.in_force.pop(offer_id, None)
+        else:
+            self.in_force[offer_id] = previous
+        return True

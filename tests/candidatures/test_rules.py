@@ -1,0 +1,184 @@
+"""Rules of the applications (D1): the state computed from the changes, proposals, deferral, automatic transitions."""
+
+from __future__ import annotations
+
+from datetime import UTC, date, datetime
+
+import pytest
+
+from rocky.candidatures.model import (
+    Change,
+    ChangeKind,
+    InvalidChangeError,
+    NextAction,
+    Stage,
+)
+from rocky.candidatures.rules import (
+    automatic_transition_allowed,
+    deferred,
+    dossier,
+    is_overdue,
+    make_next_action,
+    proposal,
+    to_cancel,
+)
+from rocky.offres.decisions import Author
+
+AT = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
+TODAY = date(2026, 9, 29)
+FINISH = NextAction("Finir le dossier", date(2026, 10, 1))
+FOLLOW_UP = NextAction("Relancer", date(2026, 10, 6))
+
+
+def change(
+    id_: int,
+    kind: ChangeKind,
+    stage: Stage | None = None,
+    action: NextAction | None = None,
+    cancels: int | None = None,
+) -> Change:
+    return Change(
+        id=id_,
+        application_id=1,
+        kind=kind,
+        author=Author.USER,
+        changed_at=AT,
+        stage=stage,
+        next_action=action,
+        cancels=cancels,
+    )
+
+
+CREATED = change(1, ChangeKind.CREATED, Stage.PREPARING, FINISH)
+SENT = change(2, ChangeKind.STAGE, Stage.SENT, FOLLOW_UP)
+
+
+def test_no_change_is_no_application() -> None:
+    state = dossier([])
+
+    assert (state.open, state.stage, state.next_action) == (False, None, None)
+    assert to_cancel([]) is None
+
+
+def test_the_latest_changes_give_the_stage_and_the_next_action() -> None:
+    later = NextAction("Relancer", date(2026, 10, 9))
+    rows = [CREATED, SENT, change(3, ChangeKind.NEXT_ACTION, action=later)]
+
+    state = dossier(rows)
+
+    assert (state.open, state.stage, state.next_action) == (True, Stage.SENT, later)
+    assert state.creation == CREATED
+
+
+def test_a_stage_change_sets_the_next_action_too_even_to_none() -> None:
+    rows = [CREATED, change(2, ChangeKind.STAGE, Stage.WITHDRAWN)]
+
+    assert dossier(rows).next_action is None
+
+
+def test_cleared_next_action() -> None:
+    rows = [CREATED, change(2, ChangeKind.NEXT_ACTION)]
+
+    assert dossier(rows).next_action is None
+    assert dossier(rows).stage is Stage.PREPARING
+
+
+def test_cancelling_a_stage_change_brings_back_the_stage_and_the_action() -> None:
+    rows = [CREATED, SENT, change(3, ChangeKind.CANCELLATION, cancels=2)]
+
+    state = dossier(rows)
+
+    assert (state.stage, state.next_action) == (Stage.PREPARING, FINISH)
+
+
+def test_annuler_goes_back_through_the_history() -> None:
+    rows = [CREATED, SENT, change(3, ChangeKind.CANCELLATION, cancels=2)]
+
+    assert to_cancel([CREATED, SENT]) == SENT
+    assert to_cancel(rows) == CREATED
+
+
+def test_a_cancelled_creation_closes_the_application() -> None:
+    rows = [CREATED, change(2, ChangeKind.CANCELLATION, cancels=1)]
+
+    state = dossier(rows)
+
+    assert (state.open, state.stage, state.next_action, state.creation) == (
+        False,
+        None,
+        None,
+        None,
+    )
+    assert to_cancel(rows) is None
+
+
+def test_a_new_creation_opens_the_application_again() -> None:
+    again = change(3, ChangeKind.CREATED, Stage.PREPARING, FINISH)
+    rows = [CREATED, change(2, ChangeKind.CANCELLATION, cancels=1), again]
+
+    state = dossier(rows)
+
+    assert (state.open, state.creation) == (True, again)
+
+
+@pytest.mark.parametrize(
+    ("stage", "expected"),
+    [
+        (Stage.PREPARING, ("Finir le dossier", date(2026, 10, 1))),
+        (Stage.READY, ("Envoyer la candidature", date(2026, 10, 1))),
+        (Stage.PREFILLED, ("Confirmer l'envoi", date(2026, 9, 30))),
+        (Stage.SENT, ("Relancer", date(2026, 10, 6))),
+        (Stage.IN_DISCUSSION, ("Relancer", date(2026, 10, 6))),
+        (Stage.INTERVIEW, ("Préparer l'entretien", None)),
+        (Stage.OFFER, ("Répondre à l'offre", date(2026, 10, 2))),
+        (Stage.REJECTED, None),
+        (Stage.WITHDRAWN, None),
+        (Stage.NO_RESPONSE, None),
+    ],
+)
+def test_proposals(stage: Stage, expected: tuple[str, date | None] | None) -> None:
+    assert proposal(stage, TODAY) == expected
+
+
+def test_a_next_action_needs_both_fields_or_none() -> None:
+    assert make_next_action("  ", None) is None
+    assert make_next_action(" Relancer ", TODAY) == NextAction("Relancer", TODAY)
+    with pytest.raises(InvalidChangeError, match="date"):
+        make_next_action("Préparer l'entretien", None)
+    with pytest.raises(InvalidChangeError, match="prochaine action"):
+        make_next_action("", TODAY)
+
+
+def test_deferring_starts_from_the_due_date() -> None:
+    assert deferred(FOLLOW_UP, 3, TODAY).due == date(2026, 10, 9)
+
+
+def test_deferring_an_overdue_action_starts_from_today() -> None:
+    overdue = NextAction("Relancer", date(2026, 9, 20))
+
+    assert is_overdue(overdue, TODAY)
+    assert deferred(overdue, 1, TODAY) == NextAction("Relancer", date(2026, 9, 30))
+    assert not is_overdue(deferred(overdue, 1, TODAY), TODAY)
+
+
+def test_only_the_offered_delays() -> None:
+    with pytest.raises(InvalidChangeError):
+        deferred(FOLLOW_UP, 2, TODAY)
+
+
+@pytest.mark.parametrize(
+    ("current", "proposed", "allowed"),
+    [
+        (Stage.SENT, Stage.IN_DISCUSSION, True),
+        (Stage.SENT, Stage.INTERVIEW, True),
+        (Stage.SENT, Stage.REJECTED, True),
+        (Stage.INTERVIEW, Stage.SENT, False),  # a late acknowledgement never goes back
+        (Stage.SENT, Stage.SENT, False),
+        (Stage.REJECTED, Stage.INTERVIEW, False),  # never out of an outcome
+        (Stage.REJECTED, Stage.NO_RESPONSE, False),
+    ],
+)
+def test_automatic_transitions_never_go_back_nor_leave_an_outcome(
+    current: Stage, proposed: Stage, allowed: bool
+) -> None:
+    assert automatic_transition_allowed(current, proposed) is allowed

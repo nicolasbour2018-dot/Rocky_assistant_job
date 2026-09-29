@@ -1,0 +1,24 @@
+{# The reasons of « Intéressé » recorded with the application (D1, Q8): « candidature préparée » is added by itself. #}
+<form class="reasons" method="post" action="/candidatures/offre/{{ offer_id }}/preparer"
+  hx-post="/candidatures/offre/{{ offer_id }}/preparer" hx-target="#dossier" hx-swap="innerHTML">
+  <fieldset>
+    <legend>Pourquoi cette offre t'intéresse ? <span class="muted">plusieurs possibles</span></legend>
+    {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+    <div class="chips">
+      {% for reason in reasons %}
+      <label class="chip">
+        <input type="checkbox" name="motifs" value="{{ reason.code }}"{% if reason.code in checked %} checked{% endif %}>
+        {{ reason.label }}</label>
+      {% endfor %}
+    </div>
+    <label class="note"><span>Précision</span>
+      <input type="text" name="precision" value="{{ note or '' }}" autocomplete="off"
+        placeholder="obligatoire pour « autre »"></label>
+    <p class="muted">L'offre passe en « Intéressé » (candidature préparée).</p>
+  </fieldset>
+  <div class="reasons-actions">
+    <button type="submit" class="btn btn-primary">Préparer la candidature</button>
+    <button type="button" class="btn btn-ghost" hx-get="/candidatures/offre/{{ offer_id }}" hx-target="#dossier"
+      hx-swap="innerHTML">Revenir</button>
+  </div>
+</form>

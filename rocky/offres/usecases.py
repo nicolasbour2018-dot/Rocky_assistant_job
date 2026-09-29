@@ -16,6 +16,8 @@ from rocky.offres.analysis.usecases import Summary
 from rocky.offres.decisions import (
     Author,
     Decision,
+    DecisionKind,
+    DecisionRow,
     effective_decisions,
     to_cancel,
 )
@@ -234,6 +236,49 @@ def cancel_last_decision(
     cancelled = to_cancel(rows)
     if cancelled is None or cancelled.decision is None:
         return None
+    _cancel(
+        store, account_id, rows, cancelled, cancelled.decision, author=author, now=now
+    )
+    return cancelled.offer_id
+
+
+def cancel_decision(
+    store: DecisionStore,
+    *,
+    account_id: int,
+    decision_id: int,
+    now: datetime,
+    author: Author = Author.USER,
+) -> bool:
+    """Cancel one given decision of the account, with its event (D1, Q9: the « Intéressé » written by « Préparer la
+    candidature » goes with the cancelled application). False when it was already cancelled."""
+    rows = store.decision_rows(account_id)
+    target = next(
+        (
+            row
+            for row in rows
+            if row.id == decision_id and row.kind is DecisionKind.DECISION
+        ),
+        None,
+    )
+    if target is None or target.decision is None:
+        raise LookupError(f"decision {decision_id} is not a decision of the account")
+    if any(row.cancels == decision_id for row in rows):
+        return False
+    _cancel(store, account_id, rows, target, target.decision, author=author, now=now)
+    return True
+
+
+def _cancel(
+    store: DecisionStore,
+    account_id: int,
+    rows: list[DecisionRow],
+    cancelled: DecisionRow,
+    decision: Decision,
+    *,
+    author: Author,
+    now: datetime,
+) -> None:
     cancellation = store.insert_cancellation(
         account_id, cancelled, author=author, now=now
     )
@@ -246,7 +291,7 @@ def cancel_last_decision(
             subject_id=str(cancelled.offer_id),
             payload={
                 "decision_id": cancelled.id,
-                "value": cancelled.decision.value.value,
+                "value": decision.value.value,
                 "restored": None
                 if restored is None or restored.decision is None
                 else restored.decision.value.value,
@@ -254,7 +299,6 @@ def cancel_last_decision(
             account_id=account_id,
         )
     )
-    return cancelled.offer_id
 
 
 class SummaryStore(Protocol):

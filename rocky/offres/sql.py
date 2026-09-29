@@ -53,7 +53,7 @@ from rocky.offres.decisions import (
     DecisionRow,
     DecisionValue,
 )
-from rocky.offres.model import Origin, StoredOffer, StoredSummary
+from rocky.offres.model import OfferHeading, Origin, StoredOffer, StoredSummary
 from rocky.offres.scoring.model import (
     THRESHOLD,
     ConfidenceLevel,
@@ -520,6 +520,26 @@ class SqlStore:
             )
         ).one_or_none()
         return None if row is None else _stored(row)
+
+    def headings(
+        self, account_id: int, offer_ids: Iterable[int]
+    ) -> dict[int, OfferHeading]:
+        """Title, employer and place of the account's offers among ``offer_ids``."""
+        ids = list(offer_ids)
+        if not ids:
+            return {}
+        rows = self._conn.execute(
+            select(
+                job_offers.c.id,
+                job_offers.c.title,
+                job_offers.c.company,
+                job_offers.c.location,
+            ).where(job_offers.c.account_id == account_id, job_offers.c.id.in_(ids))
+        )
+        return {
+            row.id: OfferHeading(row.id, row.title, row.company, row.location)
+            for row in rows
+        }
 
     def listed_offers(self, account_id: int) -> list[ListedOffer]:
         """Every offer of the account as the list and the triage need it: facts shown, tracks and current scores."""

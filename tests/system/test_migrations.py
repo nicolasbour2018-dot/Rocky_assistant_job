@@ -33,6 +33,8 @@ HEAD_TABLES = {
     "watch_run_sources",
     "job_decisions",
     "offer_summaries",
+    "applications",
+    "application_changes",
 }
 
 

@@ -350,6 +350,10 @@ details > summary { cursor: pointer; color: var(--accent); font-weight: 550; }
 .item-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
 .inline-form { display: inline; }
+/* Applications (D1): plain list and the box of an offer's sheet. */
+.application-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-1); }
+.overdue { color: var(--bad); font-weight: 600; }
+.application-box { margin-top: var(--space-3); }
 .bullets { margin: 0; padding-left: var(--space-5); }
 .prose { white-space: pre-line; }
 .project-facts { display: grid; gap: var(--space-2); margin: 0; }

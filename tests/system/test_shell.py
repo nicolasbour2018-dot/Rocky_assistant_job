@@ -53,7 +53,7 @@ def test_the_phone_bar_keeps_four_entries_and_a_more_menu(
 
 @pytest.mark.parametrize(
     "entry",
-    [e for e in NAVIGATION if e.key not in {"offers", "profile"}],
+    [e for e in NAVIGATION if e.key not in {"offers", "profile", "applications"}],
     ids=lambda e: e.key,
 )
 def test_pages_not_built_yet_explain_themselves(

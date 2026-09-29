@@ -22,6 +22,7 @@ from rocky.offres.rules import scoring_inputs
 from rocky.offres.scoring.model import Score
 from rocky.offres.sql import SqlStore, job_decisions, job_offers
 from rocky.offres.usecases import (
+    cancel_decision,
     cancel_last_decision,
     enrich_offer,
     keep_summary,
@@ -135,6 +136,41 @@ def test_nothing_to_cancel_writes_nothing(db: Connection) -> None:
         is None
     )
     assert journal(db, seeker) == before
+
+
+def test_cancelling_a_given_decision_restores_the_previous_one_once(
+    db: Connection,
+) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "a1")
+    decide(db, seeker, offer_id, LATER)
+    decision_id = decide(db, seeker, offer_id, REJECTED)
+    other = recorded(db, seeker, "a2")
+    decide(
+        db, seeker, other, LATER
+    )  # the latest decision of the account is another one
+
+    assert cancel_decision(
+        SqlStore(db), account_id=seeker.account_id, decision_id=decision_id, now=NOW
+    )
+    assert not cancel_decision(
+        SqlStore(db), account_id=seeker.account_id, decision_id=decision_id, now=NOW
+    )
+
+    rows = SqlStore(db).decision_rows(seeker.account_id)
+    assert effective_decisions(rows)[offer_id].decision == LATER
+    assert effective_decisions(rows)[other].decision == LATER
+    assert journal(db, seeker)[-1] == "offres.decision_cancelled"
+
+
+def test_a_decision_of_another_account_cannot_be_cancelled(db: Connection) -> None:
+    seeker, other = new_seeker(db), new_seeker(db)
+    decision_id = decide(db, seeker, recorded(db, seeker, "a1"))
+
+    with pytest.raises(LookupError):
+        cancel_decision(
+            SqlStore(db), account_id=other.account_id, decision_id=decision_id, now=NOW
+        )
 
 
 def test_decisions_are_appended_never_changed(db: Connection) -> None:

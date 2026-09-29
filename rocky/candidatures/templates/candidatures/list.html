@@ -1,0 +1,80 @@
+{# Plain list of step D1; the screen 📝 Candidatures proper is step D6. #}
+<section id="candidatures" class="applications">
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if not rows %}
+  <div class="empty-state">
+    <p class="empty-lead">Aucune candidature en cours.</p>
+    <p class="muted">Ouvre la fiche d'une offre et choisis « Préparer la candidature ».</p>
+    <p><a class="btn" href="/offres?vue=liste">🔎 Voir les offres</a></p>
+  </div>
+  {% else %}
+  <table class="offer-table application-table">
+    <thead><tr><th>Offre</th><th>Étape</th><th>Prochaine action</th><th></th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+    <tr id="candidature-{{ row.id }}">
+      <td><a href="/offres/{{ row.offer.id }}/fiche">{{ row.offer.title }}</a>
+        <div class="muted">{{ row.offer.company or "Employeur inconnu" }}{% if row.offer.location %} · {{ row.offer.location }}{% endif %}</div></td>
+      <td>
+        {% if stage_form and stage_form.id == row.id %}
+        <form method="post" action="/candidatures/{{ row.id }}/etape" hx-post="/candidatures/{{ row.id }}/etape"
+          hx-target="#candidatures" hx-swap="outerHTML" class="stack">
+          <input type="hidden" name="etape" value="{{ stage_form.stage }}">
+          <input type="hidden" name="saisie" value="1">
+          <strong>{{ stage_labels[stage_form.stage] }}</strong>
+          <label>Prochaine action <input type="text" name="action" value="{{ stage_form.label }}"></label>
+          <label>Date <input type="date" name="echeance" required></label>
+          <button type="submit" class="btn btn-primary">Valider</button>
+        </form>
+        {% else %}
+        <form method="post" action="/candidatures/{{ row.id }}/etape" hx-post="/candidatures/{{ row.id }}/etape"
+          hx-target="#candidatures" hx-swap="outerHTML" class="inline-form">
+          <select name="etape" aria-label="Étape">
+            {% for stage in stages %}
+            <option value="{{ stage }}"{% if stage == row.stage %} selected{% endif %}>{{ stage_labels[stage] }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn">Changer</button>
+        </form>
+        {% endif %}
+      </td>
+      <td>
+        {% if editing == row.id %}
+        <form method="post" action="/candidatures/{{ row.id }}/action" hx-post="/candidatures/{{ row.id }}/action"
+          hx-target="#candidatures" hx-swap="outerHTML" class="stack">
+          <label>Action <input type="text" name="action" value="{{ row.next_action.label if row.next_action else '' }}"></label>
+          <label>Date <input type="date" name="echeance" value="{{ row.next_action.due.isoformat() if row.next_action else '' }}"></label>
+          <p class="muted">Vide les deux champs pour effacer l'action.</p>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </form>
+        {% elif row.next_action %}
+        <span{% if row.overdue %} class="overdue"{% endif %}>{{ row.next_action.label }} — {{ row.next_action.due.strftime("%d/%m/%Y") }}{% if row.overdue %} (en retard){% endif %}</span>
+        <div class="application-actions">
+          {% for days in defer_days %}
+          <form method="post" action="/candidatures/{{ row.id }}/differer" hx-post="/candidatures/{{ row.id }}/differer"
+            hx-target="#candidatures" hx-swap="outerHTML">
+            <input type="hidden" name="jours" value="{{ days }}">
+            <button type="submit" class="btn btn-ghost" title="Différer de {{ days }} jour{{ 's' if days > 1 }}">+{{ days }} j</button>
+          </form>
+          {% endfor %}
+          <a class="btn btn-ghost" href="/candidatures/{{ row.id }}/action" hx-get="/candidatures/{{ row.id }}/action"
+            hx-target="#candidatures" hx-swap="outerHTML">Modifier</a>
+        </div>
+        {% else %}
+        <span class="muted">Aucune</span>
+        <a class="btn btn-ghost" href="/candidatures/{{ row.id }}/action" hx-get="/candidatures/{{ row.id }}/action"
+          hx-target="#candidatures" hx-swap="outerHTML">Ajouter</a>
+        {% endif %}
+      </td>
+      <td>
+        <form method="post" action="/candidatures/{{ row.id }}/annuler" hx-post="/candidatures/{{ row.id }}/annuler"
+          hx-target="#candidatures" hx-swap="outerHTML">
+          <button type="submit" class="btn btn-ghost" title="Annuler le dernier changement de cette candidature">Annuler</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>

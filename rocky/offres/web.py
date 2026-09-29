@@ -6,7 +6,7 @@ whole pages or a redirection. Decision ``docs/decisions/C7-ecran-offres.md``.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from datetime import UTC, date, datetime
 from functools import cached_property
 from typing import Annotated
@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import Engine
+from sqlalchemy import Connection, Engine
 
 from rocky.offres.analysis.rules import analyze
 from rocky.offres.analysis.text import formatted_description
@@ -36,6 +36,7 @@ from rocky.offres.decisions import (
 )
 from rocky.offres.imports import web as imports_web
 from rocky.offres.imports.model import InvalidPasteError
+from rocky.offres.model import OfferHeading
 from rocky.offres.rules import match_key, scoring_inputs
 from rocky.offres.screen import (
     DECISION_FILTER_LABELS,
@@ -54,6 +55,7 @@ from rocky.offres.screen import (
 )
 from rocky.offres.sql import SqlStore
 from rocky.offres.usecases import (
+    cancel_decision,
     cancel_last_decision,
     enrich_offer,
     keep_summary,
@@ -616,3 +618,51 @@ def sheet(
 @router.get("/fiche/fermer", response_class=HTMLResponse)
 def close_sheet(account: CurrentAccount) -> HTMLResponse:
     return HTMLResponse("")
+
+
+# For the other modules (the applications, D1), on the caller's connection and inside its transaction: they never
+# read the tables of ``offres`` themselves.
+
+
+def offer_headings(
+    connection: Connection, account_id: int, offer_ids: Iterable[int]
+) -> dict[int, OfferHeading]:
+    """The account's offers among ``offer_ids``; an offer of another account is absent."""
+    return SqlStore(connection).headings(account_id, offer_ids)
+
+
+def decision_in_force(
+    connection: Connection, account_id: int, offer_id: int
+) -> DecisionValue | None:
+    """The value of the offer's decision in force, None when it has none (to examine)."""
+    rows = SqlStore(connection).decision_rows(account_id, offer_id)
+    row = effective_decisions(rows).get(offer_id)
+    return None if row is None or row.decision is None else row.decision.value
+
+
+def record_application_decision(
+    connection: Connection,
+    *,
+    account_id: int,
+    offer_id: int,
+    decision: Decision,
+    now: datetime,
+) -> int:
+    """Record the « Intéressé » of « Préparer la candidature » (D1, Q8), with the best track's score shown."""
+    return record_decision(
+        SqlStore(connection),
+        account_id=account_id,
+        offer_id=offer_id,
+        decision=decision,
+        track_id=None,
+        now=now,
+    )
+
+
+def cancel_application_decision(
+    connection: Connection, *, account_id: int, decision_id: int, now: datetime
+) -> bool:
+    """Cancel the decision written with an application whose creation is cancelled (D1, Q9)."""
+    return cancel_decision(
+        SqlStore(connection), account_id=account_id, decision_id=decision_id, now=now
+    )
