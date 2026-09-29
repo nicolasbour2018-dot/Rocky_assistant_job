@@ -1,0 +1,25 @@
+{# The watch banner (step C6, Q2): running, late or failed; the same button launches a watch (a catch-up when late). #}
+{% set last = state.last %}
+<div id="veille-bandeau" class="alert {{ 'alert-error' if kind == 'failed' else 'alert-info' }} watch-banner" role="status"
+  {% if kind == "running" %}hx-get="/veille/bandeau" hx-trigger="every 15s" hx-swap="outerHTML"{% endif %}>
+  {% if kind == "running" %}
+  <p>
+    {% if state.running %}Veille en cours depuis le {{ state.running.started_at | paris_time }}{% else %}Veille lancée{% endif %} :
+    les nouvelles offres arrivent dans quelques minutes.
+  </p>
+  {% else %}
+  <p>
+    {% if kind == "late" %}
+      {% if state.last_successful %}Veille en retard : la dernière veille réussie date du
+      {{ state.last_successful.started_at | paris_time }}.{% else %}Aucune veille n'a encore réussi.{% endif %}
+    {% elif last.status.value == "interrupted" %}La dernière veille ({{ last.started_at | paris_time }}) a été interrompue.
+    {% else %}La dernière veille ({{ last.started_at | paris_time }}) a échoué.{% endif %}
+    {% if last and last.reason and last.status.value in ("failed", "interrupted") %}
+    <span class="watch-reason">{{ last.reason }}</span>
+    {% endif %}
+  </p>
+  <form method="post" action="/veille/lancer" hx-post="/veille/lancer" hx-target="#veille-bandeau" hx-swap="outerHTML">
+    <button type="submit" class="btn btn-primary">Lancer maintenant</button>
+  </form>
+  {% endif %}
+</div>

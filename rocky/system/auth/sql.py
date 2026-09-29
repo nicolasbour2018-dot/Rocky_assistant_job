@@ -18,8 +18,10 @@ from sqlalchemy import (
     Row,
     Table,
     Text,
+    delete,
     func,
     insert,
+    or_,
     select,
     update,
 )
@@ -265,6 +267,23 @@ class SqlAuthStore:
             .where(sessions.c.account_id == account_id, sessions.c.revoked_at.is_(None))
             .values(revoked_at=now)
         )
+
+    def purge_expired(self, now: datetime) -> tuple[int, int]:
+        """Delete sessions and tokens that can no longer be used (expired, revoked, used); how many of each."""
+        purged_sessions = self._conn.execute(
+            delete(sessions).where(
+                or_(sessions.c.expires_at <= now, sessions.c.revoked_at.is_not(None))
+            )
+        ).rowcount
+        purged_tokens = self._conn.execute(
+            delete(account_tokens).where(
+                or_(
+                    account_tokens.c.expires_at <= now,
+                    account_tokens.c.used_at.is_not(None),
+                )
+            )
+        ).rowcount
+        return purged_sessions, purged_tokens
 
     def append_event(self, event: NewEvent) -> None:
         append_event(self._conn, event)

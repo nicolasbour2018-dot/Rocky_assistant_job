@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import Connection, select, update
@@ -8,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 
 from rocky.system.auth.model import AccountStatus, TokenPurpose
 from rocky.system.auth.rules import LoginFailure
-from rocky.system.auth.sql import SqlAuthStore, accounts
+from rocky.system.auth.sql import SqlAuthStore, accounts, sessions
 from rocky.system.events import Actor, NewEvent, events
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
@@ -132,3 +133,34 @@ def test_an_event_cannot_name_an_unknown_account(
         store.append_event(
             NewEvent(type="system.ghost", actor=Actor.SYSTEM, account_id=999_999)
         )
+
+
+def test_expired_revoked_and_used_are_purged(
+    store: SqlAuthStore, db: Connection
+) -> None:
+    account_id = store.create_account(f"{uuid4().hex}@example.fr", NOW)
+    store.open_session(account_id, f"expired-{uuid4().hex}", NOW, NOW)
+    store.open_session(account_id, f"revoked-{uuid4().hex}", NOW, LATER)
+    store.open_session(account_id, f"alive-{uuid4().hex}", NOW, LATER)
+    revoked = db.execute(
+        select(sessions.c.token_hash).where(
+            sessions.c.account_id == account_id,
+            sessions.c.token_hash.like("revoked-%"),
+        )
+    ).scalar_one()
+    store.revoke_session(revoked, NOW)
+    store.issue_token(
+        account_id, TokenPurpose.ACTIVATION, f"t1-{uuid4().hex}", NOW, LATER
+    )
+    # A newer token of the same purpose marks the first one used.
+    alive_token = f"t2-{uuid4().hex}"
+    store.issue_token(account_id, TokenPurpose.ACTIVATION, alive_token, NOW, LATER)
+
+    purged_sessions, purged_tokens = store.purge_expired(NOW)
+
+    assert purged_sessions >= 2 and purged_tokens >= 1
+    left = db.execute(
+        select(sessions.c.token_hash).where(sessions.c.account_id == account_id)
+    ).scalars()
+    assert [token.split("-")[0] for token in left] == ["alive"]
+    assert store.peek_token(alive_token, TokenPurpose.ACTIVATION, NOW) == account_id

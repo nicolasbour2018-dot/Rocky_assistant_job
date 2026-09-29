@@ -29,6 +29,7 @@
     </nav>
 
     <main id="main" class="main">
+      {% for notice in notices() %}{{ notice }}{% endfor %}
       {% block content %}{% endblock %}
     </main>
   </div>

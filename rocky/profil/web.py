@@ -175,8 +175,13 @@ def month(day: date | None) -> str:
 
 
 @contextmanager
-def _editor(request: Request, account: Account) -> Iterator[ProfileEditor]:
-    """One use case, one transaction: committed on exit, rolled back on error."""
+def _editor(
+    request: Request, account: Account, *, writes: bool = False
+) -> Iterator[ProfileEditor]:
+    """One use case, one transaction: committed on exit, rolled back on error.
+
+    After a committed write, the other modules are told (``profile_changed``: the rescoring of the offers, C6 Q5).
+    """
     engine: Engine = request.app.state.engine
     clock: Clock = request.app.state.auth.clock
     with engine.begin() as connection:
@@ -186,6 +191,12 @@ def _editor(request: Request, account: Account) -> Iterator[ProfileEditor]:
             account_id=account.id,
             email=account.email,
         )
+    if writes:
+        changed: Callable[[int], None] | None = getattr(
+            request.app.state, "profile_changed", None
+        )
+        if changed is not None:
+            changed(account.id)
 
 
 def stored_profile(connection: Connection, account_id: int) -> Profile | None:
@@ -494,7 +505,7 @@ def onboarding_identity(
 ) -> Response:
     """Step 1 asks for four fields; the other identity fields are kept as they are."""
     try:
-        with _editor(request, account) as editor:
+        with _editor(request, account, writes=True) as editor:
             current = editor.profile().identity
             editor.save_identity(
                 make_identity(
@@ -520,7 +531,7 @@ def onboarding_identity(
 def onboarding_skills(
     request: Request, account: CurrentAccount, form: Form
 ) -> Response:
-    with _editor(request, account) as editor:
+    with _editor(request, account, writes=True) as editor:
         result = editor.add_skills(
             {
                 category: _text(form, category.value).splitlines()
@@ -548,7 +559,7 @@ def onboarding_track(request: Request, account: CurrentAccount, form: Form) -> R
             raise ProfileInputError(
                 "Indique au moins un intitulé et un lieu : c'est ce que la veille cherchera."
             )
-        with _editor(request, account) as editor:
+        with _editor(request, account, writes=True) as editor:
             editor.add_track(track)
     except ProfileInputError as error:
         profile = profile_of(request, account)
@@ -558,7 +569,7 @@ def onboarding_track(request: Request, account: CurrentAccount, form: Form) -> R
 
 @router.post("/demarrage/plus-tard")
 def defer_onboarding(request: Request, account: CurrentAccount) -> Response:
-    with _editor(request, account) as editor:
+    with _editor(request, account, writes=True) as editor:
         editor.defer_onboarding()
     return RedirectResponse(PROFILE_PATH, status_code=303)
 
@@ -617,7 +628,7 @@ def _write(
     change: Change,
 ) -> Response:
     try:
-        with _editor(request, account) as editor:
+        with _editor(request, account, writes=True) as editor:
             if change(editor, form) is False:
                 return Response(status_code=404)
             profile = editor.profile()

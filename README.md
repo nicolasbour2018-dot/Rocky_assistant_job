@@ -32,6 +32,7 @@ cp .env.example .env     # puis renseigner les mots de passe PostgreSQL et le SM
 | Lancer l'application (migrations comprises) | `docker compose up -d --build --wait app` → <http://127.0.0.1:8000/health> |
 | Appliquer les migrations (base de développement) | `docker compose run --rm --build migrate` |
 | Inviter une personne (création de compte) | `docker compose run --rm app rocky-admin invite <email>` |
+| Lancer une veille tout de suite (offres enregistrées) | `docker compose run --rm app rocky-admin veille <email> [--piste <nom>]` |
 | Arrêter | `docker compose down` (les données restent dans le volume `rocky-db-data`) |
 
 La vérification globale n'a besoin que de Docker ; elle tourne contre une base PostgreSQL de test jetable
@@ -40,6 +41,10 @@ La vérification globale n'a besoin que de Docker ; elle tourne contre une base 
 Il n'y a pas d'inscription publique : un compte naît par invitation. La personne invitée reçoit un lien
 d'activation (valable 7 jours), choisit son mot de passe et reste connectée tant qu'elle revient au moins une fois
 par semaine.
+
+Tant que l'application tourne, sa veille part chaque jour à 12 h (heure de Paris) pour chaque compte qui a une piste
+active. Si la dernière veille réussie date de plus de 24 h, un bandeau le signale en haut des pages et propose de la
+lancer.
 
 ## Structure
 

@@ -38,6 +38,16 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - La clé ne figure jamais dans une raison, une URL ni un journal. Sans clé, les fonctions qui en dépendent le disent.
 - Tests : faux modèle ou `MockTransport`, jamais d'appel réel (AGENTS §7).
 
+## Planificateur (`rocky/system/scheduler.py`, décision `docs/decisions/C6-veille.md`)
+- **Seul déclencheur** (D12) : aucune tâche par cron ni par un autre fil. Tâches quotidiennes à heure de Paris (une heure
+  déjà passée au démarrage n'est pas rattrapée : l'écran le propose), tâches périodiques réveillables (`wake`), tâches
+  ponctuelles (`submit`). Les tâches sont enregistrées par la composition (`system/web.py`, `_plan`).
+- Une tâche en échec est journalisée avec sa trace et le fil continue ; l'état durable d'une tâche est en base.
+- Démarré par le *lifespan* seulement si `scheduler_enabled` (vrai par `load_settings`, faux dans les `Settings` des
+  tests) : un test n'a jamais de fil ; il appelle `tick()` sur un `Scheduler` sans tâches.
+- Un module est prévenu d'un changement d'un autre par un crochet de `app.state` installé par la composition
+  (`profile_changed`), jamais par un import de l'un dans l'autre.
+
 ## Tests
 - Fixtures de `tests/conftest.py` : `db` (transaction annulée) pour tout test SQL ; `migrated_engine` quand le
   test doit valider ; `empty_engine` pour un schéma vierge. Ne jamais écrire dans le schéma `public` de `test-db`.

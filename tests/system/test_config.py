@@ -22,7 +22,9 @@ def test_load_settings_without_smtp() -> None:
     settings = load_settings(BASE)
 
     assert settings == Settings(
-        database_url="postgresql://u@h/db", public_url="http://127.0.0.1:8000"
+        database_url="postgresql://u@h/db",
+        public_url="http://127.0.0.1:8000",
+        scheduler_enabled=True,
     )
     assert settings.secure_cookies is False
 
@@ -152,3 +154,12 @@ def test_source_settings_load_without_database_settings() -> None:
     assert load_sources_settings({"ROCKY_ADZUNA_APP_ID": "id"}).adzuna_app_id == "id"
     with pytest.raises(ConfigError, match="ROCKY_SOURCES_RESULTS_PER_QUERY"):
         load_sources_settings({"ROCKY_SOURCES_RESULTS_PER_QUERY": "abc"})
+
+
+def test_the_planner_runs_in_the_application_unless_turned_off() -> None:
+    assert load_settings(BASE).scheduler_enabled
+    assert not load_settings(
+        {**BASE, "ROCKY_SCHEDULER_ENABLED": "false"}
+    ).scheduler_enabled
+    # Settings built in code (the tests) never start its thread.
+    assert not Settings(database_url="x", public_url="http://x").scheduler_enabled

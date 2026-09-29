@@ -33,6 +33,7 @@ from rocky.offres.prototype import (
     Offer,
     load_catalog,
 )
+from rocky.offres.watch import web as watch_web
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.shell import is_htmx, page
@@ -64,6 +65,7 @@ def install(app: FastAPI) -> None:
     )
     templates.env.filters["age"] = age
     imports_web.install(app)
+    watch_web.install(app)
     app.include_router(router)
 
 

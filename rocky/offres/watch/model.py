@@ -8,13 +8,18 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from enum import StrEnum
 from typing import Protocol
 
 from rocky.offres.model import OfferStore
 from rocky.offres.sources.usecases import Outcome
 from rocky.profil.model import Profile
+
+# Q1: one watch a day, at noon, Paris time.
+WATCH_HOUR = time(12, 0)
+# Q5: the rescoring is woken up by a change of the profile; this look also catches a new version of the rules.
+RESCORE_EVERY = timedelta(minutes=1)
 
 
 class Trigger(StrEnum):

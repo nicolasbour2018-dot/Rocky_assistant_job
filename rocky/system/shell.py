@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 
+from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+
+# A module's notice above every page (the late watch of C6): its HTML, or None when there is nothing to say.
+type NoticeProvider = Callable[[Request, Account], Markup | None]
 
 HTMX_SCRIPT = "htmx-2.0.11.min.js"
 
@@ -113,20 +118,36 @@ def page(
     status_code: int = 200,
     context: Mapping[str, object] | None = None,
 ) -> HTMLResponse:
-    """Render ``name`` with what the shell layout needs (navigation, account, active entry)."""
+    """Render ``name`` with what the shell layout needs (navigation, account, active entry, notices)."""
     templates: Jinja2Templates = request.app.state.templates
+    account: Account | None = request.state.account
     return templates.TemplateResponse(
         request,
         name,
         {
             "navigation": NAVIGATION,
             "active": active,
-            "account": request.state.account,
+            "account": account,
             "htmx_script": HTMX_SCRIPT,
+            # Called by the layout only: a fragment never computes the notices.
+            "notices": lambda: notices(request, account),
             **(context or {}),
         },
         status_code=status_code,
     )
+
+
+def add_notice(app: FastAPI, provider: NoticeProvider) -> None:
+    """Register a module's notice; the layout shows every notice that has something to say."""
+    providers: list[NoticeProvider] = getattr(app.state, "notices", [])
+    app.state.notices = [*providers, provider]
+
+
+def notices(request: Request, account: Account | None) -> list[Markup]:
+    if account is None:
+        return []
+    providers: list[NoticeProvider] = getattr(request.app.state, "notices", [])
+    return [notice for provider in providers if (notice := provider(request, account))]
 
 
 router = APIRouter()
