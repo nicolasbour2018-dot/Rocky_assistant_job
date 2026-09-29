@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+{% block title %}Import de ton CV · Rocky{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1><span aria-hidden="true">📄</span> Import de ton CV</h1>
+  <p class="muted"><a href="/profil#section-kit">← Retour au profil</a></p>
+</header>
+{% if message %}<p class="alert alert-info" role="status">{{ message }}</p>{% endif %}
+{% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+
+<section class="profile-section">
+  <h2>Ton gabarit</h2>
+  {% if refusal %}
+  <p class="alert alert-error">{{ refusal }}</p>
+  <p class="muted">Ton CV sera rendu avec le gabarit neutre de Rocky. Tes propositions de profil restent utilisables ci-dessous.</p>
+  {% elif preview %}
+  <p>Ton CV d'origine, et le même contenu rendu par Rocky dans le gabarit déduit : compare-les avant de l'utiliser.</p>
+  <div class="two-columns cv-compare">
+    <figure><img src="data:image/png;base64,{{ preview[0] }}" alt="Ton CV d'origine"><figcaption>Ton CV d'origine</figcaption></figure>
+    <figure><img src="data:image/png;base64,{{ preview[1] }}" alt="Le même CV rendu par Rocky"><figcaption>Rendu par Rocky</figcaption></figure>
+  </div>
+  {% endif %}
+  {% if warnings %}<ul class="small">{% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+  {% for template in templates %}
+  <p>
+    {{ template.name }}{% if template.active %} <span class="badge badge-accent">utilisé</span>{% endif %}
+    {% if not template.active %}
+    <form method="post" action="/profil/gabarit/{{ template.id }}/activer" class="inline-form"><button type="submit" class="btn btn-primary">Utiliser ce gabarit</button></form>
+    {% endif %}
+  </p>
+  {% endfor %}
+</section>
+
+<section class="profile-section">
+  <h2>Ce que ton CV propose pour ton profil</h2>
+  <p class="muted">Rien n'est écrit sans ton accord, et rien de ce que ton profil contient déjà n'est remplacé. Tu pourras tout modifier ensuite dans ton profil.</p>
+  {% if photo_found %}
+  <form method="post" action="/profil/import-cv/{{ sha256 }}/photo" class="inline-form">
+    <button type="submit" class="btn btn-ghost">{{ "Remplacer ma photo par celle du CV" if profile.photo else "Prendre la photo de ce CV" }}</button>
+  </form>
+  {% endif %}
+  {% for key, (title, items) in sections.items() if items %}
+  <form method="post" action="/profil/import-cv/{{ sha256 }}/{{ key }}" class="edit-form">
+    <h3 class="group-title">{{ title }}</h3>
+    <ul class="item-list">
+      {% for item in items %}
+      <li><label class="check"><input type="checkbox" name="choix" value="{{ item.index }}"{% if not item.present %} checked{% else %} disabled{% endif %}> {{ item.text }}{% if item.present %} <span class="badge badge-muted">déjà dans ton profil</span>{% endif %}</label></li>
+      {% endfor %}
+    </ul>
+    {% if items | rejectattr("present") | list %}<button type="submit" class="btn btn-primary">Ajouter à mon profil</button>{% endif %}
+  </form>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -24,6 +24,11 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 - `headline` = paragraphe de profil (import B5), `title` = titre court ; les liens sont une liste (`profile_links`).
 - Dépôt public : ni photo, ni gabarit dérivé, ni rendu du CV d'une vraie personne dans Git ; tests sur données fictives.
 - Un fichier de compte (photo, gabarit) passe par `system.files.FileStore` (chemin relatif, hash vérifié à la lecture).
+- Import d'un CV (`rocky/profil/cv/importer.py`) : le modèle ne reçoit que les lignes de texte et leurs positions, jamais
+  le fichier ; le PDF n'est pas conservé. La géométrie vient des lecteurs (`pdf_page.py`), le modèle ne nomme que les
+  rubriques (`semantics.py`) ; une ligne sans rubrique refuse le gabarit, les propositions restent.
+- Propositions (`proposals.py`) : une section à la fois, dans une transaction ; rien de rempli n'est remplacé.
+- Rendu : le gabarit actif du compte (`derived.py`), sinon le gabarit neutre ; les plafonds viennent du gabarit actif.
 
 ## Journal
 - Seulement ce qui explique un changement de score ou de veille : pistes, compétences, préférences, import,

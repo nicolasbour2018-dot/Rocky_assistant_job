@@ -479,3 +479,6 @@ body.auth { display: grid; place-items: center; min-height: 100vh; padding: var(
 .cv-order li > span:first-child { margin-right: auto; }
 .cv-photo { width: 7rem; height: 7rem; border-radius: 50%; object-fit: cover; display: block; margin-bottom: var(--space-2); }
 .cv-downloads { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.cv-compare figure { margin: 0; }
+.cv-compare img { width: 100%; height: auto; border: 1px solid var(--border, #d9dde3); }
+.cv-compare figcaption { font-size: 0.85em; color: var(--muted, #5b6270); margin-top: var(--space-1); }

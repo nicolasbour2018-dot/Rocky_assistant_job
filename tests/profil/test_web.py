@@ -17,7 +17,9 @@ from rocky.offres.rules import scoring_inputs
 from rocky.offres.sql import SqlStore
 from rocky.offres.usecases import record_offer
 from rocky.system.auth.sql import SqlAuthStore
+from rocky.system.pdf_read import read_pdf
 from tests.offres.fakes import NOW, TODAY, Seeker, posting
+from tests.profil.cv.fixtures import ReaderModel, designed_cv, image_only_cv
 from tests.system.web_support import HTMX, logged_in, make_app
 
 TRACK = {
@@ -589,3 +591,75 @@ def test_checking_the_cv_shows_what_each_reader_finds(client: TestClient) -> Non
     assert 'class="cv-check"' in kit
     assert "pdfminer.six :" in kit
     assert "accord entre lecteurs" in kit
+
+
+# Import of a CV PDF (decision D2, Q2, Q14, Q16)
+
+
+@pytest.fixture
+def importer(migrated_engine: Engine, tmp_path: Path) -> TestClient:
+    app = make_app(migrated_engine, storage_root=tmp_path)
+    app.state.llm_model = ReaderModel()
+    return logged_in(app, migrated_engine)[0]
+
+
+def test_importing_needs_the_consent_to_send_the_text(importer: TestClient) -> None:
+    refused = importer.post(
+        "/profil/import-cv",
+        files={"fichier": ("cv.pdf", b"%PDF-1.7", "application/pdf")},
+        headers=HTMX,
+    )
+
+    assert "Coche l&#39;accord" in section(refused.text, "kit")
+
+
+def test_an_imported_cv_proposes_its_content_and_its_template(
+    importer: TestClient,
+) -> None:
+    importer.post(
+        "/profil/identite",
+        data={
+            "full_name": "Camille Martin",
+            "contact_email": "camille.martin@example.org",
+        },
+        headers=HTMX,
+    )
+    page = importer.post(
+        "/profil/import-cv",
+        data={"consentement": "1"},
+        files={"fichier": ("cv.pdf", designed_cv(), "application/pdf")},
+    )
+
+    assert page.status_code == 200
+    assert "Rendu par Rocky" in page.text
+    assert "Tri des messages clients" in page.text
+    address = re.search(r'action="(/profil/import-cv/\w+)/identite"', page.text)
+    assert address
+    added = importer.post(
+        f"{address.group(1)}/identite", data={"choix": ["0", "1", "4"]}
+    )
+    assert "Identité : 2 éléments ajoutés." in added.text  # the name was there already
+    template = re.search(r'action="(/profil/gabarit/\d+/activer)"', page.text)
+    assert template
+
+    kit = section(importer.post(template.group(1), headers=HTMX).text, "kit")
+
+    assert "déduit de ton CV importé" in kit
+    cv = importer.get("/profil/cv/pdf?langue=fr")
+    assert cv.headers["content-type"] == "application/pdf"
+    assert "Camille Martin" in " ".join(read_pdf(cv.content)[0].text.split()).title()
+
+
+def test_an_image_pdf_is_refused_and_the_neutral_template_stays(
+    importer: TestClient,
+) -> None:
+    refused = importer.post(
+        "/profil/import-cv",
+        data={"consentement": "1"},
+        files={"fichier": ("cv.pdf", image_only_cv(), "application/pdf")},
+        headers=HTMX,
+    )
+
+    kit = section(refused.text, "kit")
+    assert "pas de texte lisible" in kit
+    assert "Gabarit neutre de Rocky" in kit

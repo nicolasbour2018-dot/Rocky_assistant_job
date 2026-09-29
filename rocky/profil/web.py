@@ -6,6 +6,8 @@ a time (``#section-<key>``); without HTMX, every route answers a whole page or a
 
 from __future__ import annotations
 
+import base64
+import json
 import mimetypes
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
 from contextlib import contextmanager
@@ -23,8 +25,19 @@ from starlette.datastructures import FormData, UploadFile
 from rocky.profil.cv import layout
 from rocky.profil.cv.check import CvCheck, check_cv, expected_facts
 from rocky.profil.cv.content import CvContent, cv_content
+from rocky.profil.cv.derived import (
+    TEMPLATE_FILE,
+    derived_headings,
+    render_derived,
+    slots_of,
+)
+from rocky.profil.cv.importer import MAX_BYTES as IMPORT_MAX_BYTES
+from rocky.profil.cv.importer import ImportRefusedError, import_cv, read_proposals
 from rocky.profil.cv.photo import MAX_BYTES as PHOTO_MAX_BYTES
 from rocky.profil.cv.photo import photo_suffix
+from rocky.profil.cv.proposals import SECTIONS as PROPOSAL_SECTIONS
+from rocky.profil.cv.proposals import apply as apply_proposals
+from rocky.profil.cv.proposals import items as proposal_items
 from rocky.profil.cv.rendering import (
     CvPdf,
     CvRefusedError,
@@ -32,6 +45,7 @@ from rocky.profil.cv.rendering import (
     neutral_headings,
     render_neutral,
 )
+from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
 from rocky.profil.model import (
     CONTRACT_LABELS,
     EXPERIENCE_KIND_LABELS,
@@ -43,6 +57,7 @@ from rocky.profil.model import (
     TRACK_STATUS_LABELS,
     Contract,
     CvLayout,
+    CvTemplateRecord,
     Experience,
     ExperienceKind,
     Language,
@@ -311,6 +326,7 @@ def _render(
         "states": states,
         "skills_by_id": {skill.id: skill for skill in profile.skills},
         "missing": missing_for_ready(profile),
+        "cv_templates": _templates_of(request, profile),
         "cv_missing_en": cv_content(
             profile, "en", request.app.state.auth.clock().date()
         ).missing,
@@ -1050,14 +1066,12 @@ def check_my_cv(request: Request, account: CurrentAccount, form: Form) -> Respon
     """
     language = "en" if _text(form, "langue") == "en" else "fr"
     profile = profile_of(request, account)
-    rendered = _cv_document(request, profile, language)
+    rendered = _cv_document(request, account, profile, language)
     if isinstance(rendered, Response):
         return rendered
-    document, content = rendered
+    document, content, headings = rendered
     state = SectionState(language=language)
-    state.check = check_cv(
-        document.pdf, expected_facts(content, neutral_headings(content))
-    )
+    state.check = check_cv(document.pdf, expected_facts(content, headings))
     return _render(request, profile, key="kit", state=state)
 
 
@@ -1070,7 +1084,9 @@ def cv_gesture(
 
     def change(editor: ProfileEditor, form: FormData) -> bool:
         profile = editor.profile()
-        editor.save_cv_layout(CV_GESTURES[gesture](profile, form))
+        editor.save_cv_layout(
+            CV_GESTURES[gesture](profile, form), _slots(request, editor)
+        )
         return True
 
     return _write(request, account, form, "kit", _cv_editing(gesture, form), change)
@@ -1138,10 +1154,10 @@ def cv_pdf(
 ) -> Response:
     language = "en" if langue == "en" else "fr"
     profile = profile_of(request, account)
-    rendered = _cv_document(request, profile, language)
+    rendered = _cv_document(request, account, profile, language)
     if isinstance(rendered, Response):
         return rendered
-    document, _ = rendered
+    document = rendered[0]
     name = "_".join(profile.identity.full_name.split()) or "CV"
     disposition = "inline" if apercu else "attachment"
     return Response(
@@ -1155,13 +1171,29 @@ def cv_pdf(
 
 
 def _cv_document(
-    request: Request, profile: Profile, language: str
-) -> tuple[CvPdf, CvContent] | Response:
-    """The rendered CV and its content, or the « kit » section telling why it is refused."""
+    request: Request, account: Account, profile: Profile, language: str
+) -> tuple[CvPdf, CvContent, tuple[str, ...]] | Response:
+    """The rendered CV, its content and its section titles; or the « kit » section telling why it is refused.
+
+    The active template of the account renders it (Q16); without one, the neutral template does.
+    """
     clock: Clock = request.app.state.auth.clock
     content = cv_content(profile, language, clock().date())
     try:
-        return render_neutral(content, _photo_of(request, profile)), content
+        active = _active_template(request, account)
+        photo = _photo_of(request, profile)
+        if active is None:
+            return (
+                render_neutral(content, photo),
+                content,
+                neutral_headings(content),
+            )
+        _, files = active
+        return (
+            render_derived(files, content, photo),
+            content,
+            derived_headings(files, language),
+        )
     except (CvRefusedError, RenderError) as error:
         reasons = (
             error.reasons if isinstance(error, CvRefusedError) else (error.reason,)
@@ -1170,6 +1202,31 @@ def _cv_document(
         return _render(
             request, profile, key="kit", state=state, status_code=_error_status(request)
         )
+
+
+def _active_template(
+    request: Request, account: Account
+) -> tuple[CvTemplateRecord, Mapping[str, bytes]] | None:
+    with _editor(request, account) as editor:
+        record = editor.active_cv_template()
+    if record is None:
+        return None
+    try:
+        return record, _files(request).read_bundle(record.path, record.sha256)
+    except (FileError, ProfileInputError) as error:
+        reason = error.reason if isinstance(error, FileError) else str(error)
+        raise CvRefusedError(
+            (f"Ton gabarit de CV est illisible : {reason}",)
+        ) from error
+
+
+def _slots(request: Request, editor: ProfileEditor) -> Slots:
+    """The room of the active template (Q26); the neutral template's without one."""
+    record = editor.active_cv_template()
+    if record is None:
+        return NEUTRAL_SLOTS
+    files = _files(request).read_bundle(record.path, record.sha256)
+    return slots_of(json.loads(files[TEMPLATE_FILE]))
 
 
 def _photo_of(request: Request, profile: Profile) -> Photo | None:
@@ -1182,3 +1239,184 @@ def _photo_of(request: Request, profile: Profile) -> Photo | None:
     except ProfileInputError as error:
         raise CvRefusedError((str(error),)) from error
     return Photo(content, profile.photo.path.rsplit(".", 1)[-1])
+
+
+# Import of a CV PDF, and the account's templates (decision D2, Q2, Q14, Q16, Q20, Q24)
+
+
+def _templates_of(request: Request, profile: Profile) -> tuple[CvTemplateRecord, ...]:
+    engine: Engine = request.app.state.engine
+    with engine.connect() as connection:
+        return SqlProfileStore(connection).cv_templates(profile.id)
+
+
+@router.post("/import-cv", response_class=HTMLResponse)
+def import_my_cv(request: Request, account: CurrentAccount, form: Form) -> Response:
+    """Read the CV (texts to the language model, never the file), derive a template, show what it proposes."""
+    profile = profile_of(request, account)
+    upload = form.get("fichier")
+    content = (
+        upload.file.read(IMPORT_MAX_BYTES + 1)
+        if isinstance(upload, UploadFile)
+        else b""
+    )
+    if not _text(form, "consentement"):
+        return _kit_refused(
+            request,
+            profile,
+            "Coche l'accord d'envoi du texte de ton CV pour l'importer.",
+        )
+    if not content:
+        return _kit_refused(request, profile, "Choisis le PDF de ton CV.")
+    clock: Clock = request.app.state.auth.clock
+    try:
+        imported = import_cv(
+            content,
+            model=request.app.state.llm_model,
+            files=_files(request),
+            account_id=account.id,
+            today=clock().date(),
+        )
+    except ImportRefusedError as error:
+        return _kit_refused(request, profile, error.reason)
+    except ProfileInputError as error:
+        return _kit_refused(request, profile, str(error))
+    template_id = None
+    if imported.template is not None:
+        with _editor(request, account, writes=True) as editor:
+            template_id = editor.record_cv_template(
+                imported.template.path, imported.template.sha256, imported.template_name
+            )
+    return _import_page(
+        request,
+        account,
+        imported.proposals.sha256,
+        template_id=template_id,
+        refusal=imported.template_refusal,
+        warnings=imported.warnings,
+        preview=imported.preview,
+    )
+
+
+def _kit_refused(request: Request, profile: Profile, reason: str) -> Response:
+    state = SectionState(error=reason)
+    return _render(
+        request, profile, key="kit", state=state, status_code=_error_status(request)
+    )
+
+
+@router.get("/import-cv/{sha256}", response_class=HTMLResponse)
+def import_page(request: Request, account: CurrentAccount, sha256: str) -> Response:
+    return _import_page(request, account, sha256)
+
+
+def _import_page(
+    request: Request,
+    account: Account,
+    sha256: str,
+    *,
+    template_id: int | None = None,
+    refusal: str | None = None,
+    warnings: tuple[str, ...] = (),
+    preview: tuple[bytes, bytes] | None = None,
+    message: str | None = None,
+    error: str | None = None,
+) -> Response:
+    try:
+        proposals, photo = read_proposals(_files(request), account.id, sha256)
+    except (FileError, ImportRefusedError, ProfileInputError):
+        return Response(status_code=404)
+    profile = profile_of(request, account)
+    response = page(
+        request,
+        "profil/import.html",
+        active="profile",
+        status_code=400 if error and not is_htmx(request) else 200,
+        context={
+            "profile": profile,
+            "sha256": sha256,
+            "sections": {
+                key: (title, proposal_items(proposals, key, profile))
+                for key, title in PROPOSAL_SECTIONS.items()
+            },
+            "photo_found": photo is not None,
+            "template_id": template_id,
+            "templates": _templates_of(request, profile),
+            "refusal": refusal,
+            "warnings": warnings,
+            "preview": tuple(base64.b64encode(image).decode() for image in preview)
+            if preview
+            else None,
+            "message": message,
+            "error": error,
+        },
+    )
+    if request.method == "POST":
+        response.headers["HX-Replace-Url"] = f"{PROFILE_PATH}/import-cv/{sha256}"
+    return response
+
+
+@router.post("/import-cv/{sha256}/photo", response_class=HTMLResponse)
+def take_imported_photo(
+    request: Request, account: CurrentAccount, sha256: str
+) -> Response:
+    try:
+        _, photo = read_proposals(_files(request), account.id, sha256)
+    except (FileError, ImportRefusedError, ProfileInputError):
+        return Response(status_code=404)
+    if photo is None:
+        return Response(status_code=404)
+    stored = _files(request).put_file(account.id, "photos", photo, "jpg")
+    with _editor(request, account, writes=True) as editor:
+        editor.save_photo(StoredPhoto(stored.path, stored.sha256))
+    return _import_page(request, account, sha256, message="Photo ajoutée à ton profil.")
+
+
+@router.post("/import-cv/{sha256}/{section}", response_class=HTMLResponse)
+def take_proposals(
+    request: Request, account: CurrentAccount, form: Form, sha256: str, section: str
+) -> Response:
+    """Add the chosen items of one section, in one transaction (Q14): nothing already filled is overwritten."""
+    if section not in PROPOSAL_SECTIONS:
+        return Response(status_code=404)
+    try:
+        proposals, _ = read_proposals(_files(request), account.id, sha256)
+    except (FileError, ImportRefusedError, ProfileInputError):
+        return Response(status_code=404)
+    try:
+        with _editor(request, account, writes=True) as editor:
+            added = apply_proposals(
+                editor, proposals, section, _ids(form, "choix"), _slots(request, editor)
+            )
+    except ProfileInputError as error:
+        return _import_page(request, account, sha256, error=str(error))
+    title = PROPOSAL_SECTIONS[section]
+    return _import_page(
+        request,
+        account,
+        sha256,
+        message=f"{title} : {added} élément{'s' if added > 1 else ''} ajouté{'s' if added > 1 else ''}.",
+    )
+
+
+@router.post("/gabarit/neutre", response_class=HTMLResponse)
+def use_neutral_template(
+    request: Request, account: CurrentAccount, form: Form
+) -> Response:
+    return _write(
+        request, account, form, "kit", "", lambda e, _: e.activate_cv_template(None)
+    )
+
+
+@router.post("/gabarit/{template_id}/activer", response_class=HTMLResponse)
+def use_template(
+    request: Request, account: CurrentAccount, form: Form, template_id: int
+) -> Response:
+    return _write(
+        request,
+        account,
+        form,
+        "kit",
+        "",
+        lambda e, _: e.activate_cv_template(template_id),
+    )

@@ -33,7 +33,28 @@
 
 <div class="cv-render">
   <h3 class="group-title">Ton CV</h3>
-  <p class="muted small">Gabarit neutre, une page A4. Un texte trop long est signalé, jamais coupé.</p>
+  {% set active_template = cv_templates | selectattr("active") | first %}
+  <p class="muted small">
+    {% if active_template %}Gabarit : {{ active_template.name }} (déduit de ton CV importé).{% else %}Gabarit neutre de Rocky.{% endif %}
+    Une page A4 ; un texte trop long est signalé, jamais coupé.
+  </p>
+  {% if cv_templates %}
+  <div class="cv-downloads">
+    {% if active_template %}{{ m.form_open(key, "/profil/gabarit/neutre", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Revenir au gabarit neutre</button></form>{% endif %}
+    {% for template in cv_templates if not template.active %}
+    {{ m.form_open(key, "/profil/gabarit/" ~ template.id ~ "/activer", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Utiliser « {{ template.name }} »</button></form>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <details class="note">
+    <summary>Importer ton CV (PDF)</summary>
+    <p class="small">Rocky lit ton CV pour te proposer de quoi remplir ton profil, et en déduit ton propre gabarit : ton design, avec tes textes. Pour le lire, <strong>le texte de ton CV (jamais le fichier) est envoyé au modèle Gemini de Google</strong>. Le PDF n'est pas conservé.</p>
+    <form method="post" action="/profil/import-cv" enctype="multipart/form-data" class="edit-form">
+      <input type="file" name="fichier" accept="application/pdf" required aria-label="PDF de ton CV">
+      <label class="check"><input type="checkbox" name="consentement" value="1" required> J'accepte l'envoi du texte de mon CV à Gemini.</label>
+      <button type="submit" class="btn btn-primary">Importer</button>
+    </form>
+  </details>
   <p class="cv-downloads">
     <a class="btn btn-primary" href="/profil/cv/pdf?langue=fr" download>Télécharger en français</a>
     <a class="btn btn-ghost" href="/profil/cv/pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu</a>

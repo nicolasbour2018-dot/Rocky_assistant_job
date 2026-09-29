@@ -717,6 +717,76 @@ class SqlProfileStore:
     def delete_project(self, profile_id: int, project_id: int) -> bool:
         return self._delete_owned(projects, profile_id, project_id)
 
+    # CV templates (decision D2, Q24)
+
+    def add_cv_template(
+        self, profile_id: int, path: str, sha256: str, name: str, now: datetime
+    ) -> tuple[int, bool]:
+        found = self._conn.execute(
+            select(cv_templates.c.id).where(
+                cv_templates.c.profile_id == profile_id,
+                cv_templates.c.sha256 == sha256,
+            )
+        ).scalar_one_or_none()
+        if found is not None:
+            return int(found), False
+        statement = (
+            insert(cv_templates)
+            .values(
+                profile_id=profile_id,
+                path=path,
+                sha256=sha256,
+                name=name,
+                active=False,
+                created_at=now,
+            )
+            .returning(cv_templates.c.id)
+        )
+        return int(self._conn.execute(statement).scalar_one()), True
+
+    def cv_templates(self, profile_id: int) -> tuple[model.CvTemplateRecord, ...]:
+        rows = self._conn.execute(
+            select(cv_templates)
+            .where(cv_templates.c.profile_id == profile_id)
+            .order_by(cv_templates.c.created_at.desc(), cv_templates.c.id.desc())
+        )
+        return tuple(
+            model.CvTemplateRecord(
+                id=row.id,
+                path=row.path,
+                sha256=row.sha256,
+                name=row.name,
+                active=row.active,
+                created_at=row.created_at,
+            )
+            for row in rows
+        )
+
+    def activate_cv_template(self, profile_id: int, template_id: int | None) -> bool:
+        if (
+            template_id is not None
+            and not self._conn.execute(
+                select(cv_templates.c.id).where(
+                    cv_templates.c.id == template_id,
+                    cv_templates.c.profile_id == profile_id,
+                )
+            ).first()
+        ):
+            return False
+        # Off first: the partial unique index allows one active template per profile at any moment.
+        self._conn.execute(
+            update(cv_templates)
+            .where(cv_templates.c.profile_id == profile_id, cv_templates.c.active)
+            .values(active=False)
+        )
+        if template_id is not None:
+            self._conn.execute(
+                update(cv_templates)
+                .where(cv_templates.c.id == template_id)
+                .values(active=True)
+            )
+        return True
+
     def append_event(self, event: NewEvent) -> None:
         append_event(self._conn, event)
 

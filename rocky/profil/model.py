@@ -304,6 +304,18 @@ class CvLayout:
 
 
 @dataclass(frozen=True)
+class CvTemplateRecord:
+    """A CV template of the profile: an immutable bundle of the files root (decision D2, Q24)."""
+
+    id: int
+    path: str
+    sha256: str
+    name: str
+    active: bool
+    created_at: datetime
+
+
+@dataclass(frozen=True)
 class OnboardingState:
     completed_at: datetime | None = None
     deferred_at: datetime | None = None
@@ -370,6 +382,20 @@ class ProfileStore(Protocol):
 
     def save_cv_layout(self, profile_id: int, layout: CvLayout) -> None:
         """Replace the whole layout; the caller has checked it against the profile."""
+        ...
+
+    def add_cv_template(
+        self, profile_id: int, path: str, sha256: str, name: str, now: datetime
+    ) -> tuple[int, bool]:
+        """The template's id, and whether it is new (the same bundle is recorded once)."""
+        ...
+
+    def cv_templates(self, profile_id: int) -> tuple[CvTemplateRecord, ...]:
+        """Newest first."""
+        ...
+
+    def activate_cv_template(self, profile_id: int, template_id: int | None) -> bool:
+        """Only ``template_id`` active (None: the neutral template); False when it is not of this profile."""
         ...
 
     def mark_onboarding_completed(self, profile_id: int, now: datetime) -> None: ...

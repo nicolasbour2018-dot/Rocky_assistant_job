@@ -27,6 +27,15 @@
     </div>
     <div class="form-actions"><button type="submit" class="btn btn-primary">Continuer</button></div>
   </form>
+  <details class="note">
+    <summary>Ou pars de ton CV (PDF)</summary>
+    <p class="small">Rocky lit ton CV pour te proposer de quoi remplir ton profil, section par section, et reprend son design pour tes futurs CV. Pour le lire, <strong>le texte de ton CV (jamais le fichier) est envoyé au modèle Gemini de Google</strong>. Le PDF n'est pas conservé.</p>
+    <form method="post" action="/profil/import-cv" enctype="multipart/form-data" class="edit-form">
+      <input type="file" name="fichier" accept="application/pdf" required aria-label="PDF de ton CV">
+      <label class="check"><input type="checkbox" name="consentement" value="1" required> J'accepte l'envoi du texte de mon CV à Gemini.</label>
+      <button type="submit" class="btn btn-primary">Importer mon CV</button>
+    </form>
+  </details>
 
   {% elif step == 2 %}
   <p class="empty-lead">Ce que tu sais faire, une compétence par ligne. Tu pourras préciser niveaux et alias ensuite.</p>

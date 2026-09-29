@@ -15,6 +15,7 @@ from rocky.profil.cv.layout import check_layout, remove_skill
 from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
 from rocky.profil.model import (
     CvLayout,
+    CvTemplateRecord,
     ExperienceDraft,
     Identity,
     ImportedCv,
@@ -124,6 +125,44 @@ class ProfileEditor:
         check_layout(profile, layout, slots)
         if layout != profile.cv:
             self._store.save_cv_layout(profile.id, layout)
+
+    # CV templates (decision D2, Q16, Q24): one active at most; none means the neutral template.
+
+    def record_cv_template(self, path: str, sha256: str, name: str) -> int:
+        profile_id = self._id()
+        template_id, new = self._store.add_cv_template(
+            profile_id, path, sha256, name, self._clock()
+        )
+        if new:
+            self._event(
+                "profil.cv_template_derived",
+                "cv_template",
+                template_id,
+                {"sha256": sha256, "name": name},
+            )
+        return template_id
+
+    def cv_templates(self) -> tuple[CvTemplateRecord, ...]:
+        return self._store.cv_templates(self._id())
+
+    def active_cv_template(self) -> CvTemplateRecord | None:
+        return next((t for t in self.cv_templates() if t.active), None)
+
+    def activate_cv_template(self, template_id: int | None) -> bool:
+        """``None`` goes back to the neutral template."""
+        current = self.active_cv_template()
+        if (current.id if current else None) == template_id:
+            return True
+        profile_id = self._id()
+        if not self._store.activate_cv_template(profile_id, template_id):
+            return False
+        self._event(
+            "profil.cv_template_activated",
+            "profile",
+            profile_id,
+            {"template_id": template_id},
+        )
+        return True
 
     def defer_onboarding(self) -> None:
         profile = self.profile()

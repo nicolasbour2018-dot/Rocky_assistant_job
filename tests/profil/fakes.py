@@ -9,6 +9,7 @@ from itertools import count
 from rocky.profil.cv.layout import remove_skill
 from rocky.profil.model import (
     CvLayout,
+    CvTemplateRecord,
     Experience,
     ExperienceDraft,
     Identity,
@@ -51,6 +52,7 @@ class InMemoryProfileStore:
         # (profile id, term) -> skill id, like the primary key of skill_terms.
         self.terms: dict[tuple[int, str], int] = {}
         self.events: list[NewEvent] = []
+        self.templates: dict[int, list[CvTemplateRecord]] = {}
         self._ids = count(1)
 
     def event_types(self) -> list[str]:
@@ -266,6 +268,30 @@ class InMemoryProfileStore:
         p.cv = replace(
             p.cv, projects=tuple(i for i in p.cv.projects if i != project_id)
         )
+        return True
+
+    def add_cv_template(
+        self, profile_id: int, path: str, sha256: str, name: str, now: datetime
+    ) -> tuple[int, bool]:
+        for record in self.templates.get(profile_id, []):
+            if record.sha256 == sha256:
+                return record.id, False
+        template_id = next(self._ids)
+        self.templates.setdefault(profile_id, []).append(
+            CvTemplateRecord(template_id, path, sha256, name, False, now)
+        )
+        return template_id, True
+
+    def cv_templates(self, profile_id: int) -> tuple[CvTemplateRecord, ...]:
+        return tuple(reversed(self.templates.get(profile_id, [])))
+
+    def activate_cv_template(self, profile_id: int, template_id: int | None) -> bool:
+        records = self.templates.get(profile_id, [])
+        if template_id is not None and all(r.id != template_id for r in records):
+            return False
+        self.templates[profile_id] = [
+            replace(r, active=r.id == template_id) for r in records
+        ]
         return True
 
     def append_event(self, event: NewEvent) -> None:
