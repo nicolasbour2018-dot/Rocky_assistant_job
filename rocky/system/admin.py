@@ -182,8 +182,10 @@ def watch_account(
         out.write(f"raison : {result.reason}\n")
     if result.report is not None:
         out.write("\n")
+        stored = {run.source: run.incomplete for run in result.sources}
         out.writelines(
-            f"{line}\n" for line in report_lines(result.report, result.detail)
+            f"{line}\n"
+            for line in report_lines(result.report, result.detail, stored or None)
         )
     with engine.connect() as connection:
         broken = SqlStore(connection).unscored_or_orphan_offers(account.id)

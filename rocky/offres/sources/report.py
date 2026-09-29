@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Mapping
 
 from rocky.offres.sources.model import SOURCE_LABELS
 from rocky.offres.sources.usecases import (
@@ -20,9 +21,15 @@ UNAVAILABLE_HINTS = {
 
 
 def report_lines(
-    report: CollectionReport, detail: DetailReport | None = None
+    report: CollectionReport,
+    detail: DetailReport | None = None,
+    stored_incomplete: Mapping[str, int] | None = None,
 ) -> list[str]:
-    """One block per source: its state, what it gave, and why it gave nothing or less."""
+    """One block per source: its state, what it gave, and why it gave nothing or less.
+
+    ``stored_incomplete``: incomplete offers by source once written (a watch does not ask again the detail of an offer
+    already complete: the excerpt of the search does not say what is stored).
+    """
     completed = (
         {(offer.source, offer.external_id): offer for offer in detail.offers}
         if detail
@@ -38,7 +45,9 @@ def report_lines(
             _headline(
                 outcome,
                 len(offers),
-                sum(not offer.description_complete for offer in offers),
+                sum(not offer.description_complete for offer in offers)
+                if stored_incomplete is None
+                else stored_incomplete.get(outcome.source.value, 0),
             )
         )
         if outcome.reason:

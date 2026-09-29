@@ -19,7 +19,7 @@ from rocky.offres.sql import SqlStorage
 from rocky.offres.watch.service import WatchService
 from rocky.system.admin import watch_account
 from tests.offres.fakes import NOW, new_seeker, posting
-from tests.offres.sources.fakes import FakeSource
+from tests.offres.sources.fakes import FakeDetailSource, FakeSource
 
 
 def failed(query: SearchQuery) -> list[CollectedOffer]:
@@ -107,3 +107,40 @@ def test_a_running_watch_is_not_started_twice(migrated_engine: Engine) -> None:
         output
         == f"Une veille de {seeker.email} est déjà en cours : rien n'a été lancé.\n"
     )
+
+
+def test_a_known_complete_offer_is_not_told_incomplete_when_seen_as_an_excerpt(
+    migrated_engine: Engine,
+) -> None:
+    with migrated_engine.begin() as connection:
+        seeker = new_seeker(connection)
+    detail = FakeDetailSource(
+        SourceCode.WTTJ,
+        lambda query: [posting("w1", source="wttj", complete=False)],
+        filters_location=False,
+    )
+
+    @contextmanager
+    def wttj() -> Iterator[Sequence[JobSource]]:
+        yield [detail]
+
+    def watch() -> str:
+        out = io.StringIO()
+        watch_account(
+            migrated_engine,
+            email=seeker.email,
+            track_name=None,
+            service=WatchService(
+                migrated_engine, sources=wttj, limit=20, clock=lambda: NOW
+            ),
+            out=out,
+        )
+        return out.getvalue()
+
+    watch()
+    second = watch()
+
+    # The detail was read once; the second search gives an excerpt, the stored text is complete.
+    assert detail.completed == ["w1"]
+    assert "Welcome to the Jungle — Collectée · 1 offre\n" in second
+    assert "0 incomplète(s)" in second
