@@ -109,6 +109,15 @@ class SqlAuthStore:
         ).one_or_none()
         return None if row is None else _account(row)
 
+    def active_accounts(self) -> list[Account]:
+        """Activated accounts, oldest first."""
+        rows = self._conn.execute(
+            select(accounts)
+            .where(accounts.c.status == AccountStatus.ACTIVE.value)
+            .order_by(accounts.c.id)
+        ).all()
+        return [_account(row) for row in rows]
+
     def create_account(self, email: str, now: datetime) -> int:
         statement = (
             insert(accounts)

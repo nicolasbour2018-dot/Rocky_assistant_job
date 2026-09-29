@@ -58,6 +58,8 @@ class Recorded:
     created: bool
     completed: bool
     score: Score
+    # The stored description is complete (a known complete offer stays complete when a source gives an excerpt).
+    description_complete: bool
 
 
 class OfferStore(Protocol):

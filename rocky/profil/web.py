@@ -15,7 +15,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import Engine
+from sqlalchemy import Connection, Engine
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData
 
@@ -186,6 +186,16 @@ def _editor(request: Request, account: Account) -> Iterator[ProfileEditor]:
             account_id=account.id,
             email=account.email,
         )
+
+
+def stored_profile(connection: Connection, account_id: int) -> Profile | None:
+    """The account's profile for the other modules outside a request (the watch); None when it has none yet.
+
+    Read only: unlike ``profile_of``, a missing profile is not created.
+    """
+    store = SqlProfileStore(connection)
+    profile_id = store.find_profile_id(account_id)
+    return None if profile_id is None else store.load(profile_id)
 
 
 def profile_of(request: Request, account: Account) -> Profile:

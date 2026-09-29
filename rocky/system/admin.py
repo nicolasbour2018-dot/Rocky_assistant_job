@@ -20,6 +20,15 @@ from rocky.offres.sources.registry import build_sources
 from rocky.offres.sources.report import report_lines
 from rocky.offres.sources.rules import queries_for_track
 from rocky.offres.sources.usecases import collect, complete_descriptions
+from rocky.offres.sql import SqlStore
+from rocky.offres.watch.model import (
+    RUN_STATUS_LABELS,
+    SUCCESSFUL,
+    Trigger,
+    WatchBusyError,
+)
+from rocky.offres.watch.service import WatchService, public_sources
+from rocky.offres.watch.usecases import active_tracks
 from rocky.profil.import_file import ImportFileError, read_import_file
 from rocky.profil.model import TrackStatus
 from rocky.profil.rules import ProfileInputError
@@ -134,6 +143,54 @@ def check_sources(
     return 0
 
 
+def watch_account(
+    engine: Engine,
+    *,
+    email: str,
+    track_name: str | None,
+    service: WatchService,
+    out: TextIO,
+) -> int:
+    """Run a real watch for ``email`` (its offers are written), then tell its status and, source by source, why."""
+    try:
+        address = normalize_email(email)
+    except InvalidEmailError as error:
+        out.write(f"{error}\n")
+        return 2
+    with engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(address)
+    if account is None:
+        out.write(f"Aucun compte pour {address}.\n")
+        return 1
+    if not active_tracks(service.profiles.profile(account.id), track_name):
+        wanted = f"nommée « {track_name} »" if track_name else "active"
+        out.write(f"Aucune piste {wanted} pour {address}.\n")
+        return 1
+    try:
+        result = service.run(account.id, Trigger.MANUAL, track_name=track_name)
+    except WatchBusyError:
+        out.write(f"Une veille de {address} est déjà en cours : rien n'a été lancé.\n")
+        return 1
+    counts = result.counts
+    out.write(
+        f"Veille {RUN_STATUS_LABELS[result.status].lower()} : {counts.found} offre(s) "
+        f"trouvée(s), {counts.new} nouvelle(s), {counts.completed} complétée(s), "
+        f"{counts.below_threshold} sous le seuil, {counts.incomplete} incomplète(s), "
+        f"{counts.not_written} non écrite(s).\n"
+    )
+    if result.reason:
+        out.write(f"raison : {result.reason}\n")
+    if result.report is not None:
+        out.write("\n")
+        out.writelines(
+            f"{line}\n" for line in report_lines(result.report, result.detail)
+        )
+    with engine.connect() as connection:
+        broken = SqlStore(connection).unscored_or_orphan_offers(account.id)
+    out.write(f"\nOffres sans score ou sans piste : {len(broken)}.\n")
+    return 0 if result.status in SUCCESSFUL else 1
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -171,11 +228,31 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="demande aussi le détail des offres incomplètes quand la source en a un",
     )
+    watch_parser = commands.add_parser(
+        "veille",
+        help="lance une vraie veille pour les pistes actives d'un compte : ses offres "
+        "sont enregistrées, puis son statut est affiché source par source",
+    )
+    watch_parser.add_argument("email")
+    watch_parser.add_argument("--piste", help="seulement la piste de ce nom")
     arguments = parser.parse_args(argv)
 
     settings = load_settings()
     engine = create_db_engine(settings.database_url)
     try:
+        if arguments.command == "veille":
+            return watch_account(
+                engine,
+                email=arguments.email,
+                track_name=arguments.piste,
+                service=WatchService(
+                    engine,
+                    sources=public_sources(settings.sources),
+                    limit=settings.sources.results_per_query,
+                    clock=utc_now,
+                ),
+                out=sys.stdout,
+            )
         if arguments.command == "sources":
             http = PublicHttp()
             try:

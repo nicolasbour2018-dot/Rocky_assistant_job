@@ -66,6 +66,7 @@ def record_offer(
         created=existing is None,
         completed=existing is not None and merged != existing.offer,
         score=result,
+        description_complete=merged.description_complete,
     )
 
 
