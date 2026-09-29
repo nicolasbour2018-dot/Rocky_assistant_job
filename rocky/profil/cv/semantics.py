@@ -64,9 +64,11 @@ hobbies (loisirs) ;
 le numéro du projet (0, 1, 2… de gauche à droite) ;
 - experiences : emplois (intitulé, employeur, puces) ; education : diplômes, formations, certifications, écoles, et \
 leurs puces. Une ligne de la colonne des formations est education, jamais experiences.
-Pour heading et fixed, « en » est la traduction anglaise de la ligne, dans la même casse et la même typographie. \
-Dans « titles », donne chaque titre de section avec les numéros de toutes ses lignes (« COMPÉTENCES » puis \
-« TECHNIQUES » forment un seul titre) et sa traduction anglaise entière, dans l'ordre des mots anglais. \
+Pour heading et fixed, « en » est la traduction anglaise de la ligne, dans la même casse, écrite normalement \
+(« PROJECTS », jamais « P R O J E C T S » : Rocky espace lui-même les lettres comme le design). \
+Dans « titles », donne chaque titre de section avec les numéros de toutes ses lignes (« C O M P É T E N C E S » puis \
+« T E C H N I Q U E S » forment un seul titre) et sa traduction anglaise entière, écrite normalement et dans \
+l'ordre des mots anglais (« TECHNICAL SKILLS »). \
 Pour project_problem, project_stack, project_work et project_results, « label » est l'étiquette qui ouvre la ligne \
 (« Problématique », sans les deux-points) et « en » sa traduction anglaise ; vides si la ligne n'en a pas.
 2. Recopie le contenu du CV dans « profile », texte pour texte (dates : années seules ; une seule année donne \

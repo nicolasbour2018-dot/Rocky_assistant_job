@@ -31,8 +31,13 @@ from rocky.profil.cv.derived import (
     render_derived,
     slots_of,
 )
+from rocky.profil.cv.importer import (
+    KEEPABLE,
+    ImportRefusedError,
+    import_cv,
+    read_proposals,
+)
 from rocky.profil.cv.importer import MAX_BYTES as IMPORT_MAX_BYTES
-from rocky.profil.cv.importer import ImportRefusedError, import_cv, read_proposals
 from rocky.profil.cv.photo import MAX_BYTES as PHOTO_MAX_BYTES
 from rocky.profil.cv.photo import photo_suffix
 from rocky.profil.cv.proposals import SECTIONS as PROPOSAL_SECTIONS
@@ -45,6 +50,7 @@ from rocky.profil.cv.rendering import (
     neutral_headings,
     render_neutral,
 )
+from rocky.profil.cv.semantics import Role
 from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
 from rocky.profil.model import (
     CONTRACT_LABELS,
@@ -158,6 +164,7 @@ def install(app: FastAPI) -> None:
         language_names=LANGUAGE_NAMES,
         language_level_labels=LANGUAGE_LEVEL_LABELS,
         experience_kind_labels=EXPERIENCE_KIND_LABELS,
+        keepable_rubrics=KEEPABLE,
         TrackStatus=TrackStatus,
         choices=CHOICES,
     )
@@ -1276,6 +1283,11 @@ def import_my_cv(request: Request, account: CurrentAccount, form: Form) -> Respo
             files=_files(request),
             account_id=account.id,
             today=clock().date(),
+            kept=frozenset(
+                Role(value)
+                for value in form.getlist("garder")
+                if isinstance(value, str) and value in KEEPABLE
+            ),
         )
     except ImportRefusedError as error:
         return _kit_refused(request, profile, error.reason)

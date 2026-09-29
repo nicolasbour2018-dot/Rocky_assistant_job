@@ -24,6 +24,7 @@ from rocky.profil.cv.proposals import preview_profile
 from rocky.profil.cv.semantics import (
     INSTRUCTIONS,
     SCHEMA,
+    Role,
     SemanticsError,
     block_roles,
     profile_answer,
@@ -34,9 +35,17 @@ from rocky.system.files import FileStore, StoredBundle
 from rocky.system.llm import JsonModel, LlmUnavailableError
 from rocky.system.render import RenderError, rasterize
 
+# Rubrics a user may keep as the imported CV wrote them, in the French CV.
+KEEPABLE = {
+    "hobbies": "Loisirs",
+    "languages": "Langues",
+    "transversal": "Compétences transversales",
+    "groups": "Compétences techniques",
+}
 IMPORTS = "imports"
 TEMPLATES = "gabarits"
 PROPOSALS_FILE = "propositions.json"
+ANSWER_FILE = "reponse-du-modele.json"
 PHOTO_FILE = "photo.jpg"
 MAX_BYTES = 10 * 1024 * 1024
 PREVIEW_DPI = 70
@@ -69,6 +78,7 @@ def import_cv(
     files: FileStore,
     account_id: int,
     today: date,
+    kept: frozenset[Role] = frozenset(),
 ) -> ImportedCv:
     if len(pdf) > MAX_BYTES:
         raise ImportRefusedError("Le PDF dépasse 10 Mo.")
@@ -86,19 +96,21 @@ def import_cv(
     refusal: str | None = None
     warnings: list[str] = []
     preview: tuple[bytes, bytes] | None = None
-    kept: dict[str, bytes] = {
-        PROPOSALS_FILE: json.dumps(proposals, ensure_ascii=False, indent=1).encode()
+    saved: dict[str, bytes] = {
+        PROPOSALS_FILE: json.dumps(proposals, ensure_ascii=False, indent=1).encode(),
+        # The model's whole answer (texts of the CV and their rubrics): a template can be derived again from it.
+        ANSWER_FILE: json.dumps(answer, ensure_ascii=False, indent=1).encode(),
     }
     try:
         roles = block_roles(answer, layout.blocks)
-        derived = derive(pdf, layout, roles, name, titles(answer, layout.blocks))
+        derived = derive(pdf, layout, roles, name, titles(answer, layout.blocks), kept)
     except (SemanticsError, PageError) as error:
         refusal = error.reason
     else:
         template = files.put_bundle(account_id, TEMPLATES, derived.files)
         warnings += derived.warnings
         if derived.photo is not None:
-            kept[PHOTO_FILE] = derived.photo.content
+            saved[PHOTO_FILE] = derived.photo.content
         try:
             rendered, _, problems = draw_derived(
                 derived.files,
@@ -113,7 +125,7 @@ def import_cv(
                 _png(render_page(pdf, PREVIEW_DPI)),
                 _png(rasterize(rendered.pdf, PREVIEW_DPI)[0]),
             )
-    stored = files.put_bundle(account_id, IMPORTS, kept)
+    stored = files.put_bundle(account_id, IMPORTS, saved)
     return ImportedCv(
         proposals=stored,
         template=template,

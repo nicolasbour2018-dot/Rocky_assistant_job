@@ -35,6 +35,7 @@ body {{ margin: 0; font-family: "Poppins", sans-serif; }}
   <rect x="200" y="330" width="170" height="160" rx="12" fill="none" stroke="#666" stroke-width="5"/>
   <circle cx="30" cy="560" r="2" fill="#333"/>
 </svg>
+<img src="curve.png" style="position:absolute;left:380pt;top:600pt;width:200pt;height:200pt">
 <div style="position:absolute;left:400pt;top:40pt;width:140pt;height:140pt;border-radius:50%;overflow:hidden">
   <img src="photo.png" style="width:140pt;height:170pt;display:block">
 </div>
@@ -70,10 +71,22 @@ def photo_png() -> bytes:
     return buffer.getvalue()
 
 
+def curve_png() -> bytes:
+    """A cyan arc on a transparent ground, like the curves a design tool exports as images."""
+    image = Image.new("RGBA", (400, 400), (0, 0, 0, 0))
+    ImageDraw.Draw(image).arc(
+        (20, 20, 380, 380), 180, 300, fill=(39, 182, 216, 255), width=10
+    )
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 def designed_cv() -> bytes:
     """Written in Poppins, a font Rocky ships: its template needs no replacement."""
     html = PAGE.format(faces=font_faces())
-    return render_pdf(html, {**font_assets(), "photo.png": photo_png()}).pdf
+    assets = {**font_assets(), "photo.png": photo_png(), "curve.png": curve_png()}
+    return render_pdf(html, assets).pdf
 
 
 def image_only_cv() -> bytes:

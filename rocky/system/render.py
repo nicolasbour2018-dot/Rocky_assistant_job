@@ -10,6 +10,7 @@ Decision ``docs/decisions/D2-cv-rendu.md`` (Q6, Q13, Q17):
 
 from __future__ import annotations
 
+import io
 import mimetypes
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -101,6 +102,50 @@ def render_pdf(html: str, assets: Mapping[str, bytes] | None = None) -> Rendered
         missing_fonts=tuple(sorted(set(measured["fonts"]))),
         refused_requests=tuple(refused),
     )
+
+
+def render_image(
+    svg: str, width_pt: float, height_pt: float, dpi: int = 300
+) -> Image.Image:
+    """An SVG drawing as an opaque RGB image, rendered on screen by Chromium, cut off from the network.
+
+    A design's transparency (masks, soft masks) becomes luminosity masks in a PDF, which some readers draw black
+    (Apple's Preview): as one opaque image, the drawing looks the same in every reader.
+    """
+    width, height = width_pt * 96 / 72, height_pt * 96 / 72  # CSS pixels
+    html = (
+        "<!doctype html><html><head><style>html, body { margin: 0; background: white; }</style></head>"
+        f'<body><img src="{ORIGIN}drawing.svg" style="display:block; width:{width}px; height:{height}px">'
+        "</body></html>"
+    )
+    files = {PAGE: html.encode(), "drawing.svg": svg.encode()}
+
+    def serve(route: Route) -> None:
+        name = route.request.url.removeprefix(ORIGIN)
+        if name not in files:
+            route.abort()
+            return
+        kind = "image/svg+xml" if name.endswith(".svg") else "text/html"
+        route.fulfill(status=200, body=files[name], content_type=kind)
+
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            try:
+                page = browser.new_page(
+                    viewport={"width": round(width), "height": round(height)},
+                    device_scale_factor=dpi / 96,
+                )
+                page.route("**/*", serve)
+                page.goto(ORIGIN + PAGE, wait_until="load")
+                png = page.screenshot(full_page=True, type="png")
+            finally:
+                browser.close()
+    except PlaywrightError as error:
+        raise RenderError(
+            f"Le dessin du gabarit a échoué ({error.message})."
+        ) from error
+    return Image.open(io.BytesIO(png)).convert("RGB")
 
 
 def page_count(pdf: bytes) -> int:

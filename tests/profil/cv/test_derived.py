@@ -17,8 +17,10 @@ from pypdf import PdfWriter
 from rocky.profil.cv.content import cv_content
 from rocky.profil.cv.derived import (
     TEMPLATE_FILE,
+    _by_column,
     _continued,
     _title_line,
+    derive,
     render_derived,
     slots_of,
     unspaced,
@@ -42,11 +44,12 @@ from rocky.profil.cv.pdf_page import (
 )
 from rocky.profil.cv.proposals import preview_profile
 from rocky.profil.cv.rendering import Photo
-from rocky.profil.cv.semantics import BlockRole, Role
+from rocky.profil.cv.semantics import BlockRole, Role, block_roles, prompt
 from rocky.system.files import FileStore
 from rocky.system.pdf_read import read_pdf
 from rocky.system.render import compare, rasterize
 from tests.profil.cv.fixtures import (
+    PROFILE,
     ReaderModel,
     designed_cv,
     image_only_cv,
@@ -288,3 +291,96 @@ def test_a_page_that_is_one_picture_gives_no_template_but_its_proposals(
     assert "image de page" in result.template_refusal
     proposals, _ = read_proposals(FileStore(tmp_path), 1, result.proposals.sha256)
     assert proposals["full_name"] == "Camille Martin"
+
+
+def test_the_cv_carries_no_transparency_mask_that_some_readers_draw_black(
+    designed: bytes, tmp_path: Path
+) -> None:
+    files, proposals, photo = stored(tmp_path, imported(designed, tmp_path))
+
+    document = render_derived(
+        files,
+        cv_content(preview_profile(proposals), "fr", TODAY),
+        Photo(photo or b"", "jpg"),
+    )
+
+    # The imported page has a transparent image; drawn through SVG, it gave soft masks that Apple's Preview drew as
+    # black blocks. The layer is one opaque image now.
+    assert b"/SMask" in designed
+    assert b"/SMask" not in document.pdf
+
+
+def test_a_kept_rubric_stays_as_the_imported_cv_wrote_it_in_french(
+    designed: bytes, tmp_path: Path
+) -> None:
+    layout = read_page(designed)
+    roles = block_roles(
+        ReaderModel().complete_json("", prompt(layout.blocks), {}), layout.blocks
+    )
+    derived = derive(designed, layout, roles, "essai", kept=frozenset({Role.PHONE}))
+    profile = preview_profile({**PROFILE, "phone": "07 11 11 11 11"})
+
+    french = " ".join(
+        read_pdf(
+            render_derived(derived.files, cv_content(profile, "fr", TODAY), None).pdf
+        )[0].text.split()
+    )
+    english = cv_content(profile, "en", TODAY)
+    english_text = " ".join(
+        read_pdf(render_derived(derived.files, replace(english, missing=()), None).pdf)[
+            0
+        ].text.split()
+    )
+
+    assert (
+        "06 00 00 00 00" in french
+    )  # kept: drawn by the layer, readable through its invisible words
+    assert "07 11 11 11 11" not in french
+    assert "07 11 11 11 11" in english_text  # the English CV takes it from the profile
+
+
+def test_projects_are_numbered_by_their_column_whatever_the_model_says() -> None:
+    style = Style("Poppins-Regular", 7.0, "#000000")
+
+    def block(i: int, text: str, x: float, y: float) -> Block:
+        box = Box(x, y, 90, 8)
+        return Block(i, box, (Line(box, y + 7, (Run(text, style),), 0.0),))
+
+    layout = PageLayout(
+        595,
+        842,
+        (
+            block(0, "Projet gauche", 10, 100),
+            block(1, "Projet droite", 300, 100),
+            block(2, "Problématique : à gauche", 10, 120),
+            block(3, "Problématique : à droite", 300, 120),
+        ),
+        (),
+        "#ffffff",
+    )
+    roles = [
+        BlockRole(0, Role.PROJECT_NAME, 1),
+        BlockRole(1, Role.PROJECT_NAME, 0),
+        BlockRole(
+            2, Role.PROJECT_PROBLEM, 0, "Problématique"
+        ),  # the model's numbers are crossed
+        BlockRole(3, Role.PROJECT_PROBLEM, 1, "Problématique"),
+    ]
+
+    assert [role.index for role in _by_column(layout, roles)] == [0, 1, 0, 1]
+
+
+def test_a_title_translation_without_words_keeps_the_english_of_each_line() -> None:
+    layout = _layout(("C O M P É T E N C E S", 100), ("T E C H N I Q U E S", 115))
+    roles = [
+        BlockRole(0, Role.HEADING, text_en="S K I L L S"),
+        BlockRole(1, Role.HEADING, text_en="T E C H N I C A L"),
+    ]
+    glued = [
+        ((0, 1), "S K I L L S T E C H N I C A L")
+    ]  # one run of letters: no word to spread
+
+    assert [_title_line(role, layout, glued).text_en for role in roles] == [
+        "S K I L L S",
+        "T E C H N I C A L",
+    ]

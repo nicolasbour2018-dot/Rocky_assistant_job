@@ -17,7 +17,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from io import BytesIO
 from itertools import pairwise
-from typing import Any
+from typing import Any, NoReturn
 
 from markupsafe import Markup, escape
 from PIL import Image, ImageChops, ImageFilter
@@ -44,12 +44,15 @@ from rocky.profil.cv.pdf_page import (
 from rocky.profil.cv.rendering import CvPdf, CvRefusedError, Photo, problems
 from rocky.profil.cv.semantics import PROJECT_ROLES, BlockRole, Role
 from rocky.profil.cv.template import Slots
-from rocky.system.render import Rendered, rasterize, render_pdf
+from rocky.system.render import Rendered, render_image, render_pdf
 
-FORMAT = "rocky-cv-gabarit/1"
+FORMAT = "rocky-cv-gabarit/2"  # 2: the layer is an opaque image (1 was an SVG: black blocks in Apple's Preview)
 TEMPLATE_FILE = "template.json"
-LAYER_FR = "calque-fr.svg"  # design with its fixed texts
-LAYER_EN = "calque.svg"  # design without any text
+LAYER_FR = (
+    "calque-fr.png"  # design with its fixed texts (and the rubrics kept as they are)
+)
+LAYER_EN = "calque.png"  # design without any text
+LAYER_DPI = 300  # the resolution of the design's own images
 PHOTO_FILE = "photo-importee"  # + suffix: proposed to the profile, never shown by the template itself
 ROOM = 1.0  # a region may grow by one line: fonts measure a hair differently than the design tool
 
@@ -71,7 +74,9 @@ def derive(
     roles: Sequence[BlockRole],
     name: str,
     titles: Sequence[tuple[tuple[int, ...], str]] = (),
+    kept: frozenset[Role] = frozenset(),
 ) -> DerivedTemplate:
+    """``kept``: rubrics the French CV shows as the imported one wrote them (the profile does not change them)."""
     page_area = layout.width * layout.height
     if any(
         image.box.width * image.box.height >= 0.8 * page_area for image in layout.images
@@ -85,6 +90,11 @@ def derive(
     content_blocks = [
         blocks[r.block_id] for r in roles if r.role not in (Role.HEADING, Role.FIXED)
     ]
+    changed_blocks = [
+        blocks[r.block_id]
+        for r in roles
+        if r.role not in (Role.HEADING, Role.FIXED) and r.role not in kept
+    ]
     fixed_blocks = [
         blocks[r.block_id] for r in roles if r.role in (Role.HEADING, Role.FIXED)
     ]
@@ -95,9 +105,9 @@ def derive(
     decorations = [region.room for region in regions]
     layer_fr = cut_svg(
         svg,
-        text_areas=[b.box for b in content_blocks],
+        text_areas=[b.box for b in changed_blocks],
         image_areas=photo_areas,
-        decoration_areas=decorations,
+        decoration_areas=[region.room for region in regions if region.role not in kept],
     )
     layer_en = cut_svg(
         svg,
@@ -122,7 +132,9 @@ def derive(
         )
         if photo
         else None,
-        "regions": [region.to_json() for region in regions],
+        "regions": [
+            {**region.to_json(), "kept": region.role in kept} for region in regions
+        ],
         "fixed": [
             {
                 "box": _box_json(block.box),
@@ -138,8 +150,12 @@ def derive(
     }
     files: dict[str, bytes] = {
         TEMPLATE_FILE: json.dumps(template, ensure_ascii=False, indent=1).encode(),
-        LAYER_FR: layer_fr.svg.encode(),
-        LAYER_EN: layer_en.svg.encode(),
+        LAYER_FR: _png(
+            render_image(layer_fr.svg, layout.width, layout.height, LAYER_DPI)
+        ),
+        LAYER_EN: _png(
+            render_image(layer_en.svg, layout.width, layout.height, LAYER_DPI)
+        ),
     }
     found = None
     if photo is not None:
@@ -167,6 +183,7 @@ class Region:
     label_en: str
     dash: str  # the separator written between two years (« 2018 - 2025 »)
     count: int  # lines of the region: the room of a list
+    original: tuple[str, ...]  # its lines as the imported CV wrote them
 
     @property
     def room(self) -> Box:
@@ -183,6 +200,7 @@ class Region:
 
     def to_json(self) -> dict[str, Any]:
         return {
+            "original": list(self.original),
             "role": self.role.value,
             "index": self.index,
             "box": _box_json(self.room),
@@ -208,6 +226,38 @@ class Measure:
     indent: (
         float  # extra left margin of the lines after the first style change (bullets)
     )
+
+
+def _by_column(layout: PageLayout, roles: Sequence[BlockRole]) -> list[BlockRole]:
+    """Projects numbered by geometry, left to right: each project line belongs to the project whose name stands
+    nearest above it horizontally (the model's numbers are not reliable across calls)."""
+    boxes = {block.id: block.box for block in layout.blocks}
+    # Columns: the project names' lines, joined when they overlap horizontally (a name may take two lines).
+    columns: list[Box] = []
+    for box in sorted(
+        (boxes[item.block_id] for item in roles if item.role is Role.PROJECT_NAME),
+        key=lambda box: box.x,
+    ):
+        if columns and box.x < columns[-1].right:
+            columns[-1] = columns[-1].union(box)
+        else:
+            columns.append(box)
+    if not columns:
+        return list(roles)
+
+    def column(box: Box) -> int:
+        middle = box.x + box.width / 2
+        return min(
+            range(len(columns)),
+            key=lambda i: abs(columns[i].x + columns[i].width / 2 - middle),
+        )
+
+    return [
+        replace(item, index=column(boxes[item.block_id]))
+        if item.role in PROJECT_ROLES
+        else item
+        for item in roles
+    ]
 
 
 def _continued(layout: PageLayout, roles: Sequence[BlockRole]) -> list[BlockRole]:
@@ -242,7 +292,7 @@ def _starts_with(text: str, label: str) -> bool:
 
 def _regions(layout: PageLayout, roles: Sequence[BlockRole]) -> list[Region]:
     blocks = {block.id: block for block in layout.blocks}
-    roles = _continued(layout, roles)
+    roles = _continued(layout, _by_column(layout, roles))
     grouped: dict[tuple[Role, int], list[Block]] = defaultdict(list)
     labels: dict[tuple[Role, int], BlockRole] = {}
     for item in roles:
@@ -270,6 +320,7 @@ def _regions(layout: PageLayout, roles: Sequence[BlockRole]) -> list[Region]:
                 label_en=labels[(role, index)].label_en,
                 dash=dash.group(1) if dash else "–",
                 count=len(lines),
+                original=tuple(" ".join(line.text.split()) for line in lines),
             )
         )
     return regions
@@ -313,16 +364,19 @@ def _measure(lines: Sequence[Any], box: Box) -> Measure:
 
 
 def _align(lines: Sequence[Any], box: Box) -> str:
+    """Centred when the lines' middles vary much less than their starts (a design tool centres to a few points),
+    right-aligned likewise with their ends."""
     if len(lines) < 2:
         return "left"
-    lefts = [line.box.x - box.x for line in lines]
-    centres = [
-        abs(line.box.x + line.box.width / 2 - (box.x + box.width / 2)) for line in lines
-    ]
-    rights = [box.right - line.box.right for line in lines]
-    if max(centres) < 2.5 and max(lefts) > 3:
+    lefts = [line.box.x for line in lines]
+    middles = [line.box.x + line.box.width / 2 for line in lines]
+    rights = [line.box.right for line in lines]
+    spread = max(lefts) - min(lefts)
+    if spread <= 6:
+        return "left"
+    if max(middles) - min(middles) < spread / 3:
         return "center"
-    if max(rights) < 2 and max(lefts) > 3:
+    if max(rights) - min(rights) < spread / 3:
         return "right"
     return "left"
 
@@ -359,13 +413,7 @@ def visible_photo(
 ) -> PhotoFrame:
     """What the page shows of the photo: where the page differs from the layer without it, inside the image's box
     (content texts left aside). A circle clip leaves the corners of that part unchanged."""
-    html = (
-        f"<!doctype html><html><head><style>@page {{ size: {layout.width}pt {layout.height}pt; margin: 0; }}"
-        "body { margin: 0; }</style></head><body>"
-        f'<img src="calque.svg" style="display:block; width:{layout.width}pt; height:{layout.height}pt">'
-        "</body></html>"
-    )
-    without = rasterize(render_pdf(html, {"calque.svg": layer.encode()}).pdf, 72)[0]
+    without = render_image(layer, layout.width, layout.height, 72)
     page = render_page(pdf, 72).resize(without.size)
     changed = (
         ImageChops.difference(page, without)
@@ -415,6 +463,9 @@ def _title_line(
         lines = sorted(ids, key=lambda i: tops.get(i, 0.0))
         spaced = len(english.split()) > 2 and all(len(w) == 1 for w in english.split())
         words = unspaced(english).split() if spaced else english.split()
+        if len(words) < len(ids):
+            # « S K I L L S T E C H N I C A L »: no word to spread over the lines, each line keeps its own English.
+            return role
         share = -(
             -len(words) // len(lines)
         )  # ceiling: the first lines take the longer share
@@ -516,8 +567,10 @@ def draw_derived(
         with_photo=photo is not None,
         suffix=photo.suffix if photo else "jpg",
     )
+    if template.get("format") != FORMAT:
+        _old_format()
     layer = LAYER_FR if content.language == "fr" else LAYER_EN
-    assets = {**font_assets(), "calque.svg": files[layer]}
+    assets = {**font_assets(), "calque.png": files[layer]}
     if photo is not None:
         assets[f"photo.{photo.suffix}"] = photo.content
     rendered = render_pdf(html, assets)
@@ -555,7 +608,7 @@ def derived_html(
         ".region { position: absolute; overflow: hidden; white-space: normal; overflow-wrap: break-word; }",
         ".region p { margin: 0; } .entry { margin: 0; } .bullet { display: block; }",
         '</style></head><body><main class="page" data-box="page">',
-        '<img class="layer" src="calque.svg" alt="">',
+        '<img class="layer" src="calque.png" alt="">',
     ]
     photo = template.get("photo")
     if photo and with_photo:
@@ -575,6 +628,10 @@ def derived_html(
         if item["text"][content.language].strip()
     ]
     for region in template["regions"]:
+        if region.get("kept") and content.language == "fr":
+            # Drawn by the layer as the imported CV wrote it; its words, invisible, for PDF readers.
+            parts.append(_kept_html(region))
+            continue
         inner = _region_html(region, content)
         if inner is None:
             continue
@@ -691,6 +748,32 @@ def _fixed_html(item: Mapping[str, Any], language: str) -> str:
             f'<path d="{shape.d}" fill="{style["color"]}"/></svg>'
         )
     return "".join(parts)
+
+
+def _kept_html(region: Mapping[str, Any]) -> str:
+    style = (
+        _box_css(region)
+        + _font_css(region["main"])
+        + f"line-height:{region['line_height']}pt; "
+    )
+    lines = "".join(f"<p>{escape(line)}</p>" for line in region.get("original", []))
+    return f'<div class="region" style="{style} color:transparent;">{lines}</div>'
+
+
+OLD_FORMAT = (
+    "Ton gabarit date d'une version de Rocky qui l'affichait mal dans certains lecteurs de PDF : "
+    "réimporte ton CV pour le refaire."
+)
+
+
+def _old_format() -> NoReturn:
+    raise CvRefusedError((OLD_FORMAT,))
+
+
+def _png(image: Image.Image) -> bytes:
+    buffer = BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
 
 
 def _span(text: str, style: Mapping[str, Any], *, underline: bool = False) -> Markup:
