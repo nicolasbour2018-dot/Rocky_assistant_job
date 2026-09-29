@@ -53,3 +53,22 @@ Critère de sortie : « Une panne simulée laisse un statut final explicite et a
 | Heure de Paris | `zoneinfo("Europe/Paris")` ; `tzdata` ajouté seulement si l'image n'a pas de base de fuseaux | Le conteneur est en UTC. |
 | Commande | `rocky-admin veille <email> [--piste]` : une vraie veille, écrite, avec son compte rendu source par source | Diagnostic et vérification réelle ; même cas d'usage que le planificateur. |
 | Forme | `rocky/offres/sql.py` (tables, tout le SQL d'`offres`), `rocky/offres/rules.py` (règles pures), `rocky/offres/usecases.py` (`record_offer`, recalcul), `rocky/offres/watch/` (veille, bandeau) ; `rocky/system/scheduler.py` | AGENTS §4 : règles → cas d'usage → SQL du module → routes. |
+
+## Mesures (29/09/2026)
+
+| Contrôle | Résultat |
+|---|---|
+| **Critère de sortie, en tests** (`tests/offres/watch/test_usecases.py`, base de test PostgreSQL) | Une source en panne → `partial` avec sa raison, les offres des autres sources écrites ; toutes en panne → `failed` ; seules des sources en attente ou non configurées → `failed` (« aucune source interrogeable »), jamais un échec à côté d'une source qui répond ; un score qui lève pour une offre → `partial`, rien de l'offre écrit ; `KeyboardInterrupt` au milieu de l'écriture d'une offre → `interrupted`, l'offre précédente entière, la suivante annulée, le verrou libéré ; veille laissée `running` par un processus tué → close `interrupted` au démarrage (laissée si un autre processus tient le verrou). Dans chaque cas, `unscored_or_orphan_offers` est vide |
+| Idempotence | Une veille rejouée : 0 nouvelle offre, 0 complétée ; même offre importée deux fois : une seule ligne ; import et veille rapprochés par l'adresse |
+| **Veille réelle** (compte d'essai de Nicolas, 2 pistes actives, lancée par le bandeau à 9 h 12) | Statut **partielle**, raison « LinkedIn : Refusée par la plateforme (… HTTP 429) » ; 3 min ; **517 offres, 517 nouvelles, 0 non écrite, 0 sans score, 0 orpheline** ; 440 sous le seuil (gardées avec leur motif), 77 au-dessus ; rattachements : 393 à « Data analyst », 183 à « Data scientist / IA » ; 6 clés de rapprochement partagées entre deux sites ; événement `offres.watch_finished` (acteur `user`, déclencheur `catch_up`) |
+| Sources de la veille réelle | Adzuna 175 (toutes des extraits) ; Apec 107 (détail refusé par DataDome, 9 requêtes sautées : « Eure et Loire ») ; WTTJ 82 ; Wellfound 85 (6 requêtes sautées) ; LinkedIn 68 puis refus 429 ; France Travail en attente d'accès (pas un échec) |
+| Recalcul complet (Q5) | 517 offres analysées et notées en 2,0 s, sans écriture (lecture de la base de développement) : la tâche de fond suffit |
+| Planificateur | Heure de Paris vérifiée dans l'image (`zoneinfo`, pas de dépendance ajoutée) ; tâche quotidienne jamais rattrapée au démarrage ; passage à l'heure d'hiver du 25/10 testé |
+| Vérification globale | `docker compose run --rm --build check` vert : 700 tests en 22 s ; ruff, mypy strict |
+
+Pas de panne simulée en plus par une fausse clé Adzuna (prévue au plan) : la veille réelle a rencontré une vraie panne
+(refus de LinkedIn), close avec son statut et sa raison, sans offre orpheline ni sans score.
+
+Limites connues, notées au plan (section 8) : refus 429 de LinkedIn dès la première veille ; 350 offres incomplètes sur
+517 ; un import qui écrirait la même offre au même instant qu'une veille heurterait la contrainte d'unicité (erreur
+visible, cas rare).

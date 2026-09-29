@@ -132,7 +132,7 @@ aucun identifiant interne affiché.
 | C3. Analyse d'annonce | `job_analysis` rapatrié dans `offres` ; compétences via les alias ; critères éliminatoires distincts des préférences ; date limite ; TJM distinct du salaire annuel ; description mise en forme ; résumé de description | Extraction mesurée sur un échantillon de l'archive | ✅ |
 | C4. Scoring : règles | Fonction pure sans effet de bord (ne modifie ni l'offre ni la base) ; **preuve minimale** (pas de composante compétences pleine sur 1–2 compétences) ; **indice de confiance** affiché ; intitulé comparé aux intitulés des pistes ; détail et preuves par composante ; version des règles ; caractéristiques stockées (D14) | Chaque score s'explique composante par composante ; la « Data Protection Analyst » (79,6 % en v1) ne remonte plus | ✅ |
 | C5. Scoring : calibrage | Nicolas annote 40–50 annonces de l'archive (pertinente / non, avec motif) ; comparaison des classements ancien vs nouveau ; ajustement des règles | Les annonces jugées pertinentes remontent ; écart chiffré et documenté | ✅ |
-| C6. Veille | Veille par pistes ; **toutes** les offres conservées, sous le seuil avec leur motif ; offre + rattachement aux pistes + score écrits comme une unité cohérente et idempotente ; veille toujours close (terminée / partielle / échouée / interrompue) ; source en attente ≠ échec ; planificateur unique et rattrapage (D12) | Une panne simulée laisse un statut final explicite et aucune offre orpheline ou sans score | 🔄 |
+| C6. Veille | Veille par pistes ; **toutes** les offres conservées, sous le seuil avec leur motif ; offre + rattachement aux pistes + score écrits comme une unité cohérente et idempotente ; veille toujours close (terminée / partielle / échouée / interrompue) ; source en attente ≠ échec ; planificateur unique et rattrapage (D12) | Une panne simulée laisse un statut final explicite et aucune offre orpheline ou sans score | ✅ |
 | C7. Écran Offres | Décisions (valeur, raison, auteur) ; mode tri une offre à la fois au clavier ; liste compacte filtrable (piste, sous le seuil, incomplètes) ; fiche latérale avec synthèse de décision (date limite, éliminatoires, preuves du profil, manques) et « Pourquoi ? » ; retour « pertinente / non pertinente » avec motif (étiquettes D14) | Tri de 20 offres au clavier ; chaque décision est tracée dans `events` | ⬜ |
 
 ### D. Candidatures
@@ -267,6 +267,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `.github/workflows/verification.yml`. Le VPS de Nicolas tourne aussi sous Ubuntu : même vigilance lors de son
   installation.
 - **(B3 → C6)** Sessions et jetons expirés restent en base : purge par une tâche du planificateur.
+  *Résolu en C6 : tâche quotidienne du planificateur (4 h), `SqlAuthStore.purge_expired`.*
 - **(B3 → B4)** Pas de `favicon.ico` (erreur 404 dans la console) ; les formulaires de mot de passe n'ont pas de champ
   identifiant caché (Chrome le recommande pour les gestionnaires de mots de passe) : à traiter avec la coque.
   *Résolu en B4 : `favicon.svg` ; champ identifiant caché lu depuis le lien sans le consommer.*
@@ -283,6 +284,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(B4 → C1, C6)** Données hétérogènes de l'archive : nom de source enregistré comme une URL, télétravail en cinq
   formulations (`Télétravail`, `partial`, `no`…), quasi-doublons d'une même offre sous deux noms d'employeur
   (« Jems Group » / « JEMS »). La déduplication de C6 doit rapprocher les variantes d'un employeur.
+  *Résolu en C6 pour les employeurs : clé de rapprochement `match_key` (« Jems Group » = « JEMS »), signal « vue aussi
+  sur … » à l'écran en C7 ; aucune fusion (décision C6, Q4).*
 - **(B4 → C3)** Descriptions contenant du Markdown (`## **…**`) : à mettre en forme.
   *Résolu en C3 : `formatted_description` (HTML et Markdown en lignes et puces).*
 - **(B4 → C7)** Décisions persistées (`job_decisions`) et journalisées, y compris annulations et changements ;
@@ -301,6 +304,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en C4 : lues par `scoring_profile` et gardées dans les `features` du score.*
 - **(B5 → C6)** Suppression définitive d'une piste : à interdire dès qu'une offre y est rattachée (seul l'archivage
   reste alors possible).
+  *Résolu en C6 : `offer_tracks.track_id` en `RESTRICT`, message « archive-la plutôt ».*
 - **(B5 → après C6)** Lieux des pistes en libellés libres jusqu'à C6 ; lieux structurés (ville + rayon, région, pays)
   visés pour la version finale.
 - **(B5 → D2)** Le gabarit HTML/CSS du CV **reproduit le design du CV actuel de Nicolas** (validation côte à côte).
@@ -337,9 +341,12 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   analyst ») ; Wellfound sert une page pour un lieu qu'il ne connaît pas (« Eure et Loire »). Le lieu doit donc peser
   dans le score ou marquer l'offre, pas seulement la requête.
   *Résolu en C4 pour le score (Q9, Q15 : hors zone, à l'étranger) ; le filtrage de la veille reste à C6.*
+  *Résolu en C6 : aucune offre n'est filtrée par la veille (invariant « aucune offre jetée ») ; une offre à l'étranger
+  est gardée, plafonnée par le score.*
 - **(C1 → C6)** `collect` déduplique par source seulement ; la déduplication entre sources et le rattachement aux
   pistes (appeler la collecte piste par piste) sont à faire en C6. Durée mesurée : 48 s pour une piste de 6 requêtes
   avec détails (pause d'une seconde par site).
+  *Résolu en C6 : `collect` garde les requêtes de chaque offre (`found_by`), rattachées aux pistes par `track_queries`.*
 - **(C1 → Nicolas, B5)** Lieu « Eure et Loire » dans les deux pistes : Apec ne connaît qu'« Eure-et-Loir » (requêtes
   sautées et signalées par `rocky-admin sources`).
 - **(C1 → F1)** État des sources à l'écran ⚙️ Système : reprendre `CollectionReport` et `report_lines`.
@@ -349,6 +356,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   les requêtes suivantes de la source ; les offres déjà reçues sont gardées. Choix de C1 (pas de réessai, un site en
   erreur est probablement en panne) : la veille partielle de C6 dira s'il faut plutôt poursuivre et marquer les
   requêtes en échec (revue de code du 25/09).
+  *Tranché en C6 (Nicolas, Q9) : choix de C1 conservé, la veille est partielle.*
 - **(B5 → F2)** Le script de réimport (`docs/procedures/b5-reimport/extract_profile.py`) ne fusionne que
   « Traitement du langage naturel (NLP) » dans NLP : l'alias « Traitement du langage naturel » décidé le 25/09 n'y
   est pas. Au réimport dans le compte réel, l'ajouter au fichier relu ou au script (revue de code du 25/09).
@@ -367,6 +375,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   aperçu incomplet ne sont pas repris tant que rien n'est enregistré.
 - **(C2 → C6)** Une page importée a pour identifiant son adresse canonique ; la veille garde l'identifiant de la
   plateforme (numéro LinkedIn, référence WTTJ). La déduplication entre import et veille doit comparer les adresses.
+  *Résolu en C6 : `SqlStore.find` cherche par source et identifiant, puis par adresse.*
 - **(C2 → C3)** Faits bruts du JSON-LD à interpréter : `employmentType` (`FULL_TIME`, `CONTRACTOR`),
   `jobLocationType` (`TELECOMMUTE`), période du salaire (`YEAR`, `DAY`), date limite (`deadline`). Les clés
   `intitule` et `enseigne` du détail Apec viennent d'un jeu reconstruit (Apec refuse son détail) : à vérifier dès
@@ -381,6 +390,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en C4 : tout est lu par le score ; période déduite = poids du salaire divisé par deux, confiance moyenne.*
 - **(C3 → C6, C7)** L'analyse et le résumé ne sont pas enregistrés : à stocker avec l'offre (analyse recalculable,
   résumé gardé une fois demandé pour ne pas rappeler le modèle).
+  *C6 : l'analyse n'est pas stockée, elle se recalcule (2 s pour 517 offres) ; le résumé reste pour C7.*
 - **(C3 → C2, C6)** Import Hellowork : le CDI n'est que dans le titre de la page (le JSON-LD donne `FULL_TIME`) ; lire
   aussi le `<title>` ou un champ de la page si le contrat manque (3 écarts de la mesure C3).
 - **(C3 → `profil`)** `normalize_term` réduit « C++ » et « C# » à « c » : une compétence de ce nom répondrait à la
@@ -390,6 +400,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en C3 : clé ajoutée par Nicolas ; un résumé réel, fidèle au texte (décision C3, clôture).*
 - **(C4 → C6)** Le score n'est pas enregistré : table des scores (une ligne par offre et par piste, `Score.to_json`,
   `RULES_VERSION`) à créer avec l'offre et ses rattachements, dans la même transaction.
+  *Résolu en C6 : `offer_scores`, un score courant par offre et par piste, avec `inputs_hash` (décision C6, Q6).*
 - **(C4 → C5)** Calibrage (mesure `docs/procedures/c4-mesure/`) : confiance faible pour 65 % des annonces (médiane des
   preuves 1,4 point, seuil 2 ; 11 compétences prouvées sur 52) ; haut du classement saturé à 100 ; marge étroite de
   la « Data Protection Analyst » avec un profil qui la favorise (47 < 50). Corrélation de rang v1 / C4 : 0,08.
@@ -439,3 +450,17 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   C3 dit « aucun réessai ») ; message « surchargé, réessaie dans un instant » plutôt que « en panne ».
   *Résolu (Nicolas, 25/09) : le projet Google AI Studio était en offre gratuite ; passé sur le compte de facturation,
   le résumé répond. Rien à changer dans Rocky.*
+- **(C6 → C1, à décider avec Nicolas)** Première veille réelle (29/09) : LinkedIn répond 429 après 68 offres (requêtes de
+  deux pistes). Si le refus revient chaque jour, chaque veille sera partielle (comme les 54/54 de l'ancien Rocky), ce
+  qui est exact mais use le signal. Leviers : moins de requêtes vers LinkedIn (intitulés, lieux), ou LinkedIn par les
+  alertes e-mail (E3). Observer quelques veilles avant de trancher.
+- **(C6 → C7)** 350 offres incomplètes sur 517 à la première veille (Adzuna, Apec, LinkedIn) : leur score est bas faute
+  de texte. Le geste « Enrichir » et le filtre « incomplètes » de C7 en sont la réponse.
+- **(C6 → C7)** L'écran Offres lit `job_offers`, `offer_tracks` et `offer_scores` (`SqlStore.current_score`) ; « vue aussi
+  sur … » par `match_key` ; une décision garde une copie du score affiché (Q6, D14) ; le bouton « Supprimer
+  définitivement » d'une piste qui a des offres pourrait être masqué (le refus est déjà expliqué).
+- **(C6 → F1)** Le bandeau de veille (retard, en cours, échec) va dans 🏠 Aujourd'hui ; ⚙️ Système lit `watch_runs` et
+  `watch_run_sources` (état par source, requêtes sautées, détail arrêté).
+- **(C6)** Un import par URL qui écrirait la même offre au même instant qu'une veille heurte la contrainte d'unicité
+  (erreur visible, pas de donnée incohérente) : réessayer suffit. Les journaux `INFO` des modules ne sont pas affichés
+  par uvicorn (seuls avertissements et erreurs, avec leur trace) : à régler avec la journalisation du VPS.

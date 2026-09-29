@@ -131,6 +131,9 @@ docs/
   `--print-link` affiche le lien d'activation au lieu de l'envoyer (aucun e-mail ne part).
 - Diagnostic des sources (vraie collecte, rien n'est écrit) :
   `docker compose run --rm app rocky-admin sources <email> [--piste <nom>] [--detail]`.
+- Veille réelle d'un compte, offres **enregistrées** (réseau réel : avec l'accord de Nicolas) :
+  `docker compose run --rm app rocky-admin veille <email> [--piste <nom>]`. L'application lance aussi la veille chaque
+  jour à 12 h (heure de Paris) tant qu'elle tourne ; `ROCKY_SCHEDULER_ENABLED=false` éteint le planificateur.
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
 - Sur GitHub : `.github/workflows/verification.yml` exécute la vérification globale à chaque push sur `refonte` et
   sur chaque PR. Une étape n'est terminée que si ce passage est vert aussi.
