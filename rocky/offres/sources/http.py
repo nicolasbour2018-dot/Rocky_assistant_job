@@ -45,6 +45,8 @@ BROWSER_HEADERS = {
 REFUSAL_STATUSES = {403, 429, 999}
 DEFAULT_TIMEOUT_SECONDS = 20.0
 DEFAULT_PAUSE_SECONDS = 1.0
+# Hosts that refuse bursts get a longer pause (decision C1, Q7: LinkedIn answered 429 after 7 pages at one a second).
+HOST_PAUSE_SECONDS = {"www.linkedin.com": 10.0}
 # A posting page: at most this size, after at most this many redirections.
 MAX_PAGE_BYTES = 3_000_000
 MAX_REDIRECTS = 5
@@ -100,7 +102,8 @@ def is_challenge(response: httpx2.Response) -> bool:
 
 
 class PublicHttp:
-    """GET and POST to public endpoints, with at least ``pause_seconds`` between two requests to one host."""
+    """GET and POST to public endpoints, with at least ``pause_seconds`` between two requests to one host (longer for
+    the hosts of ``host_pauses``)."""
 
     def __init__(
         self,
@@ -108,6 +111,7 @@ class PublicHttp:
         transport: httpx2.BaseTransport | None = None,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
         pause_seconds: float = DEFAULT_PAUSE_SECONDS,
+        host_pauses: Mapping[str, float] = HOST_PAUSE_SECONDS,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
         resolver: Resolver = resolve,
@@ -119,6 +123,7 @@ class PublicHttp:
             follow_redirects=True,
         )
         self._pause = pause_seconds
+        self._host_pauses = dict(host_pauses)
         self._clock = clock
         self._sleep = sleep
         self._resolver = resolver
@@ -270,7 +275,8 @@ class PublicHttp:
     def _wait_for(self, host: str) -> None:
         last = self._last_request.get(host)
         if last is not None:
-            remaining = self._pause - (self._clock() - last)
+            pause = max(self._pause, self._host_pauses.get(host, 0.0))
+            remaining = pause - (self._clock() - last)
             if remaining > 0:
                 self._sleep(remaining)
         self._last_request[host] = self._clock()

@@ -2,11 +2,19 @@ from __future__ import annotations
 
 import logging
 import socket
+from urllib.parse import urlsplit
 
 import httpx2
 import pytest
 
-from rocky.offres.sources.http import Page, PublicHttp, is_public_address, resolve
+from rocky.offres.sources.http import (
+    HOST_PAUSE_SECONDS,
+    Page,
+    PublicHttp,
+    is_public_address,
+    resolve,
+)
+from rocky.offres.sources.linkedin import SEARCH_URL as LINKEDIN_SEARCH_URL
 from rocky.offres.sources.model import (
     InvalidLinkError,
     NotFoundError,
@@ -307,3 +315,31 @@ def test_an_unknown_site_is_an_invalid_link_with_its_name(
     assert error.value.reason == (
         "Le site site-inexistant.invalid est introuvable (nom de domaine inconnu)."
     )
+
+
+def test_a_host_that_refuses_bursts_gets_a_longer_pause() -> None:
+    now = [100.0]
+    waits: list[float] = []
+
+    def sleep(seconds: float) -> None:
+        waits.append(seconds)
+        now[0] += seconds
+
+    replay = Replay({ROUTE: answer("[]"), ("GET", "/other"): answer("[]")})
+    http = PublicHttp(
+        transport=httpx2.MockTransport(replay._handle),
+        host_pauses={"other.example": 10.0},
+        clock=lambda: now[0],
+        sleep=sleep,
+    )
+
+    for _ in range(2):
+        http.get_json("Exemple", URL)
+        http.get_json("Autre", "https://other.example/other")
+
+    assert waits == [1.0, 10.0 - 1.0]
+
+
+def test_linkedin_searches_are_ten_seconds_apart() -> None:
+    # Decision C1, Q7: the pause must follow the address the connector really asks.
+    assert HOST_PAUSE_SECONDS[urlsplit(LINKEDIN_SEARCH_URL).hostname or ""] == 10.0

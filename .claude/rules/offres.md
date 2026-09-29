@@ -31,7 +31,9 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
   n'est **pas** un refus. Détail : un refus ou une réponse illisible arrête le détail de la source, un 404 non.
 - Jamais de « 0 offre » silencieux : une page sans la structure attendue (aucune carte, clé de données absente) est
   une panne (`SourceFailedError`) ; seule une réponse vide ou une liste vide vaut « aucun résultat ».
-- Toute requête passe par `PublicHttp` (pause par hôte, aucun réessai) ; aucun autre client HTTP.
+- Toute requête passe par `PublicHttp` (pause par hôte, aucun réessai) ; aucun autre client HTTP. Un site qui refuse les
+  rafales (429) reçoit une pause plus longue dans `HOST_PAUSE_SECONDS` (LinkedIn : 10 s, décision C1, Q7), jamais un
+  réessai ni un autre moyen.
 - Une source ne lève que `SourceRefusedError`, `SourceFailedError` ou `QuerySkippedError` ; tout le reste est un bug,
   isolé et journalisé par `collect`. Les raisons sont en français et ne citent jamais l'URL ni ses paramètres.
 - Faits bruts de l'annonce seulement (textes contrat, télétravail, salaire) ; aucune interprétation (C3), aucune

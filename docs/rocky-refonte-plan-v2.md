@@ -454,6 +454,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   deux pistes). Si le refus revient chaque jour, chaque veille sera partielle (comme les 54/54 de l'ancien Rocky), ce
   qui est exact mais use le signal. Leviers : moins de requêtes vers LinkedIn (intitulés, lieux), ou LinkedIn par les
   alertes e-mail (E3). Observer quelques veilles avant de trancher.
+  *Tranché par Nicolas (29/09, décision C1, Q7) : lieux nettoyés (18 requêtes), pause de 10 s vers LinkedIn ; un seul
+  lieu par intitulé seulement si le 429 persiste. Alertes e-mail en E3 : complément (nouvelles annonces, faits en plus
+  sur une annonce connue), jamais un repli pour LinkedIn (Q8).*
 - **(C6 → C7)** 350 offres incomplètes sur 517 à la première veille (Adzuna, Apec, LinkedIn) : leur score est bas faute
   de texte. Le geste « Enrichir » et le filtre « incomplètes » de C7 en sont la réponse.
 - **(C6 → C7)** L'écran Offres lit `job_offers`, `offer_tracks` et `offer_scores` (`SqlStore.current_score`) ; « vue aussi

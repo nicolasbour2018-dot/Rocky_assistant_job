@@ -71,3 +71,14 @@ redemandé pour chaque intitulé) ; jeton France Travail renouvelé avant expira
 mort retiré ; script de capture qui n'avale plus d'erreur de configuration (`load_sources_settings`). Le dixième
 (une panne sur une requête arrête les suivantes de la source) est un choix de C1, renvoyé à C6 (plan, section 8).
 Vérification globale : 334 tests verts.
+
+## Suite : volume envoyé à LinkedIn (Nicolas, 29/09, après la première veille réelle de C6)
+
+Constat : la première veille C6 a envoyé 27 requêtes à LinkedIn (9 intitulés × 3 lieux, une par seconde) ; LinkedIn a
+répondu 429 après au moins 7 pages (68 offres). L'ancien Rocky n'interrogeait que le premier lieu du profil actif,
+avec quelques intitulés : 43 réponses sur 43 sans erreur dans l'archive A1 (9 à 40 offres par veille).
+
+| # | Sujet | Décision |
+|---|---|---|
+| Q7 | Volume LinkedIn | Nicolas nettoie d'abord ses lieux (18 requêtes au lieu de 27). Puis, dans l'ordre : (a) **pause de 10 s entre deux requêtes vers LinkedIn** (au lieu d'1 s ; volume humain, Q5 — ce n'est pas un contournement, c'est la réponse attendue à un 429) ; (b) seulement si le 429 persiste sur plusieurs veilles : **un seul lieu par intitulé** pour LinkedIn. |
+| Q8 | Alertes e-mail (E3) | Les alertes sont un **complément** : nouvelles annonces, ou faits en plus sur une annonce déjà connue (enrichissement). Elles ne sont **pas** une solution de repli pour une source qui refuse. |
