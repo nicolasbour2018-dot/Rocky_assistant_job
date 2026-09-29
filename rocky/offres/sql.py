@@ -45,8 +45,22 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from rocky.offres.model import Origin, StoredOffer
-from rocky.offres.scoring.model import THRESHOLD, Score, TrackScore
+from rocky.offres.analysis.usecases import Summary
+from rocky.offres.decisions import (
+    Author,
+    Decision,
+    DecisionKind,
+    DecisionRow,
+    DecisionValue,
+)
+from rocky.offres.model import Origin, StoredOffer, StoredSummary
+from rocky.offres.scoring.model import (
+    THRESHOLD,
+    ConfidenceLevel,
+    Score,
+    TrackScore,
+)
+from rocky.offres.screen import ListedOffer, TrackMark
 from rocky.offres.sources.model import CollectedOffer
 from rocky.offres.sources.usecases import Outcome
 from rocky.offres.watch.model import (
@@ -208,6 +222,58 @@ offer_scores = Table(
     Index("ix_offer_scores_track_id", "track_id"),
 )
 
+job_decisions = Table(
+    "job_decisions",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("offer_id", BigInteger, ForeignKey("job_offers.id"), nullable=False),
+    # Appended only (C7, Q8): a change is a new decision, « Annuler » a cancellation row.
+    Column("kind", Text, nullable=False),
+    Column("value", Text),
+    Column("reasons", JSONB, nullable=False, server_default=text("'[]'::jsonb")),
+    Column("note", Text),
+    Column("author", Text, nullable=False),
+    # The track whose score was shown, and a copy of the whole score at that moment (Q11, D14).
+    Column("track_id", BigInteger, ForeignKey("search_tracks.id", ondelete="SET NULL")),
+    Column("displayed_score", Integer),
+    Column("score", JSONB),
+    Column("rules_version", Text),
+    Column("inputs_hash", Text),
+    Column("cancels_id", BigInteger, ForeignKey("job_decisions.id")),
+    _timestamp("decided_at"),
+    UniqueConstraint("cancels_id"),
+    CheckConstraint(_in("kind", DecisionKind), name="kind"),
+    CheckConstraint("value IS NULL OR " + _in("value", DecisionValue), name="value"),
+    CheckConstraint(_in("author", Author), name="author"),
+    CheckConstraint(
+        "(kind = 'decision') = (value IS NOT NULL AND score IS NOT NULL)",
+        name="decision_has_value",
+    ),
+    CheckConstraint(
+        "(kind = 'cancellation') = (cancels_id IS NOT NULL)",
+        name="cancellation_has_target",
+    ),
+    Index("ix_job_decisions_account_id_offer_id", "account_id", "offer_id", "id"),
+)
+
+offer_summaries = Table(
+    "offer_summaries",
+    metadata,
+    Column(
+        "offer_id",
+        BigInteger,
+        ForeignKey("job_offers.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    # Fingerprint of the description summarised: a changed description makes the summary stale (C7, Q6).
+    Column("description_hash", Text, nullable=False),
+    Column("missions", Text, nullable=False),
+    Column("context", Text, nullable=False),
+    Column("profile", Text, nullable=False),
+    _timestamp("created_at"),
+)
+
 FACT_COLUMNS = (
     "title",
     "description",
@@ -300,11 +366,13 @@ class SqlStore:
         *,
         match_key: str | None,
         now: datetime,
+        seen: bool = True,
     ) -> None:
+        seen_at = {"last_seen_at": now} if seen else {}
         self._conn.execute(
             update(job_offers)
             .where(job_offers.c.id == offer_id)
-            .values(match_key=match_key, last_seen_at=now, **_facts(offer))
+            .values(match_key=match_key, **seen_at, **_facts(offer))
         )
 
     def mark_seen(self, offer_id: int, now: datetime) -> None:
@@ -387,6 +455,14 @@ class SqlStore:
             tracks=tuple(TrackScore.from_json(row.detail) for row in rows),
         )
 
+    def current_inputs_hash(self, offer_id: int) -> str | None:
+        return self._conn.execute(
+            select(offer_scores.c.inputs_hash)
+            .where(offer_scores.c.offer_id == offer_id)
+            .order_by(offer_scores.c.position)
+            .limit(1)
+        ).scalar_one_or_none()
+
     def stale_offers(self, account_id: int, inputs_hash: str) -> list[StoredOffer]:
         current = exists().where(
             offer_scores.c.offer_id == job_offers.c.id,
@@ -433,6 +509,194 @@ class SqlStore:
             .order_by(job_offers.c.id)
         ).scalars()
         return list(rows)
+
+    # The offers screen (C7)
+
+    def offer_of(self, account_id: int, offer_id: int) -> StoredOffer | None:
+        """The offer, only when it belongs to the account."""
+        row = self._conn.execute(
+            select(job_offers).where(
+                job_offers.c.id == offer_id, job_offers.c.account_id == account_id
+            )
+        ).one_or_none()
+        return None if row is None else _stored(row)
+
+    def listed_offers(self, account_id: int) -> list[ListedOffer]:
+        """Every offer of the account as the list and the triage need it: facts shown, tracks and current scores."""
+        marks: dict[int, list[TrackMark]] = {}
+        for row in self._conn.execute(
+            select(
+                offer_scores.c.offer_id,
+                offer_scores.c.track_id,
+                offer_scores.c.position,
+                offer_scores.c.value,
+                offer_scores.c.display,
+                offer_scores.c.confidence,
+            )
+            .join(job_offers, job_offers.c.id == offer_scores.c.offer_id)
+            .where(job_offers.c.account_id == account_id)
+            .order_by(offer_scores.c.offer_id, offer_scores.c.position)
+        ):
+            marks.setdefault(row.offer_id, []).append(
+                TrackMark(
+                    track_id=row.track_id,
+                    position=row.position,
+                    value=row.value,
+                    display=row.display,
+                    confidence=ConfidenceLevel(row.confidence),
+                )
+            )
+        linked: dict[int, set[int]] = {}
+        for row in self._conn.execute(
+            select(offer_tracks.c.offer_id, offer_tracks.c.track_id)
+            .join(job_offers, job_offers.c.id == offer_tracks.c.offer_id)
+            .where(job_offers.c.account_id == account_id)
+        ):
+            linked.setdefault(row.offer_id, set()).add(row.track_id)
+        rows = self._conn.execute(
+            select(
+                job_offers.c.id,
+                job_offers.c.title,
+                job_offers.c.company,
+                job_offers.c.location,
+                job_offers.c.source,
+                job_offers.c.published_on,
+                job_offers.c.description_complete,
+                job_offers.c.match_key,
+            )
+            .where(job_offers.c.account_id == account_id)
+            .order_by(job_offers.c.id)
+        ).all()
+        return [
+            ListedOffer(
+                id=row.id,
+                title=row.title,
+                company=row.company,
+                location=row.location,
+                source=row.source,
+                published_on=row.published_on,
+                description_complete=row.description_complete,
+                match_key=row.match_key,
+                track_ids=frozenset(linked.get(row.id, ())),
+                marks=tuple(marks[row.id]),
+            )
+            # An offer always has a score (C6); one being written right now is left for the next request.
+            for row in rows
+            if row.id in marks
+        ]
+
+    def same_posting(
+        self, account_id: int, offer_id: int, key: str | None
+    ) -> list[tuple[int, str]]:
+        """Other offers of the account with the same comparison key (« vue aussi sur … », C6 Q4): id and source."""
+        if key is None:
+            return []
+        rows = self._conn.execute(
+            select(job_offers.c.id, job_offers.c.source)
+            .where(
+                job_offers.c.account_id == account_id,
+                job_offers.c.match_key == key,
+                job_offers.c.id != offer_id,
+            )
+            .order_by(job_offers.c.id)
+        ).all()
+        return [(row.id, row.source) for row in rows]
+
+    def decision_rows(
+        self, account_id: int, offer_id: int | None = None
+    ) -> list[DecisionRow]:
+        """The decisions and cancellations of the account (of one offer when given), in the order they were made."""
+        statement = select(job_decisions).where(
+            job_decisions.c.account_id == account_id
+        )
+        if offer_id is not None:
+            statement = statement.where(job_decisions.c.offer_id == offer_id)
+        rows = self._conn.execute(statement.order_by(job_decisions.c.id)).all()
+        return [_decision_row(row) for row in rows]
+
+    def insert_decision(
+        self,
+        account_id: int,
+        offer_id: int,
+        decision: Decision,
+        *,
+        author: Author,
+        track: TrackScore,
+        score: Score,
+        inputs_hash: str | None,
+        now: datetime,
+    ) -> int:
+        statement = (
+            insert(job_decisions)
+            .values(
+                account_id=account_id,
+                offer_id=offer_id,
+                kind=DecisionKind.DECISION.value,
+                value=decision.value.value,
+                reasons=list(decision.reasons),
+                note=decision.note,
+                author=author.value,
+                track_id=track.track_id,
+                displayed_score=track.display,
+                score=score.to_json(),
+                rules_version=score.rules_version,
+                inputs_hash=inputs_hash,
+                decided_at=now,
+            )
+            .returning(job_decisions.c.id)
+        )
+        return int(self._conn.execute(statement).scalar_one())
+
+    def insert_cancellation(
+        self,
+        account_id: int,
+        cancelled: DecisionRow,
+        *,
+        author: Author,
+        now: datetime,
+    ) -> DecisionRow:
+        statement = (
+            insert(job_decisions)
+            .values(
+                account_id=account_id,
+                offer_id=cancelled.offer_id,
+                kind=DecisionKind.CANCELLATION.value,
+                author=author.value,
+                cancels_id=cancelled.id,
+                decided_at=now,
+            )
+            .returning(job_decisions)
+        )
+        return _decision_row(self._conn.execute(statement).one())
+
+    def summary(self, offer_id: int) -> StoredSummary | None:
+        row = self._conn.execute(
+            select(offer_summaries).where(offer_summaries.c.offer_id == offer_id)
+        ).one_or_none()
+        if row is None:
+            return None
+        return StoredSummary(
+            description_hash=row.description_hash,
+            summary=Summary(
+                missions=row.missions, context=row.context, profile=row.profile
+            ),
+        )
+
+    def save_summary(
+        self, offer_id: int, summary: StoredSummary, now: datetime
+    ) -> None:
+        values = {
+            "description_hash": summary.description_hash,
+            "missions": summary.summary.missions,
+            "context": summary.summary.context,
+            "profile": summary.summary.profile,
+            "created_at": now,
+        }
+        self._conn.execute(
+            pg_insert(offer_summaries)
+            .values(offer_id=offer_id, **values)
+            .on_conflict_do_update(index_elements=["offer_id"], set_=values)
+        )
 
     # Runs
 
@@ -598,6 +862,20 @@ def _stored(row: Row[Any]) -> StoredOffer:
             **{name: getattr(row, name) for name in FACT_COLUMNS},
         ),
         origin=Origin(row.origin),
+    )
+
+
+def _decision_row(row: Row[Any]) -> DecisionRow:
+    kind = DecisionKind(row.kind)
+    return DecisionRow(
+        id=row.id,
+        offer_id=row.offer_id,
+        kind=kind,
+        decided_at=row.decided_at,
+        decision=Decision(DecisionValue(row.value), tuple(row.reasons), row.note)
+        if kind is DecisionKind.DECISION
+        else None,
+        cancels=row.cancels_id,
     )
 
 

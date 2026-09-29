@@ -7,8 +7,10 @@ between declared tables and migrations.
 from __future__ import annotations
 
 from rocky.offres.sql import (
+    job_decisions,
     job_offers,
     offer_scores,
+    offer_summaries,
     offer_tracks,
     watch_run_sources,
     watch_runs,
@@ -33,9 +35,11 @@ __all__ = [
     "events",
     "experience_skills",
     "experiences",
+    "job_decisions",
     "job_offers",
     "languages",
     "offer_scores",
+    "offer_summaries",
     "offer_tracks",
     "profiles",
     "project_skills",

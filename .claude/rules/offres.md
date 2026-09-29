@@ -4,22 +4,28 @@ paths: rocky/offres/**
 
 # Module `offres` — règles propres
 
-Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/decisions/B4-coque-prototype.md`.
+Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Écran : `docs/decisions/B4-coque-prototype.md` et `C7-ecran-offres.md`.
 
-## Ce qui est gardé, ce qui est jetable (prototype B4)
-- **Gardés pour C7** : `decisions.py` (valeurs, motifs, règles), `web.py`, `templates/offres/`.
-- **Jetables, supprimés en C7** : `prototype.py`, `prototype_offers.json` (et la procédure
-  `docs/procedures/b4-prototype/`). Aucun autre fichier n'importe `prototype.py` hors de `web.py`.
-- Les scores de `prototype_offers.json` sont une maquette : ne jamais s'en servir comme base du scoring C4.
-
-## Décisions et motifs
-- Données : codes anglais seulement (`rejected`, `too_senior`) ; libellés français uniquement à l'affichage.
-- Un motif au moins pour toute décision ; `other` exige une précision ; au plus 9 motifs par décision (touches 1–9).
+## Décisions et motifs (`decisions.py`, décision `docs/decisions/C7-ecran-offres.md`)
+- Une décision **est** l'étiquette D14 (Q1) : codes anglais seulement (`rejected`, `too_senior`) ; libellés français
+  uniquement à l'affichage. Un code publié ne se renomme plus (il casserait l'historique).
+- Un motif au moins pour toute décision ; `other` exige une précision ; au plus 9 motifs (touches 1–9), plus `other`
+  toujours dernier sur la touche `0`.
+- `job_decisions` est en **ajout seul** : un changement est une nouvelle décision, « Annuler » une ligne `cancellation`
+  qui vise une décision. La décision en vigueur se calcule (`effective_decisions`, `to_cancel`), jamais stockée.
+- Une décision ne s'écrit que par `record_decision` / `cancel_last_decision`, avec son événement
+  (`offres.decision_recorded`, `offres.decision_cancelled`) dans la même transaction, et une copie du score courant
+  complet et de la piste affichée (Q11).
+- Seul l'auteur `user` écrit en C7 ; « sous le seuil » n'est jamais une décision.
 
 ## Écran
 - Le serveur rend chaque état en HTML ; HTMX place les fragments. Aucun état côté client.
 - Seul JavaScript maison : `rocky/system/static/rocky.js` (raccourcis `data-key`). Toute nouvelle interaction passe
   par un attribut `hx-*` ou un élément HTML natif (`details`, `popover`, formulaire).
+- Ce que montre l'écran se calcule dans `screen.py` (règles pures : file, filtres, carte) sur ce que `SqlStore` lit ;
+  toute lecture passe par le compte (`offer_of`) : l'offre d'un autre compte répond 404.
+- Une route qui ne vise qu'une offre (motifs, boutons, décision) ne charge pas toute la liste (mesure C7 : 520 offres,
+  13 ms de lecture) ; seul l'écran qui l'affiche la lit.
 - Chaque route répond aussi sans HTMX (page entière ou redirection).
 - `hx-swap` et `hx-target` s'héritent des ancêtres : tout élément qui cible une zone déclare explicitement son
   `hx-swap` (bug « Revenir » de B4).
@@ -50,7 +56,10 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
   n'est pas un fait de l'annonce ; aucun LLM avant C3.
 - Une plateforme dont la fiche est vide pour un simple lecteur implémente `LinkSource` (Apec) ; sinon, page lue.
 - Enrichir une offre : `enriched` (description remplacée seulement par une complète, faits connus jamais écrasés)
-  ou `with_pasted_description`.
+  ou `with_pasted_description` ; à l'écran, `enrich_offer` (C7) recalcule le score aussitôt, garde les pistes, ne
+  touche pas `last_seen_at` et écrit `offres.offer_enriched`.
+- Résumé : demandé par l'utilisateur, appelé hors de toute transaction, gardé dans `offer_summaries` avec l'empreinte
+  de la description (`description_hash`) ; un résumé en échec n'est jamais gardé.
 - Les jeux enregistrés viennent de `docs/procedures/c2-captures/` ; aucun nom de personne (recruteur, salarié).
 - Écran : `wants_fragment` (de `system.shell`) décide fragment ou page entière ; la coque boost tous les liens.
 

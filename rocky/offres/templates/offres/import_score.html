@@ -1,4 +1,5 @@
-{% set best = score.best %}
+{# The best score, or the track shown by the offers screen (C7, Q7). #}
+{% set best = score_track if score_track is defined and score_track else score.best %}
 <section class="analysis score-detail" aria-labelledby="score-title">
   <h3 id="score-title">Score : {{ best.display }} / 100</h3>
   <ul class="badges">

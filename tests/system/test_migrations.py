@@ -31,6 +31,8 @@ HEAD_TABLES = {
     "offer_scores",
     "watch_runs",
     "watch_run_sources",
+    "job_decisions",
+    "offer_summaries",
 }
 
 

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import Connection
@@ -14,6 +16,7 @@ from rocky.profil.rules import make_preferences, make_skill, make_track
 from rocky.profil.sql import SqlProfileStore
 from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.sql import SqlAuthStore
+from rocky.system.llm import LlmUnavailableError
 
 NOW = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
 TODAY = date(2026, 9, 29)
@@ -50,6 +53,11 @@ def new_seeker(connection: Connection, *, activated: bool = True) -> Seeker:
     account_id = auth.create_account(email, NOW)
     if activated:
         auth.activate_account(account_id, "hash", NOW)
+    return equip(connection, account_id, email)
+
+
+def equip(connection: Connection, account_id: int, email: str) -> Seeker:
+    """Give an existing account the profile of ``new_seeker``: three skills and two active tracks."""
     seeker = Seeker(account_id, email)
     editor = seeker.editor(connection)
     editor.save_preferences(make_preferences(contracts=["permanent"]))
@@ -90,3 +98,29 @@ def posting(
         country="France",
         **facts,  # type: ignore[arg-type]
     )
+
+
+class FakeModel:
+    """A language model that gives one answer (or one error), and counts its calls."""
+
+    def __init__(
+        self, answer: object = None, error: LlmUnavailableError | None = None
+    ) -> None:
+        self._answer = answer
+        self._error = error
+        self.calls = 0
+
+    def complete_json(
+        self, instructions: str, prompt: str, schema: Mapping[str, Any]
+    ) -> Any:
+        self.calls += 1
+        if self._error is not None:
+            raise self._error
+        return self._answer
+
+
+SUMMARY = {
+    "missions": "Analyser les données de vente.",
+    "contexte": "Équipe data d'un distributeur.",
+    "profil": "Python et SQL.",
+}

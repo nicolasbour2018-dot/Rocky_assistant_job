@@ -12,7 +12,9 @@ from enum import StrEnum
 from typing import Protocol
 
 from rocky.offres.analysis.model import AccountSkill
-from rocky.offres.scoring.model import Score, ScoringProfile
+from rocky.offres.analysis.usecases import Summary
+from rocky.offres.decisions import Author, Decision, DecisionRow
+from rocky.offres.scoring.model import Score, ScoringProfile, TrackScore
 from rocky.offres.sources.model import CollectedOffer
 from rocky.system.events import NewEvent
 
@@ -62,6 +64,14 @@ class Recorded:
     description_complete: bool
 
 
+@dataclass(frozen=True)
+class StoredSummary:
+    """The summary of an offer, with the fingerprint of the description it summarises (C7, Q6)."""
+
+    description_hash: str
+    summary: Summary
+
+
 class OfferStore(Protocol):
     """The offers of the accounts, on a connection inside the caller's transaction; never commits."""
 
@@ -86,8 +96,9 @@ class OfferStore(Protocol):
         *,
         match_key: str | None,
         now: datetime,
+        seen: bool = True,
     ) -> None:
-        """New facts of a known offer; also marks it seen."""
+        """New facts of a known offer; also marks it seen, unless the user gave them (``seen=False``)."""
         ...
 
     def mark_seen(self, offer_id: int, now: datetime) -> None: ...
@@ -110,6 +121,10 @@ class OfferStore(Protocol):
         """The current scores of the offer become ``score``, one row per track (Q6)."""
         ...
 
+    def current_score(self, offer_id: int) -> Score | None: ...
+
+    def current_inputs_hash(self, offer_id: int) -> str | None: ...
+
     def stale_offers(self, account_id: int, inputs_hash: str) -> list[StoredOffer]:
         """Offers of the account without a score of this fingerprint."""
         ...
@@ -119,5 +134,41 @@ class OfferStore(Protocol):
     ) -> set[tuple[str, str]]:
         """Among ``(source, external_id)`` keys, those of stored offers whose description is complete."""
         ...
+
+    def append_event(self, event: NewEvent) -> None: ...
+
+
+class DecisionStore(Protocol):
+    """The decisions of an account (C7), on a connection inside the caller's transaction; never commits."""
+
+    def current_score(self, offer_id: int) -> Score | None: ...
+
+    def current_inputs_hash(self, offer_id: int) -> str | None: ...
+
+    def decision_rows(
+        self, account_id: int, offer_id: int | None = None
+    ) -> list[DecisionRow]: ...
+
+    def insert_decision(
+        self,
+        account_id: int,
+        offer_id: int,
+        decision: Decision,
+        *,
+        author: Author,
+        track: TrackScore,
+        score: Score,
+        inputs_hash: str | None,
+        now: datetime,
+    ) -> int: ...
+
+    def insert_cancellation(
+        self,
+        account_id: int,
+        cancelled: DecisionRow,
+        *,
+        author: Author,
+        now: datetime,
+    ) -> DecisionRow: ...
 
     def append_event(self, event: NewEvent) -> None: ...

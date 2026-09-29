@@ -1,0 +1,20 @@
+{% set piste = "" if filters.track_id is none else filters.track_id %}
+{% for offer in offers %}
+{% set mark = offer.mark_for(filters.track_id) %}
+{% set chosen = decisions.get(offer.id) %}
+<tr>
+  <td><span class="score score-small score-{{ band(mark.display) }}">{{ mark.display }}</span></td>
+  <td><a href="/offres/{{ offer.id }}/fiche{% if piste %}?piste={{ piste }}{% endif %}"
+      hx-get="/offres/{{ offer.id }}/fiche{% if piste %}?piste={{ piste }}{% endif %}" hx-target="#fiche" hx-swap="innerHTML">{{ offer.title }}</a>
+    <div class="muted">{{ offer.company or "Entreprise non précisée" }}{% if not offer.description_complete %} · incomplète{% endif %}</div></td>
+  <td class="wide-only">{{ offer.location or "—" }}</td>
+  <td class="wide-only">{{ source_label(offer.source) }}</td>
+  <td class="wide-only">{{ offer.published_on | age }}</td>
+  <td>{% if chosen and chosen.decision %}{{ decision_labels[chosen.decision.value] }}{% else %}<span class="muted">à examiner</span>{% endif %}</td>
+</tr>
+{% endfor %}
+{% if more %}
+<tr class="more-row"><td colspan="6">
+  <button type="button" class="btn btn-ghost" hx-get="/offres/liste?{{ list_query(filters, more) }}"
+    hx-target="closest tr" hx-swap="outerHTML">Afficher plus</button></td></tr>
+{% endif %}

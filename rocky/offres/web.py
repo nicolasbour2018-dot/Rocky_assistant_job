@@ -1,67 +1,92 @@
-"""Offers screen (step B4 prototype, kept as the start of C7): triage mode, compact list, side sheet, "Pourquoi ?".
+"""Offers screen (step C7, started as the B4 prototype): triage mode, compact list, side sheet, « Pourquoi ? ».
 
-The server renders every state as HTML; HTMX swaps the fragments. Requests without HTMX get whole pages.
+The server renders every state as HTML from the stored offers; HTMX swaps the fragments. Requests without HTMX get
+whole pages or a redirection. Decision ``docs/decisions/C7-ecran-offres.md``.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
 from datetime import UTC, date, datetime
+from functools import cached_property
 from typing import Annotated
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import Engine
 
+from rocky.offres.analysis.rules import analyze
+from rocky.offres.analysis.text import formatted_description
+from rocky.offres.analysis.usecases import SummaryResult, summarize
 from rocky.offres.decisions import (
     DECISION_KEYS,
     DECISION_LABELS,
     REASON_QUESTIONS,
     REASONS,
+    Decision,
     DecisionValue,
     InvalidDecisionError,
+    effective_decisions,
     make_decision,
+    reason_key,
     reason_label,
+    to_cancel,
 )
 from rocky.offres.imports import web as imports_web
-from rocky.offres.prototype import (
-    VERDICT_SIGNS,
-    Catalog,
-    DecisionBook,
-    Offer,
-    load_catalog,
+from rocky.offres.imports.model import InvalidPasteError
+from rocky.offres.rules import match_key, scoring_inputs
+from rocky.offres.screen import (
+    DECISION_FILTER_LABELS,
+    PAGE_SIZE,
+    ListedOffer,
+    ListFilters,
+    OfferCard,
+    band,
+    counts,
+    listed,
+    make_filters,
+    neighbours,
+    next_after,
+    offer_card,
+    queue,
+)
+from rocky.offres.sql import SqlStore
+from rocky.offres.usecases import (
+    cancel_last_decision,
+    enrich_offer,
+    keep_summary,
+    record_decision,
+    stored_summary,
 )
 from rocky.offres.watch import web as watch_web
+from rocky.profil.model import Profile
+from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
-from rocky.system.shell import is_htmx, page
+from rocky.system.llm import JsonModel
+from rocky.system.shell import page, wants_fragment
 
 TRIAGE = "tri"
 LIST = "liste"
 SHEET = "fiche"
-# Decision filter of the list, as written in the URL.
-DECISION_FILTERS: dict[str, DecisionValue | None] = {
-    "a_examiner": None,
-    "interesse": DecisionValue.INTERESTED,
-    "ecarte": DecisionValue.REJECTED,
-    "plus_tard": DecisionValue.LATER,
-    "toutes": None,
-}
 OFFERS_CHANGED = "offers-changed"
+SUMMARY = "offres/import_summary.html"
 
 router = APIRouter(prefix="/offres")
 
 
 def install(app: FastAPI) -> None:
-    app.state.decision_book = DecisionBook()
     templates: Jinja2Templates = app.state.templates
     templates.env.globals.update(
         decision_labels=DECISION_LABELS,
         decision_keys=DECISION_KEYS,
-        verdict_signs=VERDICT_SIGNS,
+        decision_filter_labels=DECISION_FILTER_LABELS,
         reason_label=reason_label,
+        reason_key=reason_key,
+        band=band,
+        list_query=list_query,
     )
     templates.env.filters["age"] = age
     imports_web.install(app)
@@ -82,105 +107,102 @@ def age(day: date | None) -> str:
     return f"il y a {days // 30} mois"
 
 
-@dataclass(frozen=True)
-class ListFilters:
-    track: str = ""
-    decision: str = "a_examiner"
-    below_threshold: bool = False
-    incomplete: bool = False
-
-    def query(self) -> str:
-        values = {"piste": self.track, "decision": self.decision}
-        if self.below_threshold:
-            values["sous_seuil"] = "1"
-        if self.incomplete:
-            values["incompletes"] = "1"
-        return urlencode({key: value for key, value in values.items() if value})
+def list_query(filters: ListFilters, start: int = 0) -> str:
+    """The filters of the list as written in its URL (and the first row of a page)."""
+    values = {
+        "piste": "" if filters.track_id is None else str(filters.track_id),
+        "decision": filters.decision,
+        "sous_seuil": "1" if filters.below_threshold else "",
+        "incompletes": "1" if filters.incomplete else "",
+        "depuis": str(start) if start else "",
+    }
+    return urlencode({key: value for key, value in values.items() if value})
 
 
-def _filters(
-    piste: str | None,
-    decision: str | None,
-    sous_seuil: str | None,
-    incompletes: str | None,
-) -> ListFilters:
-    return ListFilters(
-        track=piste or "",
-        decision=decision if decision in DECISION_FILTERS else "a_examiner",
-        below_threshold=bool(sous_seuil),
-        incomplete=bool(incompletes),
-    )
+def _track(value: str | None) -> int | None:
+    return int(value) if value and value.isdigit() else None
 
 
 class Screen:
-    """What one account sees: the catalog and its decisions."""
+    """What one account sees: its offers, their current scores and the decisions in force."""
 
     def __init__(self, request: Request, account: Account) -> None:
         self.request = request
         self.account = account
-        self.catalog: Catalog = load_catalog()
-        self.book: DecisionBook = request.app.state.decision_book
-        self.decisions = self.book.decisions(account.id)
+        with self.engine.begin() as connection:
+            store = SqlStore(connection)
+            self.offers = store.listed_offers(account.id)
+            rows = store.decision_rows(account.id)
+        self.decisions = effective_decisions(rows)
+        self.can_undo = to_cancel(rows) is not None
 
     @property
-    def queue(self) -> list[Offer]:
-        return self.catalog.queue(set(self.decisions))
+    def engine(self) -> Engine:
+        engine: Engine = self.request.app.state.engine
+        return engine
 
-    def counts(self) -> dict[str, int]:
-        undecided_below = [
-            o
-            for o in self.catalog.offers
-            if self.catalog.below_threshold(o) and o.id not in self.decisions
-        ]
-        return {"to_review": len(self.queue), "below": len(undecided_below)}
+    @cached_property
+    def profile(self) -> Profile:
+        return profile_of(self.request, self.account)
 
-    def listed(self, filters: ListFilters) -> list[Offer]:
-        wanted = DECISION_FILTERS[filters.decision]
-        offers = []
-        for offer in self.catalog.offers:
-            if self.catalog.below_threshold(offer) != filters.below_threshold:
-                continue
-            if filters.track and filters.track not in offer.tracks:
-                continue
-            if filters.incomplete and offer.description_is_full:
-                continue
-            decision = self.decisions.get(offer.id)
-            if filters.decision == "a_examiner" and decision is not None:
-                continue
-            if wanted is not None and (
-                decision is None or decision.value is not wanted
-            ):
-                continue
-            offers.append(offer)
-        return offers
+    @cached_property
+    def track_names(self) -> dict[int, str]:
+        return {track.id: track.name for track in self.profile.tracks}
 
-    def next_after(self, offer: Offer | None) -> Offer | None:
-        """The offer to show after ``offer`` in triage mode: the next undecided one, else the first."""
-        queue = self.queue
-        if not queue:
-            return None
-        if offer is not None:
-            order = [
-                o for o in self.catalog.offers if not self.catalog.below_threshold(o)
-            ]
-            later = order[order.index(offer) + 1 :] if offer in order else []
-            upcoming = next((o for o in later if o in queue), None)
-            if upcoming is not None:
-                return upcoming
-        return queue[0]
+    @property
+    def queue(self) -> list[ListedOffer]:
+        return queue(self.offers, self.decisions)
 
-    def neighbours(self, offer: Offer) -> tuple[Offer | None, Offer | None]:
-        queue = self.queue
-        if offer not in queue:
-            return None, None
-        index = queue.index(offer)
-        previous = queue[index - 1] if index > 0 else None
-        following = queue[index + 1] if index + 1 < len(queue) else None
-        return previous, following
+    def listed_offer(self, offer_id: int) -> ListedOffer | None:
+        return next((offer for offer in self.offers if offer.id == offer_id), None)
 
-    def triage_context(self, current: Offer | None) -> dict[str, object]:
-        previous, following = self.neighbours(current) if current else (None, None)
-        return {"current": current, "previous": previous, "following": following}
+    def page_of(
+        self, filters: ListFilters, start: int = 0
+    ) -> tuple[list[ListedOffer], int | None]:
+        """One page of the list, and the first row of the next page (None on the last one)."""
+        offers = listed(self.offers, self.decisions, filters)
+        end = start + PAGE_SIZE
+        return offers[start:end], end if end < len(offers) else None
+
+    def card(self, offer_id: int, track_id: int | None = None) -> OfferCard | None:
+        """The card of an offer of the account; None for an unknown offer or one of another account."""
+        with self.engine.begin() as connection:
+            store = SqlStore(connection)
+            stored = store.offer_of(self.account.id, offer_id)
+            score = None if stored is None else store.current_score(offer_id)
+            if stored is None or score is None:
+                return None
+            linked = store.track_ids(offer_id)
+            same = store.same_posting(
+                self.account.id, offer_id, match_key(stored.offer)
+            )
+            summary = stored_summary(store, stored)
+        inputs = scoring_inputs(self.profile)
+        return offer_card(
+            stored,
+            score=score,
+            analysis=analyze(stored.offer, inputs.skills, today=_today(self.request)),
+            profile=inputs.profile,
+            track_names=self.track_names,
+            linked=linked,
+            same_posting=same,
+            decision=self.decisions.get(offer_id),
+            summary=summary,
+            track_id=track_id,
+        )
+
+    def triage_context(self, current: int | None) -> dict[str, object]:
+        """The triage card of ``current`` (else the first of the queue), with its neighbours."""
+        if current is None:
+            first = next_after(self.offers, self.decisions, None)
+            current = None if first is None else first.id
+        card = None if current is None else self.card(current)
+        previous, following = (
+            neighbours(self.offers, self.decisions, card.id)
+            if card is not None
+            else (None, None)
+        )
+        return {"card": card, "previous": previous, "following": following}
 
     def render(
         self,
@@ -190,10 +212,10 @@ class Screen:
         status_code: int = 200,
     ) -> HTMLResponse:
         base = {
-            "catalog": self.catalog,
             "decisions": self.decisions,
-            "counts": self.counts(),
-            "can_undo": self.book.can_undo(self.account.id),
+            "counts": counts(self.offers, self.decisions),
+            "has_offers": bool(self.offers),
+            "can_undo": self.can_undo,
         }
         return page(
             self.request,
@@ -204,25 +226,56 @@ class Screen:
         )
 
 
+def _decision_of(
+    request: Request, account: Account, offer_id: int
+) -> tuple[bool, Decision | None]:
+    """Whether the offer belongs to the account, and its decision in force; reads that offer only."""
+    engine: Engine = request.app.state.engine
+    with engine.begin() as connection:
+        store = SqlStore(connection)
+        if store.offer_of(account.id, offer_id) is None:
+            return False, None
+        row = effective_decisions(store.decision_rows(account.id, offer_id)).get(
+            offer_id
+        )
+    return True, None if row is None else row.decision
+
+
+def _fragment(
+    request: Request, name: str, context: Mapping[str, object]
+) -> HTMLResponse:
+    templates: Jinja2Templates = request.app.state.templates
+    return templates.TemplateResponse(request, name, dict(context))
+
+
+def _today(request: Request) -> date:
+    today: Callable[[], date] = request.app.state.import_today
+    return today()
+
+
+def _now(request: Request) -> datetime:
+    clock: Callable[[], datetime] = request.app.state.auth.clock
+    return clock()
+
+
 def _whole_page(
     screen: Screen,
     view: str,
     filters: ListFilters,
-    current: Offer | None = None,
-    sheet: Offer | None = None,
+    *,
+    current: int | None = None,
+    sheet: OfferCard | None = None,
 ) -> HTMLResponse:
-    extra: dict[str, object] = {}
-    if view == TRIAGE:
-        current = current or screen.next_after(None)
-        previous, following = screen.neighbours(current) if current else (None, None)
-        extra = {"current": current, "previous": previous, "following": following}
+    extra = screen.triage_context(current) if view == TRIAGE else {}
+    rows, more = screen.page_of(filters)
     return screen.render(
         "offres/page.html",
         {
             "view": view,
             "filters": filters,
-            "tracks": screen.catalog.tracks,
-            "offers": screen.listed(filters),
+            "tracks": screen.track_names,
+            "offers": rows,
+            "more": more,
             "sheet": sheet,
             **extra,
         },
@@ -241,7 +294,8 @@ def offers_page(
 ) -> HTMLResponse:
     screen = Screen(request, account)
     view = vue if vue in (TRIAGE, LIST) else (TRIAGE if screen.queue else LIST)
-    return _whole_page(screen, view, _filters(piste, decision, sous_seuil, incompletes))
+    filters = make_filters(piste, decision, sous_seuil, incompletes)
+    return _whole_page(screen, view, filters)
 
 
 @router.get("/liste", response_class=HTMLResponse)
@@ -252,32 +306,57 @@ def offers_list(
     decision: str | None = None,
     sous_seuil: str | None = None,
     incompletes: str | None = None,
+    depuis: int = 0,
 ) -> Response:
-    filters = _filters(piste, decision, sous_seuil, incompletes)
-    if not is_htmx(request):
+    filters = make_filters(piste, decision, sous_seuil, incompletes)
+    if not wants_fragment(request):
         return RedirectResponse(
-            f"/offres?vue={LIST}&{filters.query()}", status_code=303
+            f"/offres?vue={LIST}&{list_query(filters)}", status_code=303
         )
     screen = Screen(request, account)
+    rows, more = screen.page_of(filters, max(depuis, 0))
     return screen.render(
-        "offres/list_rows.html",
-        {
-            "filters": filters,
-            "offers": screen.listed(filters),
-            "tracks": screen.catalog.tracks,
-        },
+        "offres/list_rows.html" if depuis <= 0 else "offres/offer_rows.html",
+        {"filters": filters, "offers": rows, "more": more},
     )
 
 
 @router.get("/tri/{offer_id}", response_class=HTMLResponse)
 def triage_offer(request: Request, account: CurrentAccount, offer_id: int) -> Response:
     screen = Screen(request, account)
-    offer = screen.catalog.get(offer_id)
-    if offer is None:
+    if screen.listed_offer(offer_id) is None:
         return RedirectResponse("/offres", status_code=303)
-    if not is_htmx(request):
-        return _whole_page(screen, TRIAGE, ListFilters(), current=offer)
-    return screen.render("offres/triage.html", screen.triage_context(offer))
+    if not wants_fragment(request):
+        return _whole_page(screen, TRIAGE, ListFilters(), current=offer_id)
+    return screen.render("offres/triage.html", screen.triage_context(offer_id))
+
+
+def _reasons(
+    request: Request,
+    offer_id: int,
+    value: DecisionValue,
+    *,
+    context: str,
+    track_id: int | None,
+    checked: tuple[str, ...] = (),
+    note: str | None = None,
+    error: str | None = None,
+) -> HTMLResponse:
+    return _fragment(
+        request,
+        "offres/reasons.html",
+        {
+            "offer_id": offer_id,
+            "value": value,
+            "question": REASON_QUESTIONS[value],
+            "reasons": REASONS[value],
+            "checked": checked,
+            "note": note or "",
+            "context": context,
+            "piste": "" if track_id is None else track_id,
+            "error": error,
+        },
+    )
 
 
 @router.get("/{offer_id}/motifs", response_class=HTMLResponse)
@@ -287,41 +366,49 @@ def reasons_panel(
     offer_id: int,
     decision: str,
     contexte: str = TRIAGE,
+    piste: str | None = None,
 ) -> Response:
-    screen = Screen(request, account)
-    offer = screen.catalog.get(offer_id)
-    if offer is None or decision not in DecisionValue:
+    found, current = _decision_of(request, account, offer_id)
+    if not found or decision not in DecisionValue:
         return Response(status_code=404)
     value = DecisionValue(decision)
-    current = screen.decisions.get(offer.id)
-    checked = current.reasons if current and current.value is value else ()
-    return screen.render(
-        "offres/reasons.html",
-        {
-            "offer": offer,
-            "value": value,
-            "question": REASON_QUESTIONS[value],
-            "reasons": REASONS[value],
-            "checked": checked,
-            "note": current.note if current and current.value is value else "",
-            "context": contexte,
-        },
+    same = current is not None and current.value is value
+    return _reasons(
+        request,
+        offer_id,
+        value,
+        context=contexte,
+        track_id=_track(piste),
+        checked=current.reasons if same and current else (),
+        note=current.note if same and current else None,
     )
 
 
 @router.get("/{offer_id}/actions", response_class=HTMLResponse)
 def decision_actions(
-    request: Request, account: CurrentAccount, offer_id: int, contexte: str = TRIAGE
+    request: Request,
+    account: CurrentAccount,
+    offer_id: int,
+    contexte: str = TRIAGE,
+    piste: str | None = None,
 ) -> Response:
-    screen = Screen(request, account)
-    offer = screen.catalog.get(offer_id)
-    if offer is None:
+    found, current = _decision_of(request, account, offer_id)
+    if not found:
         return Response(status_code=404)
-    return screen.render("offres/actions.html", {"offer": offer, "context": contexte})
+    return _fragment(
+        request,
+        "offres/actions.html",
+        {
+            "offer_id": offer_id,
+            "chosen": current,
+            "context": contexte,
+            "piste": piste or "",
+        },
+    )
 
 
 @router.post("/{offer_id}/decision", response_class=HTMLResponse)
-def record_decision(
+def decide(
     request: Request,
     account: CurrentAccount,
     offer_id: int,
@@ -329,107 +416,203 @@ def record_decision(
     motifs: Annotated[list[str] | None, Form()] = None,
     precision: Annotated[str, Form()] = "",
     contexte: Annotated[str, Form()] = TRIAGE,
+    piste: Annotated[str, Form()] = "",
 ) -> Response:
-    screen = Screen(request, account)
-    offer = screen.catalog.get(offer_id)
-    if offer is None:
+    engine: Engine = request.app.state.engine
+    with engine.begin() as connection:
+        found = SqlStore(connection).offer_of(account.id, offer_id) is not None
+    if not found:
         return Response(status_code=404)
+    track_id = _track(piste)
     try:
-        chosen = make_decision(decision, motifs or [], precision)
+        chosen: Decision = make_decision(decision, motifs or [], precision)
     except InvalidDecisionError as error:
-        return _reasons_with_error(
-            screen, offer, decision, motifs or [], precision, contexte, error
+        if decision not in DecisionValue:
+            return Response(status_code=422)
+        response = _reasons(
+            request,
+            offer_id,
+            DecisionValue(decision),
+            context=contexte,
+            track_id=track_id,
+            checked=tuple(motifs or ()),
+            note=precision,
+            error=str(error),
         )
-    screen.book.record(account.id, offer.id, chosen)
-    if not is_htmx(request):
-        return RedirectResponse("/offres", status_code=303)
-    screen = Screen(request, account)  # decisions changed
-    if contexte == SHEET:
+        # The form targets the whole card; an error only replaces the panel.
+        response.headers["HX-Retarget"] = "#decision-area"
+        response.headers["HX-Reswap"] = "innerHTML"
+        return response
+    with engine.begin() as connection:
+        record_decision(
+            SqlStore(connection),
+            account_id=account.id,
+            offer_id=offer_id,
+            decision=chosen,
+            track_id=track_id,
+            now=_now(request),
+        )
+    return _after_change(request, account, offer_id, contexte, track_id)
+
+
+def _after_change(
+    request: Request,
+    account: Account,
+    offer_id: int,
+    context: str,
+    track_id: int | None,
+    *,
+    stay: bool = False,
+    extra: Mapping[str, object] | None = None,
+) -> Response:
+    """The screen after a decision or a pasted description: the sheet again, or the triage card (the next offer
+    after a decision, the same one when ``stay``)."""
+    if not wants_fragment(request):
+        if context == SHEET:
+            return RedirectResponse(f"/offres/{offer_id}/fiche", status_code=303)
+        target = f"/offres/tri/{offer_id}" if stay else f"/offres?vue={TRIAGE}"
+        return RedirectResponse(target, status_code=303)
+    screen = Screen(request, account)  # decisions or scores changed
+    if context == SHEET:
         response = screen.render(
-            "offres/sheet.html", {"offer": offer, "with_counts": True}
+            "offres/sheet.html",
+            {
+                "card": screen.card(offer_id, track_id),
+                "with_counts": True,
+                **(extra or {}),
+            },
         )
         response.headers["HX-Trigger"] = OFFERS_CHANGED
         return response
+    current = (
+        offer_id
+        if stay
+        else (
+            None
+            if (upcoming := next_after(screen.offers, screen.decisions, offer_id))
+            is None
+            else upcoming.id
+        )
+    )
+    triage = screen.triage_context(current) if current is not None else {}
     return screen.render(
         "offres/triage.html",
-        {"with_counts": True, **screen.triage_context(screen.next_after(offer))},
+        {"with_counts": True, "card": None, **triage, **(extra or {})},
     )
-
-
-def _reasons_with_error(
-    screen: Screen,
-    offer: Offer,
-    decision: str,
-    motifs: list[str],
-    precision: str,
-    context: str,
-    error: InvalidDecisionError,
-) -> Response:
-    if decision not in DecisionValue:
-        return Response(status_code=422)
-    value = DecisionValue(decision)
-    response = screen.render(
-        "offres/reasons.html",
-        {
-            "offer": offer,
-            "value": value,
-            "question": REASON_QUESTIONS[value],
-            "reasons": REASONS[value],
-            "checked": tuple(motifs),
-            "note": precision,
-            "context": context,
-            "error": str(error),
-        },
-    )
-    # The form targets the whole card; an error only replaces the panel.
-    response.headers["HX-Retarget"] = "#decision-area"
-    response.headers["HX-Reswap"] = "innerHTML"
-    return response
 
 
 @router.post("/annuler", response_class=HTMLResponse)
 def undo(request: Request, account: CurrentAccount) -> Response:
+    engine: Engine = request.app.state.engine
+    with engine.begin() as connection:
+        offer_id = cancel_last_decision(
+            SqlStore(connection), account_id=account.id, now=_now(request)
+        )
+    if not wants_fragment(request):
+        return RedirectResponse(f"/offres?vue={TRIAGE}", status_code=303)
     screen = Screen(request, account)
-    offer_id = screen.book.undo(account.id)
-    if not is_htmx(request):
-        return RedirectResponse("/offres?vue=tri", status_code=303)
-    screen = Screen(request, account)
-    offer = screen.catalog.get(offer_id) if offer_id is not None else None
-    current = offer if offer in screen.queue else screen.next_after(None)
+    back = offer_id if any(o.id == offer_id for o in screen.queue) else None
     response = screen.render(
-        "offres/triage.html", {"with_counts": True, **screen.triage_context(current)}
+        "offres/triage.html", {"with_counts": True, **screen.triage_context(back)}
     )
     response.headers["HX-Trigger"] = OFFERS_CHANGED
     return response
 
 
-@router.get("/{offer_id}/pourquoi", response_class=HTMLResponse)
-def why(request: Request, account: CurrentAccount, offer_id: int) -> Response:
+@router.post("/{offer_id}/description", response_class=HTMLResponse)
+def paste_description(
+    request: Request,
+    account: CurrentAccount,
+    offer_id: int,
+    texte: Annotated[str, Form()] = "",
+    contexte: Annotated[str, Form()] = TRIAGE,
+    piste: Annotated[str, Form()] = "",
+) -> Response:
+    """« Coller la description » (Q5, Q13): the score is computed again at once; the offer stays on screen."""
     screen = Screen(request, account)
-    offer = screen.catalog.get(offer_id)
-    if offer is None:
+    with screen.engine.begin() as connection:
+        stored = SqlStore(connection).offer_of(account.id, offer_id)
+    if stored is None:
         return Response(status_code=404)
-    return screen.render("offres/why.html", {"offer": offer})
+    inputs = scoring_inputs(screen.profile)
+    error: str | None = None
+    try:
+        with screen.engine.begin() as connection:
+            enrich_offer(
+                SqlStore(connection),
+                stored,
+                texte,
+                inputs=inputs,
+                now=_now(request),
+                today=_today(request),
+            )
+    except InvalidPasteError as invalid:
+        error = str(invalid)
+    return _after_change(
+        request,
+        account,
+        offer_id,
+        contexte,
+        _track(piste),
+        stay=True,
+        extra={"paste_error": error},
+    )
+
+
+@router.post("/{offer_id}/resume", response_class=HTMLResponse)
+def summary(request: Request, account: CurrentAccount, offer_id: int) -> Response:
+    """The summary of the offer (Q6): the one kept, or one call to the language model, kept when it succeeds."""
+    engine: Engine = request.app.state.engine
+    with engine.begin() as connection:
+        store = SqlStore(connection)
+        stored = store.offer_of(account.id, offer_id)
+        kept = None if stored is None else stored_summary(store, stored)
+    if stored is None:
+        return Response(status_code=404)
+    if kept is not None:
+        result = SummaryResult(summary=kept)
+    else:
+        model: JsonModel = request.app.state.llm_model
+        # The model is called outside any transaction (a network call never holds one, C6).
+        result = summarize(
+            stored.offer.title, formatted_description(stored.offer.description), model
+        )
+        if result.summary is not None:
+            with engine.begin() as connection:
+                keep_summary(
+                    SqlStore(connection), stored, result.summary, now=_now(request)
+                )
+    if not wants_fragment(request):
+        return RedirectResponse(f"/offres/{offer_id}/fiche", status_code=303)
+    templates: Jinja2Templates = request.app.state.templates
+    return templates.TemplateResponse(request, SUMMARY, {"summary_result": result})
+
+
+@router.get("/{offer_id}/pourquoi", response_class=HTMLResponse)
+def why(
+    request: Request, account: CurrentAccount, offer_id: int, piste: str | None = None
+) -> Response:
+    screen = Screen(request, account)
+    card = screen.card(offer_id, _track(piste))
+    if card is None:
+        return Response(status_code=404)
+    return screen.render("offres/why.html", {"card": card})
 
 
 @router.get("/{offer_id}/fiche", response_class=HTMLResponse)
-def sheet(request: Request, account: CurrentAccount, offer_id: int) -> Response:
+def sheet(
+    request: Request, account: CurrentAccount, offer_id: int, piste: str | None = None
+) -> Response:
     screen = Screen(request, account)
-    offer = screen.catalog.get(offer_id)
-    if offer is None:
+    card = screen.card(offer_id, _track(piste))
+    if card is None:
         return Response(status_code=404)
-    if not is_htmx(request):
-        return _whole_page(screen, LIST, ListFilters(), sheet=offer)
-    return screen.render("offres/sheet.html", {"offer": offer})
+    if not wants_fragment(request):
+        filters = ListFilters(track_id=_track(piste))
+        return _whole_page(screen, LIST, filters, sheet=card)
+    return screen.render("offres/sheet.html", {"card": card})
 
 
 @router.get("/fiche/fermer", response_class=HTMLResponse)
 def close_sheet(account: CurrentAccount) -> HTMLResponse:
     return HTMLResponse("")
-
-
-@router.post("/reinitialiser")
-def reset(request: Request, account: CurrentAccount) -> RedirectResponse:
-    """Prototype only: forget every decision of this account."""
-    request.app.state.decision_book.reset(account.id)
-    return RedirectResponse("/offres", status_code=303)

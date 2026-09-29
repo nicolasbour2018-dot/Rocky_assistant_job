@@ -1,22 +1,43 @@
-"""Decisions on offers and their reasons (decision B4; kept for C7).
+"""Decisions on offers and their reasons (decisions B4 and C7).
 
-Only the English codes are stored: they are the labels of the future training dataset (D14). French labels exist
-for display only, so rewording a label never changes the data. Error messages are shown to the user (French).
+Only the English codes are stored: a decision is the label of the future training dataset (D14, C7 Q1). French
+labels exist for display only, so rewording a label never changes the data. Error messages are shown to the user
+(French).
+
+Decisions are appended, never changed (C7, Q8): a new decision on an offer replaces the previous one, and a
+cancellation appends a row that cancels one decision. ``effective_decisions`` gives what is in force.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 
 OTHER = "other"
+# Keyboard key of "other" in the reasons panel; the other reasons take 1–9 by rank.
+OTHER_KEY = "0"
+MAX_REASON_KEYS = 9
 
 
 class DecisionValue(StrEnum):
     INTERESTED = "interested"
     REJECTED = "rejected"
     LATER = "later"
+
+
+class DecisionKind(StrEnum):
+    DECISION = "decision"
+    CANCELLATION = "cancellation"
+
+
+class Author(StrEnum):
+    """Who decided (plan §3). Only the user decides in C7 (Q2); rules and the AI may later."""
+
+    USER = "user"
+    RULE = "rule"
+    AI = "ai"
 
 
 DECISION_LABELS = {
@@ -43,6 +64,7 @@ class Reason:
     label: str
 
 
+# C7, Q10: the reasons most given in the C5 annotations (seniority, sector, blocking condition) are rejection reasons.
 REASONS: dict[DecisionValue, tuple[Reason, ...]] = {
     DecisionValue.INTERESTED: (
         Reason("target_job", "métier visé"),
@@ -56,12 +78,13 @@ REASONS: dict[DecisionValue, tuple[Reason, ...]] = {
     DecisionValue.REJECTED: (
         Reason("not_the_job", "pas le métier"),
         Reason("too_senior", "trop senior"),
-        Reason("too_junior", "trop junior"),
         Reason("missing_skills", "compétences manquantes"),
+        Reason("sector", "secteur ou domaine"),
+        Reason("company", "entreprise"),
         Reason("location", "lieu ou télétravail"),
         Reason("contract", "contrat"),
         Reason("salary", "salaire"),
-        Reason("company", "entreprise ou secteur"),
+        Reason("blocking_condition", "condition bloquante (visa, langue, permis…)"),
         Reason(OTHER, "autre"),
     ),
     DecisionValue.LATER: (
@@ -85,8 +108,25 @@ class Decision:
     note: str | None = None
 
 
+@dataclass(frozen=True)
+class DecisionRow:
+    """One stored row: a decision, or the cancellation of the decision ``cancels``."""
+
+    id: int
+    offer_id: int
+    kind: DecisionKind
+    decided_at: datetime
+    decision: Decision | None = None
+    cancels: int | None = None
+
+
 def reason_label(value: DecisionValue, code: str) -> str:
     return next(reason.label for reason in REASONS[value] if reason.code == code)
+
+
+def reason_key(code: str, rank: int) -> str:
+    """The key that ticks a reason: its rank (1–9), "0" for "other"."""
+    return OTHER_KEY if code == OTHER else str(rank)
 
 
 def make_decision(
@@ -107,3 +147,30 @@ def make_decision(
     if OTHER in codes and text is None:
         raise InvalidDecisionError("Précise le motif « autre ».")
     return Decision(decision_value, codes, text)
+
+
+def _standing(rows: Iterable[DecisionRow]) -> list[DecisionRow]:
+    """Decisions not cancelled, in the order they were made."""
+    ordered = sorted(rows, key=lambda row: row.id)
+    cancelled = {
+        row.cancels for row in ordered if row.kind is DecisionKind.CANCELLATION
+    }
+    return [
+        row
+        for row in ordered
+        if row.kind is DecisionKind.DECISION and row.id not in cancelled
+    ]
+
+
+def effective_decisions(rows: Iterable[DecisionRow]) -> dict[int, DecisionRow]:
+    """The decision in force for each offer: its latest decision not cancelled (Q8).
+
+    Cancelling a change brings the previous decision back; cancelling the only one leaves the offer to examine.
+    """
+    return {row.offer_id: row for row in _standing(rows)}
+
+
+def to_cancel(rows: Iterable[DecisionRow]) -> DecisionRow | None:
+    """The decision that « Annuler » cancels: the latest decision of the account not cancelled yet (Q8)."""
+    standing = _standing(rows)
+    return standing[-1] if standing else None

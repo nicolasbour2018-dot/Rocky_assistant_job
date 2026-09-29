@@ -204,7 +204,6 @@ textarea {
 .segmented a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .counts { display: flex; gap: var(--space-4); color: var(--muted); }
 .counts strong { color: var(--text); }
-.prototype-note { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); color: var(--muted); font-size: 12px; }
 
 /* Offer card (triage) and sheet share offer_body.html */
 .triage { max-width: 780px; }
@@ -236,6 +235,11 @@ textarea {
 .synthesis { display: grid; gap: var(--space-1); }
 .line-good { color: var(--good); }
 .line-bad { color: var(--bad); }
+.line-partial { color: var(--muted, inherit); }
+.gaps { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 2px; }
+.summary-area, .paste { margin-top: var(--space-3); }
+.paste textarea { width: 100%; font: inherit; }
+.more-row td { text-align: center; }
 .facts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; }
 .facts dt { color: var(--muted); font-size: 12px; }
 .facts dd { margin: 0; }

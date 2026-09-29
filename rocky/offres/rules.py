@@ -75,6 +75,11 @@ def _json_default(value: object) -> object:
     raise TypeError(f"not a JSON value: {type(value).__name__}")
 
 
+def description_hash(offer: CollectedOffer) -> str:
+    """Fingerprint of the description: a stored summary of another one is stale (C7, Q6)."""
+    return hashlib.sha256(offer.description.encode()).hexdigest()
+
+
 def match_key(offer: CollectedOffer) -> str | None:
     """Title and employer in comparison form: two sites showing the same key probably show the same posting.
 
