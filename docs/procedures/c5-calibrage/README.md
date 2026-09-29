@@ -202,6 +202,33 @@ chef, expert, directeur, manager, stage ; intitulés ajoutés « Analyste OSINT 
 Stabilité : 4 doublons sur 5. Seuil gardé à 50 (Q31). Les deux candidatures du contrôle sous le seuil sont plafonnées
 par des choix de Nicolas : 70 (habilitation exigée), 750 (mot exclu « chef »).
 
+### Relecture de `score-2026-09-29.2` (29/09/2026, `relecture.json`)
+
+32 annonces non annotées : 20 premières → juste 3, **trop haute 17** (« il manque trop d'informations pour avoir
+100 % », expérience, salaire, contrat) ; 10 juste sous le seuil → juste 6, trop haute 2 (1193 et 445 : « data seul
+ne doit pas faire monter le score »), trop basse 2 (393 : savoir-être, déjà traité par Q28 ; 438 : compétences
+implicites, limite de l'analyse) ; contrôle sous le seuil → juste 2.
+
+| Version | Changement | Motif qui le justifie |
+|---|---|---|
+| `score-2026-09-29.3` | Une composante facultative dont l'annonce ne dit rien compte **0,5** au lieu d'être retirée (Q32) ; « rien à comparer » (aucune préférence, aucune langue demandée, piste sans lieu, télétravail complet) reste neutre et retiré ; un intitulé **partiel** vaut 0, un intitulé dont tous les mots sont présents mais séparés garde 0,5 (Q33) | Relecture : 17 des 20 premières jugées trop hautes faute d'informations ; 1193 et 445 trop hautes sur « data » seul |
+
+Simulation avant de coder (composante absente à 0,3 / 0,5 / 0,7) : 0,3 fait tomber le contrôle à 26 sur 30 au-dessus
+du seuil ; 0,5 et 0,7 gardent toutes les mesures, 0,5 marque le plus l'écart entre annonces complètes et incomplètes.
+
+### Mesure de la version 3 (29/09/2026)
+
+| | Cible | v1 | Référence | `score-2026-09-29.3` | |
+|---|---|---|---|---|---|
+| AUC pertinente / Non | ≥ 0,80 | 0,52 | 0,75 | **0,94** | ✅ |
+| Non dans les 10 premières | 0 | 7 | 3 | **1** (751, à 83) | ❌ accepté (Q30) |
+| Oui · pertinentes · Non au-dessus de 50 | 12 · ≥ 19 · ≤ 9 | 12 · 18 · 25 | 12 · 20 · 20 | **12 · 20 · 5** | ✅ |
+| Contrôle (30) : rang médian · premier quart · au-dessus | ≤ 25 % · ≥ 17 · ≥ 27 | 26 % · 15 · 28 | 34 % · 13 · 26 | **26 % · 14 · 28** | ❌ accepté (Q29), ✅ |
+
+Mesure C4 relancée avec cette version : 1193 à **45** (< 50, critère de C4 tenu) ; 1 annonce à 100 parmi les 404 (23
+avant) ; 186 au-dessus de 50 ; 180 plafonnées (mots exclus du profil et étranger) ; confiance haute 61, moyenne 125,
+faible 218 ; corrélation de rang v1 / C4 : 0,00.
+
 ## 4. Relecture (Q21)
 
 ```sh

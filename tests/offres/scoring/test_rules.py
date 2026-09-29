@@ -222,7 +222,7 @@ def test_requirements_never_bring_the_evidence_below_zero() -> None:
         ("Senior Data Analyst (H/F)", 1.0),
         ("Data Analysts", 1.0),
         ("Data Protection Analyst - Freelance", 0.5),
-        ("Analyste Data Marketing", 0.25),
+        ("Analyste Data Marketing", 0.0),
         ("Comptable", 0.0),
     ],
 )
@@ -302,11 +302,24 @@ def test_remote_mode_is_compared_with_the_preferences() -> None:
     assert value(scored(analysis(remote=RemoteMode.ON_SITE)), ComponentCode.REMOTE) == 0
 
 
-def test_a_component_without_information_is_left_out() -> None:
+def test_a_component_the_posting_says_nothing_about_counts_half() -> None:
     result = scored(analysis(contracts=(), remote=None))
 
     assert value(result, ComponentCode.CONTRACT) is None
     assert value(result, ComponentCode.REMOTE) is None
+    # Contract (10) and remote work (5) at 0.5, everything else full: 92.5 on 100.
+    assert result.value == pytest.approx(92.5)
+
+
+def test_a_component_with_nothing_to_compare_is_left_out() -> None:
+    profile = replace(
+        PROFILE, preferences=replace(PROFILE.preferences, contracts=(), remote_modes=())
+    )
+    result = scored(analysis(languages=()), profile=profile)
+
+    assert result.component(ComponentCode.CONTRACT).neutral
+    assert result.component(ComponentCode.REMOTE).neutral
+    assert result.component(ComponentCode.LANGUAGES).neutral
     assert result.display == 100
 
 

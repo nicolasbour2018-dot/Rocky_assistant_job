@@ -421,7 +421,10 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   décisions réelles de Nicolas à l'écran Offres (C7, étiquettes D14) serviront à les affiner. Directions relevées : le
   contrôle reste à parité avec la v1 sans la dépasser (annonces au bon intitulé mais pauvres en compétences du profil,
   haut du classement saturé à 100) ; une annonce qui demande surtout des compétences absentes du profil (751,
-  « Financement structuré ») reste haute, faute de lire le poids de ces compétences dans l'annonce (Q30).
+  « Financement structuré ») reste haute, faute de lire le poids de ces compétences dans l'annonce (Q30) ; une annonce
+  aux compétences implicites (438, « accessibles mais pas toutes nommées ») reste basse, l'analyse ne lisant que les
+  termes du profil (Q34). Avec les mots exclus de Nicolas et la règle de l'étranger, 180 des 404 annonces de la mesure
+  sont plafonnées : à surveiller dans l'écran Offres (C7).
 - **(C4 → après C6)** Lieux structurés : une ville d'Eure-et-Loir ne répond pas à « Eure et Loire » ; un pays absent
   (LinkedIn, Wellfound) est lu comme la France, avec le marqueur « pays non précisé ».
 - **(C4 → profil)** Permis et habilitation absents du profil : une condition bloquante plafonne toujours le score

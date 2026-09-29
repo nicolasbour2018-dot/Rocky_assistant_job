@@ -16,7 +16,7 @@ from typing import Any
 from rocky.offres.analysis.model import Importance
 from rocky.profil.model import LanguageLevel, Preferences, SkillLevel
 
-RULES_VERSION = "score-2026-09-29.2"
+RULES_VERSION = "score-2026-09-29.3"
 
 
 class ComponentCode(StrEnum):
@@ -41,8 +41,9 @@ COMPONENT_LABELS = {
     ComponentCode.LANGUAGES: "Langues",
 }
 
-# Weights (Q16). Skills and title always count, even at 0 (Q17); an optional component without information is left
-# out and the others are renormalised.
+# Weights (Q16). Skills and title always count, even at 0 (Q17). An optional component the posting says nothing about
+# counts ABSENT_VALUE (C5, Q32: a score of 100 needs every fact); a neutral one (nothing to compare: no preference,
+# nothing asked, full remote work) is left out and the others are renormalised.
 WEIGHTS = {
     ComponentCode.SKILLS: 40.0,
     ComponentCode.TITLE: 25.0,
@@ -53,6 +54,7 @@ WEIGHTS = {
     ComponentCode.EXPERIENCE: 3.0,
     ComponentCode.LANGUAGES: 2.0,
 }
+ABSENT_VALUE = 0.5
 OPTIONAL_COMPONENTS = (
     ComponentCode.CONTRACT,
     ComponentCode.LOCATION,
@@ -77,7 +79,8 @@ REQUIREMENT_PENALTY = 1.0
 
 # Title (Q4): the track title as written scores 1, all its words apart score this, some of its words this share.
 SCATTERED_TITLE = 0.5
-PARTIAL_TITLE_FACTOR = 0.5
+# Only part of the words ("Data" without "analyst") is not the job (C5, Q33).
+PARTIAL_TITLE_FACTOR = 0.0
 
 # Location (Q9, Q15).
 IN_ZONE = 1.0
@@ -174,8 +177,9 @@ class ScoringProfile:
 
 @dataclass(frozen=True)
 class Component:
-    """One component. ``value`` in [0, 1], or None when it is left out (no information, or ``neutral``: full remote
-    work makes the place irrelevant). ``weight`` is the weight actually used (a deduced salary period halves it)."""
+    """One component. ``value`` in [0, 1], or None when the posting says nothing (counted ``ABSENT_VALUE``) or when
+    there is nothing to compare (``neutral``: no preference, nothing asked, full remote work makes the place
+    irrelevant). ``weight`` is the weight actually used (a deduced salary period halves it)."""
 
     code: ComponentCode
     value: float | None

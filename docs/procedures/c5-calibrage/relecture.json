@@ -1,0 +1,229 @@
+{
+ "rules_version": "score-2026-09-29.2",
+ "answers": [
+  {
+   "group": "Les 20 premières",
+   "id": "2",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience et le salaire)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "3",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%notamment l'expérience et le salaire)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "4",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%notamment l'expérience et le salaire, le contrat)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "20",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience et le salaire et le contrat)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "97",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "l'expérience demandée ne correspond pas à un niveau junior"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "172",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience et le salaire et le contrat)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "406",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "449",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience, le contrat et le salaire)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "467",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "612",
+   "score": 100,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "847",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "858",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "924",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience, le salaire, le contrat et le lieu)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1051",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience, le salaire, le contrat)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1054",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience, le salaire, le contrat)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1060",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience, le salaire, le contrat)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1035",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment, le salaire, le contrat)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1115",
+   "score": 100,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "1129",
+   "score": 100,
+   "verdict": "trop_haut",
+   "comment": "Il manque trop d'informations (même moins lourdes que celles renseignées pour avoir un 100%, notamment l'expérience, le salaire, le contrat)"
+  },
+  {
+   "group": "Les 20 premières",
+   "id": "840",
+   "score": 99,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "438",
+   "score": 49,
+   "verdict": "trop_bas",
+   "comment": "Les compétences ne sont pas toutes explicites mais semble décrire des compétences accessibles. "
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "1231",
+   "score": 49,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "545",
+   "score": 48,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "297",
+   "score": 47,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "1237",
+   "score": 47,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "405",
+   "score": 46,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "622",
+   "score": 45,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "393",
+   "score": 45,
+   "verdict": "trop_bas",
+   "comment": "les qualités requises sont des soft skills et ne doivent pas trop impacter les compétences techniques"
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "1193",
+   "score": 45,
+   "verdict": "trop_haut",
+   "comment": "intitulé non correspondant. data seul ne doit pas faire monter le score. "
+  },
+  {
+   "group": "Les 10 juste sous le seuil",
+   "id": "445",
+   "score": 45,
+   "verdict": "trop_haut",
+   "comment": "intitulé non correspondant. data seul ne doit pas faire monter le score. "
+  },
+  {
+   "group": "Candidatures du contrôle sous le seuil",
+   "id": "70",
+   "score": 30,
+   "verdict": "juste",
+   "comment": ""
+  },
+  {
+   "group": "Candidatures du contrôle sous le seuil",
+   "id": "750",
+   "score": 30,
+   "verdict": "juste",
+   "comment": ""
+  }
+ ]
+}

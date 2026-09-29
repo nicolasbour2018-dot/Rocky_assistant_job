@@ -87,6 +87,14 @@ ramenées dans la même proportion : ≥ 19 dans le premier quart, ≥ 31 au-des
 | Q30 | Annonce 751 | **Limite acceptée** : sa non-pertinence dépend du poids des compétences de finance dans l'annonce, que l'analyse ne voit pas (elle ne lit que les termes du profil). Direction d'amélioration notée en section 8. |
 | Q31 | Seuil | **50** : seul seuil qui tient à la fois les cibles Q13 et le contrôle au-dessus du seuil (à 61, lu sur la courbe, 2 Non au-dessus au lieu de 5, mais le contrôle tombe à 21 sur 30). |
 
+### Troisième version (grill avec Nicolas, 29/09, après sa relecture de la version 2)
+
+| # | Sujet | Décision |
+|---|---|---|
+| Q32 | Information absente | Une composante facultative dont l'annonce ne dit rien compte **0,5** (« on ne sait pas ») au lieu d'être retirée et renormalisée (révise C4 Q17) : 100 est réservé aux annonces qui disent tout et où tout correspond. « Rien à comparer » (aucune préférence au profil, aucune langue demandée, piste sans lieu, télétravail complet) reste **neutre** : retiré, sans effet sur la confiance. |
+| Q33 | Intitulé partiel | Une partie seulement des mots d'un intitulé de piste (« Data » sans « analyst ») vaut **0** ; tous les mots présents mais séparés gardent 0,5 (« Data Science Analyst », au contrôle). |
+| Q34 | Compétences implicites | 438 (« compétences pas toutes explicites mais accessibles ») : limite de l'analyse, qui ne lit que les termes du profil ; notée en section 8, pas de règle. |
+
 ### Limites de la mesure
 
 - **Annotateur unique et subjectif** : c'est voulu (Q1, les étiquettes D14 sont les décisions de Nicolas), mais les

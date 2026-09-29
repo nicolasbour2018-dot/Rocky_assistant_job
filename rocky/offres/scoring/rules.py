@@ -22,6 +22,7 @@ from rocky.offres.analysis.text import fold, term_pattern
 from rocky.offres.scoring.model import (
     ABROAD,
     ABROAD_FULL_REMOTE,
+    ABSENT_VALUE,
     CAP,
     COMPONENT_LABELS,
     DEDUCED_PERIOD_FACTOR,
@@ -279,9 +280,13 @@ def _track_score(shared: _Shared, track: ScoringTrack | None) -> TrackScore:
 
 
 def _merge(components: Iterable[Component]) -> float:
-    """Weighted mean of the counted components, on 100; a left-out component weighs nothing (Q17)."""
+    """Weighted mean on 100 (Q17): a component the posting says nothing about counts ``ABSENT_VALUE`` (C5, Q32), a
+    neutral one weighs nothing."""
     counted = [
-        (item.value, item.weight) for item in components if item.value is not None
+        (ABSENT_VALUE if item.value is None else item.value, item.weight)
+        for item in components
+        if item.value is not None
+        or (item.code in OPTIONAL_COMPONENTS and not item.neutral)
     ]
     total = sum(weight for _, weight in counted)
     if total == 0:
@@ -463,6 +468,7 @@ def _contract(analysis: PostingAnalysis, profile: ScoringProfile) -> Component:
             None,
             weight,
             "Aucun contrat recherché dans le profil",
+            neutral=True,
         )
     matches = set(analysis.contracts) & set(wanted)
     return Component(
@@ -487,6 +493,7 @@ def _remote(analysis: PostingAnalysis, profile: ScoringProfile) -> Component:
             None,
             weight,
             "Aucun mode de travail recherché dans le profil",
+            neutral=True,
         )
     return Component(
         ComponentCode.REMOTE,
@@ -514,6 +521,7 @@ def _location(
                 None,
                 weight,
                 "Aucune piste active : lieu non comparé",
+                neutral=True,
             ),
             False,
             (),
@@ -587,6 +595,7 @@ def _location(
                 None,
                 weight,
                 f"La piste « {track.name} » n'a pas de lieu",
+                neutral=True,
             ),
             False,
             (),
@@ -678,7 +687,9 @@ def _salary(analysis: PostingAnalysis, profile: ScoringProfile) -> Component:
         )
         missing = "Aucun salaire minimum dans le profil"
     if minimum is None or minimum <= 0:
-        return Component(ComponentCode.SALARY, None, weight, missing, evidence)
+        return Component(
+            ComponentCode.SALARY, None, weight, missing, evidence, neutral=True
+        )
     detail = (
         f"{_money(amount)} € {unit} au plus, pour un minimum de {_money(minimum)} €"
     )
@@ -756,7 +767,11 @@ def _languages(analysis: PostingAnalysis, profile: ScoringProfile) -> Component:
     weight = WEIGHTS[ComponentCode.LANGUAGES]
     if not analysis.languages:
         return Component(
-            ComponentCode.LANGUAGES, None, weight, "Aucune langue demandée"
+            ComponentCode.LANGUAGES,
+            None,
+            weight,
+            "Aucune langue demandée",
+            neutral=True,
         )
     own = dict(profile.languages)
     values: list[float] = []
