@@ -9,6 +9,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 
+from rocky.offres.model import Origin
+from rocky.offres.rules import scoring_inputs
+from rocky.offres.sql import SqlStore
+from rocky.offres.usecases import record_offer
+from rocky.system.auth.sql import SqlAuthStore
+from tests.offres.fakes import NOW, TODAY, Seeker, posting
 from tests.system.web_support import HTMX, logged_in, make_app
 
 TRACK = {
@@ -396,3 +402,34 @@ def test_items_of_another_account_are_out_of_reach(
 def test_unknown_sections_and_actions_are_not_found(client: TestClient) -> None:
     assert client.get("/profil/inconnue").status_code == 404
     assert client.post("/profil/pistes/1/voler").status_code == 404
+
+
+def test_a_track_with_offers_is_archived_not_deleted_on_screen(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    client, email = logged_in(app, migrated_engine)
+    client.post("/profil/pistes", data=TRACK)
+    with migrated_engine.begin() as connection:
+        account = SqlAuthStore(connection).find_account(email)
+        assert account is not None
+        seeker = Seeker(account.id, email)
+        profile = seeker.profile(connection)
+        record_offer(
+            SqlStore(connection),
+            account_id=account.id,
+            offer=posting("p1"),
+            inputs=scoring_inputs(profile),
+            origin=Origin.WATCH,
+            track_ids=[profile.tracks[0].id],
+            now=NOW,
+            today=TODAY,
+        )
+    base = f"/profil/pistes/{profile.tracks[0].id}"
+
+    refused = client.post(f"{base}/supprimer", headers=HTMX)
+
+    assert refused.status_code == 200
+    assert "Des offres sont rattachées à cette piste : archive-la plutôt." in (
+        refused.text.replace("&#39;", "'")
+    )
+    assert "Data analyst" in section(client.get("/profil").text, "pistes")

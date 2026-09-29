@@ -244,3 +244,27 @@ def test_an_unexpected_detail_error_is_logged_and_stops_that_source(
         for kept in report.offers
     )
     assert "TypeError: unexpected" in caplog.text
+
+
+def test_each_offer_keeps_the_queries_that_found_it() -> None:
+    by_place = {
+        "Paris": found("a1", "a2"),
+        "Lyon": found("a2", "a3"),
+    }
+    source = FakeSource(SourceCode.APEC, lambda query: by_place[query.location or ""])
+
+    (outcome,) = collect([source], [PARIS, LYON], limit=20).outcomes
+
+    assert outcome.found_by == {"a1": (PARIS,), "a2": (PARIS, LYON), "a3": (LYON,)}
+
+
+def test_a_source_that_ignores_the_place_keeps_the_query_it_was_sent() -> None:
+    source = FakeSource(
+        SourceCode.WTTJ,
+        lambda query: found("w1", source=SourceCode.WTTJ),
+        filters_location=False,
+    )
+
+    (outcome,) = collect([source], [PARIS, LYON], limit=20).outcomes
+
+    assert outcome.found_by == {"w1": (SearchQuery("Data analyst"),)}

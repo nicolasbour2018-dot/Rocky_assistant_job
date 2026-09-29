@@ -6,7 +6,7 @@ Nothing is written: the watch (C6) stores offers, their tracks and their scores 
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 
@@ -65,6 +65,8 @@ class SourceOutcome:
     offers: tuple[CollectedOffer, ...] = ()
     skipped: tuple[SkippedQuery, ...] = ()
     reason: str | None = None
+    # The queries that found each offer, by ``external_id``: the watch links an offer to the tracks behind them.
+    found_by: Mapping[str, tuple[SearchQuery, ...]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -101,6 +103,7 @@ def _collect_one(
             source.code, UNAVAILABLE[availability], source.filters_location
         )
     offers: dict[str, CollectedOffer] = {}
+    found_by: dict[str, list[SearchQuery]] = {}
     skipped: list[SkippedQuery] = []
 
     def outcome(status: Outcome, reason: str | None = None) -> SourceOutcome:
@@ -111,6 +114,7 @@ def _collect_one(
             tuple(offers.values()),
             tuple(skipped),
             reason,
+            {key: tuple(queries) for key, queries in found_by.items()},
         )
 
     try:
@@ -123,6 +127,9 @@ def _collect_one(
             for offer in found:
                 # Several titles of the tracks find the same posting: it is collected once.
                 offers.setdefault(offer.external_id, offer)
+                queries_of_offer = found_by.setdefault(offer.external_id, [])
+                if query not in queries_of_offer:
+                    queries_of_offer.append(query)
     except SourceRefusedError as error:
         return outcome(Outcome.REFUSED, error.reason)
     except SourceFailedError as error:

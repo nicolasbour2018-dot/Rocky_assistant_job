@@ -232,6 +232,11 @@ class TrackScore:
     def component(self, code: ComponentCode) -> Component:
         return next(item for item in self.components if item.code == code)
 
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> TrackScore:
+        """The score of one track from its stored form (``dataclasses.asdict``)."""
+        return _track_score(data)
+
 
 @dataclass(frozen=True)
 class Score:

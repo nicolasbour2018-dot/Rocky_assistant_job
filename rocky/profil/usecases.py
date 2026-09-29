@@ -23,6 +23,7 @@ from rocky.profil.model import (
     SkillCategory,
     SkillDraft,
     TrackDraft,
+    TrackInUseError,
     TrackStatus,
 )
 from rocky.profil.rules import (
@@ -37,6 +38,8 @@ from rocky.profil.rules import (
 from rocky.system.events import Actor, JsonValue, NewEvent
 
 type Clock = Callable[[], datetime]
+
+TRACK_IN_USE = "Des offres sont rattachées à cette piste : archive-la plutôt."
 
 
 @dataclass(frozen=True)
@@ -146,10 +149,16 @@ class ProfileEditor:
         )
 
     def delete_track(self, track_id: int) -> bool:
-        """Final removal. Allowed while no offer refers to tracks (until C6 links them)."""
+        """Final removal, refused once an offer is linked to the track (decision B5, Q21): it is archived instead."""
         profile = self.profile()
         track = profile.track(track_id)
-        if track is None or not self._store.delete_track(profile.id, track_id):
+        if track is None:
+            return False
+        try:
+            deleted = self._store.delete_track(profile.id, track_id)
+        except TrackInUseError as error:
+            raise ProfileInputError(TRACK_IN_USE) from error
+        if not deleted:
             return False
         self._event(
             "profil.track_deleted", "search_track", track_id, _track(track.content)

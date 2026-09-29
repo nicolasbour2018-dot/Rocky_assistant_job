@@ -285,6 +285,10 @@ class Profile:
         return next((t for t in self.tracks if t.id == track_id), None)
 
 
+class TrackInUseError(Exception):
+    """An offer is linked to the track: it can be archived, never deleted (decision B5, Q21)."""
+
+
 class ProfileStore(Protocol):
     """Storage of the profile aggregate, bound to one open transaction.
 
@@ -326,7 +330,9 @@ class ProfileStore(Protocol):
         self, profile_id: int, track_id: int, status: TrackStatus, now: datetime
     ) -> bool: ...
 
-    def delete_track(self, profile_id: int, track_id: int) -> bool: ...
+    def delete_track(self, profile_id: int, track_id: int) -> bool:
+        """Raises ``TrackInUseError`` when an offer is linked to the track (the database refuses, step C6)."""
+        ...
 
     def term_owners(
         self, profile_id: int, terms: frozenset[str], except_skill: int | None

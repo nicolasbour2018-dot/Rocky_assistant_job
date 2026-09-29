@@ -33,6 +33,7 @@ from sqlalchemy import (
     text,
     update,
 )
+from sqlalchemy.exc import IntegrityError
 
 from rocky.profil import model
 from rocky.profil.model import (
@@ -55,10 +56,14 @@ from rocky.profil.model import (
     SkillLevel,
     Track,
     TrackDraft,
+    TrackInUseError,
     TrackStatus,
 )
 from rocky.system.db import metadata
 from rocky.system.events import NewEvent, append_event
+
+# PostgreSQL error codes of a row still referenced: ON DELETE RESTRICT, and NO ACTION.
+STILL_REFERENCED = frozenset({"23001", "23503"})
 
 
 def _in(column: str, values: type[StrEnum]) -> str:
@@ -385,7 +390,15 @@ class SqlProfileStore:
         )
 
     def delete_track(self, profile_id: int, track_id: int) -> bool:
-        return self._delete_owned(search_tracks, profile_id, track_id)
+        # The offers keep their tracks (``offer_tracks``, ON DELETE RESTRICT): the refusal comes from the database,
+        # the profile never reads the tables of the offers. A savepoint keeps the caller's transaction usable.
+        try:
+            with self._conn.begin_nested():
+                return self._delete_owned(search_tracks, profile_id, track_id)
+        except IntegrityError as error:
+            if getattr(error.orig, "sqlstate", None) in STILL_REFERENCED:
+                raise TrackInUseError(track_id) from error
+            raise
 
     # Skills
 

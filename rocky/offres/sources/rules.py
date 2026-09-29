@@ -61,6 +61,12 @@ def queries_for_track(
     ]
 
 
+def query_key(query: SearchQuery, *, filters_location: bool) -> tuple[str, str]:
+    """What a source is actually asked (compared as terms): the title, and the location when the source filters it."""
+    location = query.location if filters_location else None
+    return normalize_term(query.title), normalize_term(location or "")
+
+
 def unique_queries(
     queries: Iterable[SearchQuery], *, filters_location: bool
 ) -> list[SearchQuery]:
@@ -69,7 +75,7 @@ def unique_queries(
     kept: list[SearchQuery] = []
     for query in queries:
         location = query.location if filters_location else None
-        key = (normalize_term(query.title), normalize_term(location or ""))
+        key = query_key(query, filters_location=filters_location)
         if key not in seen:
             seen.add(key)
             kept.append(SearchQuery(query.title, location))

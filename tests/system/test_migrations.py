@@ -26,6 +26,11 @@ HEAD_TABLES = {
     "projects",
     "experience_skills",
     "project_skills",
+    "job_offers",
+    "offer_tracks",
+    "offer_scores",
+    "watch_runs",
+    "watch_run_sources",
 }
 
 
