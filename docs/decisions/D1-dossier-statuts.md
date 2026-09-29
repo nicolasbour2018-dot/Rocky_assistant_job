@@ -66,3 +66,16 @@ jour n'est plus en retard.
 | Tests automatiques | Règles (`test_rules.py`, 29 tests), cas d'usage avec faux adaptateurs (`test_usecases.py`), SQL et contraintes (`test_sql.py` : un dossier par offre, une seule annulation par changement, changements incohérents refusés par la base), écran par HTTP (`test_web.py`, 11 tests : encart, motifs, liste, entretien daté, annulations, sans HTMX, 404 pour un autre compte) ; `offres` : `application_decision`, `cancel_decision` |
 | Vérification globale | `docker compose run --rm --build check` : 799 tests, 28 s |
 | Essai dans Chromium (Playwright, instance à part : schéma jetable de `test-db`, 3 offres semées dont une « Plus tard ») | Fiche → encart « Préparer la candidature » → motif « métier visé » → « En préparation, Finir le dossier le 01/10/2026 » ; liste : « Envoyée » → « Relancer — 06/10/2026 » ; « +3 j » → 09/10 ; « Annuler » ×3 → 06/10, « En préparation », puis « Aucune candidature en cours ». Contrôle en lecture seule : 6 changements pour 6 événements `candidatures.*`, l'« Intéressé » (`application_started`, `target_job`) annulé et « Plus tard » de nouveau en vigueur. Console sans erreur |
+
+## Critère de sortie et clôture (Nicolas, 29/09)
+
+Essai réel par Nicolas sur son compte d'essai (base de développement, migration `0006`), dont « Préparer » sur une offre
+à examiner ; contrôle en lecture seule (transaction annulée) :
+
+| Contrôle | Résultat |
+|---|---|
+| Dossiers | 2 dossiers ; 6 changements (2 créations, 2 changements d'étape, 2 annulations) |
+| Traçabilité | **6 changements pour 6 événements** `candidatures.*` ; aucun changement sans événement |
+| Lien avec la décision (Q8) | L'offre à examiner est passée en « Intéressé » avec `application_started`, `target_job`, `skills_match`, `location` (motifs choisis dans le panneau) ; l'autre dossier s'est ouvert sans nouvelle décision |
+
+**Étape validée par Nicolas.** Suite : D2 (CV maître et rendu).

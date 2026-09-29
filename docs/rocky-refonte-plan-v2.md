@@ -139,7 +139,7 @@ aucun identifiant interne affiché.
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| D1. Dossier et statuts | Étapes (préparée, préremplie, envoyée, suivie…) ; transitions et **annulation dans une seule transaction** ; prochaine action datée, différable | Une panne injectée pendant l'annulation ne laisse aucun état contradictoire | 🔄 |
+| D1. Dossier et statuts | Étapes (préparée, préremplie, envoyée, suivie…) ; transitions et **annulation dans une seule transaction** ; prochaine action datée, différable | Une panne injectée pendant l'annulation ne laisse aucun état contradictoire | ✅ |
 | D2. CV maître et rendu | CV structuré FR/EN ; gabarit HTML/CSS → PDF (Playwright) ; listes déterministes ; fin du verrou Canva (SHA-256, coordonnées pixels) et de LibreOffice ; « Vérifier mon CV » (ATS V3 porté) | CV FR et EN validés visuellement par Nicolas ; parsing du PDF vérifié | ⬜ |
 | D3. Ciblage et traduction | Sélection et ordre des éléments selon l'annonce ; traduction champ par champ avec glossaire et validation | CV anglais ciblé sans ressaisie | ⬜ |
 | D4. Lettre et message | Même moteur ; storytelling de préparation ; ton des prompts revu (pas de jugement dévalorisant sur la reconversion) | Lettres FR et EN validées sur 3 annonces réelles | ⬜ |
