@@ -140,7 +140,7 @@ aucun identifiant interne affiché.
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
 | D1. Dossier et statuts | Étapes (préparée, préremplie, envoyée, suivie…) ; transitions et **annulation dans une seule transaction** ; prochaine action datée, différable | Une panne injectée pendant l'annulation ne laisse aucun état contradictoire | ✅ |
-| D2. CV maître et rendu | CV structuré FR/EN ; gabarit HTML/CSS → PDF (Playwright) ; listes déterministes ; fin du verrou Canva (SHA-256, coordonnées pixels) et de LibreOffice ; « Vérifier mon CV » (ATS V3 porté) ; import d'un CV PDF et **gabarit par compte déduit du CV importé**, gabarit neutre à défaut (décision D2) | CV FR validé visuellement par Nicolas (EN aussi quand un CV anglais est importé : import facultatif, décision D2, Q33) ; parsing du PDF vérifié ; le gabarit déduit du CV Canva de Nicolas le reproduit à l'identique, seuls compétences et projets variant (Q17, Q29) ; un PDF image est refusé avec sa raison et se rabat sur le gabarit neutre | 🔄 |
+| D2. CV maître et rendu | CV structuré FR/EN ; gabarit HTML/CSS → PDF (Playwright) ; listes déterministes ; fin du verrou Canva (SHA-256, coordonnées pixels) et de LibreOffice ; « Vérifier mon CV » (ATS V3 porté) ; import d'un CV PDF et **gabarit par compte déduit du CV importé**, gabarit neutre à défaut (décision D2) | CV FR validé visuellement par Nicolas (EN aussi quand un CV anglais est importé : import facultatif, décision D2, Q33) ; parsing du PDF vérifié ; le gabarit déduit du CV Canva de Nicolas le reproduit à l'identique, seuls compétences et projets variant (Q17, Q29) ; un PDF image est refusé avec sa raison et se rabat sur le gabarit neutre | ✅ |
 | D3. Ciblage et traduction | Sélection et ordre des éléments selon l'annonce ; traduction champ par champ avec glossaire et validation | CV anglais ciblé sans ressaisie | ⬜ |
 | D4. Lettre et message | Même moteur ; storytelling de préparation ; ton des prompts revu (pas de jugement dévalorisant sur la reconversion) | Lettres FR et EN validées sur 3 annonces réelles | ⬜ |
 | D5. Révisions et envoi | Chaque génération dans un chemin immuable avec hash, vérifié au téléchargement ; préremplissage navigateur porté (confirmation avant) ; confirmation d'envoi au retour avec date et canal | Deux générations → deux PDF distincts récupérables ; l'envoi est lié à la révision exacte | ⬜ |
@@ -525,6 +525,12 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   toucher l'élément dessiné juste en dessous (bord d'une carte projet) sans être signalé comme débordement.
 - **(D2 → D3, D4)** Le rendu d'un gabarit déduit reprend les conventions du Canva de Nicolas (« période : intitulé
   - employeur - », école soulignée, puces à amorce en gras) : un autre design peut demander d'autres recettes.
+- **(D2 → à reprendre, avant F2)** Étape validée avec des limites (décision D2, clôture) : rendu des blocs projets
+  approximatif (retours à la ligne, écarts, « : » des noms de projet) ; gabarit déduit mis au point sur un seul design ;
+  rangement des lignes par le modèle variable d'un appel à l'autre (règles déterministes à éprouver sur d'autres CV) ;
+  gabarit neutre trop court pour un parcours long (CV anglais de Nicolas sans CV anglais importé : 77 mm de trop).
+  À affiner proprement dans une étape dédiée.
+- **(D2 → Nicolas)** Ordre des projets du CV maître (Water Potability avant Pilotage, inverse du Canva) : à vérifier.
 - **(D2 → bêtas, §5)** Adapter aussi les expériences et les formations d'un CV importé à l'offre (décision D2, Q34) :
   seulement si les bêtas en montrent le besoin ; aujourd'hui, le CV importé est tenu pour à jour.
 - **(D2 → F2, §5 VPS)** Le dépôt GitHub est **public** et n'a **aucune licence**. Aucune dépendance AGPL n'est ajoutée

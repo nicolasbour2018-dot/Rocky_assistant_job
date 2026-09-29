@@ -110,6 +110,23 @@ qu'à adapter à l'offre les blocs qui en dépendent.
 | PDF image | CV EN de l'archive : gabarit refusé (« image de page ») ; un PDF sans texte est refusé dès la lecture |
 | **Après la révision Q29–Q33** (gabarit refait depuis la réponse conservée, sans nouvel appel) | Seuls groupes de compétences, transversales, noms et corps des projets sont des zones ; tout le reste est l'image du CV importé, lu par les lecteurs grâce aux mots invisibles. CV FR de Nicolas : aucun débordement, aucun masque doux, « Vérifier mon CV » **37 sur 37** (nom, contact, titres de section, compétences, projets). Sans CV anglais importé, le CV anglais passe par le gabarit neutre, où le parcours complet de Nicolas déborde de 77 mm : à importer (Q33) |
 
-## Critère de sortie et clôture
+## Critère de sortie et clôture (Nicolas, 30/09)
 
-*(À remplir à la validation de Nicolas.)*
+| Critère | Résultat |
+|---|---|
+| CV FR validé visuellement | Validé par Nicolas tel quel : gabarit respecté, compétences et projets remplis par le profil, le reste repris du CV importé |
+| CV EN | Import facultatif (Q33) : pas de CV anglais importé ; le gabarit neutre déborde avec le parcours complet de Nicolas |
+| Lecture du PDF | « Vérifier mon CV » : 37 éléments sur 37 lus par les trois lecteurs |
+| Reproduction (Q17) | Hors zones variables : 0,22 % des pixels (flou 1 px, seuil 48/255), photo identique |
+| PDF image | Refusé avec sa raison, gabarit neutre en repli |
+
+**Étape validée par Nicolas, avec des limites à reprendre proprement plus tard** (section 8 du plan) :
+- rendu des blocs projets encore approximatif (retours à la ligne, étiquettes sans le « : » final des noms) ;
+- mise au point faite sur un seul design (le Canva de Nicolas) : un autre design peut demander d'autres règles ;
+- le modèle ne range pas deux fois les lignes pareil : règles déterministes en place (colonnes, lignes de suite), à
+  surveiller sur d'autres CV ;
+- CV anglais : pas de CV anglais importé pour Nicolas, gabarit neutre trop court pour son parcours ;
+- stack des projets sans version anglaise ; compétences « métier » hors des groupes techniques ; ordre des projets du
+  CV maître à vérifier par Nicolas.
+
+Suite : D3 (ciblage et traduction).
