@@ -69,3 +69,21 @@ Critère de sortie : « Tri de 20 offres au clavier ; chaque décision est trac�
 | Tri au clavier, Chromium (Playwright, instance à part : schéma jetable de `test-db`, 24 offres semées, faux modèle de langage) | **20 offres triées au clavier** (`e` → `2` `4` → `Entrée`, `i` → `1`, `p` → `0` → `t` précision → `Échap` → `Entrée`), compteur à jour à chaque décision ; `u` deux fois rend les deux dernières offres dans l'ordre ; `w`, `r`, `j`, `k` répondent ; file vidée → « Tout est trié », puis `u` rend l'offre |
 | Frappes trop rapides | Un robot qui frappe dans la milliseconde qui suit l'arrivée d'un fragment perd la touche, ou fait partir le formulaire sans HTMX (page rechargée, décision enregistrée quand même). Avec 80 ms entre deux touches (rythme humain rapide), aucune perte sur 25 décisions. Une navigation complète comptée une fois pendant une série, non reproduite ensuite touche par touche |
 | Temps de réponse, 520 offres (TestClient, base `test-db`, poste) | Carte de tri : médiane 33 ms (max 110) ; motifs 8 ms (15) ; décision 44 ms (87) ; liste 22 ms (55) ; fiche 33 ms (67). Parts : session 8 ms, lecture de la liste 13 ms, profil 5 ms, analyse d'une offre 0,2 ms. Critère B4 (< 150 ms en local) tenu |
+
+## Critère de sortie et clôture (Nicolas, 29/09)
+
+Tri réel par Nicolas sur son compte d'essai (base de développement, 652 offres), au clavier, de 12 h 27 à 12 h 40 ;
+contrôle en lecture seule (transaction annulée) :
+
+| Contrôle | Résultat |
+|---|---|
+| Décisions | **22 décisions sur 21 offres** (12 intéressé, 9 écarté, 1 plus tard), auteur `user` ; 1 annulation (`u`, une décision « intéressé » annulée, l'offre revenue à examiner) ; 21 décisions en vigueur |
+| Traçabilité | **23 événements pour 23 lignes** (`offres.decision_recorded` × 22, `offres.decision_cancelled` × 1) : aucune décision ni annulation sans événement, aucun événement sans ligne |
+| Motifs | « lieu ou télétravail » cité dans 16 des 18 premières décisions ; un motif « autre » avec sa précision (« date de candidature dépassée ») |
+| Unité C6 | `unscored_or_orphan_offers` vide |
+
+Constat de l'essai, noté en section 8 du plan : les lieux des pistes (« Ile de France », « Eure et Loir ») ne couvrent
+pas les villes des annonces dans le score (78 offres entre 40 et 49 avec un lieu « hors zone »). Pas de changement des
+pistes pendant l'essai (les lieux font aussi les requêtes de la veille) ; correction à placer à la revue de la section 8.
+
+**Étape validée par Nicolas.** Suite : D1 (dossier et statuts).

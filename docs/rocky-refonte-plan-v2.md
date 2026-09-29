@@ -133,7 +133,7 @@ aucun identifiant interne affiché.
 | C4. Scoring : règles | Fonction pure sans effet de bord (ne modifie ni l'offre ni la base) ; **preuve minimale** (pas de composante compétences pleine sur 1–2 compétences) ; **indice de confiance** affiché ; intitulé comparé aux intitulés des pistes ; détail et preuves par composante ; version des règles ; caractéristiques stockées (D14) | Chaque score s'explique composante par composante ; la « Data Protection Analyst » (79,6 % en v1) ne remonte plus | ✅ |
 | C5. Scoring : calibrage | Nicolas annote 40–50 annonces de l'archive (pertinente / non, avec motif) ; comparaison des classements ancien vs nouveau ; ajustement des règles | Les annonces jugées pertinentes remontent ; écart chiffré et documenté | ✅ |
 | C6. Veille | Veille par pistes ; **toutes** les offres conservées, sous le seuil avec leur motif ; offre + rattachement aux pistes + score écrits comme une unité cohérente et idempotente ; veille toujours close (terminée / partielle / échouée / interrompue) ; source en attente ≠ échec ; planificateur unique et rattrapage (D12) | Une panne simulée laisse un statut final explicite et aucune offre orpheline ou sans score | ✅ |
-| C7. Écran Offres | Décisions (valeur, raison, auteur) ; mode tri une offre à la fois au clavier ; liste compacte filtrable (piste, sous le seuil, incomplètes) ; fiche latérale avec synthèse de décision (date limite, éliminatoires, preuves du profil, manques) et « Pourquoi ? » ; retour « pertinente / non pertinente » avec motif (étiquettes D14) | Tri de 20 offres au clavier ; chaque décision est tracée dans `events` | 🔄 |
+| C7. Écran Offres | Décisions (valeur, raison, auteur) ; mode tri une offre à la fois au clavier ; liste compacte filtrable (piste, sous le seuil, incomplètes) ; fiche latérale avec synthèse de décision (date limite, éliminatoires, preuves du profil, manques) et « Pourquoi ? » ; retour « pertinente / non pertinente » avec motif (étiquettes D14) | Tri de 20 offres au clavier ; chaque décision est tracée dans `events` | ✅ |
 
 ### D. Candidatures
 
@@ -489,3 +489,15 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   déclenche aucune requête) ; parade à juger sur le VPS : panneaux de motifs envoyés avec la carte.
 - **(C7)** La liste se calcule en mémoire sur toutes les offres du compte (13 ms pour 520) : passer à une requête filtrée
   en SQL si un compte dépasse quelques milliers d'offres.
+- **(C7 → étape à placer, avant le recalibrage)** **Lieux structurés, mesuré le 29/09** : les pistes de Nicolas ont pour
+  lieux « Ile de France » et « Eure et Loir », mais le score cherche le mot du lieu dans celui de l'annonce (`_zone`) ;
+  « Paris 01 - 75 », « Levallois-Perret », « Courbevoie - 92 », « Chartres - 28 » n'y répondent pas. Sur 1 304 scores
+  (652 offres × 2 pistes), la composante lieu vaut 1 dans 156 cas, 0,3 (hors zone) dans 698 ; **78 offres sont entre 40
+  et 49 avec un lieu « hors zone »**, pour 60 au-dessus du seuil. Remplacer les régions par des villes dans les pistes
+  n'est pas la parade : les lieux des pistes font aussi les requêtes de la veille (Apec sur la région entière, volume
+  LinkedIn, C1 Q7) et les banlieues resteraient hors zone. Correction : un référentiel (communes, départements →
+  région) pour qu'une région couvre ses villes dans le score ; nouvelle `RULES_VERSION`, mesures C4/C5 relancées.
+  Suite des constats (B5 → après C6) et (C4 → après C6). À trancher à la revue de cette section.
+- **(C7, à trancher à la revue)** Motif « autre » de l'essai : « date de candidature dépassée ». Une annonce dont la date
+  limite est passée pourrait être signalée à l'écran (la date limite est déjà lue par l'analyse C3), voire écartée par
+  une règle (auteur `rule`, Q2) ; ou un motif « date limite dépassée » ajouté à « Écarté ».
