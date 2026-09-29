@@ -299,10 +299,13 @@ cv_templates = Table(
     Column("name", Text, nullable=False),
     Column("active", Boolean, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("language", Text, nullable=False, server_default=text("'fr'")),
     UniqueConstraint("profile_id", "sha256"),
+    CheckConstraint("language IN ('fr', 'en')", name="language"),
     Index(
         "uq_cv_templates_one_active",
         "profile_id",
+        "language",
         unique=True,
         postgresql_where=text("active"),
     ),
@@ -720,7 +723,13 @@ class SqlProfileStore:
     # CV templates (decision D2, Q24)
 
     def add_cv_template(
-        self, profile_id: int, path: str, sha256: str, name: str, now: datetime
+        self,
+        profile_id: int,
+        path: str,
+        sha256: str,
+        name: str,
+        language: str,
+        now: datetime,
     ) -> tuple[int, bool]:
         found = self._conn.execute(
             select(cv_templates.c.id).where(
@@ -737,6 +746,7 @@ class SqlProfileStore:
                 path=path,
                 sha256=sha256,
                 name=name,
+                language=language,
                 active=False,
                 created_at=now,
             )
@@ -756,27 +766,35 @@ class SqlProfileStore:
                 path=row.path,
                 sha256=row.sha256,
                 name=row.name,
+                language=row.language,
                 active=row.active,
                 created_at=row.created_at,
             )
             for row in rows
         )
 
-    def activate_cv_template(self, profile_id: int, template_id: int | None) -> bool:
+    def activate_cv_template(
+        self, profile_id: int, language: str, template_id: int | None
+    ) -> bool:
         if (
             template_id is not None
             and not self._conn.execute(
                 select(cv_templates.c.id).where(
                     cv_templates.c.id == template_id,
                     cv_templates.c.profile_id == profile_id,
+                    cv_templates.c.language == language,
                 )
             ).first()
         ):
             return False
-        # Off first: the partial unique index allows one active template per profile at any moment.
+        # Off first: the partial unique index allows one active template per language at any moment.
         self._conn.execute(
             update(cv_templates)
-            .where(cv_templates.c.profile_id == profile_id, cv_templates.c.active)
+            .where(
+                cv_templates.c.profile_id == profile_id,
+                cv_templates.c.language == language,
+                cv_templates.c.active,
+            )
             .values(active=False)
         )
         if template_id is not None:

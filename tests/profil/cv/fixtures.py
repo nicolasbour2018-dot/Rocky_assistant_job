@@ -16,11 +16,7 @@ from PIL import Image, ImageDraw
 from rocky.profil.cv.library import font_assets, font_faces
 from rocky.system.render import render_pdf
 
-HEADINGS = {
-    "C O N T A C T": "C O N T A C T",
-    "E X P É R I E N C E S": "E X P E R I E N C E",
-    "P R O J E T S": "P R O J E C T S",
-}
+LABELS = {"project_problem": "Problématique", "project_stack": "Stack technique"}
 
 PAGE = """<!doctype html><html><head><meta charset="utf-8"><style>
 {faces}
@@ -49,6 +45,11 @@ body {{ margin: 0; font-family: "Poppins", sans-serif; }}
 <p class="t h" style="left:210pt;top:300pt">P R O J E T S</p>
 <p class="t" style="left:215pt;top:345pt;font-size:8pt;font-weight:bold">Tri des messages clients</p>
 <p class="t" style="left:215pt;top:360pt;font-size:7pt">Problématique : Des milliers de messages</p>
+<p class="t" style="left:215pt;top:385pt;font-size:7pt">Stack technique : Python, Docker</p>
+<p class="t" style="left:30pt;top:360pt;font-size:8pt;font-weight:bold">Langages :</p>
+<p class="t" style="left:30pt;top:372pt;font-size:8pt">Python, SQL</p>
+<p class="t" style="left:30pt;top:420pt;font-size:8pt">Curiosité</p>
+<p class="t" style="left:30pt;top:432pt;font-size:8pt">Rigueur</p>
 <p class="t h" style="left:30pt;top:530pt">E X P É R I E N C E S</p>
 <p class="t" style="left:30pt;top:550pt;font-size:8pt">
   <b>2023 - 2026 : Data scientist</b><i> - Transports Exemple -</i></p>
@@ -121,6 +122,11 @@ ROLES = (
     ("P R O J E T S", "heading"),
     ("Tri des messages", "project_name"),
     ("Problématique", "project_problem"),
+    ("Stack technique", "project_stack"),
+    ("Langages", "groups"),
+    ("Python, SQL", "groups"),
+    ("Curiosité", "transversal"),
+    ("Rigueur", "transversal"),
     ("E X P É R I E N C E S", "heading"),
     ("2023 - 2026", "experiences"),
     ("- Transports", "experiences"),
@@ -136,7 +142,7 @@ PROFILE: Mapping[str, Any] = {
     "email": "camille.martin@example.org",
     "phone": "06 00 00 00 00",
     "skill_groups": [{"name": "Langages", "skills": ["Python", "SQL"]}],
-    "transversal": ["Curiosité"],
+    "transversal": ["Curiosité", "Rigueur"],
     "languages": [{"name": "Anglais", "level": "c1"}],
     "hobbies": ["Randonnée"],
     "experiences": [
@@ -150,7 +156,11 @@ PROFILE: Mapping[str, Any] = {
         }
     ],
     "projects": [
-        {"name": "Tri des messages clients", "problem": "Des milliers de messages"}
+        {
+            "name": "Tri des messages clients",
+            "problem": "Des milliers de messages",
+            "stack": ["Python", "Docker"],
+        }
     ],
 }
 
@@ -173,11 +183,7 @@ class ReaderModel:
             if role is None:
                 continue
             item: dict[str, Any] = {"id": int(number), "role": role}
-            if role == "heading":
-                item["en"] = HEADINGS.get(text.strip(), text)
-            if role == "fixed":
-                item["en"] = "Designed for responsible reading"
-            if role == "project_problem":
-                item["label"], item["en"] = "Problématique", "Problem"
+            if role in LABELS:
+                item["label"] = LABELS[role]
             roles.append(item)
         return {"roles": roles[self.skip :], "profile": dict(PROFILE)}

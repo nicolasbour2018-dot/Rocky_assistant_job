@@ -8,7 +8,6 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "beautifulsoup4>=4.15.0",
     "fastapi>=0.141.1",
-    "fonttools>=4.66.0",
     "httpx2>=2.13.1",
     "jinja2>=3.1.6",
     "pdfminer-six>=20260107",
@@ -85,8 +84,8 @@ exclude = ['^tests/test_[^/]*\.py$']
 explicit_package_bases = true
 
 [[tool.mypy.overrides]]
-# pypdfium2 and fontTools ship no type information (decision D2): their values are converted at the boundary.
-module = ["pypdfium2", "pypdfium2.*", "fontTools", "fontTools.*"]
+# pypdfium2 ships no type information (decision D2): its values are converted at the boundary (render, pdf_read).
+module = ["pypdfium2", "pypdfium2.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

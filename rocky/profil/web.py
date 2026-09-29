@@ -23,21 +23,21 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData, UploadFile
 
 from rocky.profil.cv import layout
-from rocky.profil.cv.check import CvCheck, check_cv, expected_facts
-from rocky.profil.cv.content import CvContent, cv_content
+from rocky.profil.cv.check import CvCheck, Fact, check_cv, expected_facts
+from rocky.profil.cv.content import cv_content
 from rocky.profil.cv.derived import (
     TEMPLATE_FILE,
-    derived_headings,
+    derived_facts,
     render_derived,
     slots_of,
 )
+from rocky.profil.cv.importer import MAX_BYTES as IMPORT_MAX_BYTES
 from rocky.profil.cv.importer import (
-    KEEPABLE,
     ImportRefusedError,
     import_cv,
+    import_language,
     read_proposals,
 )
-from rocky.profil.cv.importer import MAX_BYTES as IMPORT_MAX_BYTES
 from rocky.profil.cv.photo import MAX_BYTES as PHOTO_MAX_BYTES
 from rocky.profil.cv.photo import photo_suffix
 from rocky.profil.cv.proposals import SECTIONS as PROPOSAL_SECTIONS
@@ -50,7 +50,6 @@ from rocky.profil.cv.rendering import (
     neutral_headings,
     render_neutral,
 )
-from rocky.profil.cv.semantics import Role
 from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
 from rocky.profil.model import (
     CONTRACT_LABELS,
@@ -164,7 +163,6 @@ def install(app: FastAPI) -> None:
         language_names=LANGUAGE_NAMES,
         language_level_labels=LANGUAGE_LEVEL_LABELS,
         experience_kind_labels=EXPERIENCE_KIND_LABELS,
-        keepable_rubrics=KEEPABLE,
         TrackStatus=TrackStatus,
         choices=CHOICES,
     )
@@ -1076,9 +1074,9 @@ def check_my_cv(request: Request, account: CurrentAccount, form: Form) -> Respon
     rendered = _cv_document(request, account, profile, language)
     if isinstance(rendered, Response):
         return rendered
-    document, content, headings = rendered
+    document, facts = rendered
     state = SectionState(language=language)
-    state.check = check_cv(document.pdf, expected_facts(content, headings))
+    state.check = check_cv(document.pdf, facts)
     return _render(request, profile, key="kit", state=state)
 
 
@@ -1179,28 +1177,20 @@ def cv_pdf(
 
 def _cv_document(
     request: Request, account: Account, profile: Profile, language: str
-) -> tuple[CvPdf, CvContent, tuple[str, ...]] | Response:
-    """The rendered CV, its content and its section titles; or the « kit » section telling why it is refused.
+) -> tuple[CvPdf, tuple[Fact, ...]] | Response:
+    """The rendered CV and what PDF readers must find in it; or the « kit » section telling why it is refused.
 
-    The active template of the account renders it (Q16); without one, the neutral template does.
+    The account's active template in that language renders it (Q16, Q33); without one, the neutral template does.
     """
     clock: Clock = request.app.state.auth.clock
     content = cv_content(profile, language, clock().date())
     try:
-        active = _active_template(request, account)
-        photo = _photo_of(request, profile)
+        active = _active_template(request, account, language)
         if active is None:
-            return (
-                render_neutral(content, photo),
-                content,
-                neutral_headings(content),
-            )
+            document = render_neutral(content, _photo_of(request, profile))
+            return document, expected_facts(content, neutral_headings(content))
         _, files = active
-        return (
-            render_derived(files, content, photo),
-            content,
-            derived_headings(files, language),
-        )
+        return render_derived(files, content), derived_facts(files, content)
     except (CvRefusedError, RenderError) as error:
         reasons = (
             error.reasons if isinstance(error, CvRefusedError) else (error.reason,)
@@ -1212,10 +1202,10 @@ def _cv_document(
 
 
 def _active_template(
-    request: Request, account: Account
+    request: Request, account: Account, language: str
 ) -> tuple[CvTemplateRecord, Mapping[str, bytes]] | None:
     with _editor(request, account) as editor:
-        record = editor.active_cv_template()
+        record = editor.active_cv_template(language)
     if record is None:
         return None
     try:
@@ -1228,8 +1218,9 @@ def _active_template(
 
 
 def _slots(request: Request, editor: ProfileEditor) -> Slots:
-    """The room of the active template (Q26); the neutral template's without one."""
-    record = editor.active_cv_template()
+    """The room of the active French template (Q26; the master CV is written in French); the neutral one's
+    without one."""
+    record = editor.active_cv_template("fr")
     if record is None:
         return NEUTRAL_SLOTS
     files = _files(request).read_bundle(record.path, record.sha256)
@@ -1283,11 +1274,7 @@ def import_my_cv(request: Request, account: CurrentAccount, form: Form) -> Respo
             files=_files(request),
             account_id=account.id,
             today=clock().date(),
-            kept=frozenset(
-                Role(value)
-                for value in form.getlist("garder")
-                if isinstance(value, str) and value in KEEPABLE
-            ),
+            language="en" if _text(form, "langue") == "en" else "fr",
         )
     except ImportRefusedError as error:
         return _kit_refused(request, profile, error.reason)
@@ -1297,7 +1284,10 @@ def import_my_cv(request: Request, account: CurrentAccount, form: Form) -> Respo
     if imported.template is not None:
         with _editor(request, account, writes=True) as editor:
             template_id = editor.record_cv_template(
-                imported.template.path, imported.template.sha256, imported.template_name
+                imported.template.path,
+                imported.template.sha256,
+                imported.template_name,
+                imported.language,
             )
     return _import_page(
         request,
@@ -1336,6 +1326,7 @@ def _import_page(
 ) -> Response:
     try:
         proposals, photo = read_proposals(_files(request), account.id, sha256)
+        language = import_language(_files(request), account.id, sha256)
     except (FileError, ImportRefusedError, ProfileInputError):
         return Response(status_code=404)
     profile = profile_of(request, account)
@@ -1347,10 +1338,14 @@ def _import_page(
         context={
             "profile": profile,
             "sha256": sha256,
+            # The profile is written in French first: an English CV proposes no profile content.
             "sections": {
                 key: (title, proposal_items(proposals, key, profile))
                 for key, title in PROPOSAL_SECTIONS.items()
-            },
+            }
+            if language == "fr"
+            else {},
+            "language": language,
             "photo_found": photo is not None,
             "template_id": template_id,
             "templates": _templates_of(request, profile),
@@ -1415,8 +1410,14 @@ def take_proposals(
 def use_neutral_template(
     request: Request, account: CurrentAccount, form: Form
 ) -> Response:
+    language = "en" if _text(form, "langue") == "en" else "fr"
     return _write(
-        request, account, form, "kit", "", lambda e, _: e.activate_cv_template(None)
+        request,
+        account,
+        form,
+        "kit",
+        "",
+        lambda e, _: e.activate_cv_template(None, language),
     )
 
 
@@ -1430,5 +1431,12 @@ def use_template(
         form,
         "kit",
         "",
-        lambda e, _: e.activate_cv_template(template_id),
+        lambda e, _: _activate(e, template_id),
+    )
+
+
+def _activate(editor: ProfileEditor, template_id: int) -> bool:
+    record = next((t for t in editor.cv_templates() if t.id == template_id), None)
+    return record is not None and editor.activate_cv_template(
+        record.id, record.language
     )

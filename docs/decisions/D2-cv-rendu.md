@@ -54,6 +54,20 @@ le gabarit neutre. »
 | Q27 | Découpage | Une étape, une série de commits cohérents, chacun avec une vérification verte (docs ; `system` ; données du profil ; rendu ; vérification ; déduction et import ; données de Nicolas et clôture). |
 | Q28 | Étape E5 | **E5. Lecture assistée** : navigateur visible sur le poste, geste « Enrichir » dans la fiche d'offre (décision C1, Q6). Critère : « une offre Apec incomplète enrichie depuis sa fiche ». |
 
+### Révision après l'essai du gabarit déduit (Nicolas, 29/09, Q29–Q34)
+
+Nicolas a trouvé la page reproduite fidèle mais la fonction sur-dimensionnée : le CV importé est à jour, il ne sert
+qu'à adapter à l'offre les blocs qui en dépendent.
+
+| # | Sujet | Décision |
+|---|---|---|
+| Q29 | Blocs variables | Seuls trois blocs sont remplis par le profil : **compétences techniques** (groupes), **compétences transversales**, **projets**. Tout le reste du CV importé est repris tel quel : nom, titre, âge, accroche, photo, contact, langues, loisirs, expériences, formations. Remplace Q7 (photo), Q8 (âge, titre, accroche) et Q10 (loisirs) pour un gabarit déduit ; le gabarit neutre les garde. |
+| Q30 | Âge, accroche | Jamais générés ni modifiés : l'utilisateur fournit un CV à jour. Ils peuvent manquer d'un CV à l'autre. |
+| Q31 | Projets | Un projet est un seul bloc qui s'écoule dans sa carte (problème, stack, livrable à la suite, avec l'écart d'origine entre paragraphes), et non trois zones fixes qui laissent des trous. Son nom garde sa zone. |
+| Q32 | Compétences | L'espace vide sous les compétences est gardé : il accueille des compétences en plus. |
+| Q33 | Anglais | **Un CV importé par langue**, l'import anglais étant **facultatif** : l'utilisateur peut importer aussi son CV anglais à jour ; les blocs non variables du CV anglais viennent de lui. Remplace Q21 (un gabarit pour deux langues). Sans CV importé dans une langue, le gabarit neutre sert. |
+| Q34 | Plus tard | Adapter aussi expériences et formations : idée d'amélioration, à évaluer pendant les bêtas (section 8 du plan). |
+
 ## Décisions techniques
 
 | Sujet | Décision | Raison |
@@ -94,6 +108,7 @@ le gabarit neutre. »
 | Q17 — dans les zones | 11,6 % des pixels : textes recopiés par le modèle (dont une puce de la stack du projet 2 rangée dans le problème), retours à la ligne. Écart de mise en page ramené de 20,5 % à 11,6 % par l'alignement des lignes de base |
 | CV de Nicolas, FR et EN (profil réel, CV maître composé dans l'ordre du Canva, anglais saisi) | Rendus sans débordement ; « Vérifier mon CV » : **61 éléments sur 61 lus par les trois lecteurs**, en français et en anglais ; accord entre lecteurs 0,99 et 1,0 |
 | PDF image | CV EN de l'archive : gabarit refusé (« image de page ») ; un PDF sans texte est refusé dès la lecture |
+| **Après la révision Q29–Q33** (gabarit refait depuis la réponse conservée, sans nouvel appel) | Seuls groupes de compétences, transversales, noms et corps des projets sont des zones ; tout le reste est l'image du CV importé, lu par les lecteurs grâce aux mots invisibles. CV FR de Nicolas : aucun débordement, aucun masque doux, « Vérifier mon CV » **37 sur 37** (nom, contact, titres de section, compétences, projets). Sans CV anglais importé, le CV anglais passe par le gabarit neutre, où le parcours complet de Nicolas déborde de 77 mm : à importer (Q33) |
 
 ## Critère de sortie et clôture
 

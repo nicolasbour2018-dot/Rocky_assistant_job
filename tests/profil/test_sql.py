@@ -308,3 +308,26 @@ def test_a_skill_of_a_group_can_be_deleted(db: Connection) -> None:
 
     assert editor.delete_skill(python)
     assert editor.profile().cv.groups == (SkillGroup(Text("Data")),)
+
+
+def test_one_active_template_per_language(db: Connection) -> None:
+    editor = new_editor(db)
+    french = editor.record_cv_template("comptes/1/gabarits/a", "a", "CV français", "fr")
+    english = editor.record_cv_template("comptes/1/gabarits/b", "b", "CV anglais", "en")
+    other = editor.record_cv_template(
+        "comptes/1/gabarits/c", "c", "Autre CV français", "fr"
+    )
+
+    assert editor.activate_cv_template(french, "fr")
+    assert editor.activate_cv_template(english, "en")
+    assert not editor.activate_cv_template(english, "fr")  # not a French template
+    assert editor.activate_cv_template(other, "fr")
+
+    active = editor.active_cv_template("fr")
+    assert active is not None
+    assert active.id == other
+    english_active = editor.active_cv_template("en")
+    assert english_active is not None
+    assert english_active.id == english
+    assert editor.activate_cv_template(None, "en")
+    assert editor.active_cv_template("en") is None

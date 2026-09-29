@@ -354,13 +354,6 @@ def photo_candidate(layout: PageLayout) -> PageImage | None:
     return best[1]
 
 
-@dataclass(frozen=True)
-class PhotoFrame:
-    image: Box  # where the whole image lies (it may be larger than what shows)
-    visible: Box  # what the page shows of it (a clip, often a circle)
-    round: bool
-
-
 def _close(pixel: Any, wanted: tuple[int, ...]) -> bool:
     return all(abs(int(a) - b) <= 12 for a, b in zip(pixel[:3], wanted, strict=False))
 

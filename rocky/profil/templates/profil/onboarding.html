@@ -32,9 +32,7 @@
     <p class="small">Rocky lit ton CV pour te proposer de quoi remplir ton profil, section par section, et reprend son design pour tes futurs CV. Pour le lire, <strong>le texte de ton CV (jamais le fichier) est envoyé au modèle Gemini de Google</strong>. Le PDF n'est pas conservé.</p>
     <form method="post" action="/profil/import-cv" enctype="multipart/form-data" class="edit-form">
       <input type="file" name="fichier" accept="application/pdf" required aria-label="PDF de ton CV">
-    <fieldset class="field"><legend>Garder tel quel dans ton CV en français <span class="hint">Le texte d'origine reste, ton profil ne le change pas</span></legend>
-      <div class="chips">{% for code, label in keepable_rubrics.items() %}<label class="chip"><input type="checkbox" name="garder" value="{{ code }}">{{ label }}</label>{% endfor %}</div>
-    </fieldset>
+      <input type="hidden" name="langue" value="fr">
       <label class="check"><input type="checkbox" name="consentement" value="1" required> J'accepte l'envoi du texte de mon CV à Gemini.</label>
       <button type="submit" class="btn btn-primary">Importer mon CV</button>
     </form>

@@ -271,26 +271,36 @@ class InMemoryProfileStore:
         return True
 
     def add_cv_template(
-        self, profile_id: int, path: str, sha256: str, name: str, now: datetime
+        self,
+        profile_id: int,
+        path: str,
+        sha256: str,
+        name: str,
+        language: str,
+        now: datetime,
     ) -> tuple[int, bool]:
         for record in self.templates.get(profile_id, []):
             if record.sha256 == sha256:
                 return record.id, False
         template_id = next(self._ids)
         self.templates.setdefault(profile_id, []).append(
-            CvTemplateRecord(template_id, path, sha256, name, False, now)
+            CvTemplateRecord(template_id, path, sha256, name, language, False, now)
         )
         return template_id, True
 
     def cv_templates(self, profile_id: int) -> tuple[CvTemplateRecord, ...]:
         return tuple(reversed(self.templates.get(profile_id, [])))
 
-    def activate_cv_template(self, profile_id: int, template_id: int | None) -> bool:
+    def activate_cv_template(
+        self, profile_id: int, language: str, template_id: int | None
+    ) -> bool:
         records = self.templates.get(profile_id, [])
-        if template_id is not None and all(r.id != template_id for r in records):
+        mine = [r for r in records if r.language == language]
+        if template_id is not None and all(r.id != template_id for r in mine):
             return False
         self.templates[profile_id] = [
-            replace(r, active=r.id == template_id) for r in records
+            replace(r, active=r.id == template_id) if r.language == language else r
+            for r in records
         ]
         return True
 

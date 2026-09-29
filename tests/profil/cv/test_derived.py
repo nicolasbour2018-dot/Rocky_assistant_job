@@ -1,4 +1,5 @@
-"""A template derived from an imported CV (decision D2, Q15–Q24), on a fictional designed CV made for the test."""
+"""A template derived from an imported CV (decision D2, Q15–Q24, Q29–Q33), on a fictional designed CV made for the
+test: only the skills and the projects follow the profile, everything else stays as the imported CV drew it."""
 
 from __future__ import annotations
 
@@ -14,13 +15,13 @@ import pytest
 from PIL import ImageFilter
 from pypdf import PdfWriter
 
+from rocky.profil.cv.check import Fact, check_cv
 from rocky.profil.cv.content import cv_content
 from rocky.profil.cv.derived import (
     TEMPLATE_FILE,
     _by_column,
     _continued,
-    _title_line,
-    derive,
+    derived_facts,
     render_derived,
     slots_of,
     unspaced,
@@ -30,6 +31,7 @@ from rocky.profil.cv.importer import (
     ImportedCv,
     ImportRefusedError,
     import_cv,
+    import_language,
     read_proposals,
 )
 from rocky.profil.cv.pdf_page import (
@@ -43,8 +45,8 @@ from rocky.profil.cv.pdf_page import (
     render_page,
 )
 from rocky.profil.cv.proposals import preview_profile
-from rocky.profil.cv.rendering import Photo
-from rocky.profil.cv.semantics import BlockRole, Role, block_roles, prompt
+from rocky.profil.cv.semantics import BlockRole, Role
+from rocky.profil.model import Profile, Text
 from rocky.system.files import FileStore
 from rocky.system.pdf_read import read_pdf
 from rocky.system.render import compare, rasterize
@@ -64,13 +66,35 @@ def designed() -> bytes:
     return designed_cv()
 
 
+def imported(
+    pdf: bytes, root: Path, model: ReaderModel | None = None, language: str = "fr"
+) -> ImportedCv:
+    return import_cv(
+        pdf,
+        model=model or ReaderModel(),
+        files=FileStore(root),
+        account_id=1,
+        today=TODAY,
+        language=language,
+    )
+
+
 @dataclass
 class Shared:
-    """One import of the designed CV, read by several tests: a derivation draws two 300 dpi layers."""
+    """One import of the designed CV, read by several tests: a derivation draws a 300 dpi layer."""
 
     root: Path
     result: ImportedCv
     model: ReaderModel
+
+    def files(self) -> Mapping[str, bytes]:
+        assert self.result.template is not None
+        return FileStore(self.root).read_bundle(
+            self.result.template.path, self.result.template.sha256
+        )
+
+    def proposals(self) -> Mapping[str, Any]:
+        return read_proposals(FileStore(self.root), 1, self.result.proposals.sha256)[0]
 
 
 @pytest.fixture(scope="module")
@@ -80,52 +104,41 @@ def shared(designed: bytes, tmp_path_factory: pytest.TempPathFactory) -> Shared:
     return Shared(root, imported(designed, root, model), model)
 
 
-def imported(pdf: bytes, root: Path, model: ReaderModel | None = None) -> ImportedCv:
-    return import_cv(
-        pdf,
-        model=model or ReaderModel(),
-        files=FileStore(root),
-        account_id=1,
-        today=TODAY,
-    )
+def text_of(pdf: bytes) -> str:
+    return " ".join(read_pdf(pdf)[0].text.split())
 
 
-def stored(
-    root: Path, result: ImportedCv
-) -> tuple[Mapping[str, bytes], Mapping[str, Any], bytes | None]:
-    """The template files, the proposals and the photo of an import."""
-    assert result.template is not None
-    files = FileStore(root).read_bundle(result.template.path, result.template.sha256)
-    proposals, photo = read_proposals(FileStore(root), 1, result.proposals.sha256)
-    return files, proposals, photo
+def test_only_skills_and_projects_become_regions(shared: Shared) -> None:
+    template = json.loads(shared.files()[TEMPLATE_FILE])
+
+    assert shared.result.template_refusal is None
+    assert shared.result.warnings == ()
+    assert {region["kind"] for region in template["regions"]} == {
+        "groups",
+        "transversal",
+        "project_name",
+        "project_body",
+    }
+    (body,) = [r for r in template["regions"] if r["kind"] == "project_body"]
+    assert [part["role"] for part in body["parts"]] == [
+        "project_problem",
+        "project_stack",
+    ]
+    assert (
+        body["parts"][1]["gap"] > 0
+    )  # the space the design left between the two parts
+    assert slots_of(template).projects == 1
+    assert template["language"] == "fr"
 
 
-def test_the_template_reproduces_the_design_outside_its_text_regions(
+def test_the_design_and_the_kept_texts_stay_outside_the_variable_blocks(
     designed: bytes, shared: Shared
 ) -> None:
-    result, tmp_path = shared.result, shared.root
-
-    assert result.template_refusal is None
-    assert result.warnings == ()
-    assert result.preview is not None
-    files, proposals, photo = stored(tmp_path, result)
+    files = shared.files()
     template = json.loads(files[TEMPLATE_FILE])
-    assert {region["role"] for region in template["regions"]} == {
-        "name",
-        "title",
-        "headline",
-        "email",
-        "phone",
-        "project_name",
-        "project_problem",
-        "experiences",
-    }
-    assert template["photo"]["round"]
-    assert slots_of(template).projects == 1
-    assert photo is not None
-
-    content = cv_content(preview_profile(proposals), "fr", TODAY)
-    document = render_derived(files, content, Photo(photo, "jpg"))
+    document = render_derived(
+        files, cv_content(preview_profile(shared.proposals()), "fr", TODAY)
+    )
 
     original = render_page(designed, 72).filter(ImageFilter.GaussianBlur(1))
     reproduced = (
@@ -135,56 +148,121 @@ def test_the_template_reproduces_the_design_outside_its_text_regions(
     )
     mask = [
         (
-            int(r["box"]["x"]),
-            int(r["box"]["y"]),
-            int(r["box"]["x"] + r["box"]["width"]) + 1,
-            int(r["box"]["y"] + r["box"]["height"]) + 1,
+            int(r["room"]["x"]),
+            int(r["room"]["y"]),
+            int(r["room"]["x"] + r["room"]["width"]) + 1,
+            int(r["room"]["y"] + r["room"]["height"]) + 1,
         )
         for r in template["regions"]
     ]
     outside = compare(original, reproduced, mask=mask, threshold=48)
-    assert outside.ratio < 0.003, (
-        f"{outside.changed_pixels} pixels differ outside the text regions"
+    # Name, photo, contact, headline, titles, experiences and footer are the imported page itself.
+    assert outside.ratio < 0.003, f"{outside.changed_pixels} pixels differ"
+
+
+def test_the_profile_fills_the_variable_blocks_and_nothing_else(shared: Shared) -> None:
+    profile = preview_profile(
+        {
+            **PROFILE,
+            "phone": "07 11 11 11 11",  # the kept phone of the CV does not follow the profile
+            "transversal": ["Écoute"],
+            "projects": [
+                {
+                    "name": "Prévision des stocks",
+                    "problem": "Ruptures",
+                    "stack": ["Pandas"],
+                }
+            ],
+        }
+    )
+
+    text = text_of(render_derived(shared.files(), cv_content(profile, "fr", TODAY)).pdf)
+
+    assert "Prévision des stocks" in text
+    assert "Stack technique : Pandas" in text
+    assert "Écoute" in text
+    assert "Tri des messages clients" not in text
+    assert "06 00 00 00 00" in text  # kept, as invisible words over the layer
+    assert "07 11 11 11 11" not in text
+
+
+def test_the_whole_cv_is_read_as_words_by_every_reader(shared: Shared) -> None:
+    files = shared.files()
+    content = cv_content(preview_profile(shared.proposals()), "fr", TODAY)
+    facts = derived_facts(files, content)
+    document = render_derived(files, content)
+
+    check = check_cv(document.pdf, facts)
+
+    assert Fact("Section", "PROJETS") in facts  # « P R O J E T S » read as a word
+    assert Fact("Nom", "CAMILLE MARTIN") in facts
+    assert check.readable, check.warnings
+    assert "Prévision de la demande par entrepôt." in text_of(document.pdf)
+
+
+def _in_english(profile: Profile) -> Profile:
+    """The variable blocks written in English; the experiences left French: this template never shows them."""
+    return replace(
+        profile,
+        skills=tuple(
+            replace(s, content=replace(s.content, label=Text(s.label.fr, s.label.fr)))
+            for s in profile.skills
+        ),
+        cv=replace(
+            profile.cv,
+            groups=tuple(
+                replace(g, name=Text(g.name.fr, "Languages")) for g in profile.cv.groups
+            ),
+        ),
+        projects=tuple(
+            replace(
+                p,
+                content=replace(
+                    p.content,
+                    name=Text(p.content.name.fr, "Message triage"),
+                    problem=Text(p.content.problem.fr, "Thousands of messages"),
+                ),
+            )
+            for p in profile.projects
+        ),
     )
 
 
-def test_the_english_cv_writes_the_translated_titles_again(
-    designed: bytes, shared: Shared
+def test_an_english_cv_asks_english_only_for_the_variable_blocks(
+    designed: bytes, tmp_path: Path
 ) -> None:
-    files, proposals, _ = stored(shared.root, shared.result)
-    english = cv_content(preview_profile(proposals), "en", TODAY)
+    result = imported(designed, tmp_path, language="en")
+    assert result.template is not None
+    assert import_language(FileStore(tmp_path), 1, result.proposals.sha256) == "en"
+    files = FileStore(tmp_path).read_bundle(
+        result.template.path, result.template.sha256
+    )
+    content = cv_content(_in_english(preview_profile(PROFILE)), "en", TODAY)
+    assert content.missing  # the experiences have no English
+
+    text = text_of(render_derived(files, content).pdf)
+
+    assert "Message triage" in text
     assert (
-        english.missing
-    )  # the preview profile holds French texts only: pretend they are translated
-
-    document = render_derived(files, replace(english, missing=()), None)
-
-    text = " ".join(read_pdf(document.pdf)[0].text.split())
-    # Drawn as outlines, spaced like the design; read as words through their invisible text.
-    assert "PROJECTS" in text
-    assert "P R O J" not in text
-    assert "PROJETS" not in text
-    assert "Designed for responsible reading" in text
-
-
-def test_french_titles_stay_in_the_layer_and_are_read_as_words(
-    designed: bytes, shared: Shared
-) -> None:
-    files, proposals, _ = stored(shared.root, shared.result)
-
-    document = render_derived(
-        files, cv_content(preview_profile(proposals), "fr", TODAY), None
-    )
-
-    text = " ".join(read_pdf(document.pdf)[0].text.split())
-    assert "PROJETS" in text
-    assert "EXPÉRIENCES" in text
-    assert "P R O J" not in text
+        "Stack technique: Python, Docker" in text
+    )  # the label as the CV wrote it, English colon
 
 
 def test_a_pdf_made_of_an_image_is_refused_with_its_reason(tmp_path: Path) -> None:
     with pytest.raises(ImportRefusedError, match="pas de texte lisible"):
         imported(image_only_cv(), tmp_path)
+
+
+def test_a_page_that_is_one_picture_gives_no_template_but_its_proposals(
+    tmp_path: Path,
+) -> None:
+    result = imported(scanned_cv(), tmp_path)
+
+    assert result.template is None
+    assert result.template_refusal is not None
+    assert "image de page" in result.template_refusal
+    proposals, _ = read_proposals(FileStore(tmp_path), 1, result.proposals.sha256)
+    assert proposals["full_name"] == "Camille Martin"
 
 
 def test_a_cv_of_two_pages_is_refused(designed: bytes, tmp_path: Path) -> None:
@@ -213,41 +291,51 @@ def test_only_the_texts_reach_the_model_never_the_file(
     designed: bytes, shared: Shared
 ) -> None:
     (prompt,) = shared.model.prompts
+
     assert "CAMILLE MARTIN" in prompt
     assert "%PDF" not in prompt
     assert prompt.count("\n[") == len(read_page(designed).blocks)
 
 
-def _layout(*lines: tuple[str, float]) -> PageLayout:
+def test_the_cv_carries_no_transparency_mask_that_some_readers_draw_black(
+    designed: bytes, shared: Shared
+) -> None:
+    document = render_derived(
+        shared.files(), cv_content(preview_profile(shared.proposals()), "fr", TODAY)
+    )
+
+    # The imported page has a transparent image; drawn through SVG, it gave soft masks that Apple's Preview drew
+    # as black blocks. The layer is one opaque image.
+    assert b"/SMask" in designed
+    assert b"/SMask" not in document.pdf
+
+
+def _layout(*lines: tuple[str, float, float]) -> PageLayout:
     style = Style("Poppins-Regular", 7.0, "#000000")
     blocks = tuple(
         Block(
             i,
-            Box(10, y, 100, 8),
-            (Line(Box(10, y, 100, 8), y + 7, (Run(text, style),), 0.0),),
+            Box(x, y, 90, 8),
+            (Line(Box(x, y, 90, 8), y + 7, (Run(text, style),), 0.0),),
         )
-        for i, (text, y) in enumerate(lines)
+        for i, (text, x, y) in enumerate(lines)
     )
     return PageLayout(595, 842, blocks, (), "#ffffff")
 
 
 def test_a_project_line_continues_the_part_whose_label_opens_above_it() -> None:
     layout = _layout(
-        ("Problématique : Combiner des", 100),
-        ("données sportives.", 110),
-        ("Stack technique : Python,", 130),
-        ("Projections d'effectifs", 140),
-        ("comptables, automatisation", 150),
+        ("Problématique : Combiner des", 10, 100),
+        ("données sportives.", 10, 110),
+        ("Stack technique : Python,", 10, 130),
+        ("Projections d'effectifs", 10, 140),
+        ("comptables, automatisation", 10, 150),
     )
     roles = [
         BlockRole(0, Role.PROJECT_PROBLEM, 1, "Problématique"),
-        BlockRole(
-            1, Role.PROJECT_PROBLEM, 1, "Problématique"
-        ),  # the label repeated on a following line
+        BlockRole(1, Role.PROJECT_PROBLEM, 1, "Problématique"),  # label repeated below
         BlockRole(2, Role.PROJECT_STACK, 1, "Stack technique"),
-        BlockRole(
-            3, Role.PROJECT_NAME, 1
-        ),  # a line of the stack taken for the project's name
+        BlockRole(3, Role.PROJECT_NAME, 1),  # a line of the stack taken for the name
         BlockRole(4, Role.PROJECT_PROBLEM, 1, "Problématique"),
     ]
 
@@ -262,137 +350,24 @@ def test_a_project_line_continues_the_part_whose_label_opens_above_it() -> None:
     ]
 
 
-def test_a_title_on_two_lines_is_translated_whole_then_spread_over_them() -> None:
-    layout = _layout(("C O M P É T E N C E S", 100), ("T E C H N I Q U E S", 115))
-    roles = [
-        BlockRole(0, Role.HEADING, text_en="S K I L L S"),
-        BlockRole(1, Role.HEADING),
-    ]
-
-    spread = [
-        _title_line(role, layout, [((0, 1), "TECHNICAL SKILLS")]) for role in roles
-    ]
-
-    assert [role.text_en for role in spread] == ["TECHNICAL", "SKILLS"]
-    spaced = _title_line(
-        roles[0], layout, [((0, 1), "T E C H N I C A L   S K I L L S")]
-    )
-    assert spaced.text_en == "T E C H N I C A L"
-    assert unspaced("T E C H N I C A L   S K I L L S") == "TECHNICAL SKILLS"
-
-
-def test_the_photo_shows_its_round_frame_not_its_whole_image(
-    designed: bytes, shared: Shared
-) -> None:
-    files, _, _ = stored(shared.root, shared.result)
-    photo = json.loads(files[TEMPLATE_FILE])["photo"]
-
-    # The fixture shows a 140 × 140 pt disc of a 140 × 170 pt image.
-    assert photo["round"]
-    assert abs(photo["visible"]["height"] - 140) < 3
-    assert photo["image"]["height"] > photo["visible"]["height"] + 20
-
-
-def test_a_page_that_is_one_picture_gives_no_template_but_its_proposals(
-    tmp_path: Path,
-) -> None:
-    result = imported(scanned_cv(), tmp_path)
-
-    assert result.template is None
-    assert result.template_refusal is not None
-    assert "image de page" in result.template_refusal
-    proposals, _ = read_proposals(FileStore(tmp_path), 1, result.proposals.sha256)
-    assert proposals["full_name"] == "Camille Martin"
-
-
-def test_the_cv_carries_no_transparency_mask_that_some_readers_draw_black(
-    designed: bytes, shared: Shared
-) -> None:
-    files, proposals, photo = stored(shared.root, shared.result)
-
-    document = render_derived(
-        files,
-        cv_content(preview_profile(proposals), "fr", TODAY),
-        Photo(photo or b"", "jpg"),
-    )
-
-    # The imported page has a transparent image; drawn through SVG, it gave soft masks that Apple's Preview drew as
-    # black blocks. The layer is one opaque image now.
-    assert b"/SMask" in designed
-    assert b"/SMask" not in document.pdf
-
-
-def test_a_kept_rubric_stays_as_the_imported_cv_wrote_it_in_french(
-    designed: bytes, tmp_path: Path
-) -> None:
-    layout = read_page(designed)
-    roles = block_roles(
-        ReaderModel().complete_json("", prompt(layout.blocks), {}), layout.blocks
-    )
-    derived = derive(designed, layout, roles, "essai", kept=frozenset({Role.PHONE}))
-    profile = preview_profile({**PROFILE, "phone": "07 11 11 11 11"})
-
-    french = " ".join(
-        read_pdf(
-            render_derived(derived.files, cv_content(profile, "fr", TODAY), None).pdf
-        )[0].text.split()
-    )
-    english = cv_content(profile, "en", TODAY)
-    english_text = " ".join(
-        read_pdf(render_derived(derived.files, replace(english, missing=()), None).pdf)[
-            0
-        ].text.split()
-    )
-
-    assert (
-        "06 00 00 00 00" in french
-    )  # kept: drawn by the layer, readable through its invisible words
-    assert "07 11 11 11 11" not in french
-    assert "07 11 11 11 11" in english_text  # the English CV takes it from the profile
-
-
 def test_projects_are_numbered_by_their_column_whatever_the_model_says() -> None:
-    style = Style("Poppins-Regular", 7.0, "#000000")
-
-    def block(i: int, text: str, x: float, y: float) -> Block:
-        box = Box(x, y, 90, 8)
-        return Block(i, box, (Line(box, y + 7, (Run(text, style),), 0.0),))
-
-    layout = PageLayout(
-        595,
-        842,
-        (
-            block(0, "Projet gauche", 10, 100),
-            block(1, "Projet droite", 300, 100),
-            block(2, "Problématique : à gauche", 10, 120),
-            block(3, "Problématique : à droite", 300, 120),
-        ),
-        (),
-        "#ffffff",
+    layout = _layout(
+        ("Projet gauche", 10, 100),
+        ("Projet droite", 300, 100),
+        ("Problématique : à gauche", 10, 120),
+        ("Problématique : à droite", 300, 120),
     )
     roles = [
         BlockRole(0, Role.PROJECT_NAME, 1),
         BlockRole(1, Role.PROJECT_NAME, 0),
-        BlockRole(
-            2, Role.PROJECT_PROBLEM, 0, "Problématique"
-        ),  # the model's numbers are crossed
+        BlockRole(2, Role.PROJECT_PROBLEM, 0, "Problématique"),  # numbers crossed
         BlockRole(3, Role.PROJECT_PROBLEM, 1, "Problématique"),
     ]
 
     assert [role.index for role in _by_column(layout, roles)] == [0, 1, 0, 1]
 
 
-def test_a_title_translation_without_words_keeps_the_english_of_each_line() -> None:
-    layout = _layout(("C O M P É T E N C E S", 100), ("T E C H N I Q U E S", 115))
-    roles = [
-        BlockRole(0, Role.HEADING, text_en="S K I L L S"),
-        BlockRole(1, Role.HEADING, text_en="T E C H N I C A L"),
-    ]
-    glued = [
-        ((0, 1), "S K I L L S T E C H N I C A L")
-    ]  # one run of letters: no word to spread
-
-    assert [_title_line(role, layout, glued).text_en for role in roles] == [
-        "S K I L L S",
-        "T E C H N I C A L",
-    ]
+def test_a_title_spaced_letter_by_letter_reads_as_words() -> None:
+    assert unspaced("P R O J E T S") == "PROJETS"
+    assert unspaced("T E C H N I C A L   S K I L L S") == "TECHNICAL SKILLS"
+    assert unspaced("C   O   N   T") == "CONT"

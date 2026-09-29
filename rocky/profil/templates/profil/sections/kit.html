@@ -33,26 +33,26 @@
 
 <div class="cv-render">
   <h3 class="group-title">Ton CV</h3>
-  {% set active_template = cv_templates | selectattr("active") | first %}
-  <p class="muted small">
-    {% if active_template %}Gabarit : {{ active_template.name }} (déduit de ton CV importé).{% else %}Gabarit neutre de Rocky.{% endif %}
-    Une page A4 ; un texte trop long est signalé, jamais coupé.
-  </p>
-  {% if cv_templates %}
-  <div class="cv-downloads">
-    {% if active_template %}{{ m.form_open(key, "/profil/gabarit/neutre", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Revenir au gabarit neutre</button></form>{% endif %}
-    {% for template in cv_templates if not template.active %}
-    {{ m.form_open(key, "/profil/gabarit/" ~ template.id ~ "/activer", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Utiliser « {{ template.name }} »</button></form>
+  <p class="muted small">Une page A4 ; un texte trop long est signalé, jamais coupé. Avec ton CV importé, seuls tes compétences et tes projets viennent du profil : le reste est celui de ton CV.</p>
+  <ul class="small">
+    {% for code, language_name in (("fr", "français"), ("en", "anglais")) %}
+    {% set active_template = cv_templates | selectattr("active") | selectattr("language", "equalto", code) | first %}
+    <li>CV {{ language_name }} : {% if active_template %}{{ active_template.name }}
+      {{ m.form_open(key, "/profil/gabarit/neutre", "inline-form") }}<input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost btn-mini">Revenir au gabarit neutre</button></form>
+      {% else %}gabarit neutre de Rocky{% endif %}
+      {% for template in cv_templates if not template.active and template.language == code %}
+      {{ m.form_open(key, "/profil/gabarit/" ~ template.id ~ "/activer", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Utiliser « {{ template.name }} »</button></form>
+      {% endfor %}
+    </li>
     {% endfor %}
-  </div>
-  {% endif %}
+  </ul>
   <details class="note">
     <summary>Importer ton CV (PDF)</summary>
-    <p class="small">Rocky lit ton CV pour te proposer de quoi remplir ton profil, et en déduit ton propre gabarit : ton design, avec tes textes. Pour le lire, <strong>le texte de ton CV (jamais le fichier) est envoyé au modèle Gemini de Google</strong>. Le PDF n'est pas conservé.</p>
+    <p class="small">Importe ton CV à jour : Rocky le reprend tel quel et n'y adapte que tes compétences et tes projets à chaque offre. Un CV en anglais est facultatif ; sans lui, ton CV anglais utilise le gabarit neutre. Pour le lire, <strong>le texte de ton CV (jamais le fichier) est envoyé au modèle Gemini de Google</strong>. Le PDF n'est pas conservé.</p>
     <form method="post" action="/profil/import-cv" enctype="multipart/form-data" class="edit-form">
       <input type="file" name="fichier" accept="application/pdf" required aria-label="PDF de ton CV">
-      <fieldset class="field"><legend>Garder tel quel dans ton CV en français <span class="hint">Le texte d'origine reste, ton profil ne le change pas</span></legend>
-        <div class="chips">{% for code, label in keepable_rubrics.items() %}<label class="chip"><input type="checkbox" name="garder" value="{{ code }}">{{ label }}</label>{% endfor %}</div>
+      <fieldset class="field"><legend>Ce CV est rédigé en</legend>
+        <div class="chips"><label class="chip"><input type="radio" name="langue" value="fr" checked>français</label><label class="chip"><input type="radio" name="langue" value="en">anglais</label></div>
       </fieldset>
       <label class="check"><input type="checkbox" name="consentement" value="1" required> J'accepte l'envoi du texte de mon CV à Gemini.</label>
       <button type="submit" class="btn btn-primary">Importer</button>

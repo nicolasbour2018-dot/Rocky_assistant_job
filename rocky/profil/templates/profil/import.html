@@ -9,19 +9,19 @@
 {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
 
 <section class="profile-section">
-  <h2>Ton gabarit</h2>
+  <h2>Ton gabarit en {{ "français" if language == "fr" else "anglais" }}</h2>
   {% if refusal %}
   <p class="alert alert-error">{{ refusal }}</p>
   <p class="muted">Ton CV sera rendu avec le gabarit neutre de Rocky. Tes propositions de profil restent utilisables ci-dessous.</p>
   {% elif preview %}
-  <p>Ton CV d'origine, et le même contenu rendu par Rocky dans le gabarit déduit : compare-les avant de l'utiliser.</p>
+  <p>Ton CV d'origine, et le même CV où Rocky a réécrit tes compétences et tes projets (le reste est repris tel quel) : compare-les avant de l'utiliser.</p>
   <div class="two-columns cv-compare">
     <figure><img src="data:image/png;base64,{{ preview[0] }}" alt="Ton CV d'origine"><figcaption>Ton CV d'origine</figcaption></figure>
     <figure><img src="data:image/png;base64,{{ preview[1] }}" alt="Le même CV rendu par Rocky"><figcaption>Rendu par Rocky</figcaption></figure>
   </div>
   {% endif %}
   {% if warnings %}<ul class="small">{% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
-  {% for template in templates %}
+  {% for template in templates if template.language == language %}
   <p>
     {{ template.name }}{% if template.active %} <span class="badge badge-accent">utilisé</span>{% endif %}
     {% if not template.active %}
@@ -31,6 +31,7 @@
   {% endfor %}
 </section>
 
+{% if language == "fr" %}
 <section class="profile-section">
   <h2>Ce que ton CV propose pour ton profil</h2>
   <p class="muted">Rien n'est écrit sans ton accord, et rien de ce que ton profil contient déjà n'est remplacé. Tu pourras tout modifier ensuite dans ton profil.</p>
@@ -51,4 +52,5 @@
   </form>
   {% endfor %}
 </section>
+{% endif %}
 {% endblock %}

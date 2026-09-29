@@ -128,39 +128,44 @@ class ProfileEditor:
 
     # CV templates (decision D2, Q16, Q24): one active at most; none means the neutral template.
 
-    def record_cv_template(self, path: str, sha256: str, name: str) -> int:
+    def record_cv_template(
+        self, path: str, sha256: str, name: str, language: str
+    ) -> int:
         profile_id = self._id()
         template_id, new = self._store.add_cv_template(
-            profile_id, path, sha256, name, self._clock()
+            profile_id, path, sha256, name, language, self._clock()
         )
         if new:
             self._event(
                 "profil.cv_template_derived",
                 "cv_template",
                 template_id,
-                {"sha256": sha256, "name": name},
+                {"sha256": sha256, "name": name, "language": language},
             )
         return template_id
 
     def cv_templates(self) -> tuple[CvTemplateRecord, ...]:
         return self._store.cv_templates(self._id())
 
-    def active_cv_template(self) -> CvTemplateRecord | None:
-        return next((t for t in self.cv_templates() if t.active), None)
+    def active_cv_template(self, language: str) -> CvTemplateRecord | None:
+        return next(
+            (t for t in self.cv_templates() if t.active and t.language == language),
+            None,
+        )
 
-    def activate_cv_template(self, template_id: int | None) -> bool:
-        """``None`` goes back to the neutral template."""
-        current = self.active_cv_template()
+    def activate_cv_template(self, template_id: int | None, language: str) -> bool:
+        """``None`` goes back to the neutral template for ``language``."""
+        current = self.active_cv_template(language)
         if (current.id if current else None) == template_id:
             return True
         profile_id = self._id()
-        if not self._store.activate_cv_template(profile_id, template_id):
+        if not self._store.activate_cv_template(profile_id, language, template_id):
             return False
         self._event(
             "profil.cv_template_activated",
             "profile",
             profile_id,
-            {"template_id": template_id},
+            {"template_id": template_id, "language": language},
         )
         return True
 

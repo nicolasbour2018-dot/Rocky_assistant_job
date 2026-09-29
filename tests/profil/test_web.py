@@ -644,7 +644,7 @@ def test_an_imported_cv_proposes_its_content_and_its_template(
 
     kit = section(importer.post(template.group(1), headers=HTMX).text, "kit")
 
-    assert "déduit de ton CV importé" in kit
+    assert "CV français : CV français importé le" in " ".join(kit.split())
     cv = importer.get("/profil/cv/pdf?langue=fr")
     assert cv.headers["content-type"] == "application/pdf"
     assert "Camille Martin" in " ".join(read_pdf(cv.content)[0].text.split()).title()
@@ -662,4 +662,4 @@ def test_an_image_pdf_is_refused_and_the_neutral_template_stays(
 
     kit = section(refused.text, "kit")
     assert "pas de texte lisible" in kit
-    assert "Gabarit neutre de Rocky" in kit
+    assert "CV français : gabarit neutre de Rocky" in " ".join(kit.split())

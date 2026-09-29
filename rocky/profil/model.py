@@ -311,6 +311,7 @@ class CvTemplateRecord:
     path: str
     sha256: str
     name: str
+    language: str  # fr, en: the language of the imported CV (decision D2, Q33)
     active: bool
     created_at: datetime
 
@@ -385,7 +386,13 @@ class ProfileStore(Protocol):
         ...
 
     def add_cv_template(
-        self, profile_id: int, path: str, sha256: str, name: str, now: datetime
+        self,
+        profile_id: int,
+        path: str,
+        sha256: str,
+        name: str,
+        language: str,
+        now: datetime,
     ) -> tuple[int, bool]:
         """The template's id, and whether it is new (the same bundle is recorded once)."""
         ...
@@ -394,8 +401,11 @@ class ProfileStore(Protocol):
         """Newest first."""
         ...
 
-    def activate_cv_template(self, profile_id: int, template_id: int | None) -> bool:
-        """Only ``template_id`` active (None: the neutral template); False when it is not of this profile."""
+    def activate_cv_template(
+        self, profile_id: int, language: str, template_id: int | None
+    ) -> bool:
+        """Only ``template_id`` active in ``language`` (None: the neutral template); False when it is not of this
+        profile or not in that language."""
         ...
 
     def mark_onboarding_completed(self, profile_id: int, now: datetime) -> None: ...

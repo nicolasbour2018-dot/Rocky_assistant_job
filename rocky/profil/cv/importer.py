@@ -1,4 +1,5 @@
-"""Import of a CV PDF (decision D2, Q2, Q14, Q16, Q20): profile proposals, and the account's own template.
+"""Import of a CV PDF (decision D2, Q2, Q14, Q16, Q20, Q33): profile proposals, and the account's own template in
+the CV's language (one imported CV per language, the English one optional).
 
 Everything slow happens here, outside any database transaction: reading the page, one language model call,
 deriving the template, rendering a side-by-side preview. What is kept is written to the files root as immutable
@@ -24,28 +25,21 @@ from rocky.profil.cv.proposals import preview_profile
 from rocky.profil.cv.semantics import (
     INSTRUCTIONS,
     SCHEMA,
-    Role,
     SemanticsError,
     block_roles,
     profile_answer,
     prompt,
-    titles,
 )
 from rocky.system.files import FileStore, StoredBundle
 from rocky.system.llm import JsonModel, LlmUnavailableError
 from rocky.system.render import RenderError, rasterize
 
-# Rubrics a user may keep as the imported CV wrote them, in the French CV.
-KEEPABLE = {
-    "hobbies": "Loisirs",
-    "languages": "Langues",
-    "transversal": "Compétences transversales",
-    "groups": "Compétences techniques",
-}
+LANGUAGES = {"fr": "français", "en": "anglais"}
 IMPORTS = "imports"
 TEMPLATES = "gabarits"
 PROPOSALS_FILE = "propositions.json"
 ANSWER_FILE = "reponse-du-modele.json"
+LANGUAGE_FILE = "langue.txt"
 PHOTO_FILE = "photo.jpg"
 MAX_BYTES = 10 * 1024 * 1024
 PREVIEW_DPI = 70
@@ -64,6 +58,7 @@ class ImportedCv:
     proposals: StoredBundle  # propositions.json (+ photo.jpg when the CV has one)
     template: StoredBundle | None
     template_name: str
+    language: str
     template_refusal: str | None  # why no template: the neutral one stays (Q20)
     warnings: tuple[str, ...]  # replaced fonts, rendering problems of the preview
     preview: (
@@ -78,8 +73,11 @@ def import_cv(
     files: FileStore,
     account_id: int,
     today: date,
-    kept: frozenset[Role] = frozenset(),
+    language: str = "fr",
 ) -> ImportedCv:
+    """``language``: the language the CV is written in; its template serves the CVs in that language."""
+    if language not in LANGUAGES:
+        raise ImportRefusedError("Langue du CV inconnue.")
     if len(pdf) > MAX_BYTES:
         raise ImportRefusedError("Le PDF dépasse 10 Mo.")
     try:
@@ -91,7 +89,7 @@ def import_cv(
         proposals = profile_answer(answer)
     except (LlmUnavailableError, SemanticsError) as error:
         raise ImportRefusedError(error.reason) from error
-    name = f"Gabarit importé le {today.strftime('%d/%m/%Y')}"
+    name = f"CV {LANGUAGES[language]} importé le {today.strftime('%d/%m/%Y')}"
     template: StoredBundle | None = None
     refusal: str | None = None
     warnings: list[str] = []
@@ -100,10 +98,11 @@ def import_cv(
         PROPOSALS_FILE: json.dumps(proposals, ensure_ascii=False, indent=1).encode(),
         # The model's whole answer (texts of the CV and their rubrics): a template can be derived again from it.
         ANSWER_FILE: json.dumps(answer, ensure_ascii=False, indent=1).encode(),
+        LANGUAGE_FILE: language.encode(),
     }
     try:
         roles = block_roles(answer, layout.blocks)
-        derived = derive(pdf, layout, roles, name, titles(answer, layout.blocks), kept)
+        derived = derive(pdf, layout, roles, name, language)
     except (SemanticsError, PageError) as error:
         refusal = error.reason
     else:
@@ -113,9 +112,7 @@ def import_cv(
             saved[PHOTO_FILE] = derived.photo.content
         try:
             rendered, _, problems = draw_derived(
-                derived.files,
-                cv_content(preview_profile(proposals), "fr", today),
-                derived.photo,
+                derived.files, cv_content(preview_profile(proposals), language, today)
             )
         except RenderError as error:
             warnings.append(f"Aperçu : {error.reason}")
@@ -130,6 +127,7 @@ def import_cv(
         proposals=stored,
         template=template,
         template_name=name,
+        language=language,
         template_refusal=refusal,
         warnings=tuple(warnings),
         preview=preview,
@@ -150,3 +148,11 @@ def _png(image: Image.Image) -> bytes:
     buffer = io.BytesIO()
     image.save(buffer, format="PNG", optimize=True)
     return buffer.getvalue()
+
+
+def import_language(files: FileStore, account_id: int, sha256: str) -> str:
+    """The language of the CV of one import (« fr » for an import made before it was recorded)."""
+    if not sha256.isalnum():
+        raise ImportRefusedError("Import introuvable.")
+    bundle = files.read_bundle(f"comptes/{account_id}/{IMPORTS}/{sha256}", sha256)
+    return bundle.get(LANGUAGE_FILE, b"fr").decode()

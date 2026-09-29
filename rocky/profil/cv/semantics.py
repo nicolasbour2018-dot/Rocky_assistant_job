@@ -1,9 +1,8 @@
-"""What each text block of an imported CV is, and what the CV says: one language model call (decision D2, Q14,
-Q20, Q21).
+"""What each text line of an imported CV is, and what the CV says: one language model call (decision D2, Q14, Q20).
 
-The model receives the extracted texts and their positions, never the file. It names the role of every block
-(the geometry stays Rocky's), translates the fixed texts of the template into English, and copies the CV into
-profile proposals. Its answer is checked field by field: a block without a known role refuses the template.
+The model receives the extracted texts and their positions, never the file. It names the rubric of every line (the
+geometry stays Rocky's) and copies the CV into profile proposals. Its answer is checked field by field: a line
+without a known rubric refuses the template.
 """
 
 from __future__ import annotations
@@ -48,29 +47,20 @@ PROJECT_ROLES = frozenset(
         Role.PROJECT_RESULTS,
     }
 )
-TRANSLATED_ROLES = frozenset({Role.HEADING, Role.FIXED}) | PROJECT_ROLES - {
-    Role.PROJECT_NAME
-}
-
 INSTRUCTIONS = """Tu lis un CV d'une page, découpé en lignes de texte numérotées (position en points depuis le \
 coin haut gauche). Deux tâches, sans jamais inventer ni reformuler un texte :
 1. Donne le rôle de CHAQUE ligne (liste « roles »). Rôles :
 - name, title (intitulé de poste sous le nom), age, headline (paragraphe de profil), email, phone, city ;
-- heading : titre de section du gabarit (« EXPÉRIENCES », « C O N T A C T ») ; fixed : autre texte du design, \
-identique pour toute personne (mention en pied de page) ;
+- heading : titre de section (« EXPÉRIENCES », « C O N T A C T ») ; fixed : autre texte du design (mention en pied \
+de page) ;
 - groups : compétences techniques et leurs noms de groupe ; transversal : compétences transversales ; languages ; \
 hobbies (loisirs) ;
 - project_name, project_problem, project_stack, project_work (livrable, réalisation), project_results : « index » est \
 le numéro du projet (0, 1, 2… de gauche à droite) ;
 - experiences : emplois (intitulé, employeur, puces) ; education : diplômes, formations, certifications, écoles, et \
-leurs puces. Une ligne de la colonne des formations est education, jamais experiences.
-Pour heading et fixed, « en » est la traduction anglaise de la ligne, dans la même casse, écrite normalement \
-(« PROJECTS », jamais « P R O J E C T S » : Rocky espace lui-même les lettres comme le design). \
-Dans « titles », donne chaque titre de section avec les numéros de toutes ses lignes (« C O M P É T E N C E S » puis \
-« T E C H N I Q U E S » forment un seul titre) et sa traduction anglaise entière, écrite normalement et dans \
-l'ordre des mots anglais (« TECHNICAL SKILLS »). \
+leurs puces.
 Pour project_problem, project_stack, project_work et project_results, « label » est l'étiquette qui ouvre la ligne \
-(« Problématique », sans les deux-points) et « en » sa traduction anglaise ; vides si la ligne n'en a pas.
+(« Problématique », sans les deux-points) ; vide si la ligne n'en a pas.
 2. Recopie le contenu du CV dans « profile », texte pour texte (dates : années seules ; une seule année donne \
 start_year seul ; « ongoing » vrai seulement pour ce qui est écrit en cours)."""
 
@@ -89,20 +79,8 @@ SCHEMA: Mapping[str, Any] = {
                     "role": {"type": "string", "enum": [role.value for role in Role]},
                     "index": {"type": "integer"},
                     "label": _TEXT,
-                    "en": _TEXT,
                 },
                 "required": ["id", "role"],
-            },
-        },
-        "titles": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "ids": {"type": "array", "items": {"type": "integer"}},
-                    "en": _TEXT,
-                },
-                "required": ["ids", "en"],
             },
         },
         "profile": {
@@ -191,8 +169,6 @@ class BlockRole:
     role: Role
     index: int = 0
     label: str = ""  # lead label of a project part, as written (« Problématique »)
-    label_en: str = ""
-    text_en: str = ""  # English of a heading or a fixed text
 
 
 def prompt(blocks: Sequence[Block]) -> str:
@@ -225,10 +201,6 @@ def block_roles(answer: Any, blocks: Sequence[Block]) -> tuple[BlockRole, ...]:
             role=Role(role),
             index=index if isinstance(index, int) and 0 <= index < 20 else 0,
             label=_text(item.get("label")),
-            label_en=_text(item.get("en")) if Role(role) in PROJECT_ROLES else "",
-            text_en=_text(item.get("en"))
-            if Role(role) in (Role.HEADING, Role.FIXED)
-            else "",
         )
     missing = sorted(known - set(found))
     if missing:
@@ -237,22 +209,6 @@ def block_roles(answer: Any, blocks: Sequence[Block]) -> tuple[BlockRole, ...]:
             "Rocky ne peut pas reproduire ce CV à l'identique."
         )
     return tuple(found[block.id] for block in blocks)
-
-
-def titles(
-    answer: Any, blocks: Sequence[Block]
-) -> tuple[tuple[tuple[int, ...], str], ...]:
-    """Section titles spread over several lines, with their whole English translation; unknown lines left out."""
-    known = {block.id for block in blocks}
-    found = []
-    for item in answer.get("titles", []) if isinstance(answer, dict) else []:
-        if not isinstance(item, dict):
-            continue
-        ids = tuple(i for i in item.get("ids", []) if isinstance(i, int) and i in known)
-        english = _text(item.get("en"))
-        if ids and english:
-            found.append((ids, english))
-    return tuple(found)
 
 
 def profile_answer(answer: Any) -> Mapping[str, Any]:
