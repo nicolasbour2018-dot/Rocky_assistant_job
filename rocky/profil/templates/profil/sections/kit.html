@@ -44,6 +44,22 @@
     <a class="btn btn-ghost" href="/profil/cv/pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
     {% endif %}
   </p>
+  <div class="cv-downloads">
+    {% for code, label in (("fr", "Vérifier mon CV"), ("en", "Check my CV")) if code == "fr" or not cv_missing_en %}
+    {{ m.form_open(key, "/profil/cv/verifier", "inline-form") }}<input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost">{{ label }}</button></form>
+    {% endfor %}
+  </div>
+  {% if state.check %}{% set check = state.check %}
+  <div class="cv-check" role="status">
+    {% if check.readable %}
+    <p class="alert alert-info">Les {{ check.readers | length }} lecteurs de PDF retrouvent les {{ check.facts | length }} éléments attendus de ton CV{{ " anglais" if language == "en" }}.</p>
+    {% else %}
+    <p class="alert alert-error">{{ check.found_by_all }} éléments sur {{ check.facts | length }} lus par les {{ check.readers | length }} lecteurs. À regarder :</p>
+    <ul class="small">{% for warning in check.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+    {% endif %}
+    <p class="muted small">{% for reader in check.readers %}{{ reader.reader }} : {{ reader.error or (reader.words ~ " mots") }}{% if not loop.last %} · {% endif %}{% endfor %} · accord entre lecteurs {{ "%.0f" | format(check.agreement * 100) }} %</p>
+  </div>
+  {% endif %}
   {% if cv_missing_en %}
   <details class="note"><summary>Pour le CV anglais, il manque {{ cv_missing_en | length }} texte{{ "s" if cv_missing_en | length > 1 }} en anglais</summary>
     <ul class="small">{% for where in cv_missing_en %}<li>{{ where }}</li>{% endfor %}</ul>

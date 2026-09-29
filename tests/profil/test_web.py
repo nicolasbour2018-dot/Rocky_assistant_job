@@ -574,3 +574,18 @@ def test_an_english_cv_waits_for_its_english_texts(client: TestClient) -> None:
     assert "Identité : titre du CV" in section(page.text, "kit")
     assert refused.status_code == 400
     assert "attend encore" in section(refused.text, "kit")
+
+
+def test_checking_the_cv_shows_what_each_reader_finds(client: TestClient) -> None:
+    client.post(
+        "/profil/identite",
+        data={"full_name": "Camille Martin", "contact_email": "c@example.org"},
+        headers=HTMX,
+    )
+
+    checked = client.post("/profil/cv/verifier", data={"langue": "fr"}, headers=HTMX)
+
+    kit = section(checked.text, "kit")
+    assert 'class="cv-check"' in kit
+    assert "pdfminer.six :" in kit
+    assert "accord entre lecteurs" in kit

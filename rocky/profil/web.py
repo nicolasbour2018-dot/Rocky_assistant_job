@@ -21,10 +21,17 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData, UploadFile
 
 from rocky.profil.cv import layout
-from rocky.profil.cv.content import cv_content
+from rocky.profil.cv.check import CvCheck, check_cv, expected_facts
+from rocky.profil.cv.content import CvContent, cv_content
 from rocky.profil.cv.photo import MAX_BYTES as PHOTO_MAX_BYTES
 from rocky.profil.cv.photo import photo_suffix
-from rocky.profil.cv.rendering import CvRefusedError, Photo, render_neutral
+from rocky.profil.cv.rendering import (
+    CvPdf,
+    CvRefusedError,
+    Photo,
+    neutral_headings,
+    render_neutral,
+)
 from rocky.profil.model import (
     CONTRACT_LABELS,
     EXPERIENCE_KIND_LABELS,
@@ -282,6 +289,8 @@ class SectionState:
     editing: str | None = None
     values: Values = field(default_factory=lambda: Values({}))
     error: str | None = None
+    # Result of « Vérifier mon CV » (section « kit »), shown once, never stored.
+    check: CvCheck | None = None
 
 
 def _render(
@@ -1033,6 +1042,25 @@ def photo(request: Request, account: CurrentAccount) -> Response:
     return Response(content, media_type=kind, headers={"Cache-Control": "private"})
 
 
+@router.post("/cv/verifier", response_class=HTMLResponse)
+def check_my_cv(request: Request, account: CurrentAccount, form: Form) -> Response:
+    """Render the CV, then read it back with the three PDF readers (decision D2, Q12).
+
+    Declared before ``/cv/{gesture}``, which would take its address otherwise.
+    """
+    language = "en" if _text(form, "langue") == "en" else "fr"
+    profile = profile_of(request, account)
+    rendered = _cv_document(request, profile, language)
+    if isinstance(rendered, Response):
+        return rendered
+    document, content = rendered
+    state = SectionState(language=language)
+    state.check = check_cv(
+        document.pdf, expected_facts(content, neutral_headings(content))
+    )
+    return _render(request, profile, key="kit", state=state)
+
+
 @router.post("/cv/{gesture}", response_class=HTMLResponse)
 def cv_gesture(
     request: Request, account: CurrentAccount, form: Form, gesture: str
@@ -1110,19 +1138,10 @@ def cv_pdf(
 ) -> Response:
     language = "en" if langue == "en" else "fr"
     profile = profile_of(request, account)
-    clock: Clock = request.app.state.auth.clock
-    try:
-        document = render_neutral(
-            cv_content(profile, language, clock().date()), _photo_of(request, profile)
-        )
-    except (CvRefusedError, RenderError) as error:
-        reasons = (
-            error.reasons if isinstance(error, CvRefusedError) else (error.reason,)
-        )
-        state = SectionState(language=language, error=" ".join(reasons))
-        return _render(
-            request, profile, key="kit", state=state, status_code=_error_status(request)
-        )
+    rendered = _cv_document(request, profile, language)
+    if isinstance(rendered, Response):
+        return rendered
+    document, _ = rendered
     name = "_".join(profile.identity.full_name.split()) or "CV"
     disposition = "inline" if apercu else "attachment"
     return Response(
@@ -1133,6 +1152,24 @@ def cv_pdf(
             "Cache-Control": "no-store",
         },
     )
+
+
+def _cv_document(
+    request: Request, profile: Profile, language: str
+) -> tuple[CvPdf, CvContent] | Response:
+    """The rendered CV and its content, or the « kit » section telling why it is refused."""
+    clock: Clock = request.app.state.auth.clock
+    content = cv_content(profile, language, clock().date())
+    try:
+        return render_neutral(content, _photo_of(request, profile)), content
+    except (CvRefusedError, RenderError) as error:
+        reasons = (
+            error.reasons if isinstance(error, CvRefusedError) else (error.reason,)
+        )
+        state = SectionState(language=language, error=" ".join(reasons))
+        return _render(
+            request, profile, key="kit", state=state, status_code=_error_status(request)
+        )
 
 
 def _photo_of(request: Request, profile: Profile) -> Photo | None:

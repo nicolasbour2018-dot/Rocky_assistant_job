@@ -90,6 +90,22 @@ def neutral_html(content: CvContent, *, with_photo: bool, suffix: str = "jpg") -
     )
 
 
+def neutral_headings(content: CvContent) -> tuple[str, ...]:
+    """Section headings the neutral template writes for this content (checked by « Vérifier mon CV »)."""
+    labels = LABELS[content.language]
+    present = {
+        "contact": True,
+        "technical": bool(content.groups),
+        "transversal": bool(content.transversal),
+        "languages": bool(content.languages),
+        "hobbies": bool(content.hobbies),
+        "experiences": bool(content.experiences),
+        "projects": bool(content.projects),
+        "education": bool(content.education),
+    }
+    return tuple(labels[key] for key, shown in present.items() if shown)
+
+
 def render_neutral(content: CvContent, photo: Photo | None) -> CvPdf:
     if content.missing:
         raise CvRefusedError(
