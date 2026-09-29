@@ -19,6 +19,9 @@
       <span class="hint import-busy" aria-hidden="true">Lecture de la page…</span>
     </div>
   </form>
-  <div id="import-result" aria-live="polite">{% include "offres/import_result.html" %}</div>
+  <div id="import-result" aria-live="polite">
+    {% include "offres/import_added.html" %}
+    {% include "offres/import_result.html" %}
+  </div>
 </section>
 {% endblock %}

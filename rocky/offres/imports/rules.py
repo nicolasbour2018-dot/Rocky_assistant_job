@@ -11,7 +11,7 @@ import html
 import json
 import re
 from collections.abc import Iterator
-from dataclasses import replace
+from dataclasses import asdict, fields, replace
 from datetime import date
 from typing import Any
 from urllib.parse import urljoin, urlsplit, urlunsplit
@@ -72,6 +72,22 @@ NO_CONTENT_REASON = (
     "Colle la description de l'annonce."
 )
 _SPACES = re.compile(r"[ \t\xa0]+")
+UNREADABLE_OFFER = (
+    "L'offre à ajouter est illisible : relis l'annonce, puis ajoute-la de nouveau."
+)
+# Types of the fields of ``CollectedOffer`` as sent back by the preview form (dates are ISO texts).
+_TEXT_FIELDS = frozenset(
+    field.name
+    for field in fields(CollectedOffer)
+    if field.name
+    not in {
+        "description_complete",
+        "salary_min",
+        "salary_max",
+        "published_on",
+        "deadline",
+    }
+)
 # Fact fields that an enrichment may fill when the offer does not know them.
 FACT_FIELDS = (
     "company",
@@ -397,3 +413,44 @@ def _visible_text(soup: BeautifulSoup) -> str:
     for tag in body.find_all(NOISE_TAGS):
         tag.decompose()
     return html_to_text(str(body))
+
+
+def offer_json(offer: CollectedOffer) -> str:
+    """The offer of a preview, carried by the « Ajouter à mes offres » form (nothing is stored before the gesture)."""
+    return json.dumps(
+        asdict(offer),
+        default=lambda value: value.isoformat(),
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+
+
+def offer_from_json(value: str) -> CollectedOffer:
+    """The offer sent back by the form, checked again: a form can be altered. Raises ``InvalidPasteError``."""
+    try:
+        data = json.loads(value)
+        if not isinstance(data, dict) or set(data) != {
+            field.name for field in fields(CollectedOffer)
+        }:
+            raise ValueError("unexpected fields")
+        for name in _TEXT_FIELDS:
+            if data[name] is not None and not isinstance(data[name], str):
+                raise ValueError(name)
+        if not isinstance(data["description_complete"], bool):
+            raise ValueError("description_complete")
+        for name in ("salary_min", "salary_max"):
+            amount = data[name]
+            if amount is not None and (
+                isinstance(amount, bool) or not isinstance(amount, int | float)
+            ):
+                raise ValueError(name)
+            data[name] = None if amount is None else float(amount)
+        for name in ("published_on", "deadline"):
+            data[name] = date.fromisoformat(data[name]) if data[name] else None
+        offer = CollectedOffer(**data)
+        check_link(offer.url)
+    except (ValueError, TypeError, InvalidLinkError) as error:
+        raise InvalidPasteError(UNREADABLE_OFFER) from error
+    if not (offer.source and offer.external_id and offer.title.strip()):
+        raise InvalidPasteError(UNREADABLE_OFFER)
+    return offer

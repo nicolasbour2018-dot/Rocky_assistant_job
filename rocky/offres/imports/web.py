@@ -14,6 +14,7 @@ from typing import Annotated
 from fastapi import APIRouter, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import Engine
 
 from rocky.offres.analysis.model import (
     CONDITION_LABELS,
@@ -32,8 +33,9 @@ from rocky.offres.imports.model import (
     ImportResult,
     InvalidPasteError,
 )
-from rocky.offres.imports.rules import offer_from_paste
+from rocky.offres.imports.rules import offer_from_json, offer_from_paste, offer_json
 from rocky.offres.imports.usecases import import_link, link_sources
+from rocky.offres.rules import scoring_inputs
 from rocky.offres.scoring.model import (
     CAP,
     COMPONENT_LABELS,
@@ -47,6 +49,8 @@ from rocky.offres.sources.model import (
     source_label,
 )
 from rocky.offres.sources.registry import build_sources
+from rocky.offres.sql import SqlStore
+from rocky.offres.usecases import add_imported_offer
 from rocky.profil.model import (
     CONTRACT_LABELS,
     LANGUAGE_LEVEL_LABELS,
@@ -62,6 +66,7 @@ from rocky.system.shell import page, wants_fragment
 PAGE = "offres/import.html"
 RESULT = "offres/import_result.html"
 SUMMARY = "offres/import_summary.html"
+ADDED = "offres/import_added.html"
 # Outcomes after which pasting the posting text is the way on (an invalid link is corrected instead).
 PASTE_OUTCOMES = {ImportOutcome.REFUSED, ImportOutcome.FAILED}
 IMPORTANCE_ORDER = (Importance.ELIMINATORY, Importance.PREFERRED, Importance.DETECTED)
@@ -88,6 +93,7 @@ def install(app: FastAPI) -> None:
         confidence_labels=CONFIDENCE_LABELS,
         score_cap=number(CAP),
         number=number,
+        offer_json=offer_json,
     )
     app.include_router(router)
 
@@ -214,6 +220,42 @@ def summarize_posting(
         templates: Jinja2Templates = request.app.state.templates
         return templates.TemplateResponse(request, SUMMARY, context)
     return page(request, PAGE, active="offers", context=context)
+
+
+@router.post("/ajouter", response_class=HTMLResponse)
+def add_offer(
+    request: Request, account: CurrentAccount, offre: Annotated[str, Form()] = ""
+) -> HTMLResponse:
+    """« Ajouter à mes offres » (C6, Q10): the previewed offer joins the offers, linked to its best track, with its
+    scores, in one transaction. Adding it again changes nothing but what the new reading completes."""
+    try:
+        offer = offer_from_json(offre)
+    except InvalidPasteError as error:
+        return _added(request, {"added_error": str(error)}, 400)
+    inputs = scoring_inputs(profile_of(request, account))
+    engine: Engine = request.app.state.engine
+    clock: Callable[[], datetime] = request.app.state.auth.clock
+    with engine.begin() as connection:
+        recorded = add_imported_offer(
+            SqlStore(connection),
+            account_id=account.id,
+            offer=offer,
+            inputs=inputs,
+            now=clock(),
+            today=_today(request),
+        )
+    return _added(request, {"added": recorded, "added_title": offer.title})
+
+
+def _added(
+    request: Request, context: dict[str, object], status_code: int = 200
+) -> HTMLResponse:
+    if wants_fragment(request):
+        templates: Jinja2Templates = request.app.state.templates
+        return templates.TemplateResponse(request, ADDED, context)
+    return page(
+        request, PAGE, active="offers", status_code=status_code, context=context
+    )
 
 
 def _analysis(

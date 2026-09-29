@@ -28,7 +28,12 @@
       <div class="description-text">{{ description }}</div>
     </details>
     <p><a href="{{ offer.url }}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce d'origine</a></p>
-    <p class="hint">Aperçu seulement : l'offre n'est pas encore ajoutée à tes offres (elle le sera avec la veille).</p>
+    <form class="form-actions import-add" method="post" action="/offres/importer/ajouter"
+          hx-post="/offres/importer/ajouter" hx-target="this" hx-swap="outerHTML">
+      <input type="hidden" name="offre" value="{{ offer_json(offer) }}">
+      <button type="submit" class="btn btn-primary">Ajouter à mes offres</button>
+      <span class="hint">Aperçu seulement tant que tu ne l'ajoutes pas : elle rejoindra la piste où son score est le plus haut.</span>
+    </form>
   </article>
   {% else %}
   <p class="alert alert-error" role="alert">{{ result.reason }}</p>

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html as html_lib
 import re
 from collections.abc import Mapping
 from datetime import date
@@ -12,7 +13,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from markupsafe import escape
-from sqlalchemy import Engine
+from sqlalchemy import Engine, select
 
 from rocky.offres.analysis.model import RULES_VERSION, Salary, SalaryPeriod
 from rocky.offres.imports.rules import VISIBLE_TEXT_REASON
@@ -20,6 +21,9 @@ from rocky.offres.imports.usecases import PASTE_HINT
 from rocky.offres.imports.web import offer_facts, salary_label
 from rocky.offres.scoring.model import RULES_VERSION as SCORE_RULES_VERSION
 from rocky.offres.sources.model import CollectedOffer
+from rocky.offres.sql import SqlStore, job_offers
+from rocky.system.auth.sql import SqlAuthStore
+from rocky.system.events import events
 from rocky.system.llm import LlmUnavailableError
 from tests.offres.sources.replay import Answer, Replay, answer
 from tests.system.web_support import HTMX, logged_in, make_app
@@ -159,6 +163,7 @@ def test_a_posting_link_shows_its_preview(client: TestClient) -> None:
     assert "<dt>Employeur</dt><dd>Alteca</dd>" in page
     assert "<dt>Date limite</dt><dd>08/10/2026</dd>" in page
     assert "Aperçu seulement" in page
+    assert "Ajouter à mes offres" in page
     assert "Coller la description" not in page
 
 
@@ -376,3 +381,66 @@ def test_an_unavailable_summary_gives_its_reason(
         "Résumé indisponible : Le modèle de langage n'est pas configuré (clé Gemini absente)."
         in page
     )
+
+
+def added_form(page: str) -> str:
+    """The offer carried by the « Ajouter à mes offres » form of a preview, as the browser sends it back."""
+    match = re.search(r'<input type="hidden" name="offre" value="([^"]*)">', page)
+    assert match, "no add form"
+    return html_lib.unescape(match.group(1))
+
+
+def test_a_previewed_posting_is_added_to_the_offers_once(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    client, email = logged_in(app, migrated_engine)
+    track = {"name": "Data", "titles": "Data Analyst", "locations": "Paris"}
+    assert client.post("/profil/pistes", data=track).status_code == 303
+    preview = client.post("/offres/importer", data={"lien": HELLOWORK}, headers=HTMX)
+    offer = added_form(preview.text)
+
+    added = text_of(
+        client.post(
+            "/offres/importer/ajouter", data={"offre": offer}, headers=HTMX
+        ).text
+    )
+    again = text_of(
+        client.post(
+            "/offres/importer/ajouter", data={"offre": offer}, headers=HTMX
+        ).text
+    )
+
+    assert "Ajoutée à tes offres · piste « Data », score" in added
+    assert "Déjà dans tes offres · piste « Data »" in again
+    with migrated_engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(email)
+        assert account is not None
+        rows = connection.execute(
+            select(job_offers.c.id, job_offers.c.origin, job_offers.c.title).where(
+                job_offers.c.account_id == account.id
+            )
+        ).all()
+        assert [(row.origin, row.title) for row in rows] == [
+            ("import", "Data Analyst Banque Expérimenté H/F")
+        ]
+        assert SqlStore(connection).unscored_or_orphan_offers(account.id) == []
+        added_events = connection.execute(
+            select(events.c.id).where(
+                events.c.type == "offres.offer_added",
+                events.c.account_id == account.id,
+            )
+        ).all()
+        assert len(added_events) == 2
+
+
+def test_an_altered_add_form_is_refused_with_its_reason(client: TestClient) -> None:
+    refused = client.post(
+        "/offres/importer/ajouter",
+        data={"offre": '{"url": "javascript:alert(1)"}'},
+        headers=HTMX,
+    )
+    whole_page = client.post("/offres/importer/ajouter", data={"offre": "{"})
+
+    assert "L'offre à ajouter est illisible" in text_of(refused.text)
+    assert whole_page.status_code == 400
+    assert "L'offre à ajouter est illisible" in text_of(whole_page.text)

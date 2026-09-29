@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
@@ -15,7 +16,9 @@ from rocky.offres.imports.rules import (
     VISIBLE_TEXT_REASON,
     check_link,
     enriched,
+    offer_from_json,
     offer_from_paste,
+    offer_json,
     parse_page,
     pasted_text,
     with_pasted_description,
@@ -431,3 +434,51 @@ def test_an_offer_is_made_from_its_link_and_what_the_user_copied() -> None:
 def test_an_offer_made_from_a_paste_needs_a_title() -> None:
     with pytest.raises(InvalidPasteError, match=r"Indique l'intitulé de l'annonce\."):
         offer_from_paste(HELLOWORK, " ", "Missions : SQL.")
+
+
+def test_the_offer_of_a_preview_comes_back_from_its_form_unchanged() -> None:
+    offer = CollectedOffer(
+        source="hellowork.com",
+        external_id="https://www.hellowork.com/fr-fr/emplois/1.html",
+        url="https://www.hellowork.com/fr-fr/emplois/1.html",
+        title="Data analyst",
+        description="Texte.",
+        description_complete=True,
+        salary_min=45000,
+        published_on=date(2026, 9, 25),
+    )
+
+    assert offer_from_json(offer_json(offer)) == replace(offer, salary_min=45000.0)
+
+
+@pytest.mark.parametrize(
+    "altered",
+    [
+        "{",
+        "[]",
+        '{"title": "x"}',
+        "URL",
+        "DESCRIPTION_COMPLETE",
+        "SALARY",
+    ],
+)
+def test_an_altered_offer_is_refused(altered: str) -> None:
+    offer = CollectedOffer(
+        source="hellowork.com",
+        external_id="1",
+        url="https://www.hellowork.com/1",
+        title="Data analyst",
+        description="Texte.",
+        description_complete=True,
+    )
+    data = json.loads(offer_json(offer))
+    if altered == "URL":
+        data["url"] = "javascript:alert(1)"
+    elif altered == "DESCRIPTION_COMPLETE":
+        data["description_complete"] = "oui"
+    elif altered == "SALARY":
+        data["salary_min"] = "beaucoup"
+    value = json.dumps(data) if altered.isupper() else altered
+
+    with pytest.raises(InvalidPasteError, match="illisible"):
+        offer_from_json(value)
