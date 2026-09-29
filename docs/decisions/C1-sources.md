@@ -82,3 +82,8 @@ avec quelques intitulés : 43 réponses sur 43 sans erreur dans l'archive A1 (9 
 |---|---|---|
 | Q7 | Volume LinkedIn | Nicolas nettoie d'abord ses lieux (18 requêtes au lieu de 27). Puis, dans l'ordre : (a) **pause de 10 s entre deux requêtes vers LinkedIn** (au lieu d'1 s ; volume humain, Q5 — ce n'est pas un contournement, c'est la réponse attendue à un 429) ; (b) seulement si le 429 persiste sur plusieurs veilles : **un seul lieu par intitulé** pour LinkedIn. |
 | Q8 | Alertes e-mail (E3) | Les alertes sont un **complément** : nouvelles annonces, ou faits en plus sur une annonce déjà connue (enrichissement). Elles ne sont **pas** une solution de repli pour une source qui refuse. |
+
+Mesure (29/09, `rocky-admin veille` sur le compte d'essai de Nicolas, lieux nettoyés, pause de 10 s) : LinkedIn
+**140 offres, aucun refus** (18 requêtes) ; veille **terminée** en 4 min 15 ; 470 offres dont 125 nouvelles, 0 sans
+score ni piste. Effet du nettoyage des lieux : Wellfound passe de 85 offres à 3 (ses offres étaient sur sa page
+« Paris », ses pages « Île-de-France » et « Eure-et-Loir » en ont très peu).
