@@ -72,11 +72,23 @@ le gabarit neutre. »
 | Photo (Q7, Q20) | L'image du PDF peut dépasser ce que la page montre (découpe en disque) : la zone visible est mesurée sur le rendu, l'image garde sa place et sa taille, découpée pareil | Cadrage identique avec sa propre photo. |
 | Titres en anglais (Q21) | Un titre sur plusieurs lignes est traduit en entier sur sa première ligne, les suivantes vides | « COMPÉTENCES / TECHNIQUES » devenait « SKILLS / TECHNICAL ». |
 | Aperçu de l'import | Rendu du contenu du CV lui-même (profil provisoire en mémoire), montré même imparfait avec ses débordements ; jamais stocké ; appel au modèle, dérivation et aperçu hors transaction, enregistrement du gabarit dans une transaction courte | Voir ce qui ne va pas plutôt qu'un refus sans image. |
+| Titres des sections (Q12) | Chaque titre fixe porte, pour les lecteurs de PDF, les mêmes mots en texte invisible, sans les espaces que le design met entre les lettres (« CONTACT » au lieu de « C O N T A C T ») ; en anglais, le titre visible est dessiné en tracés (`fonttools`, MIT, contours des polices embarquées) pour n'être pas lu lettre par lettre | Le calque transforme les titres en tracés : sans ce texte, aucun titre ne serait lu ; lu espacé, il ne serait pas reconnu. |
+| Robustesse face au modèle | Règles déterministes après sa réponse : une ligne ne commence une partie de projet que si son texte commence par l'étiquette ; une ligne sans étiquette (ou prise pour un nom de projet) continue la partie au-dessus ; les titres sur plusieurs lignes sont traduits en entier (liste « titles ») puis répartis ; une année seule n'est jamais « en cours » | Deux appels réels ont rangé différemment les mêmes lignes. |
+| Page image (Q20) | Une image couvrant 80 % de la page ou plus refuse le gabarit (son texte y est superposé) ; les propositions restent | Le CV EN de l'archive avait 130 lignes de texte sur une image pleine page. |
 | Fichiers | `ROCKY_STORAGE_ROOT` (volume nommé `rocky-files` dans l'application) ; chemins **relatifs** à la racine, jamais absolus ; dossiers immuables nommés par leur hash, relus avec vérification | Constats A1 → D5 et B1 → D2. |
 
-## Mesures
+## Mesures (29/09/2026)
 
-*(À remplir pendant l'étape.)*
+| Contrôle | Résultat |
+|---|---|
+| Vérification globale | `docker compose run --rm --build check` : 888 tests, 39 s (43 s au total, image en cache) ; Chromium et poppler dans les images |
+| Gabarit neutre | Références visuelles rendues sous Linux ; écart macOS / Linux ≈ 0,45 % de la page (anticrénelage) ; les trois lecteurs lisent tout le CV d'exemple |
+| Import réel du Canva (Gemini 3.5 Flash Lite) | 152 lignes, 7 images, 36 tracés ; un appel de 10 à 15 s ; toutes les lignes rattachées ; photo trouvée (disque de 165 pt dans une image de 180 × 225 pt). Cinq appels réels pendant la mise au point, seulement sur le texte extrait |
+| **Q17 — hors zones de texte et photo** (contenu du Canva recopié par le modèle, rendu dans le gabarit déduit, 100 dpi) | **0,22 %** des pixels après un flou de 1 px et un seuil de 48/255 (1,5 % en brut : liserés d'anticrénelage entre le rendu de pdfium et celui de Chromium). Seuil retenu : 0,5 % |
+| Q17 — photo | 0 pixel d'écart (même image, même cadrage) |
+| Q17 — dans les zones | 11,6 % des pixels : textes recopiés par le modèle (dont une puce de la stack du projet 2 rangée dans le problème), retours à la ligne. Écart de mise en page ramené de 20,5 % à 11,6 % par l'alignement des lignes de base |
+| CV de Nicolas, FR et EN (profil réel, CV maître composé dans l'ordre du Canva, anglais saisi) | Rendus sans débordement ; « Vérifier mon CV » : **61 éléments sur 61 lus par les trois lecteurs**, en français et en anglais ; accord entre lecteurs 0,99 et 1,0 |
+| PDF image | CV EN de l'archive : gabarit refusé (« image de page ») ; un PDF sans texte est refusé dès la lecture |
 
 ## Critère de sortie et clôture
 

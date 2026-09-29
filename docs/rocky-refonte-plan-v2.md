@@ -515,6 +515,16 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D1 → E4, F1)** L'accusé de réception est un fait du dossier, pas une étape (D1, Q1) : à enregistrer par E. Un
   passage automatique à « Sans réponse » après un délai sans message, et toute transition automatique, passent par
   `automatic_transition_allowed` (jamais en arrière, jamais hors d'une issue).
+- **(D2 → D3)** La **stack** d'un projet est stockée une seule fois, sans version anglaise (B5) : le CV anglais montre
+  « analyse de sentiment », « base vectorielle »… À traiter avec la traduction champ par champ.
+- **(D2 → Nicolas)** Compétences du Canva classées « métier » dans le profil (HuggingFace, MLFlow, Transformers,
+  IA générative, Architecture engineering) : un groupe de compétences techniques ne peut pas les contenir (Q9). Harness
+  n'est pas au profil. Les passer en « techniques » (effet sur le score) ou les laisser hors du CV : à trancher.
+- **(D2 → Nicolas)** « 37 ans » : l'âge demande la date de naissance, absente du profil ; rien n'a été inventé.
+- **(D2)** Une zone du gabarit déduit a une ligne d'air sous elle : un texte un peu plus long que celui du Canva peut
+  toucher l'élément dessiné juste en dessous (bord d'une carte projet) sans être signalé comme débordement.
+- **(D2 → D3, D4)** Le rendu d'un gabarit déduit reprend les conventions du Canva de Nicolas (« période : intitulé
+  - employeur - », école soulignée, puces à amorce en gras) : un autre design peut demander d'autres recettes.
 - **(D2 → F2, §5 VPS)** Le dépôt GitHub est **public** et n'a **aucune licence**. Aucune dépendance AGPL n'est ajoutée
   (décision D2, Q25) ; choisir une licence avant d'ouvrir Rocky à d'autres utilisateurs. Les données personnelles
   (photo, gabarits dérivés, rendus de CV) ne sont jamais versionnées.

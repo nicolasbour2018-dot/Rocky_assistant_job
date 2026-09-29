@@ -339,7 +339,10 @@ def _experience(raw: Mapping[str, Any]) -> ExperienceDraft:
         organisation=_text(raw.get("organisation")),
         place=_text(raw.get("place")) or None,
         start=f"{start}-01" if isinstance(start, int) else "",
-        end=f"{end}-12" if isinstance(end, int) else None,
+        # One year alone is that year, not an ongoing job: « ongoing » says it is (« 2023 – aujourd'hui »).
+        end=None
+        if raw.get("ongoing") is True
+        else f"{end if isinstance(end, int) else start}-12",
         bullets_fr=_texts(raw.get("bullets")),
     )
 

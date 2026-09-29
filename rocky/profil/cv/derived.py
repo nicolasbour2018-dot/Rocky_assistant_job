@@ -14,37 +14,44 @@ import re
 import statistics
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from io import BytesIO
 from itertools import pairwise
 from typing import Any
 
 from markupsafe import Markup, escape
+from PIL import Image, ImageChops, ImageFilter
 
 from rocky.profil.cv.content import CvContent, CvEntry, Span
-from rocky.profil.cv.library import font_assets, font_faces, match_pdf_font
+from rocky.profil.cv.library import (
+    font_assets,
+    font_faces,
+    match_pdf_font,
+    text_path,
+)
 from rocky.profil.cv.pdf_page import (
     Block,
     Box,
+    PageError,
     PageLayout,
     PhotoFrame,
     Style,
     cut_svg,
     page_svg,
     photo_candidate,
-    photo_frame,
+    render_page,
 )
 from rocky.profil.cv.rendering import CvPdf, CvRefusedError, Photo, problems
 from rocky.profil.cv.semantics import PROJECT_ROLES, BlockRole, Role
 from rocky.profil.cv.template import Slots
-from rocky.system.render import Rendered, render_pdf
+from rocky.system.render import Rendered, rasterize, render_pdf
 
 FORMAT = "rocky-cv-gabarit/1"
 TEMPLATE_FILE = "template.json"
 LAYER_FR = "calque-fr.svg"  # design with its fixed texts
 LAYER_EN = "calque.svg"  # design without any text
 PHOTO_FILE = "photo-importee"  # + suffix: proposed to the profile, never shown by the template itself
-ROOM = 0.6  # a region may grow by this share of a line: fonts measure a hair differently than the design tool
+ROOM = 1.0  # a region may grow by one line: fonts measure a hair differently than the design tool
 
 
 # Building
@@ -59,9 +66,21 @@ class DerivedTemplate:
 
 
 def derive(
-    pdf: bytes, layout: PageLayout, roles: Sequence[BlockRole], name: str
+    pdf: bytes,
+    layout: PageLayout,
+    roles: Sequence[BlockRole],
+    name: str,
+    titles: Sequence[tuple[tuple[int, ...], str]] = (),
 ) -> DerivedTemplate:
-    by_block = {role.block_id: role for role in roles}
+    page_area = layout.width * layout.height
+    if any(
+        image.box.width * image.box.height >= 0.8 * page_area for image in layout.images
+    ):
+        raise PageError(
+            "Ce CV est une image de page (son texte y est superposé) : son design ne peut pas être séparé de "
+            "ses textes, Rocky ne peut donc pas le reproduire. Ton CV sera rendu avec le gabarit neutre."
+        )
+    by_block = {role.block_id: _title_line(role, layout, titles) for role in roles}
     blocks = {block.id: block for block in layout.blocks}
     content_blocks = [
         blocks[r.block_id] for r in roles if r.role not in (Role.HEADING, Role.FIXED)
@@ -96,13 +115,19 @@ def derive(
             "height": layout.height,
             "background": layout.background,
         },
-        "photo": _photo_json(photo_frame(pdf, photo.box, layout.background))
+        "photo": _photo_json(
+            visible_photo(
+                pdf, layer_fr.svg, photo.box, [b.box for b in content_blocks], layout
+            )
+        )
         if photo
         else None,
         "regions": [region.to_json() for region in regions],
         "fixed": [
             {
                 "box": _box_json(block.box),
+                "role": by_block[block.id].role.value,
+                "baseline": block.lines[0].baseline,
                 # An empty English text continues the heading above it (translated whole on its first line).
                 "text": {"fr": block.text, "en": by_block[block.id].text_en},
                 **_style_json(_measure(block.lines, block.box)),
@@ -145,13 +170,15 @@ class Region:
 
     @property
     def room(self) -> Box:
-        """The box, plus a little room below (the fonts of the design tool measure a hair differently)."""
+        """The box, raised by half the leading (CSS sets a line in the middle of its line height, the PDF
+        measures it from its ascent), plus one line of room below (fonts measure a hair differently)."""
+        half = max((self.measure.line_height - self.measure.ink) / 2, 0)
         extra = self.measure.line_height * ROOM
         return Box(
             self.box.x - 1,
-            self.box.y - 1,
+            self.box.y - 1 - half,
             self.box.width + 2,
-            self.box.height + 1 + extra,
+            self.box.height + 1 + half + extra,
         )
 
     def to_json(self) -> dict[str, Any]:
@@ -173,6 +200,7 @@ class Measure:
     soft: Style
     plain: Style  # neither bold nor italic (the school of an education line)
     line_height: float
+    ink: float  # height of one line as the PDF measures it (ascent to descent)
     gap: float  # extra space between two entries of a list (experiences), in points
     align: str  # left, center, right
     letter_spacing: float
@@ -182,8 +210,39 @@ class Measure:
     )
 
 
+def _continued(layout: PageLayout, roles: Sequence[BlockRole]) -> list[BlockRole]:
+    """A project line without its own label continues the part above it, in the same project (the model may
+    give it the next part): only the first line of « Stack technique : … » carries the label."""
+    boxes = {block.id: block.box for block in layout.blocks}
+    texts = {block.id: block.text for block in layout.blocks}
+    fixed = list(roles)
+    order = sorted(
+        range(len(fixed)),
+        key=lambda i: (boxes[fixed[i].block_id].y, boxes[fixed[i].block_id].x),
+    )
+    current: dict[int, Role] = {}
+    for i in order:
+        item = fixed[i]
+        if item.role not in PROJECT_ROLES:
+            continue
+        starts = item.label and _starts_with(texts[item.block_id], item.label)
+        if item.role is not Role.PROJECT_NAME and starts:
+            current[item.index] = item.role
+        elif item.index in current and current[item.index] is not item.role:
+            # Below a labelled part, even a line named as the project's title continues that part.
+            fixed[i] = replace(item, role=current[item.index])
+    return fixed
+
+
+def _starts_with(text: str, label: str) -> bool:
+    return (
+        " ".join(text.split()).casefold().startswith(" ".join(label.split()).casefold())
+    )
+
+
 def _regions(layout: PageLayout, roles: Sequence[BlockRole]) -> list[Region]:
     blocks = {block.id: block for block in layout.blocks}
+    roles = _continued(layout, roles)
     grouped: dict[tuple[Role, int], list[Block]] = defaultdict(list)
     labels: dict[tuple[Role, int], BlockRole] = {}
     for item in roles:
@@ -240,6 +299,9 @@ def _measure(lines: Sequence[Any], box: Box) -> Measure:
         soft=soft,
         plain=plain,
         line_height=min(line_height, main.size * 2.2),
+        ink=statistics.median([line.box.height for line in lines])
+        if lines
+        else main.size,
         gap=round(statistics.median(wide), 2) if wide else 0.0,
         align=_align(lines, box),
         letter_spacing=statistics.median([line.letter_spacing for line in lines])
@@ -290,6 +352,76 @@ def _slots_json(regions: Sequence[Region]) -> dict[str, int]:
 
 def _group_count(region: Region | None) -> int:
     return 3 if region is None else max(1, min(8, region.count // 2))
+
+
+def visible_photo(
+    pdf: bytes, layer: str, box: Box, texts: Sequence[Box], layout: PageLayout
+) -> PhotoFrame:
+    """What the page shows of the photo: where the page differs from the layer without it, inside the image's box
+    (content texts left aside). A circle clip leaves the corners of that part unchanged."""
+    html = (
+        f"<!doctype html><html><head><style>@page {{ size: {layout.width}pt {layout.height}pt; margin: 0; }}"
+        "body { margin: 0; }</style></head><body>"
+        f'<img src="calque.svg" style="display:block; width:{layout.width}pt; height:{layout.height}pt">'
+        "</body></html>"
+    )
+    without = rasterize(render_pdf(html, {"calque.svg": layer.encode()}).pdf, 72)[0]
+    page = render_page(pdf, 72).resize(without.size)
+    changed = (
+        ImageChops.difference(page, without)
+        .convert("L")
+        .point(lambda v: 255 if v > 40 else 0)
+    )
+    inside = Image.new("L", changed.size, 0)
+    inside.paste(255, (int(box.x), int(box.y), int(box.right) + 1, int(box.bottom) + 1))
+    for text in texts:
+        inside.paste(
+            0,
+            (
+                int(text.x) - 1,
+                int(text.y) - 1,
+                int(text.right) + 2,
+                int(text.bottom) + 2,
+            ),
+        )
+    # Thin differences (anti-aliased edges of a curve crossing the image's box) go; the photo, a solid area, stays.
+    solid = ImageChops.multiply(changed, inside).filter(ImageFilter.MinFilter(5))
+    found = solid.getbbox()
+    if found is None:
+        return PhotoFrame(box, box, round=False)
+    x0, y0, x1, y1 = (found[0] - 2, found[1] - 2, found[2] + 2, found[3] + 2)
+    visible = Box(x0, y0, x1 - x0, y1 - y0)
+    inset = max(2, int(min(visible.width, visible.height) * 0.08))
+    corners = [
+        (x0 + inset, y0 + inset),
+        (x1 - inset, y0 + inset),
+        (x0 + inset, y1 - inset),
+        (x1 - inset, y1 - inset),
+    ]
+    round_clip = sum(changed.getpixel(point) == 0 for point in corners) >= 3
+    return PhotoFrame(box, visible, round=round_clip)
+
+
+def _title_line(
+    role: BlockRole, layout: PageLayout, titles: Sequence[tuple[tuple[int, ...], str]]
+) -> BlockRole:
+    """The English of one line of a title, the whole translation spread over its lines, words in order."""
+    if role.role is not Role.HEADING:
+        return role
+    for ids, english in titles:
+        if role.block_id not in ids:
+            continue
+        tops = {block.id: block.box.y for block in layout.blocks}
+        lines = sorted(ids, key=lambda i: tops.get(i, 0.0))
+        spaced = len(english.split()) > 2 and all(len(w) == 1 for w in english.split())
+        words = unspaced(english).split() if spaced else english.split()
+        share = -(
+            -len(words) // len(lines)
+        )  # ceiling: the first lines take the longer share
+        position = lines.index(role.block_id)
+        part = " ".join(words[position * share : (position + 1) * share])
+        return replace(role, text_en=" ".join(part) if spaced else part)
+    return role
 
 
 def _photo_json(frame: PhotoFrame) -> dict[str, Any]:
@@ -396,9 +528,9 @@ def derived_headings(files: Mapping[str, bytes], language: str) -> tuple[str, ..
     """The section titles of the template, as the CV writes them (checked by « Vérifier mon CV »)."""
     template = json.loads(files[TEMPLATE_FILE])
     return tuple(
-        " ".join(item["text"][language].split())
+        unspaced(text) if _spaced(text) else " ".join(text.split())
         for item in template["fixed"]
-        if " " not in item["text"][language].strip() or len(item["text"][language]) < 40
+        if (text := item["text"][language]).strip() and item.get("role") == "heading"
     )
 
 
@@ -437,12 +569,11 @@ def derived_html(
             f"top:{whole['y'] - shown['y']}pt; width:{whole['width']}pt; height:{whole['height']}pt; "
             'object-fit:cover;"></div>'
         )
-    if content.language != "fr":
-        parts += [
-            _fixed_html(item, content.language)
-            for item in template["fixed"]
-            if item["text"][content.language].strip()
-        ]
+    parts += [
+        _fixed_html(item, content.language)
+        for item in template["fixed"]
+        if item["text"][content.language].strip()
+    ]
     for region in template["regions"]:
         inner = _region_html(region, content)
         if inner is None:
@@ -510,19 +641,56 @@ def _text_css(region: Mapping[str, Any]) -> str:
     return css
 
 
+def unspaced(text: str) -> str:
+    """« P R O J E T S » → « PROJETS »: the shortest run of spaces parts two letters, a longer run two words."""
+    runs = re.findall(r" +", text.strip())
+    if not runs:
+        return text.strip()
+    letter = min(len(run) for run in runs)
+    words = re.split(rf" {{{letter + 1},}}", text.strip())
+    return " ".join(word.replace(" " * letter, "") for word in words)
+
+
+def _spaced(text: str) -> bool:
+    words = text.split()
+    return len(words) > 2 and sum(len(word) == 1 for word in words) >= 0.8 * len(words)
+
+
 def _fixed_html(item: Mapping[str, Any], language: str) -> str:
+    """A fixed text of the design: drawn by the layer in French, as outlines in English; for PDF readers, the same
+    words as invisible text, without the spaces a design puts between letters (Q12: headings read as words)."""
     box = item["box"]
-    # A translation may be longer: never cut, it may run past the old box.
-    width = box["width"] + 40
-    left = box["x"] - (20 if item["align"] == "center" else 0)
-    css = f"left:{left}pt; top:{box['y']}pt; width:{width}pt; " + _text_css(item)
     text = item["text"][language]
-    if item.get("letter_spacing"):
-        # « S K I L L S » drawn with letter spacing: the letters without their spaces, words kept apart.
-        text = re.sub(r"(?<=\S) (?=\S)", "", text)
-        text = re.sub(r" {2,}", " ", text)
-    lines = "".join(f"<p>{escape(line)}</p>" for line in text.split("\n"))
-    return f'<div class="region" style="{css} overflow:visible;">{lines}</div>'
+    words = unspaced(text) if _spaced(text) else " ".join(text.split())
+    style = item["main"]
+    hidden = (
+        f"left:{box['x']}pt; top:{box['y']}pt; width:{box['width'] + 60}pt; "
+        + _font_css(style)
+        + "color:transparent; white-space:nowrap; overflow:visible;"
+    )
+    parts = [f'<div class="region" style="{hidden}">{escape(words)}</div>']
+    if language != "fr":
+        pitch = float(item.get("letter_spacing") or 0)
+        drawn = words if _spaced(text) else text
+        shape = text_path(
+            drawn,
+            style["family"],
+            style["weight"],
+            style["italic"],
+            style["size"],
+            pitch,
+        )
+        left = box["x"]
+        if item.get("align") == "center" or _spaced(item["text"]["fr"]):
+            # A spaced title stands centred where the French one stood.
+            left = box["x"] + (box["width"] - shape.width) / 2
+        top = float(item.get("baseline", box["y"] + shape.ascent)) - shape.ascent
+        parts.append(
+            f'<svg style="position:absolute; left:{left:.2f}pt; top:{top:.2f}pt; overflow:visible" '
+            f'width="{shape.width}pt" height="{shape.height}pt" viewBox="0 0 {shape.width} {shape.height}">'
+            f'<path d="{shape.d}" fill="{style["color"]}"/></svg>'
+        )
+    return "".join(parts)
 
 
 def _span(text: str, style: Mapping[str, Any], *, underline: bool = False) -> Markup:
@@ -542,20 +710,25 @@ def _lines(items: Iterable[str | Markup]) -> str:
     return "".join(f"<p>{escape(item)}</p>" for item in items)
 
 
+_LEAD = re.compile(r"^(.{2,60}?)( ?:) ")
+
+
 def _led(region: Mapping[str, Any], text: str) -> Markup:
-    """« Analyse de performance : suivi… » → the lead in the strong style, like the design writes it."""
-    lead, separator, rest = text.partition(" : ")
-    if separator and len(lead) <= 60:
-        return Markup("{}{}").format(
-            _strong(region, lead + separator.rstrip() + " "), rest
-        )
-    return Markup("{}").format(text)
+    """« Analyse de performance : suivi… », « Performance analysis: tracking… » → the lead in the strong style."""
+    match = _LEAD.match(text)
+    if match is None:
+        return Markup("{}").format(text)
+    lead = match.group(1) + match.group(2)
+    return Markup("{}{}").format(_strong(region, lead + " "), text[match.end() :])
 
 
 def _region_html(region: Mapping[str, Any], content: CvContent) -> str | None:
     role = Role(region["role"])
     index = int(region["index"])
     label = region["label"].get(content.language) or region["label"].get("fr", "")
+    colon = (
+        " :" if content.language == "fr" else ":"
+    )  # French typography puts a space before it
     simple = {
         Role.NAME: content.full_name,
         Role.TITLE: content.title,
@@ -575,7 +748,7 @@ def _region_html(region: Mapping[str, Any], content: CvContent) -> str | None:
         )
     if role is Role.GROUPS:
         return "".join(
-            f"<p>{_strong(region, group.name + ' :')}</p><p>{escape(', '.join(group.skills))}</p>"
+            f"<p>{_strong(region, group.name + colon)}</p><p>{escape(', '.join(group.skills))}</p>"
             for group in content.groups
             if group.skills
         )
@@ -590,7 +763,7 @@ def _region_html(region: Mapping[str, Any], content: CvContent) -> str | None:
         )
     if role in (Role.EXPERIENCES, Role.EDUCATION):
         entries = content.experiences if role is Role.EXPERIENCES else content.education
-        return "".join(_entry_html(region, entry, role) for entry in entries)
+        return "".join(_entry_html(region, entry, role, colon) for entry in entries)
     if index >= len(content.projects):
         return None
     project = content.projects[index]
@@ -606,31 +779,39 @@ def _region_html(region: Mapping[str, Any], content: CvContent) -> str | None:
         return ""
     if role is Role.PROJECT_NAME or not label:
         return _lines([text])
-    return f"<p>{_strong(region, label + ' :')} {escape(text)}</p>"
+    return f"<p>{_strong(region, label + colon)} {escape(text)}</p>"
 
 
-def _entry_html(region: Mapping[str, Any], entry: CvEntry, role: Role) -> str:
+def _entry_html(
+    region: Mapping[str, Any], entry: CvEntry, role: Role, colon: str
+) -> str:
     period = entry.period.replace(" – ", f" {region['dash']} ")
-    indent = region.get("indent") or 0
+    indent = float(region.get("indent") or 0)
     gap = region.get("gap") or 0
     if role is Role.EXPERIENCES:
         head = Markup("{}{}").format(
-            _strong(region, f"{period} : {entry.title}"),
+            _strong(region, f"{period}{colon} {entry.title}"),
             _soft(region, f" - {entry.organisation} -"),
         )
         bullets = [_led(region, bullet) for bullet in entry.bullets]
     else:
+        school = (
+            f"{entry.organisation} - {entry.place}"
+            if entry.place
+            else entry.organisation
+        )
         head = Markup("{}<br>{}").format(
-            _strong(region, f"{period} - {entry.title} :"),
-            _span(
-                entry.organisation, region.get("plain", region["main"]), underline=True
-            ),
+            _strong(region, f"{period} - {entry.title}{colon}"),
+            _span(school, region.get("plain", region["main"]), underline=True),
         )
         bullets = [_soft(region, bullet) for bullet in entry.bullets]
-    # A hanging bullet: the lines that follow start under the text, not under the bullet.
-    hang = f"padding-left:{indent + 6}pt; text-indent:-6pt;"
+    # The text starts where the design's text starts; the bullet sits in the margin before it.
+    dot = max(indent - float(region["main"]["size"]) * 1.2, 0)
+    hang = indent - dot
     items = "".join(
-        f'<span class="bullet" style="{hang}">•&nbsp;{bullet}</span>'
+        f'<span class="bullet" style="padding-left:{indent}pt">'
+        f'<span style="display:inline-block; width:{hang:.1f}pt; margin-left:-{hang:.1f}pt">•</span>'
+        f"{bullet}</span>"
         for bullet in bullets
     )
     return f'<div class="entry" style="margin-bottom:{gap}pt"><p>{head}</p><p>{items}</p></div>'

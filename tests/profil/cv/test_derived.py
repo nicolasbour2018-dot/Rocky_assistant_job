@@ -15,7 +15,14 @@ from PIL import ImageFilter
 from pypdf import PdfWriter
 
 from rocky.profil.cv.content import cv_content
-from rocky.profil.cv.derived import TEMPLATE_FILE, render_derived, slots_of
+from rocky.profil.cv.derived import (
+    TEMPLATE_FILE,
+    _continued,
+    _title_line,
+    render_derived,
+    slots_of,
+    unspaced,
+)
 from rocky.profil.cv.importer import (
     IMPORTS,
     ImportedCv,
@@ -23,13 +30,28 @@ from rocky.profil.cv.importer import (
     import_cv,
     read_proposals,
 )
-from rocky.profil.cv.pdf_page import read_page, render_page
+from rocky.profil.cv.pdf_page import (
+    Block,
+    Box,
+    Line,
+    PageLayout,
+    Run,
+    Style,
+    read_page,
+    render_page,
+)
 from rocky.profil.cv.proposals import preview_profile
 from rocky.profil.cv.rendering import Photo
+from rocky.profil.cv.semantics import BlockRole, Role
 from rocky.system.files import FileStore
 from rocky.system.pdf_read import read_pdf
 from rocky.system.render import compare, rasterize
-from tests.profil.cv.fixtures import ReaderModel, designed_cv, image_only_cv
+from tests.profil.cv.fixtures import (
+    ReaderModel,
+    designed_cv,
+    image_only_cv,
+    scanned_cv,
+)
 
 TODAY = date(2026, 9, 29)
 
@@ -119,9 +141,26 @@ def test_the_english_cv_writes_the_translated_titles_again(
     document = render_derived(files, replace(english, missing=()), None)
 
     text = " ".join(read_pdf(document.pdf)[0].text.split())
-    assert "P R O J E C T S" in text
-    assert "P R O J E T S" not in text
+    # Drawn as outlines, spaced like the design; read as words through their invisible text.
+    assert "PROJECTS" in text
+    assert "P R O J" not in text
+    assert "PROJETS" not in text
     assert "Designed for responsible reading" in text
+
+
+def test_french_titles_stay_in_the_layer_and_are_read_as_words(
+    designed: bytes, tmp_path: Path
+) -> None:
+    files, proposals, _ = stored(tmp_path, imported(designed, tmp_path))
+
+    document = render_derived(
+        files, cv_content(preview_profile(proposals), "fr", TODAY), None
+    )
+
+    text = " ".join(read_pdf(document.pdf)[0].text.split())
+    assert "PROJETS" in text
+    assert "EXPÉRIENCES" in text
+    assert "P R O J" not in text
 
 
 def test_a_pdf_made_of_an_image_is_refused_with_its_reason(tmp_path: Path) -> None:
@@ -162,3 +201,90 @@ def test_only_the_texts_reach_the_model_never_the_file(
     assert "CAMILLE MARTIN" in prompt
     assert "%PDF" not in prompt
     assert prompt.count("\n[") == len(read_page(designed).blocks)
+
+
+def _layout(*lines: tuple[str, float]) -> PageLayout:
+    style = Style("Poppins-Regular", 7.0, "#000000")
+    blocks = tuple(
+        Block(
+            i,
+            Box(10, y, 100, 8),
+            (Line(Box(10, y, 100, 8), y + 7, (Run(text, style),), 0.0),),
+        )
+        for i, (text, y) in enumerate(lines)
+    )
+    return PageLayout(595, 842, blocks, (), "#ffffff")
+
+
+def test_a_project_line_continues_the_part_whose_label_opens_above_it() -> None:
+    layout = _layout(
+        ("Problématique : Combiner des", 100),
+        ("données sportives.", 110),
+        ("Stack technique : Python,", 130),
+        ("Projections d'effectifs", 140),
+        ("comptables, automatisation", 150),
+    )
+    roles = [
+        BlockRole(0, Role.PROJECT_PROBLEM, 1, "Problématique"),
+        BlockRole(
+            1, Role.PROJECT_PROBLEM, 1, "Problématique"
+        ),  # the label repeated on a following line
+        BlockRole(2, Role.PROJECT_STACK, 1, "Stack technique"),
+        BlockRole(
+            3, Role.PROJECT_NAME, 1
+        ),  # a line of the stack taken for the project's name
+        BlockRole(4, Role.PROJECT_PROBLEM, 1, "Problématique"),
+    ]
+
+    fixed = [role.role for role in _continued(layout, roles)]
+
+    assert fixed == [
+        Role.PROJECT_PROBLEM,
+        Role.PROJECT_PROBLEM,
+        Role.PROJECT_STACK,
+        Role.PROJECT_STACK,
+        Role.PROJECT_STACK,
+    ]
+
+
+def test_a_title_on_two_lines_is_translated_whole_then_spread_over_them() -> None:
+    layout = _layout(("C O M P É T E N C E S", 100), ("T E C H N I Q U E S", 115))
+    roles = [
+        BlockRole(0, Role.HEADING, text_en="S K I L L S"),
+        BlockRole(1, Role.HEADING),
+    ]
+
+    spread = [
+        _title_line(role, layout, [((0, 1), "TECHNICAL SKILLS")]) for role in roles
+    ]
+
+    assert [role.text_en for role in spread] == ["TECHNICAL", "SKILLS"]
+    spaced = _title_line(
+        roles[0], layout, [((0, 1), "T E C H N I C A L   S K I L L S")]
+    )
+    assert spaced.text_en == "T E C H N I C A L"
+    assert unspaced("T E C H N I C A L   S K I L L S") == "TECHNICAL SKILLS"
+
+
+def test_the_photo_shows_its_round_frame_not_its_whole_image(
+    designed: bytes, tmp_path: Path
+) -> None:
+    files, _, _ = stored(tmp_path, imported(designed, tmp_path))
+    photo = json.loads(files[TEMPLATE_FILE])["photo"]
+
+    # The fixture shows a 140 × 140 pt disc of a 140 × 170 pt image.
+    assert photo["round"]
+    assert abs(photo["visible"]["height"] - 140) < 3
+    assert photo["image"]["height"] > photo["visible"]["height"] + 20
+
+
+def test_a_page_that_is_one_picture_gives_no_template_but_its_proposals(
+    tmp_path: Path,
+) -> None:
+    result = imported(scanned_cv(), tmp_path)
+
+    assert result.template is None
+    assert result.template_refusal is not None
+    assert "image de page" in result.template_refusal
+    proposals, _ = read_proposals(FileStore(tmp_path), 1, result.proposals.sha256)
+    assert proposals["full_name"] == "Camille Martin"

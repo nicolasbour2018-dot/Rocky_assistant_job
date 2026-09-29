@@ -236,7 +236,8 @@ def _line(line: LTTextLine, height: float) -> Line | None:
     )
     return Line(
         box=_box(line.bbox, height),
-        baseline=height - chars[0].y0 - _descent(chars[0]),
+        # The text matrix holds the baseline; the character box starts at the descent.
+        baseline=round(height - float(chars[0].matrix[5]), 2),
         runs=cleaned,
         letter_spacing=_letter_spacing(chars),
     )
@@ -250,17 +251,11 @@ def _style(char: LTChar) -> Style:
     )
 
 
-def _descent(char: LTChar) -> float:
-    return float(char.descent) if hasattr(char, "descent") else 0.0
-
-
 def _letter_spacing(chars: Sequence[LTChar]) -> float:
-    """Median gap between a character's advance and the next one's start (0 for ordinary text)."""
-    gaps = sorted(
-        b.x0 - (a.x0 + a.adv)
-        for a, b in pairwise(chars)
-        if a.get_text() != " " and b.get_text() != " "
-    )
+    """Median gap between two letters, over the spaces between them: ordinary text gives 0, a title spaced
+    letter by letter (« P R O J E T S ») gives its pitch."""
+    letters = [c for c in chars if c.get_text().strip()]
+    gaps = sorted(b.x0 - (a.x0 + a.adv) for a, b in pairwise(letters))
     if not gaps:
         return 0.0
     middle = gaps[len(gaps) // 2]
@@ -364,47 +359,6 @@ class PhotoFrame:
     image: Box  # where the whole image lies (it may be larger than what shows)
     visible: Box  # what the page shows of it (a clip, often a circle)
     round: bool
-
-
-def photo_frame(pdf: bytes, box: Box, background: str) -> PhotoFrame:
-    """The part of the photo the page shows, found on the rendered page: rows and columns that are not background."""
-    scale = 2.0
-    image = render_page(pdf, int(72 * scale))
-    left, top = int(box.x * scale), int(box.y * scale)
-    right, bottom = int(box.right * scale), int(box.bottom * scale)
-    wanted = tuple(int(background[i : i + 2], 16) for i in (1, 3, 5))
-    crop = image.crop((left, top, right, bottom))
-    width, height = crop.size
-    shown = [
-        [not _close(_rgb(crop, (x, y)), wanted) for x in range(width)]
-        for y in range(height)
-    ]
-    rows = [y for y in range(height) if sum(shown[y]) > width * 0.02]
-    columns = [
-        x
-        for x in range(width)
-        if sum(shown[y][x] for y in range(height)) > height * 0.02
-    ]
-    if not rows or not columns:
-        return PhotoFrame(box, box, round=False)
-    visible = Box(
-        box.x + columns[0] / scale,
-        box.y + rows[0] / scale,
-        (columns[-1] - columns[0] + 1) / scale,
-        (rows[-1] - rows[0] + 1) / scale,
-    )
-    inset = min(visible.width, visible.height) * 0.06
-    corners = [
-        (visible.x + inset, visible.y + inset),
-        (visible.right - inset, visible.y + inset),
-        (visible.x + inset, visible.bottom - inset),
-        (visible.right - inset, visible.bottom - inset),
-    ]
-    background_corners = sum(
-        _close(_rgb(image, (int(x * scale), int(y * scale))), wanted)
-        for x, y in corners
-    )
-    return PhotoFrame(box, visible, round=background_corners >= 3)
 
 
 def _close(pixel: Any, wanted: tuple[int, ...]) -> bool:

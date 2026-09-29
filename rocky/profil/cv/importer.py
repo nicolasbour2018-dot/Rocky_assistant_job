@@ -28,6 +28,7 @@ from rocky.profil.cv.semantics import (
     block_roles,
     profile_answer,
     prompt,
+    titles,
 )
 from rocky.system.files import FileStore, StoredBundle
 from rocky.system.llm import JsonModel, LlmUnavailableError
@@ -90,7 +91,7 @@ def import_cv(
     }
     try:
         roles = block_roles(answer, layout.blocks)
-        derived = derive(pdf, layout, roles, name)
+        derived = derive(pdf, layout, roles, name, titles(answer, layout.blocks))
     except (SemanticsError, PageError) as error:
         refusal = error.reason
     else:

@@ -64,11 +64,13 @@ hobbies (loisirs) ;
 le numéro du projet (0, 1, 2… de gauche à droite) ;
 - experiences : emplois (intitulé, employeur, puces) ; education : diplômes, formations, certifications, écoles, et \
 leurs puces. Une ligne de la colonne des formations est education, jamais experiences.
-Pour heading et fixed, « en » est la traduction anglaise, dans la même casse et la même typographie ; un titre \
-sur plusieurs lignes est traduit en entier sur sa première ligne, « en » restant vide pour les suivantes. \
+Pour heading et fixed, « en » est la traduction anglaise de la ligne, dans la même casse et la même typographie. \
+Dans « titles », donne chaque titre de section avec les numéros de toutes ses lignes (« COMPÉTENCES » puis \
+« TECHNIQUES » forment un seul titre) et sa traduction anglaise entière, dans l'ordre des mots anglais. \
 Pour project_problem, project_stack, project_work et project_results, « label » est l'étiquette qui ouvre la ligne \
 (« Problématique », sans les deux-points) et « en » sa traduction anglaise ; vides si la ligne n'en a pas.
-2. Recopie le contenu du CV dans « profile », texte pour texte (dates : années seules)."""
+2. Recopie le contenu du CV dans « profile », texte pour texte (dates : années seules ; une seule année donne \
+start_year seul ; « ongoing » vrai seulement pour ce qui est écrit en cours)."""
 
 _TEXT = {"type": "string"}
 _TEXTS = {"type": "array", "items": _TEXT}
@@ -88,6 +90,17 @@ SCHEMA: Mapping[str, Any] = {
                     "en": _TEXT,
                 },
                 "required": ["id", "role"],
+            },
+        },
+        "titles": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "ids": {"type": "array", "items": {"type": "integer"}},
+                    "en": _TEXT,
+                },
+                "required": ["ids", "en"],
             },
         },
         "profile": {
@@ -134,6 +147,7 @@ SCHEMA: Mapping[str, Any] = {
                             "place": _TEXT,
                             "start_year": {"type": "integer"},
                             "end_year": {"type": "integer"},
+                            "ongoing": {"type": "boolean"},
                             "bullets": _TEXTS,
                         },
                         "required": ["kind", "title", "organisation", "start_year"],
@@ -221,6 +235,22 @@ def block_roles(answer: Any, blocks: Sequence[Block]) -> tuple[BlockRole, ...]:
             "Rocky ne peut pas reproduire ce CV à l'identique."
         )
     return tuple(found[block.id] for block in blocks)
+
+
+def titles(
+    answer: Any, blocks: Sequence[Block]
+) -> tuple[tuple[tuple[int, ...], str], ...]:
+    """Section titles spread over several lines, with their whole English translation; unknown lines left out."""
+    known = {block.id for block in blocks}
+    found = []
+    for item in answer.get("titles", []) if isinstance(answer, dict) else []:
+        if not isinstance(item, dict):
+            continue
+        ids = tuple(i for i in item.get("ids", []) if isinstance(i, int) and i in known)
+        english = _text(item.get("en"))
+        if ids and english:
+            found.append((ids, english))
+    return tuple(found)
 
 
 def profile_answer(answer: Any) -> Mapping[str, Any]:

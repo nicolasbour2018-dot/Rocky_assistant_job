@@ -81,6 +81,21 @@ def image_only_cv() -> bytes:
     return render_pdf(html, {"photo.png": photo_png()}).pdf
 
 
+def scanned_cv() -> bytes:
+    """A page that is one picture, its text laid over it (like an exported image with a text layer)."""
+    html = (
+        f"<!doctype html><html><head><style>{font_faces()}"
+        "@page { size: 595pt 842pt; margin: 0; } body { margin: 0; }"
+        '</style></head><body><img src="photo.png" style="position:absolute; width:595pt; height:842pt">'
+        '<p style="position:absolute; left:30pt; top:40pt; font: 26pt Poppins; color: transparent">'
+        "CAMILLE MARTIN</p>"
+        '<p style="position:absolute; left:30pt; top:90pt; font: 9pt Poppins; color: transparent">'
+        "Data scientist issue de la logistique, je transforme des données opérationnelles.</p>"
+        "</body></html>"
+    )
+    return render_pdf(html, {**font_assets(), "photo.png": photo_png()}).pdf
+
+
 # The roles a careful reader gives to each line of the designed CV.
 ROLES = (
     ("CAMILLE MARTIN", "name"),

@@ -11,6 +11,10 @@ from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
+from fontTools.pens.svgPathPen import SVGPathPen
+from fontTools.pens.transformPen import TransformPen
+from fontTools.ttLib import TTFont
+
 FONTS_DIR = Path(__file__).parent / "fonts"
 DEFAULT_FAMILY = "Poppins"
 
@@ -72,3 +76,62 @@ def font_assets(prefix: str = "fonts/") -> dict[str, bytes]:
 
 def _key(value: str) -> str:
     return re.sub(r"[^a-z]", "", value.lower())
+
+
+@dataclass(frozen=True)
+class TextPath:
+    d: str  # SVG path, in points, baseline at y = ascent
+    width: float
+    height: float
+    ascent: float
+
+
+def text_path(
+    text: str,
+    family: str,
+    weight: int,
+    italic: bool,
+    size: float,
+    letter_spacing: float = 0.0,
+) -> TextPath:
+    """``text`` drawn as outlines of a shipped font (decision D2): visible like text, never read as text.
+
+    Used for the titles a design spaces letter by letter: as text, PDF readers would find « E D U C A T I O N ».
+    """
+    font = _ttfont(_file_of(family, weight, italic))
+    scale = size / font["head"].unitsPerEm
+    ascent = font["hhea"].ascent * scale
+    descent = -font["hhea"].descent * scale
+    glyphs = font.getGlyphSet()
+    cmap = font.getBestCmap()
+    parts: list[str] = []
+    x = 0.0
+    for character in text:
+        name = cmap.get(ord(character))
+        if name is None:
+            name = ".notdef"
+        pen = SVGPathPen(glyphs)
+        transform = TransformPen(pen, (scale, 0, 0, -scale, x, ascent))
+        glyphs[name].draw(transform)
+        if pen.getCommands():
+            parts.append(pen.getCommands())
+        x += glyphs[name].width * scale + letter_spacing
+    return TextPath(
+        " ".join(parts),
+        round(max(x - letter_spacing, 0.0), 2),
+        round(ascent + descent, 2),
+        round(ascent, 2),
+    )
+
+
+def _file_of(family: str, weight: int, italic: bool) -> str:
+    candidates = [font for font in FONTS if font.family == family] or [
+        font for font in FONTS if font.family == DEFAULT_FAMILY
+    ]
+    best = min(candidates, key=lambda f: (f.italic != italic, abs(f.weight - weight)))
+    return best.file
+
+
+@cache
+def _ttfont(file: str) -> TTFont:
+    return TTFont(FONTS_DIR / file)
