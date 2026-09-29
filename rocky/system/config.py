@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 
 DATABASE_URL_VAR = "ROCKY_DATABASE_URL"
 PUBLIC_URL_VAR = "ROCKY_PUBLIC_URL"
@@ -23,6 +24,7 @@ RESULTS_PER_QUERY_VAR = "ROCKY_SOURCES_RESULTS_PER_QUERY"
 GEMINI_API_KEY_VAR = "ROCKY_GEMINI_API_KEY"
 GEMINI_MODEL_VAR = "ROCKY_GEMINI_MODEL"
 SCHEDULER_ENABLED_VAR = "ROCKY_SCHEDULER_ENABLED"
+STORAGE_ROOT_VAR = "ROCKY_STORAGE_ROOT"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 DEFAULT_SMTP_PORT = 587
@@ -82,6 +84,8 @@ class Settings:
     # The planner (daily watch, rescoring, purge; D12): on for the application (``load_settings``), off by default
     # for settings built in code, so that the tests never start its thread.
     scheduler_enabled: bool = False
+    # Root of the account files (photos, CV templates; D2). Without it, the features that store files say so.
+    storage_root: Path | None = None
 
     @property
     def secure_cookies(self) -> bool:
@@ -102,7 +106,18 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
             model=_value(env, GEMINI_MODEL_VAR) or DEFAULT_GEMINI_MODEL,
         ),
         scheduler_enabled=_boolean(env, SCHEDULER_ENABLED_VAR, default=True),
+        storage_root=_storage_root(env),
     )
+
+
+def _storage_root(env: Mapping[str, str]) -> Path | None:
+    raw = _value(env, STORAGE_ROOT_VAR)
+    if not raw:
+        return None
+    root = Path(raw)
+    if not root.is_absolute():
+        raise ConfigError(f"{STORAGE_ROOT_VAR} must be an absolute path")
+    return root
 
 
 def _value(env: Mapping[str, str], name: str) -> str:
