@@ -133,7 +133,7 @@ aucun identifiant interne affiché.
 | C4. Scoring : règles | Fonction pure sans effet de bord (ne modifie ni l'offre ni la base) ; **preuve minimale** (pas de composante compétences pleine sur 1–2 compétences) ; **indice de confiance** affiché ; intitulé comparé aux intitulés des pistes ; détail et preuves par composante ; version des règles ; caractéristiques stockées (D14) | Chaque score s'explique composante par composante ; la « Data Protection Analyst » (79,6 % en v1) ne remonte plus | ✅ |
 | C5. Scoring : calibrage | Nicolas annote 40–50 annonces de l'archive (pertinente / non, avec motif) ; comparaison des classements ancien vs nouveau ; ajustement des règles | Les annonces jugées pertinentes remontent ; écart chiffré et documenté | ✅ |
 | C6. Veille | Veille par pistes ; **toutes** les offres conservées, sous le seuil avec leur motif ; offre + rattachement aux pistes + score écrits comme une unité cohérente et idempotente ; veille toujours close (terminée / partielle / échouée / interrompue) ; source en attente ≠ échec ; planificateur unique et rattrapage (D12) | Une panne simulée laisse un statut final explicite et aucune offre orpheline ou sans score | ✅ |
-| C7. Écran Offres | Décisions (valeur, raison, auteur) ; mode tri une offre à la fois au clavier ; liste compacte filtrable (piste, sous le seuil, incomplètes) ; fiche latérale avec synthèse de décision (date limite, éliminatoires, preuves du profil, manques) et « Pourquoi ? » ; retour « pertinente / non pertinente » avec motif (étiquettes D14) | Tri de 20 offres au clavier ; chaque décision est tracée dans `events` | ⬜ |
+| C7. Écran Offres | Décisions (valeur, raison, auteur) ; mode tri une offre à la fois au clavier ; liste compacte filtrable (piste, sous le seuil, incomplètes) ; fiche latérale avec synthèse de décision (date limite, éliminatoires, preuves du profil, manques) et « Pourquoi ? » ; retour « pertinente / non pertinente » avec motif (étiquettes D14) | Tri de 20 offres au clavier ; chaque décision est tracée dans `events` | 🔄 |
 
 ### D. Candidatures
 
@@ -290,11 +290,13 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en C3 : `formatted_description` (HTML et Markdown en lignes et puces).*
 - **(B4 → C7)** Décisions persistées (`job_decisions`) et journalisées, y compris annulations et changements ;
   suppression de `rocky/offres/prototype.py`, `prototype_offers.json` et de `docs/procedures/b4-prototype/`.
+  *Résolu en C7 : `job_decisions` en ajout seul, changements et annulations journalisés ; prototype supprimé.*
 - **(B4 → C7, VPS)** Une touche frappée pendant l'arrivée d'un fragment HTMX se perd : envoyer les panneaux de motifs
   avec la carte, ou sérialiser les requêtes (`hx-sync`), si la latence du VPS le rend sensible.
 - **(B4 → C7)** HTMX fait hériter `hx-swap` et `hx-target` de ses ancêtres : un élément placé dans un conteneur qui
   en déclare un autre doit déclarer les siens (bug « Revenir » trouvé par Nicolas, corrigé en B4). D6 confirmé :
   HTMX retenu par Nicolas, cinq critères tenus.
+  *Tenu en C7 : `hx-swap` explicite sur chaque cible, test de non-régression gardé.*
 - **(B5 → C3)** Les compétences et leurs alias sont **propres à chaque compte** (décision B5, Q2) : la détection des
   compétences d'une annonce se fait avec les termes du compte (`skill_terms`, `normalize_term`), pas avec un
   dictionnaire global. L'ancien `SKILL_ALIASES` n'a servi qu'au réimport.
@@ -383,6 +385,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en C3 pour les codes (décodés par source) ; la vérification des clés du détail Apec reste ouverte.*
 - **(C2 → C7, F1)** La coque boost tous les liens (`hx-boost`) : tout écran atteint par un lien doit choisir
   fragment ou page par `wants_fragment` (`system.shell`), jamais par `is_htmx` seul (bug de C2 trouvé à l'essai).
+  *Tenu en C7 : l'écran Offres n'utilise que `wants_fragment`.*
 - **(C3 → C4)** Caractéristiques pour le score (D14) : compétences du compte avec leur importance (éliminatoire, un
   plus, mentionnée) et leur preuve, conditions, contrats et télétravail dans le vocabulaire des préférences, salaire
   avec période (comparable à `min_salary_eur` / `min_daily_rate_eur`), expérience, langues ; `RULES_VERSION` à garder
@@ -391,6 +394,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C3 → C6, C7)** L'analyse et le résumé ne sont pas enregistrés : à stocker avec l'offre (analyse recalculable,
   résumé gardé une fois demandé pour ne pas rappeler le modèle).
   *C6 : l'analyse n'est pas stockée, elle se recalcule (2 s pour 517 offres) ; le résumé reste pour C7.*
+  *Résolu en C7 : résumé gardé dans `offer_summaries`, périmé quand la description change.*
 - **(C3 → C2, C6)** Import Hellowork : le CDI n'est que dans le titre de la page (le JSON-LD donne `FULL_TIME`) ; lire
   aussi le `<title>` ou un champ de la page si le contrat manque (3 écarts de la mesure C3).
 - **(C3 → `profil`)** `normalize_term` réduit « C++ » et « C# » à « c » : une compétence de ce nom répondrait à la
@@ -459,11 +463,29 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   sur une annonce connue), jamais un repli pour LinkedIn (Q8).*
 - **(C6 → C7)** 350 offres incomplètes sur 517 à la première veille (Adzuna, Apec, LinkedIn) : leur score est bas faute
   de texte. Le geste « Enrichir » et le filtre « incomplètes » de C7 en sont la réponse.
+  *Résolu en C7 : filtre « Incomplètes » (au-dessus et sous le seuil) et « Coller la description » (score recalculé).*
 - **(C6 → C7)** L'écran Offres lit `job_offers`, `offer_tracks` et `offer_scores` (`SqlStore.current_score`) ; « vue aussi
   sur … » par `match_key` ; une décision garde une copie du score affiché (Q6, D14) ; le bouton « Supprimer
   définitivement » d'une piste qui a des offres pourrait être masqué (le refus est déjà expliqué).
+  *Résolu en C7 : écran branché sur ces tables, « vue aussi sur … » par `match_key`, copie du score dans chaque
+  décision ; le bouton de suppression est renvoyé à `profil`.*
 - **(C6 → F1)** Le bandeau de veille (retard, en cours, échec) va dans 🏠 Aujourd'hui ; ⚙️ Système lit `watch_runs` et
   `watch_run_sources` (état par source, requêtes sautées, détail arrêté).
 - **(C6)** Un import par URL qui écrirait la même offre au même instant qu'une veille heurte la contrainte d'unicité
   (erreur visible, pas de donnée incohérente) : réessayer suffit. Les journaux `INFO` des modules ne sont pas affichés
   par uvicorn (seuls avertissements et erreurs, avec leur trace) : à régler avec la journalisation du VPS.
+- **(C7 → F2)** Les décisions de C7 (compte d'essai, base de développement) sont un essai : avant de repartir sur une
+  base neuve, les **exporter dans un fichier** (`job_decisions` et leurs événements) pour une analyse éventuelle
+  (décision C7, Q9).
+- **(C7 → `profil`)** Le bouton « Supprimer définitivement » d'une piste qui a des offres pourrait être masqué (le refus
+  est déjà expliqué) ; laissé tel quel en C7 (Q14).
+- **(C7 → D2)** Lecture assistée d'une offre incomplète (navigateur visible sur le poste, décision C1, Q6) : reportée,
+  Playwright arrive en D2. En C7, seule la description collée enrichit une offre (Q5).
+- **(C7 → recalibrage)** Les décisions réelles (étiquettes D14 avec la copie du score) sont la matière des leviers
+  notés en C5 (séniorité, compétences hors profil, plafonds).
+- **(C7)** « Vue aussi sur … » : chaque offre d'un doublon se décide séparément (Q4) ; copier la décision sur l'autre
+  offre (auteur `rule`) ou la sortir de la file, si la double décision gêne à l'usage.
+- **(C7 → VPS)** Frappes perdues (constat B4 → C7) : toujours ouvert. `hx-sync` n'y répond pas (la touche perdue ne
+  déclenche aucune requête) ; parade à juger sur le VPS : panneaux de motifs envoyés avec la carte.
+- **(C7)** La liste se calcule en mémoire sur toutes les offres du compte (13 ms pour 520) : passer à une requête filtrée
+  en SQL si un compte dépasse quelques milliers d'offres.
