@@ -478,3 +478,4 @@ body.auth { display: grid; place-items: center; min-height: 100vh; padding: var(
 .cv-order li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
 .cv-order li > span:first-child { margin-right: auto; }
 .cv-photo { width: 7rem; height: 7rem; border-radius: 50%; object-fit: cover; display: block; margin-bottom: var(--space-2); }
+.cv-downloads { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }

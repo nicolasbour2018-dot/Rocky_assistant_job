@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import replace
 
+from rocky.profil.cv.template import Slots
 from rocky.profil.model import (
     CvLayout,
     Hobby,
@@ -21,8 +22,10 @@ from rocky.profil.model import (
 from rocky.profil.rules import ProfileInputError, normalize_term, optional
 
 
-def check_layout(profile: Profile, layout: CvLayout) -> None:
-    """Refuse a layout that names an item of another profile, misplaces a skill or repeats an item."""
+def check_layout(profile: Profile, layout: CvLayout, slots: Slots) -> None:
+    """Refuse a layout that names an item of another profile, misplaces a skill, repeats an item, or holds more
+    than the slots of the template (Q26: refused when saved, never cut when rendered)."""
+    _check_slots(layout, slots)
     categories = {skill.id: skill.content.category for skill in profile.skills}
     seen: set[int] = set()
     names: set[str] = set()
@@ -53,6 +56,29 @@ def check_layout(profile: Profile, layout: CvLayout) -> None:
     for hobby in layout.hobbies:
         if not optional(hobby.label.fr):
             raise ProfileInputError("Un loisir a besoin d'un nom en français.")
+
+
+def _check_slots(layout: CvLayout, slots: Slots) -> None:
+    hobbies = sum(1 for hobby in layout.hobbies if hobby.in_cv)
+    limits = (
+        (len(layout.projects), slots.projects, "projets"),
+        (len(layout.groups), slots.groups, "groupes de compétences"),
+        (len(layout.transversal), slots.transversal, "compétences transversales"),
+        (hobbies, slots.hobbies, "loisirs"),
+        *(
+            (
+                len(group.skill_ids),
+                slots.skills_per_group,
+                f"compétences par groupe (« {group.name.fr} »)",
+            )
+            for group in layout.groups
+        ),
+    )
+    for count, limit, what in limits:
+        if count > limit:
+            raise ProfileInputError(
+                f"Ton gabarit de CV prévoit {limit} {what} au plus : retires-en un avant d'en ajouter."
+            )
 
 
 def _once(seen: set[int], skill_id: int) -> None:

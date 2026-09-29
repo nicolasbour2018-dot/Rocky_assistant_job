@@ -31,8 +31,12 @@ _MEASURE = """() => {
     const extraY = el.scrollHeight - el.clientHeight;
     boxes.push({name: el.dataset.box, extraX, extraY});
   }
-  return {boxes, fonts: [...document.fonts].filter(f => f.status !== 'loaded').map(f => f.family)};
+  return {boxes, fonts: [...document.fonts].filter(f => f.status === 'error').map(f => f.family)};
 }"""
+# Every declared font is loaded, used or not: a font file that fails is then an error, never a silent fallback.
+_LOAD_FONTS = (
+    "Promise.allSettled([...document.fonts].map(f => f.load())).then(() => true)"
+)
 
 
 class RenderError(Exception):
@@ -55,7 +59,7 @@ class Rendered:
     pdf: bytes
     page_count: int
     overflows: tuple[Overflow, ...]
-    missing_fonts: tuple[str, ...]  # declared fonts that failed to load
+    missing_fonts: tuple[str, ...]  # declared fonts whose file failed to load
     refused_requests: tuple[str, ...]  # requests outside the given assets
 
 
@@ -76,11 +80,13 @@ def render_pdf(html: str, assets: Mapping[str, bytes] | None = None) -> Rendered
 
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch()
+            # Without hinting, glyph advances match the PDF fonts: readers see words, not spaced letters.
+            browser = playwright.chromium.launch(args=["--font-render-hinting=none"])
             try:
                 page = browser.new_page()
                 page.route("**/*", serve)
                 page.goto(ORIGIN + PAGE, wait_until="load")
+                page.evaluate(_LOAD_FONTS)
                 page.evaluate("document.fonts.ready.then(() => true)")
                 measured: dict[str, Any] = page.evaluate(_MEASURE)
                 pdf = page.pdf(prefer_css_page_size=True, print_background=True)

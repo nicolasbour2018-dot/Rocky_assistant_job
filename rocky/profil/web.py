@@ -21,8 +21,10 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData, UploadFile
 
 from rocky.profil.cv import layout
+from rocky.profil.cv.content import cv_content
 from rocky.profil.cv.photo import MAX_BYTES as PHOTO_MAX_BYTES
 from rocky.profil.cv.photo import photo_suffix
+from rocky.profil.cv.rendering import CvRefusedError, Photo, render_neutral
 from rocky.profil.model import (
     CONTRACT_LABELS,
     EXPERIENCE_KIND_LABELS,
@@ -67,6 +69,7 @@ from rocky.profil.usecases import Clock, ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.files import FileError, FileStore
+from rocky.system.render import RenderError
 from rocky.system.shell import NAVIGATION, is_htmx, page, wants_fragment
 
 PROFILE_PATH = "/profil"
@@ -299,6 +302,9 @@ def _render(
         "states": states,
         "skills_by_id": {skill.id: skill for skill in profile.skills},
         "missing": missing_for_ready(profile),
+        "cv_missing_en": cv_content(
+            profile, "en", request.app.state.auth.clock().date()
+        ).missing,
         "onboarding_open": needs_onboarding(profile.onboarding),
         "message": message,
     }
@@ -1093,3 +1099,49 @@ CV_GESTURES: dict[str, Callable[[Profile, FormData], CvLayout]] = {
     "loisir-monter": lambda p, f: layout.move_hobby(p.cv, _int(f, "index"), -1),
     "loisir-descendre": lambda p, f: layout.move_hobby(p.cv, _int(f, "index"), 1),
 }
+
+
+# The CV as a PDF (decision D2, Q6, Q11): delivered whole or refused with its reasons, never cut.
+
+
+@router.get("/cv/pdf")
+def cv_pdf(
+    request: Request, account: CurrentAccount, langue: str = "fr", apercu: bool = False
+) -> Response:
+    language = "en" if langue == "en" else "fr"
+    profile = profile_of(request, account)
+    clock: Clock = request.app.state.auth.clock
+    try:
+        document = render_neutral(
+            cv_content(profile, language, clock().date()), _photo_of(request, profile)
+        )
+    except (CvRefusedError, RenderError) as error:
+        reasons = (
+            error.reasons if isinstance(error, CvRefusedError) else (error.reason,)
+        )
+        state = SectionState(language=language, error=" ".join(reasons))
+        return _render(
+            request, profile, key="kit", state=state, status_code=_error_status(request)
+        )
+    name = "_".join(profile.identity.full_name.split()) or "CV"
+    disposition = "inline" if apercu else "attachment"
+    return Response(
+        document.pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disposition}; filename="CV_{name}_{language.upper()}.pdf"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+def _photo_of(request: Request, profile: Profile) -> Photo | None:
+    if profile.photo is None:
+        return None
+    try:
+        content = _files(request).read_file(profile.photo.path, profile.photo.sha256)
+    except FileError as error:
+        raise CvRefusedError((f"La photo est illisible : {error.reason}",)) from error
+    except ProfileInputError as error:
+        raise CvRefusedError((str(error),)) from error
+    return Photo(content, profile.photo.path.rsplit(".", 1)[-1])

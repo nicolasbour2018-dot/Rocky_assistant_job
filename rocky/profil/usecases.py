@@ -12,6 +12,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 
 from rocky.profil.cv.layout import check_layout, remove_skill
+from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
 from rocky.profil.model import (
     CvLayout,
     ExperienceDraft,
@@ -117,9 +118,10 @@ class ProfileEditor:
 
     # Master CV (decision D2, Q9, Q10): no event, it moves no score.
 
-    def save_cv_layout(self, layout: CvLayout) -> None:
+    def save_cv_layout(self, layout: CvLayout, slots: Slots = NEUTRAL_SLOTS) -> None:
+        """``slots``: those of the active template (the neutral one until a template is derived, Q16)."""
         profile = self.profile()
-        check_layout(profile, layout)
+        check_layout(profile, layout, slots)
         if layout != profile.cv:
             self._store.save_cv_layout(profile.id, layout)
 
@@ -365,7 +367,7 @@ class ProfileEditor:
             )
         if imported.cv is not None:
             layout = _imported_layout(imported.cv, skill_ids, project_ids)
-            check_layout(self.profile(), layout)
+            check_layout(self.profile(), layout, NEUTRAL_SLOTS)
             self._store.save_cv_layout(profile.id, layout)
         for track in imported.tracks:
             self._check_track_name(self.profile(), track.name, except_track=None)

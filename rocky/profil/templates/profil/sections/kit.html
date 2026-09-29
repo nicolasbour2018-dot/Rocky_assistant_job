@@ -31,8 +31,28 @@
 {% set free_technical = profile.skills | selectattr("content.category", "equalto", "technical") | rejectattr("id", "in", placed) | map(attribute="id") | list %}
 {% set free_transversal = profile.skills | rejectattr("content.category", "equalto", "technical") | rejectattr("id", "in", cv.transversal) | map(attribute="id") | list %}
 
+<div class="cv-render">
+  <h3 class="group-title">Ton CV</h3>
+  <p class="muted small">Gabarit neutre, une page A4. Un texte trop long est signalé, jamais coupé.</p>
+  <p class="cv-downloads">
+    <a class="btn btn-primary" href="/profil/cv/pdf?langue=fr" download>Télécharger en français</a>
+    <a class="btn btn-ghost" href="/profil/cv/pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu</a>
+    {% if cv_missing_en %}
+    <span class="btn btn-ghost" aria-disabled="true">Anglais : textes à compléter</span>
+    {% else %}
+    <a class="btn btn-primary" href="/profil/cv/pdf?langue=en" download>Download in English</a>
+    <a class="btn btn-ghost" href="/profil/cv/pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
+    {% endif %}
+  </p>
+  {% if cv_missing_en %}
+  <details class="note"><summary>Pour le CV anglais, il manque {{ cv_missing_en | length }} texte{{ "s" if cv_missing_en | length > 1 }} en anglais</summary>
+    <ul class="small">{% for where in cv_missing_en %}<li>{{ where }}</li>{% endfor %}</ul>
+  </details>
+  {% endif %}
+</div>
+
 <p class="section-lead">Ce qui figure dans ton CV maître, et dans quel ordre. Tes expériences et formations y sont toutes, par date.</p>
-{% if state.error and state.editing in ("", "photo") %}{{ m.error(state) }}{% endif %}
+{% if state.error and state.editing in ("", "photo", none) %}{{ m.error(state) }}{% endif %}
 
 <div class="two-columns">
   <div>

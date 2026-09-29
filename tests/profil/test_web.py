@@ -541,3 +541,36 @@ def test_without_storage_the_photo_says_it_is_not_configured(
     )
 
     assert "ROCKY_STORAGE_ROOT" in section(refused.text, "kit")
+
+
+def test_the_cv_is_downloaded_as_one_pdf_page(client: TestClient) -> None:
+    client.post(
+        "/profil/identite",
+        data={"full_name": "Camille Martin", "title_fr": "Data Scientist"},
+        headers=HTMX,
+    )
+
+    response = client.get("/profil/cv/pdf?langue=fr")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert (
+        response.headers["content-disposition"]
+        == 'attachment; filename="CV_Camille_Martin_FR.pdf"'
+    )
+    assert response.content.startswith(b"%PDF")
+
+
+def test_an_english_cv_waits_for_its_english_texts(client: TestClient) -> None:
+    client.post(
+        "/profil/identite",
+        data={"full_name": "Camille Martin", "title_fr": "Data Scientiste"},
+        headers=HTMX,
+    )
+
+    page = client.get("/profil")
+    refused = client.get("/profil/cv/pdf?langue=en")
+
+    assert "Identité : titre du CV" in section(page.text, "kit")
+    assert refused.status_code == 400
+    assert "attend encore" in section(refused.text, "kit")
