@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Connection, Engine
 
+from rocky.offres.analysis.model import PostingAnalysis
 from rocky.offres.analysis.rules import analyze
 from rocky.offres.analysis.text import formatted_description
 from rocky.offres.analysis.usecases import SummaryResult, summarize
@@ -629,6 +630,21 @@ def offer_headings(
 ) -> dict[int, OfferHeading]:
     """The account's offers among ``offer_ids``; an offer of another account is absent."""
     return SqlStore(connection).headings(account_id, offer_ids)
+
+
+def offer_analysis(
+    connection: Connection,
+    account_id: int,
+    offer_id: int,
+    profile: Profile,
+    today: date,
+) -> PostingAnalysis | None:
+    """The analysis of an offer of the account with its profile's skills (D3: the CV of an application is targeted
+    with it); None for an unknown offer or one of another account."""
+    stored = SqlStore(connection).offer_of(account_id, offer_id)
+    if stored is None:
+        return None
+    return analyze(stored.offer, scoring_inputs(profile).skills, today=today)
 
 
 def decision_in_force(
