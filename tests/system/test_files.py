@@ -95,3 +95,23 @@ def test_invalid_names_in_a_bundle_are_refused(tmp_path: Path, name: str) -> Non
 def test_a_missing_file_says_so(tmp_path: Path) -> None:
     with pytest.raises(FileError, match="introuvable"):
         FileStore(tmp_path).read_file("comptes/1/photos/none.png", "0" * 64)
+
+
+def test_a_bundle_is_found_by_one_of_its_files_and_only_when_intact(
+    tmp_path: Path,
+) -> None:
+    store = FileStore(tmp_path)
+    kept = store.put_bundle(
+        1, "imports", {"texte.sha256": b"abc", "reponse.json": b"{}"}
+    )
+    store.put_bundle(1, "imports", {"texte.sha256": b"other", "reponse.json": b"[]"})
+
+    assert store.find_bundle(1, "imports", "texte.sha256", b"abc") == {
+        "texte.sha256": b"abc",
+        "reponse.json": b"{}",
+    }
+    assert store.find_bundle(1, "imports", "texte.sha256", b"none") is None
+    assert store.find_bundle(2, "imports", "texte.sha256", b"abc") is None
+
+    (tmp_path / kept.path / "reponse.json").write_bytes(b"altered")
+    assert store.find_bundle(1, "imports", "texte.sha256", b"abc") is None

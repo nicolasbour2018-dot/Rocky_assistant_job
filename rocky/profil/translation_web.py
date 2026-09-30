@@ -6,20 +6,35 @@ Registered before the profile's own routes (``/profil/{key}`` would take ``/prof
 
 from __future__ import annotations
 
+import base64
+import io
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+from PIL import Image
 from sqlalchemy import Engine
 
-from rocky.profil.rules import ProfileInputError
+from rocky.profil.cv.content import cv_content
+from rocky.profil.cv.derived import (
+    KeptText,
+    draw_derived,
+    english_template,
+    kept_texts,
+)
+from rocky.profil.cv.importer import TEMPLATES
+from rocky.profil.cv.rendering import CvRefusedError
+from rocky.profil.model import CvTemplateRecord
+from rocky.profil.rules import ProfileInputError, text_sha256
 from rocky.profil.sql import SqlProfileStore
 from rocky.profil.translation import (
     Proposal,
+    Segment,
     TranslationError,
     glossary_pairs,
     propose,
@@ -29,6 +44,8 @@ from rocky.profil.translation import (
 from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.files import FileError, FileStore
+from rocky.system.render import rasterize
 from rocky.system.shell import page, wants_fragment
 
 router = APIRouter(prefix="/profil")
@@ -177,6 +194,7 @@ def _row(
     english: str = "",
     retour: str = "",
     empreinte: str = "",
+    accept_url: str = "/profil/traduction/accepter",
 ) -> Response:
     templates: Jinja2Templates = request.app.state.templates
     return templates.TemplateResponse(
@@ -190,6 +208,7 @@ def _row(
             "english": english,
             "retour": back_to(retour),
             "empreinte": empreinte,
+            "accept_url": accept_url,
         },
     )
 
@@ -233,3 +252,235 @@ def to_review(request: Request, account: Account) -> tuple[str, ...]:
         memory = editor.translation_memory()
     _, stale = to_translate(profile, memory)
     return tuple(segment.where for segment in stale)
+
+
+# « Préparer mon CV anglais » (decision D3, Q8, Q16–Q20): the English version of the imported French CV.
+
+
+@dataclass(frozen=True)
+class EnglishState:
+    """Where the English version of the account's French template stands."""
+
+    french: CvTemplateRecord | None
+    refusal: (
+        str | None
+    )  # why it cannot be prepared (no French template, one to import again)
+    texts: tuple[KeptText, ...] = ()
+    validated: Mapping[str, str] = field(default_factory=dict)  # kept text id → English
+    files: Mapping[str, bytes] = field(default_factory=dict)
+
+    @property
+    def to_translate(self) -> tuple[KeptText, ...]:
+        return tuple(text for text in self.texts if text.id not in self.validated)
+
+
+def _english_state(request: Request, account: Account) -> EnglishState:
+    with _editor(request, account) as editor:
+        french = editor.active_cv_template("fr")
+        memory = editor.translation_memory()
+    if french is None:
+        return EnglishState(
+            None,
+            "Ton CV anglais se prépare à partir de ton CV français importé : importe-le d'abord dans Profil & kit.",
+        )
+    try:
+        files = _file_store(request).read_bundle(french.path, french.sha256)
+        texts = kept_texts(files)
+    except (CvRefusedError, FileError) as error:
+        reason = (
+            " ".join(error.reasons)
+            if isinstance(error, CvRefusedError)
+            else error.reason
+        )
+        return EnglishState(french, reason)
+    validated = {
+        text.id: memory[text_sha256(text.text)].translation
+        for text in texts
+        if text_sha256(text.text) in memory
+    }
+    return EnglishState(french, None, texts, validated, files)
+
+
+def _file_store(request: Request) -> FileStore:
+    root = request.app.state.settings.storage_root
+    if root is None:
+        raise FileError(
+            "Le stockage des fichiers n'est pas configuré (ROCKY_STORAGE_ROOT)."
+        )
+    return FileStore(root)
+
+
+def _english_screen(
+    request: Request,
+    account: Account,
+    *,
+    proposals: tuple[Proposal, ...] = (),
+    error: str | None = None,
+    message: str | None = None,
+) -> Response:
+    state = _english_state(request, account)
+    preview: str | None = None
+    problems: tuple[str, ...] = ()
+    with _editor(request, account) as editor:
+        profile = editor.profile()
+        memory = editor.translation_memory()
+        english = editor.active_cv_template("en")
+    missing_fields, _ = to_translate(profile, memory)
+    if state.refusal is None and state.french is not None:
+        clock: Callable[[], datetime] = request.app.state.auth.clock
+        files = english_template(
+            state.files, state.validated, state.french.sha256, partial=True
+        )
+        rendered, _, problems = draw_derived(
+            files, cv_content(profile, "en", clock().date())
+        )
+        preview = base64.b64encode(_png(rasterize(rendered.pdf, 80)[0])).decode()
+    context: Mapping[str, object] = {
+        "state": state,
+        "proposals": proposals,
+        "missing_fields": missing_fields,
+        "preview": preview,
+        "problems": problems,
+        "outdated": english is not None
+        and english.source_sha256 is not None
+        and state.french is not None
+        and english.source_sha256 != state.french.sha256,
+        "english": english,
+        "error": error,
+        "message": message,
+    }
+    if wants_fragment(request):
+        templates: Jinja2Templates = request.app.state.templates
+        return templates.TemplateResponse(
+            request, "profil/english_body.html", dict(context)
+        )
+    return page(request, "profil/english.html", active="profile", context=context)
+
+
+def _png(image: Image.Image) -> bytes:
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    return bytes(buffer.getvalue())
+
+
+@router.get("/cv-anglais", response_class=HTMLResponse)
+def english_page(request: Request, account: CurrentAccount) -> Response:
+    return _english_screen(request, account)
+
+
+@router.post("/cv-anglais", response_class=HTMLResponse)
+def translate_cv(
+    request: Request,
+    account: CurrentAccount,
+    consentement: Annotated[str, Form()] = "",
+) -> Response:
+    """One call to the model for the texts of the imported CV not validated yet (Q18), after the user's consent."""
+    if not consentement:
+        return _english_screen(
+            request,
+            account,
+            error="Coche l'accord d'envoi de ces textes pour les faire traduire.",
+        )
+    state = _english_state(request, account)
+    if state.refusal is not None:
+        return _english_screen(request, account, error=state.refusal)
+    with _editor(request, account) as editor:
+        profile = editor.profile()
+        memory = editor.translation_memory()
+        glossary = editor.glossary()
+    segments = [
+        Segment(text.id, text.where, text.text, None) for text in state.to_translate
+    ]
+    if not segments:
+        return _english_screen(
+            request, account, message="Tous les textes sont déjà traduits."
+        )
+    try:
+        proposals = propose(
+            segments,
+            memory=memory,
+            pairs=glossary_pairs(profile, glossary),
+            protected=protected_names(profile),
+            model=request.app.state.llm_model,
+        )
+    except TranslationError as error:
+        return _english_screen(request, account, error=error.reason)
+    return _english_screen(request, account, proposals=proposals)
+
+
+@router.post("/cv-anglais/accepter", response_class=HTMLResponse)
+def accept_cv_text(
+    request: Request,
+    account: CurrentAccount,
+    cle: Annotated[str, Form()],
+    empreinte: Annotated[str, Form()],
+    anglais: Annotated[str, Form()] = "",
+    ou: Annotated[str, Form()] = "",
+) -> Response:
+    """Keep one validated text of the English version (in the memory: nothing else is stored before the whole CV)."""
+    state = _english_state(request, account)
+    text = next((t for t in state.texts if t.id == cle), None)
+    try:
+        if text is None or text_sha256(text.text) != empreinte:
+            raise ProfileInputError(
+                "Ce texte n'est plus dans ton CV français : recharge la page."
+            )
+        with _editor(request, account) as editor:
+            editor.validate_translation(text.text, anglais)
+    except ProfileInputError as error:
+        return _row(
+            request,
+            cle,
+            ou,
+            error=str(error),
+            english=anglais,
+            empreinte=empreinte,
+            accept_url="/profil/cv-anglais/accepter",
+        )
+    if not wants_fragment(request):
+        return RedirectResponse("/profil/cv-anglais", status_code=303)
+    return _row(
+        request, cle, ou, accepted=True, accept_url="/profil/cv-anglais/accepter"
+    )
+
+
+@router.post("/cv-anglais/creer", response_class=HTMLResponse)
+def create_english_cv(request: Request, account: CurrentAccount) -> Response:
+    """The English template, once every text is validated (Q18): an immutable bundle, recorded and made active (Q17)."""
+    state = _english_state(request, account)
+    if state.refusal is not None or state.french is None:
+        return _english_screen(request, account, error=state.refusal)
+    if state.to_translate:
+        return _english_screen(
+            request,
+            account,
+            error=f"Il reste {len(state.to_translate)} texte(s) à valider avant de créer ton CV anglais.",
+        )
+    files = english_template(state.files, state.validated, state.french.sha256)
+    stored = _file_store(request).put_bundle(account.id, TEMPLATES, files)
+    with _editor(request, account) as editor:
+        template_id = editor.record_cv_template(
+            stored.path,
+            stored.sha256,
+            f"{state.french.name} — version anglaise",
+            "en",
+            source_sha256=state.french.sha256,
+        )
+        editor.activate_cv_template(template_id, "en")
+    return _english_screen(
+        request,
+        account,
+        message="Ton CV anglais est prêt : il sert désormais à tous tes CV en anglais.",
+    )
+
+
+def english_cv_outdated(request: Request, account: Account) -> bool:
+    """The active English template was translated from another French one than the active one (Q19)."""
+    with _editor(request, account) as editor:
+        french = editor.active_cv_template("fr")
+        english = editor.active_cv_template("en")
+    return (
+        english is not None
+        and english.source_sha256 is not None
+        and (french is None or english.source_sha256 != french.sha256)
+    )

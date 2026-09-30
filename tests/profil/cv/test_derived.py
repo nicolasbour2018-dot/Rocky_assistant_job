@@ -5,11 +5,8 @@ from __future__ import annotations
 
 import io
 import json
-from collections.abc import Mapping
-from dataclasses import dataclass, replace
-from datetime import date
+from dataclasses import replace
 from pathlib import Path
-from typing import Any
 
 import pytest
 from PIL import ImageFilter
@@ -28,9 +25,7 @@ from rocky.profil.cv.derived import (
 )
 from rocky.profil.cv.importer import (
     IMPORTS,
-    ImportedCv,
     ImportRefusedError,
-    import_cv,
     import_language,
     read_proposals,
 )
@@ -52,56 +47,13 @@ from rocky.system.pdf_read import read_pdf
 from rocky.system.render import compare, rasterize
 from tests.profil.cv.fixtures import (
     PROFILE,
+    TODAY,
     ReaderModel,
-    designed_cv,
+    Shared,
     image_only_cv,
+    imported,
     scanned_cv,
 )
-
-TODAY = date(2026, 9, 29)
-
-
-@pytest.fixture(scope="module")
-def designed() -> bytes:
-    return designed_cv()
-
-
-def imported(
-    pdf: bytes, root: Path, model: ReaderModel | None = None, language: str = "fr"
-) -> ImportedCv:
-    return import_cv(
-        pdf,
-        model=model or ReaderModel(),
-        files=FileStore(root),
-        account_id=1,
-        today=TODAY,
-        language=language,
-    )
-
-
-@dataclass
-class Shared:
-    """One import of the designed CV, read by several tests: a derivation draws a 300 dpi layer."""
-
-    root: Path
-    result: ImportedCv
-    model: ReaderModel
-
-    def files(self) -> Mapping[str, bytes]:
-        assert self.result.template is not None
-        return FileStore(self.root).read_bundle(
-            self.result.template.path, self.result.template.sha256
-        )
-
-    def proposals(self) -> Mapping[str, Any]:
-        return read_proposals(FileStore(self.root), 1, self.result.proposals.sha256)[0]
-
-
-@pytest.fixture(scope="module")
-def shared(designed: bytes, tmp_path_factory: pytest.TempPathFactory) -> Shared:
-    root = tmp_path_factory.mktemp("import")
-    model = ReaderModel()
-    return Shared(root, imported(designed, root, model), model)
 
 
 def text_of(pdf: bytes) -> str:

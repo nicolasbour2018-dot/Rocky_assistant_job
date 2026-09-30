@@ -634,6 +634,7 @@ def _dossier_page(
         "error": error,
         "cv_refusal": cv_refusal,
         "to_review": translation_web.to_review(request, account),
+        "english_outdated": translation_web.english_cv_outdated(request, account),
         "importance_labels": IMPORTANCE_LABELS,
         "coverage_labels": COVERAGE_LABELS,
     }

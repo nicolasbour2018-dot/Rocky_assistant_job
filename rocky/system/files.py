@@ -99,6 +99,29 @@ class FileStore:
                 raise
         return StoredBundle(path=relative, sha256=digest, names=names)
 
+    def find_bundle(
+        self, account_id: int, kind: str, name: str, content: bytes
+    ) -> dict[str, bytes] | None:
+        """The files of an intact bundle of the account holding ``name`` with ``content`` (a bundle's directory is
+        named by its hash: each one found is checked like any read); None when there is none."""
+        _check_name(name)
+        directory = self._absolute(_relative(account_id, kind, "x")).parent
+        if not directory.is_dir():
+            return None
+        for entry in sorted(directory.iterdir()):
+            if not entry.is_dir() or entry.name.startswith("."):
+                continue
+            candidate = entry / name
+            if not candidate.is_file() or candidate.read_bytes() != content:
+                continue
+            try:
+                return self.read_bundle(
+                    _relative(account_id, kind, entry.name), entry.name
+                )
+            except FileError:
+                continue
+        return None
+
     def read_file(self, path: str, expected_sha256: str) -> bytes:
         content = self._read(path)
         if sha256(content) != expected_sha256:

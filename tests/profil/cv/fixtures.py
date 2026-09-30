@@ -9,11 +9,16 @@ from __future__ import annotations
 import io
 import re
 from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw
 
+from rocky.profil.cv.importer import ImportedCv, import_cv, read_proposals
 from rocky.profil.cv.library import font_assets, font_faces
+from rocky.system.files import FileStore
 from rocky.system.render import render_pdf
 
 LABELS = {"project_problem": "Problématique", "project_stack": "Stack technique"}
@@ -187,3 +192,37 @@ class ReaderModel:
                 item["label"] = LABELS[role]
             roles.append(item)
         return {"roles": roles[self.skip :], "profile": dict(PROFILE)}
+
+
+TODAY = date(2026, 9, 29)
+
+
+def imported(
+    pdf: bytes, root: Path, model: ReaderModel | None = None, language: str = "fr"
+) -> ImportedCv:
+    return import_cv(
+        pdf,
+        model=model or ReaderModel(),
+        files=FileStore(root),
+        account_id=1,
+        today=TODAY,
+        language=language,
+    )
+
+
+@dataclass
+class Shared:
+    """One import of the designed CV, read by several tests."""
+
+    root: Path
+    result: ImportedCv
+    model: ReaderModel
+
+    def files(self) -> Mapping[str, bytes]:
+        assert self.result.template is not None
+        return FileStore(self.root).read_bundle(
+            self.result.template.path, self.result.template.sha256
+        )
+
+    def proposals(self) -> Mapping[str, Any]:
+        return read_proposals(FileStore(self.root), 1, self.result.proposals.sha256)[0]

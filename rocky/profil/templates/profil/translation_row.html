@@ -9,7 +9,8 @@
   {% if source %}<p class="muted small description-text">{{ source }}</p>{% endif %}
   {% if from_memory %}<p class="badge badge-accent">Déjà validée pour ce même texte</p>{% endif %}
   {% for warning in warnings or () %}<p class="badge badge-warn">{{ warning }}</p>{% endfor %}
-  <form method="post" action="/profil/traduction/accepter" hx-post="/profil/traduction/accepter" hx-target="#{{ row_id }}" hx-swap="outerHTML" class="stack">
+  {% set accept = accept_url or "/profil/traduction/accepter" %}
+  <form method="post" action="{{ accept }}" hx-post="{{ accept }}" hx-target="#{{ row_id }}" hx-swap="outerHTML" class="stack">
     <input type="hidden" name="cle" value="{{ key }}">
     <input type="hidden" name="empreinte" value="{{ empreinte }}">
     <input type="hidden" name="ou" value="{{ where }}">

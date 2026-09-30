@@ -26,7 +26,7 @@ from PIL import Image
 
 from rocky.profil.cv.check import Fact
 from rocky.profil.cv.content import CvContent
-from rocky.profil.cv.library import font_assets, font_faces, match_pdf_font
+from rocky.profil.cv.library import font_assets, font_faces, match_pdf_font, text_path
 from rocky.profil.cv.pdf_page import (
     Block,
     Box,
@@ -43,10 +43,13 @@ from rocky.profil.cv.semantics import PROJECT_ROLES, BlockRole, Role
 from rocky.profil.cv.template import Slots
 from rocky.system.render import Rendered, render_image, render_pdf
 
+# 4: also the page without any text and the kept texts in units, for its English version (D3, Q24);
 # 3: only the variable blocks are regions (2: every rubric was; 1: the layer was an SVG, drawn black by Preview).
-FORMAT = "rocky-cv-gabarit/3"
+FORMAT = "rocky-cv-gabarit/4"
+READABLE_FORMATS = frozenset({"rocky-cv-gabarit/3", FORMAT})
 TEMPLATE_FILE = "template.json"
 LAYER = "calque.png"
+LAYER_BARE = "calque-sans-texte.png"  # the design without any text: the layer of the English version (D3, Q8)
 LAYER_DPI = 300  # the resolution of the design's own images
 ROOM = 1.0  # a region may grow by one line: fonts measure a hair differently than the design tool
 VARIABLE = frozenset({Role.GROUPS, Role.TRANSVERSAL}) | PROJECT_ROLES
@@ -95,11 +98,22 @@ def derive(
     changed = [blocks[r.block_id] for r in roles if r.role in VARIABLE]
     kept = [(r, blocks[r.block_id]) for r in roles if r.role not in VARIABLE]
     regions = _regions(layout, roles)
+    svg = page_svg(pdf)
     cut = cut_svg(
-        page_svg(pdf),
+        svg,
         text_areas=[block.box for block in changed],
         image_areas=(),
         decoration_areas=[region["room"] for region in regions],
+    )
+    units = _units(kept)
+    bare = cut_svg(
+        svg,
+        text_areas=[block.box for block in layout.blocks],
+        image_areas=(),
+        decoration_areas=[
+            *(region["room"] for region in regions),
+            *(_unit_box(unit) for unit in units if unit["kind"] == "paragraph"),
+        ],
     )
     fonts = {style.font for block in layout.blocks for style in block.style_counts()}
     replaced = sorted(font for font in fonts if match_pdf_font(font).replaced)
@@ -118,10 +132,14 @@ def derive(
             if role.role in FACT_KINDS and block.text.strip()
         ],
         "slots": _slots(regions),
+        "units": units,
     }
     files = {
         TEMPLATE_FILE: json.dumps(template, ensure_ascii=False, indent=1).encode(),
         LAYER: _png(render_image(cut.svg, layout.width, layout.height, LAYER_DPI)),
+        LAYER_BARE: _png(
+            render_image(bare.svg, layout.width, layout.height, LAYER_DPI)
+        ),
     }
     found = photo_candidate(layout)
     photo = None
@@ -335,6 +353,152 @@ def slots_of(template: Mapping[str, Any]) -> Slots:
     )
 
 
+# The kept texts in units, for the English version (decision D3, Q16, Q20, Q21): a line that stands alone keeps its
+# place; the lines of one paragraph or one bullet form a unit that flows in its box. Bold and italic runs are marked
+# (``**…**``, ``_…_``) so that the translation keeps them.
+
+# Never sent to the model, copied as they are (Q21).
+PROTECTED_ROLES = frozenset({Role.NAME, Role.EMAIL, Role.PHONE, Role.CITY})
+_CONTACT = re.compile(
+    r"@|https?://|www\.|linkedin|github|^\+?[\d .()/-]{8,}$", re.IGNORECASE
+)
+_BULLET = re.compile(r"^\s*[•·▪●◦‣\-–—]\s")
+RUBRIC_LABELS = {
+    Role.NAME: "Nom",
+    Role.TITLE: "Titre",
+    Role.AGE: "Âge",
+    Role.HEADLINE: "Accroche",
+    Role.EMAIL: "E-mail",
+    Role.PHONE: "Téléphone",
+    Role.CITY: "Ville",
+    Role.HEADING: "Titre de section",
+    Role.FIXED: "Texte du design",
+    Role.LANGUAGES: "Langues",
+    Role.HOBBIES: "Loisirs",
+    Role.EXPERIENCES: "Expériences",
+    Role.EDUCATION: "Formations",
+}
+
+
+def _units(kept: Sequence[tuple[BlockRole, Block]]) -> list[dict[str, Any]]:
+    entries = sorted(
+        ((item.role, line) for item, block in kept for line in block.lines),
+        key=lambda entry: (entry[1].box.y, entry[1].box.x),
+    )
+    groups: list[tuple[Role, list[Line]]] = []
+    for role, line in entries:
+        if not line.text.strip():
+            continue
+        home = next(
+            (
+                lines
+                for other, lines in reversed(groups[-8:])
+                if other is role and _continues(lines, line, role, entries)
+            ),
+            None,
+        )
+        if home is None:
+            groups.append((role, [line]))
+        else:
+            home.append(line)
+    return [_unit(index, role, lines) for index, (role, lines) in enumerate(groups)]
+
+
+def _continues(
+    lines: Sequence[Line], line: Line, role: Role, entries: Sequence[tuple[Role, Line]]
+) -> bool:
+    """The next line of a paragraph: same column, the next baseline, the line above filled to its column's width
+    (a wrapped line), and not a new bullet."""
+    if role in PROTECTED_ROLES or role in (Role.HEADING, Role.TITLE, Role.AGE):
+        return False
+    last, first = lines[-1], lines[0]
+    size = _main_style(lines).size
+    step = line.baseline - last.baseline
+    if not 0 < step <= 1.8 * size or _BULLET.match(line.text):
+        return False
+    if not first.box.x - 3 <= line.box.x <= first.box.x + 3 * size:
+        return False
+    widest = max(
+        other.box.right - first.box.x
+        for kind, other in entries
+        if kind is role and abs(other.box.x - first.box.x) <= 3 * size
+    )
+    return last.box.right - first.box.x >= 0.8 * widest
+
+
+def _main_style(lines: Sequence[Line]) -> Style:
+    counts: Counter[Style] = Counter()
+    for line in lines:
+        for run in line.runs:
+            counts[run.style] += len(run.text.strip())
+    return counts.most_common(1)[0][0]
+
+
+def _marked(lines: Sequence[Line], main: Style) -> str:
+    """The text of the unit, its bold and italic runs marked; wrapped lines joined into one text."""
+    parts = []
+    for line in lines:
+        text = ""
+        for run in line.runs:
+            if not run.text.strip():
+                text += run.text
+                continue
+            core = run.text.strip()
+            lead = run.text[: len(run.text) - len(run.text.lstrip())]
+            tail = run.text[len(run.text.rstrip()) :]
+            if run.style.bold and not main.bold:
+                core = f"**{core}**"
+            elif run.style.italic and not main.italic:
+                core = f"_{core}_"
+            text += lead + core + tail
+        parts.append(" ".join(text.split()))
+    return " ".join(parts).replace("** **", " ").replace("_ _", " ")
+
+
+def _unit(index: int, role: Role, lines: Sequence[Line]) -> dict[str, Any]:
+    box = lines[0].box
+    for line in lines[1:]:
+        box = box.union(line.box)
+    main = _main_style(lines)
+    styles = {run.style for line in lines for run in line.runs if run.text.strip()}
+    strong = next((style for style in styles if style.bold and not main.bold), main)
+    soft = next((style for style in styles if style.italic and not main.italic), main)
+    measure = _measure(lines)
+    text = _marked(lines, main)
+    spaced = role is Role.HEADING and _spaced(text)
+    return {
+        "id": index,
+        "role": role.value,
+        "kind": "heading"
+        if role is Role.HEADING
+        else "paragraph"
+        if len(lines) > 1
+        else "line",
+        "box": _box_json(box),
+        "baseline": round(lines[0].baseline, 2),
+        "text": unspaced(text) if spaced else text,
+        "spaced": spaced,
+        "letter_spacing": round(lines[0].letter_spacing, 2),
+        "protected": role in PROTECTED_ROLES or bool(_CONTACT.search(text)),
+        "main": _style_json(main),
+        "strong": _style_json(strong),
+        "soft": _style_json(soft),
+        "line_height": measure["line_height"],
+        "ink": measure["ink"],
+        "align": measure["align"],
+    }
+
+
+def _spaced(text: str) -> bool:
+    words = text.split()
+    return len(words) > 2 and sum(len(word) == 1 for word in words) >= 0.8 * len(words)
+
+
+def _unit_box(unit: Mapping[str, Any]) -> Box:
+    box = unit["box"]
+    return Box(box["x"], box["y"], box["width"], box["height"])
+
+
 def _kept_line(block: Block) -> dict[str, Any]:
     runs = block.lines[0].runs
     return {
@@ -346,10 +510,9 @@ def _kept_line(block: Block) -> dict[str, Any]:
 
 def _words(text: str) -> str:
     """The words of a line; a title spaced letter by letter (« P R O J E T S ») read as « PROJETS »."""
-    words = text.split()
-    if len(words) > 2 and sum(len(word) == 1 for word in words) >= 0.8 * len(words):
+    if _spaced(text):
         return unspaced(text)
-    return " ".join(words)
+    return " ".join(text.split())
 
 
 def unspaced(text: str) -> str:
@@ -420,7 +583,7 @@ def draw_derived(
 ) -> tuple[Rendered, str, tuple[str, ...]]:
     """The rendering whatever its problems, with them: the import preview shows what went wrong."""
     template = json.loads(files[TEMPLATE_FILE])
-    if template.get("format") != FORMAT:
+    if template.get("format") not in READABLE_FORMATS:
         _old_format()
     html = derived_html(template, content)
     rendered = render_pdf(html, {**font_assets(), LAYER: files[LAYER]})
@@ -469,6 +632,9 @@ def derived_html(template: Mapping[str, Any], content: CvContent) -> str:
         for line in template["kept"]
         if line["text"]
     ]
+    # The English version: the layer has no text; every kept unit is written in its validated English (D3, Q20).
+    if template.get("translated"):
+        parts += [_unit_html(template, unit) for unit in template["units"]]
     colon = (
         " :" if content.language == "fr" else ":"
     )  # French typography puts a space before it
@@ -585,3 +751,228 @@ OLD_FORMAT = "Ton gabarit date d'une version précédente de Rocky : réimporte 
 
 def _old_format() -> NoReturn:
     raise CvRefusedError((OLD_FORMAT,))
+
+
+# The English version of a template (decision D3, Q8, Q16–Q21): the design without any text, each kept unit written
+# in the English the user validated (names and contacts copied), the variable blocks from the profile as in French.
+
+ENGLISH_NEEDS_REIMPORT = (
+    "Ton gabarit français date d'une version précédente de Rocky : réimporte ton CV français pour préparer "
+    "sa version anglaise."
+)
+_MARKS = re.compile(r"\*\*(.+?)\*\*|(?<!\w)_(.+?)_(?!\w)")
+
+
+@dataclass(frozen=True)
+class KeptText:
+    """A text of the imported CV to translate for its English version: a kept unit (``u<id>``) or the label that
+    opens a part of the project cards (``label:<text>``, once for all the cards)."""
+
+    id: str
+    where: str
+    text: str
+
+
+def kept_texts(files: Mapping[str, bytes]) -> tuple[KeptText, ...]:
+    """The texts of a French template to translate (Q16); names and contacts are left out (Q21). Refused for a
+    template made before its units were kept (Q24: import the CV again)."""
+    template = json.loads(files[TEMPLATE_FILE])
+    if template.get("format") != FORMAT or LAYER_BARE not in files:
+        raise CvRefusedError((ENGLISH_NEEDS_REIMPORT,))
+    units = [
+        KeptText(f"u{unit['id']}", _unit_where(unit), unit["text"])
+        for unit in template["units"]
+        if not unit["protected"] and unit["text"].strip()
+    ]
+    labels = dict.fromkeys(
+        part["label"]
+        for region in template["regions"]
+        for part in region.get("parts", [])
+        if part["label"]
+    )
+    return (
+        *units,
+        *(
+            KeptText(f"label:{label}", f"Étiquette des projets : « {label} »", label)
+            for label in labels
+        ),
+    )
+
+
+def english_template(
+    files: Mapping[str, bytes],
+    translations: Mapping[str, str],
+    source_sha256: str,
+    *,
+    partial: bool = False,
+) -> dict[str, bytes]:
+    """The bundle of the English version of a French template: its layer without text, each unit with its English.
+
+    ``partial``: a preview; a unit not translated yet keeps its French. Otherwise every unit must have its English.
+    """
+    template = json.loads(files[TEMPLATE_FILE])
+    if template.get("format") != FORMAT or LAYER_BARE not in files:
+        raise CvRefusedError((ENGLISH_NEEDS_REIMPORT,))
+    units = []
+    for unit in template["units"]:
+        english = (
+            unit["text"] if unit["protected"] else translations.get(f"u{unit['id']}")
+        )
+        if english is None:
+            if not partial:
+                raise ValueError(f"unit {unit['id']} has no English")
+            english = unit["text"]
+        units.append({**unit, "en": english})
+    headings = [
+        {"kind": FACT_KINDS[Role.HEADING], "text": _words(_plain(unit["en"]))}
+        for unit in units
+        if unit["kind"] == "heading" and unit["en"].strip()
+    ]
+    regions = [
+        {
+            **region,
+            "parts": [
+                {**part, "label": _label(part["label"], translations, partial)}
+                for part in region.get("parts", [])
+            ],
+        }
+        if "parts" in region
+        else region
+        for region in template["regions"]
+    ]
+    english = {
+        **template,
+        "regions": regions,
+        "name": f"{template['name']} — version anglaise",
+        "language": "en",
+        "translated": True,
+        "source_sha256": source_sha256,
+        "units": [_with_room(template, unit) for unit in units],
+        "kept": [],
+        "facts": [
+            *(f for f in template["facts"] if f["kind"] != FACT_KINDS[Role.HEADING]),
+            *headings,
+        ],
+    }
+    return {
+        TEMPLATE_FILE: json.dumps(english, ensure_ascii=False, indent=1).encode(),
+        LAYER: files[LAYER_BARE],
+    }
+
+
+def _label(label: str, translations: Mapping[str, str], partial: bool) -> str:
+    if not label:
+        return label
+    english = translations.get(f"label:{label}")
+    if english is None:
+        if not partial:
+            raise ValueError(f"label {label!r} has no English")
+        return label
+    return english
+
+
+def _with_room(template: Mapping[str, Any], unit: Mapping[str, Any]) -> dict[str, Any]:
+    """The width a single line may take in English: up to the next text on its right, or the page's margin."""
+    box = unit["box"]
+    top, bottom = box["y"], box["y"] + box["height"]
+    others = [
+        other["box"] for other in template["units"] if other["id"] != unit["id"]
+    ] + [region["room"] for region in template["regions"]]
+    right = min(
+        (
+            other["x"]
+            for other in others
+            if other["x"] >= box["x"] + box["width"] - 1
+            and other["y"] < bottom
+            and other["y"] + other["height"] > top
+        ),
+        default=template["page"]["width"] - 12,
+    )
+    return {**unit, "room_width": round(max(right - box["x"] - 2, box["width"] + 2), 2)}
+
+
+def _unit_where(unit: Mapping[str, Any]) -> str:
+    text = _plain(unit["text"])
+    short = text if len(text) <= 50 else text[:49] + "…"
+    return f"{RUBRIC_LABELS.get(Role(unit['role']), unit['role'])} : « {short} »"
+
+
+def _plain(text: str) -> str:
+    return _MARKS.sub(lambda match: match.group(1) or match.group(2), text)
+
+
+def _unit_html(template: Mapping[str, Any], unit: Mapping[str, Any]) -> str:
+    text = unit["en"]
+    if not text.strip():
+        return ""
+    if unit["kind"] == "heading":
+        return _heading_html(unit, text)
+    box = unit["box"]
+    line_height = float(unit["line_height"])
+    half = max((line_height - float(unit["ink"])) / 2, 0)
+    top = box["y"] - 1 - half
+    if unit["kind"] == "paragraph":
+        width, height = box["width"] + 2, box["height"] + 1 + half + line_height * ROOM
+        left, wrap = box["x"] - 1, "normal"
+    else:
+        width, height = unit["room_width"], line_height + 1
+        left, wrap = box["x"] - 1, "nowrap"
+        if unit["align"] == "center":
+            grow = min(unit["room_width"] - box["width"], box["x"] - 12)
+            left, width = box["x"] - 1 - grow / 2, box["width"] + 2 + grow
+    style = (
+        f"left:{left:.2f}pt; top:{top:.2f}pt; width:{width:.2f}pt; height:{height:.2f}pt; "
+        + _font_css(unit["main"])
+        + f"line-height:{line_height}pt; text-align:{unit['align']}; white-space:{wrap}; "
+    )
+    name = escape(f"zone « {_unit_where(unit)} »")
+    return f'<div class="region" data-box="{name}" style="{style}">{_marked_html(unit, text)}</div>'
+
+
+def _marked_html(unit: Mapping[str, Any], text: str) -> Markup:
+    parts: list[Markup] = []
+    position = 0
+    for match in _MARKS.finditer(text):
+        parts.append(escape(text[position : match.start()]))
+        if match.group(1) is not None:
+            parts.append(_styled(unit["strong"], match.group(1)))
+        else:
+            parts.append(_styled(unit["soft"], match.group(2)))
+        position = match.end()
+    parts.append(escape(text[position:]))
+    return Markup("").join(parts)
+
+
+def _styled(style: Mapping[str, Any], text: str) -> Markup:
+    return Markup('<span style="{}">{}</span>').format(Markup(_font_css(style)), text)
+
+
+def _heading_html(unit: Mapping[str, Any], text: str) -> str:
+    """A section title drawn as outlines (its letter spacing kept, never read letter by letter), and its words as
+    invisible text for PDF readers (decision D2, « Titres des sections »)."""
+    box, style = unit["box"], unit["main"]
+    words = _plain(text)
+    hidden = (
+        f"left:{box['x']}pt; top:{box['y']}pt; width:{box['width'] + 60}pt; "
+        + _font_css(style)
+        + "color:transparent; white-space:nowrap; overflow:visible;"
+    )
+    shape = text_path(
+        words,
+        style["family"],
+        style["weight"],
+        style["italic"],
+        style["size"],
+        float(unit.get("letter_spacing") or 0),
+    )
+    left = box["x"]
+    if unit["align"] == "center" or unit["spaced"]:
+        # A spaced title stands centred where the French one stood.
+        left = box["x"] + (box["width"] - shape.width) / 2
+    top = float(unit["baseline"]) - shape.ascent
+    return (
+        f'<div class="region" style="{hidden}">{escape(words)}</div>'
+        f'<svg style="position:absolute; left:{left:.2f}pt; top:{top:.2f}pt; overflow:visible" '
+        f'width="{shape.width}pt" height="{shape.height}pt" viewBox="0 0 {shape.width} {shape.height}">'
+        f'<path d="{shape.d}" fill="{style["color"]}"/></svg>'
+    )

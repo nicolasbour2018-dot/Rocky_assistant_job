@@ -9,6 +9,7 @@ shown once and never stored. The caller then records the template in the profile
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 from collections.abc import Mapping
@@ -39,6 +40,8 @@ IMPORTS = "imports"
 TEMPLATES = "gabarits"
 PROPOSALS_FILE = "propositions.json"
 ANSWER_FILE = "reponse-du-modele.json"
+# The SHA-256 of the texts sent to the model: the same CV imported again reuses its answer (decision D3, Q24).
+TEXT_FILE = "texte-lu.sha256"
 LANGUAGE_FILE = "langue.txt"
 PHOTO_FILE = "photo.jpg"
 MAX_BYTES = 10 * 1024 * 1024
@@ -84,8 +87,15 @@ def import_cv(
         layout = read_page(pdf)
     except PageError as error:
         raise ImportRefusedError(error.reason) from error
+    sent = prompt(layout.blocks)
+    read = hashlib.sha256(sent.encode()).hexdigest().encode()
+    earlier = files.find_bundle(account_id, IMPORTS, TEXT_FILE, read)
     try:
-        answer = model.complete_json(INSTRUCTIONS, prompt(layout.blocks), SCHEMA)
+        answer = (
+            json.loads(earlier[ANSWER_FILE])
+            if earlier is not None and ANSWER_FILE in earlier
+            else model.complete_json(INSTRUCTIONS, sent, SCHEMA)
+        )
         proposals = profile_answer(answer)
     except (LlmUnavailableError, SemanticsError) as error:
         raise ImportRefusedError(error.reason) from error
@@ -99,6 +109,7 @@ def import_cv(
         # The model's whole answer (texts of the CV and their rubrics): a template can be derived again from it.
         ANSWER_FILE: json.dumps(answer, ensure_ascii=False, indent=1).encode(),
         LANGUAGE_FILE: language.encode(),
+        TEXT_FILE: read,
     }
     try:
         roles = block_roles(answer, layout.blocks)

@@ -68,6 +68,7 @@
     <a class="btn btn-ghost" href="/profil/cv/pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
     {% endif %}
   </p>
+  <p><a class="btn" href="/profil/cv-anglais">Préparer mon CV anglais</a> <span class="muted small">— la version anglaise de ton CV importé, dans le même design.</span></p>
   <div class="cv-downloads">
     {% for code, label in (("fr", "Vérifier mon CV"), ("en", "Check my CV")) if code == "fr" or not cv_missing_en %}
     {{ m.form_open(key, "/profil/cv/verifier", "inline-form") }}<input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost">{{ label }}</button></form>

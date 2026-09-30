@@ -138,18 +138,29 @@ class ProfileEditor:
     # CV templates (decision D2, Q16, Q24): one active at most; none means the neutral template.
 
     def record_cv_template(
-        self, path: str, sha256: str, name: str, language: str
+        self,
+        path: str,
+        sha256: str,
+        name: str,
+        language: str,
+        source_sha256: str | None = None,
     ) -> int:
+        """``source_sha256``: the French template an English one was translated from (decision D3, Q18)."""
         profile_id = self._id()
         template_id, new = self._store.add_cv_template(
-            profile_id, path, sha256, name, language, self._clock()
+            profile_id, path, sha256, name, language, self._clock(), source_sha256
         )
         if new:
             self._event(
                 "profil.cv_template_derived",
                 "cv_template",
                 template_id,
-                {"sha256": sha256, "name": name, "language": language},
+                {
+                    "sha256": sha256,
+                    "name": name,
+                    "language": language,
+                    "source_sha256": source_sha256,
+                },
             )
         return template_id
 
@@ -401,6 +412,15 @@ class ProfileEditor:
 
     def translation_memory(self) -> dict[str, Remembered]:
         return self._store.translation_memory(self._id())
+
+    def validate_translation(self, source: str, english: str) -> str:
+        """Keep the English the user validated for a text of the imported CV (its English version, Q16, Q19)."""
+        lines = [" ".join(line.split()) for line in english.strip().splitlines()]
+        cleaned = "\n".join(line for line in lines if line)
+        if not cleaned:
+            raise ProfileInputError("La traduction est vide.")
+        self._store.remember_translation(self._id(), source, cleaned, self._clock())
+        return cleaned
 
     def accept_translation(self, key: str, source_sha256: str, english: str) -> None:
         """Write the English the user accepted for one text of the profile, keep it in the memory, journal it (the
