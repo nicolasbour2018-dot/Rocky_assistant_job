@@ -67,6 +67,7 @@
         {% endif %}
       </td>
       <td>
+        <a class="btn" href="/candidatures/{{ row.id }}">Dossier</a>
         <form method="post" action="/candidatures/{{ row.id }}/annuler" hx-post="/candidatures/{{ row.id }}/annuler"
           hx-target="#candidatures" hx-swap="outerHTML">
           <button type="submit" class="btn btn-ghost" title="Annuler le dernier changement de cette candidature">Annuler</button>

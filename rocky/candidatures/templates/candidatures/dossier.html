@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block title %}{{ dossier.offer.title }} · Candidature · Rocky{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1><span aria-hidden="true">📝</span> {{ dossier.offer.title }}</h1>
+  <p class="muted">{{ dossier.offer.company or "Employeur inconnu" }}{% if dossier.offer.location %} · {{ dossier.offer.location }}{% endif %}
+    {% if dossier.stage %} · <strong>{{ stage_labels[dossier.stage] }}</strong>{% endif %}</p>
+  <p><a class="btn btn-ghost" href="/offres/{{ dossier.offer.id }}/fiche">Voir l'offre</a> <a class="btn btn-ghost" href="/candidatures">Toutes mes candidatures</a></p>
+</header>
+{% include "candidatures/cv_step.html" %}
+{% endblock %}

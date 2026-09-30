@@ -4,7 +4,8 @@
   {% if state %}
   <p>{% if prepared %}Candidature ouverte. {% endif %}Candidature : <strong>{{ stage_labels[state.stage] }}</strong>
     {% if state.next_action %}— {{ state.next_action.label }} le {{ state.next_action.due.strftime("%d/%m/%Y") }}{% endif %}</p>
-  <p><a class="btn" href="/candidatures">📝 Voir mes candidatures</a></p>
+  <p><a class="btn btn-primary" href="/candidatures/{{ application_id }}">Ouvrir le dossier</a>
+    <a class="btn" href="/candidatures">📝 Voir mes candidatures</a></p>
   {% elif rejected %}
   <p class="muted">Offre écartée : change ta décision pour préparer une candidature.</p>
   {% elif needs_reasons %}

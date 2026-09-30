@@ -474,6 +474,12 @@ body.auth { display: grid; place-items: center; min-height: 100vh; padding: var(
 
 /* Master CV (profile, section « kit », D2): ordered lists with small gesture buttons. */
 .btn-mini { padding: 0 var(--space-2); min-height: 1.75rem; font-size: 0.85em; }
+/* The page of an application (D3) */
+.dossier-cv { display: grid; gap: var(--space-3); max-width: 980px; }
+.dossier-cv h4 { margin: var(--space-2) 0 0; font-size: 13px; }
+details.why { display: inline; }
+details.why > summary { display: inline; font-size: 12px; font-weight: 500; }
+details.why[open] > span { display: block; flex-basis: 100%; }
 .cv-order { display: grid; gap: var(--space-1); margin: var(--space-2) 0; padding-left: 1.5em; }
 .cv-order li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
 .cv-order li > span:first-child { margin-right: auto; }

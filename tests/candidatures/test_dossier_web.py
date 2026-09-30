@@ -1,0 +1,159 @@
+"""The page of an application and its step « CV » through HTTP (decision D3, Q1, Q4, Q9, Q11, Q23)."""
+
+from __future__ import annotations
+
+import pytest
+from fastapi import FastAPI
+from sqlalchemy import Engine, select
+
+from rocky.profil.model import CvLayout, SkillGroup, Text
+from rocky.profil.rules import make_project, make_skill
+from rocky.system.events import events
+from tests.candidatures.test_web import Desk, desk_with
+from tests.offres.fakes import TODAY
+from tests.system.web_support import HTMX, make_app
+
+
+@pytest.fixture
+def app(migrated_engine: Engine) -> FastAPI:
+    app = make_app(migrated_engine)
+    app.state.import_today = lambda: TODAY
+    return app
+
+
+@pytest.fixture
+def desk(app: FastAPI, migrated_engine: Engine) -> Desk:
+    """An open application on an offer asking Python and SQL (« Un plus : Tableau »), and a master CV holding one
+    group « Langages » (Tableau, Python), the soft skill Curiosité and two projects."""
+    desk = desk_with(app, migrated_engine)
+    with migrated_engine.begin() as connection:
+        editor = desk.seeker.editor(connection)
+        skills = {skill.label.fr: skill.id for skill in editor.profile().skills}
+        curiosity = editor.add_skill(make_skill(label_fr="Curiosité", category="soft"))
+        sorting = editor.add_project(
+            make_project(name_fr="Tri", skill_ids=[skills["Tableau"]])
+        )
+        editor.add_project(
+            make_project(name_fr="Prévision", stack="Python", skill_ids=[skills["SQL"]])
+        )
+        editor.save_cv_layout(
+            CvLayout(
+                groups=(
+                    SkillGroup(Text("Langages"), (skills["Tableau"], skills["Python"])),
+                ),
+                transversal=(curiosity,),
+                projects=(sorting,),
+            )
+        )
+    desk.prepare("target_job")
+    return desk
+
+
+def page(desk: Desk) -> str:
+    response = desk.client.get(f"/candidatures/{desk.application_id()}")
+    assert response.status_code == 200
+    return response.text
+
+
+def test_the_page_of_an_application_shows_its_targeted_cv(desk: Desk) -> None:
+    html = page(desk)
+
+    assert "1. CV" in html
+    # Python is required: it comes before Tableau, welcome only.
+    assert html.index("<span>Python</span>") < html.index("<span>Tableau</span>")
+    assert "Citée par l&#39;annonce (éliminatoire)" in html
+    # Prévision proves SQL: it replaces Tri, and says so.
+    assert "<span>Prévision</span>" in html
+    assert (
+        "Remplacé par un projet qui prouve plus de compétences de l&#39;annonce" in html
+    )
+    # SQL is required but outside the master CV: proposed, with its group to choose.
+    assert "Ajouter dans le groupe" in html
+    assert "Dans ton profil, pas dans le CV" in html
+
+
+def test_the_box_of_the_offer_links_to_its_application(desk: Desk) -> None:
+    box = desk.client.get(f"/candidatures/offre/{desk.offer_id}", headers=HTMX).text
+
+    assert f'href="/candidatures/{desk.application_id()}"' in box
+
+
+def test_a_gesture_is_kept_for_the_application_and_journaled(
+    desk: Desk, migrated_engine: Engine
+) -> None:
+    application_id = desk.application_id()
+    before = page(desk)
+    assert "Revenir à la proposition de Rocky" not in before
+
+    html = desk.client.post(
+        f"/candidatures/{application_id}/cv",
+        data={
+            "geste": "competence-ajouter",
+            "element": _skill(desk, "SQL"),
+            "groupe": "0",
+        },
+        headers=HTMX,
+    ).text
+
+    assert "Revenir à la proposition de Rocky" in html
+    # SQL is cited by the posting: its reason says so, and that the user added it.
+    assert "Citée par l&#39;annonce (éliminatoire) : ajoutée par toi" in html
+    with migrated_engine.connect() as connection:
+        types = (
+            connection.execute(
+                select(events.c.type).where(
+                    events.c.subject_type == "application",
+                    events.c.subject_id == str(application_id),
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert "candidatures.cv_selection_changed" in types
+
+    reset = desk.client.post(
+        f"/candidatures/{application_id}/cv/proposition", headers=HTMX
+    ).text
+    assert "Revenir à la proposition de Rocky" not in reset
+
+
+def test_the_french_cv_of_the_application_is_a_pdf(desk: Desk) -> None:
+    response = desk.client.get(
+        f"/candidatures/{desk.application_id()}/cv.pdf?langue=fr"
+    )
+
+    assert response.status_code == 200
+    assert response.content.startswith(b"%PDF")
+
+
+def test_an_english_cv_still_in_french_is_refused_with_what_is_missing(
+    desk: Desk,
+) -> None:
+    response = desk.client.get(
+        f"/candidatures/{desk.application_id()}/cv.pdf?langue=en"
+    )
+
+    assert response.status_code == 409
+    assert "Traduire les champs manquants" in response.text
+    assert "Projet « Prévision » : stack" in response.text
+
+
+def test_the_application_of_another_account_is_not_found(
+    app: FastAPI, migrated_engine: Engine, desk: Desk
+) -> None:
+    other = desk_with(app, migrated_engine)
+
+    assert other.client.get(f"/candidatures/{desk.application_id()}").status_code == 404
+    assert (
+        other.client.post(
+            f"/candidatures/{desk.application_id()}/cv",
+            data={"geste": "projet-basculer", "element": "1"},
+        ).status_code
+        == 404
+    )
+
+
+def _skill(desk: Desk, label: str) -> str:
+    with desk.engine.connect() as connection:
+        skills = desk.seeker.profile(connection).skills
+    return str(next(skill.id for skill in skills if skill.label.fr == label))

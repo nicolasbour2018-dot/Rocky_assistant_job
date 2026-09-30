@@ -7,6 +7,7 @@ criterion of D1). Decision ``docs/decisions/D1-dossier-statuts.md``.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date, datetime
 
 from rocky.candidatures.model import (
@@ -242,6 +243,34 @@ def cancel_last_change(
         },
     )
     return target
+
+
+def adjust_cv_selection(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    layout: Mapping[str, JsonValue] | None,
+    now: datetime,
+) -> bool:
+    """Keep the CV selection the user adjusted for this application (decision D3, Q4), with its event (the before and
+    after are training data, D14); ``None`` goes back to the rules' proposal. False when nothing changes."""
+    application, _ = _open(store, account_id, application_id)
+    before = store.cv_selection(application.id)
+    if before == layout:
+        return False
+    store.insert_cv_selection(account_id, application.id, layout, now)
+    _event(
+        store,
+        application,
+        "candidatures.cv_selection_changed",
+        Author.USER,
+        {
+            "before": None if before is None else dict(before),
+            "after": None if layout is None else dict(layout),
+        },
+    )
+    return True
 
 
 def _open(

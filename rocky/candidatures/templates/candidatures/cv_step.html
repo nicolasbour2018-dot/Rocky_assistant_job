@@ -1,0 +1,101 @@
+{# Step « CV » of an application (decision D3): the CV targeted at the offer, adjustable, with its reasons. #}
+{% set base = "/candidatures/" ~ dossier.application_id %}
+{% macro gesture(name, label, element, title="", group=none) -%}
+<form method="post" action="{{ base }}/cv" hx-post="{{ base }}/cv" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
+  <input type="hidden" name="geste" value="{{ name }}"><input type="hidden" name="element" value="{{ element }}">
+  {% if group is not none %}<input type="hidden" name="groupe" value="{{ group }}">{% endif %}
+  <button type="submit" class="btn btn-ghost btn-mini"{% if title %} title="{{ title }}" aria-label="{{ title }}"{% endif %}>{{ label }}</button>
+</form>
+{%- endmacro %}
+{% macro why(reason) %}<details class="why"><summary>Pourquoi ?</summary><span class="muted small">{{ reason }}</span></details>{% endmacro %}
+<section id="dossier-cv" class="dossier-cv" aria-label="CV de la candidature">
+  <h2>1. CV</h2>
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if cv_refusal %}
+  <div class="alert alert-error" role="alert">
+    <p>Ce CV ne peut pas être produit :</p>
+    <ul>{% for reason in cv_refusal %}<li>{{ reason }}</li>{% endfor %}</ul>
+    <p><a class="btn" href="/profil/traduction?retour={{ base | urlencode }}">Traduire les champs manquants</a></p>
+  </div>
+  {% endif %}
+  {% if view.outdated %}<p class="alert alert-info">Ton CV maître a changé (ses groupes de compétences) depuis ton ajustement : Rocky repart de sa proposition.</p>{% endif %}
+  <p class="muted">Rocky part de ton CV maître : les compétences citées par l'annonce passent en tête, les projets qui en prouvent le plus sont choisis. Rien n'est réécrit.
+    {% if view.adjusted %}Tu as ajusté cette sélection.{% endif %}</p>
+
+  <div class="cv-downloads">
+    <a class="btn btn-primary" href="{{ base }}/cv.pdf?langue=fr" download>CV français</a>
+    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu</a>
+    <a class="btn btn-primary" href="{{ base }}/cv.pdf?langue=en" download>CV anglais</a>
+    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
+    {% if view.adjusted %}
+    <form method="post" action="{{ base }}/cv/proposition" hx-post="{{ base }}/cv/proposition" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
+      <button type="submit" class="btn btn-ghost">Revenir à la proposition de Rocky</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="two-columns">
+    <div>
+      <h3 class="group-title">Compétences techniques</h3>
+      {% for name, skills in view.groups %}{% set group_index = loop.index0 %}
+      <h4>{{ name }}</h4>
+      <ol class="cv-order">
+        {% for item in skills %}
+        <li><span>{{ item.label }}</span>{{ why(item.reason) }}{{ gesture("competence-monter", "↑", item.id, "Monter") }}{{ gesture("competence-descendre", "↓", item.id, "Descendre") }}{{ gesture("competence-retirer", "✕", item.id, "Retirer de ce CV") }}</li>
+        {% else %}<li class="muted small">Aucune.</li>
+        {% endfor %}
+      </ol>
+      {% endfor %}
+      <h3 class="group-title">Compétences transversales</h3>
+      <ol class="cv-order">
+        {% for item in view.transversal %}
+        <li><span>{{ item.label }}</span>{{ why(item.reason) }}{{ gesture("competence-monter", "↑", item.id, "Monter") }}{{ gesture("competence-descendre", "↓", item.id, "Descendre") }}{{ gesture("competence-retirer", "✕", item.id, "Retirer de ce CV") }}</li>
+        {% else %}<li class="muted small">Aucune.</li>
+        {% endfor %}
+      </ol>
+      {% if view.proposed %}
+      <h3 class="group-title">Citées par l'annonce, pas dans ce CV</h3>
+      <ul class="cv-order">
+        {% for item, technical in view.proposed %}
+        <li><span>{{ item.label }}</span>{{ why(item.reason) }}
+          {% if technical %}
+          {% if view.groups %}
+          <form method="post" action="{{ base }}/cv" hx-post="{{ base }}/cv" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
+            <input type="hidden" name="geste" value="competence-ajouter"><input type="hidden" name="element" value="{{ item.id }}">
+            <select name="groupe" aria-label="Groupe de {{ item.label }}">{% for name, _ in view.groups %}<option value="{{ loop.index0 }}">{{ name }}</option>{% endfor %}</select>
+            <button type="submit" class="btn btn-ghost btn-mini">Ajouter dans le groupe</button>
+          </form>
+          {% endif %}
+          {% else %}{{ gesture("competence-ajouter", "Ajouter", item.id) }}{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    <div>
+      <h3 class="group-title">Projets</h3>
+      <ol class="cv-order">
+        {% for item in view.projects %}
+        <li><span>{{ item.label }}</span>{{ why(item.reason) }}{{ gesture("projet-monter", "↑", item.id, "Monter") }}{{ gesture("projet-descendre", "↓", item.id, "Descendre") }}{{ gesture("projet-basculer", "✕", item.id, "Retirer de ce CV") }}</li>
+        {% else %}<li class="muted small">Aucun projet.</li>
+        {% endfor %}
+      </ol>
+      {% for item in view.other_projects %}
+      <p class="small">{{ item.label }} <span class="muted">— {{ item.reason }}</span> {{ gesture("projet-basculer", "Ajouter", item.id) }}</p>
+      {% endfor %}
+      <h3 class="group-title">Ce que l'annonce demande</h3>
+      {% if view.coverage %}
+      <ul class="evidence-list">
+        {% for line in view.coverage %}
+        <li class="{{ 'line-good' if line.coverage == 'in_cv' else 'line-partial' if line.coverage == 'in_profile' else 'line-bad' }}">
+          {{ "✅" if line.coverage == "in_cv" else "➕" if line.coverage == "in_profile" else "❌" }}
+          <strong>{{ line.name }}</strong>{% if line.importance %} · {{ importance_labels[line.importance] }}{% endif %}
+          — {{ coverage_labels[line.coverage] }}
+          {% if line.importance %}<div class="muted small">« {{ line.evidence }} »</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="muted">L'annonce n'exige ni ne souhaite aucune compétence de ton profil.</p>{% endif %}
+    </div>
+  </div>
+</section>

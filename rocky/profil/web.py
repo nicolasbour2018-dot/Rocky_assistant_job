@@ -1177,22 +1177,37 @@ def cv_pdf(
     )
 
 
-def _cv_document(
+def cv_document(
     request: Request, account: Account, profile: Profile, language: str
-) -> tuple[CvPdf, tuple[Fact, ...]] | Response:
-    """The rendered CV and what PDF readers must find in it; or the « kit » section telling why it is refused.
+) -> tuple[CvPdf, tuple[Fact, ...]]:
+    """The rendered CV of ``profile`` and what PDF readers must find in it; raises ``CvRefusedError`` (or
+    ``RenderError``) with its reasons. For the other modules too: an application renders its targeted CV by giving
+    the profile its own layout (decision D3, Q1).
 
     The account's active template in that language renders it (Q16, Q33); without one, the neutral template does.
     """
     clock: Clock = request.app.state.auth.clock
     content = cv_content(profile, language, clock().date())
+    active = _active_template(request, account, language)
+    if active is None:
+        document = render_neutral(content, _photo_of(request, profile))
+        return document, expected_facts(content, neutral_headings(content))
+    _, files = active
+    return render_derived(files, content), derived_facts(files, content)
+
+
+def cv_slots(request: Request, account: Account) -> Slots:
+    """The room of the account's active French template, for the other modules (an application's selection)."""
+    with _editor(request, account) as editor:
+        return _slots(request, editor)
+
+
+def _cv_document(
+    request: Request, account: Account, profile: Profile, language: str
+) -> tuple[CvPdf, tuple[Fact, ...]] | Response:
+    """The rendered CV and its facts; or the « kit » section telling why it is refused."""
     try:
-        active = _active_template(request, account, language)
-        if active is None:
-            document = render_neutral(content, _photo_of(request, profile))
-            return document, expected_facts(content, neutral_headings(content))
-        _, files = active
-        return render_derived(files, content), derived_facts(files, content)
+        return cv_document(request, account, profile, language)
     except (CvRefusedError, RenderError) as error:
         reasons = (
             error.reasons if isinstance(error, CvRefusedError) else (error.reason,)
