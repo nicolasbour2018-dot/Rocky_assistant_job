@@ -33,6 +33,16 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 ## Journal
 - Seulement ce qui explique un changement de score ou de veille : pistes, compétences, préférences, import,
   onboarding terminé. Pas les corrections de texte. Une modification sans changement n'écrit rien.
+- Exception (décision D3, Q13) : une traduction proposée par le modèle et acceptée écrit `profil.translation_accepted`
+  (champ, empreinte du français) : le texte vient de l'IA, validé par l'utilisateur.
+
+## Traduction (décision `docs/decisions/D3-ciblage-traduction.md`)
+- Règles pures et appel au modèle dans `rocky/profil/translation.py` ; écran dans `translation_web.py`, enregistré
+  **avant** les routes du profil (`/profil/{key}` prendrait `/profil/traduction`).
+- Un texte traduisible a une clé stable (`segments_of`) ; `accept_translation` refuse si le français a changé depuis la
+  proposition (empreinte). Rien de non validé n'est stocké ; la mémoire (`translation_memory`) garde chaque validation.
+- « À revoir » se déduit de la mémoire (`is_stale`) : aucune colonne d'état ; un anglais saisi à la main n'est jamais
+  marqué.
 
 ## Écran
 - Chaque section est `#section-<clé>` et se remplace en entier (`outerHTML`). Tout lien ou formulaire d'une section

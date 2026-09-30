@@ -11,12 +11,18 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
 
-from rocky.profil.cv.layout import check_layout, remove_skill
+from rocky.profil.cv.layout import (
+    check_layout,
+    remove_skill,
+    rename_group,
+    update_hobby,
+)
 from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
 from rocky.profil.model import (
     CvLayout,
     CvTemplateRecord,
     ExperienceDraft,
+    GlossaryTerm,
     Identity,
     ImportedCv,
     ImportedProfile,
@@ -25,10 +31,12 @@ from rocky.profil.model import (
     Profile,
     ProfileStore,
     ProjectDraft,
+    Remembered,
     SkillCategory,
     SkillDraft,
     SkillGroup,
     StoredPhoto,
+    Text,
     TrackDraft,
     TrackInUseError,
     TrackStatus,
@@ -42,6 +50,7 @@ from rocky.profil.rules import (
     normalize_term,
     skill_terms,
 )
+from rocky.profil.translation import segments_of
 from rocky.system.events import Actor, JsonValue, NewEvent
 
 type Clock = Callable[[], datetime]
@@ -369,6 +378,108 @@ class ProfileEditor:
 
     def delete_project(self, project_id: int) -> bool:
         return self._store.delete_project(self._id(), project_id)
+
+    # Translation (decision D3, Q5, Q6, Q13, Q14, Q19)
+
+    def glossary(self) -> tuple[GlossaryTerm, ...]:
+        return self._store.glossary(self._id())
+
+    def save_glossary_term(self, fr: str, en: str) -> int:
+        """Add a term, or give the one already there a new English; the same text: never translated."""
+        french, english = " ".join(fr.split()), " ".join(en.split())
+        term = normalize_term(french)
+        if not term or not english:
+            raise ProfileInputError(
+                "Un terme du glossaire a besoin de son français et de son anglais."
+            )
+        return self._store.save_glossary_term(
+            self._id(), term, french, english, self._clock()
+        )
+
+    def delete_glossary_term(self, term_id: int) -> bool:
+        return self._store.delete_glossary_term(self._id(), term_id)
+
+    def translation_memory(self) -> dict[str, Remembered]:
+        return self._store.translation_memory(self._id())
+
+    def accept_translation(self, key: str, source_sha256: str, english: str) -> None:
+        """Write the English the user accepted for one text of the profile, keep it in the memory, journal it (the
+        text came from the model, validated by the user). Refused when the French changed since the proposal."""
+        profile = self.profile()
+        segment = next((s for s in segments_of(profile) if s.key == key), None)
+        if segment is None:
+            raise ProfileInputError("Ce texte n'est plus dans ton profil.")
+        if segment.source_sha256 != source_sha256:
+            raise ProfileInputError(
+                "Le texte français a changé depuis la proposition : traduis-le à nouveau."
+            )
+        lines = [" ".join(line.split()) for line in english.strip().splitlines()]
+        english = "\n".join(line for line in lines if line)
+        if not english:
+            raise ProfileInputError("La traduction est vide.")
+        self._write_english(profile, key, english)
+        self._store.remember_translation(
+            profile.id, segment.source, english, self._clock()
+        )
+        self._event(
+            "profil.translation_accepted",
+            "profile",
+            profile.id,
+            {"field": key, "source_sha256": source_sha256},
+        )
+
+    def _write_english(self, profile: Profile, key: str, english: str) -> None:
+        kind, _, rest = key.partition(":")
+        identifier, _, field = rest.partition(":")
+        lines = tuple(english.split("\n"))
+        if kind == "identity":
+            identity = profile.identity
+            if identifier == "title":
+                identity = replace(identity, title=Text(identity.title.fr, english))
+            else:
+                identity = replace(
+                    identity, headline=Text(identity.headline.fr, english)
+                )
+            self.save_identity(identity)
+        elif kind == "group":
+            index = int(identifier)
+            name = Text(profile.cv.groups[index].name.fr, english)
+            self._store.save_cv_layout(
+                profile.id, rename_group(profile.cv, index, name)
+            )
+        elif kind == "hobby":
+            index = int(identifier)
+            label = Text(profile.cv.hobbies[index].label.fr, english)
+            self._store.save_cv_layout(
+                profile.id, update_hobby(profile.cv, index, label)
+            )
+        elif kind == "skill" and (skill := profile.skill(int(identifier))) is not None:
+            label = Text(skill.label.fr, english)
+            self.update_skill(skill.id, replace(skill.content, label=label))
+        elif kind == "project":
+            project = next(p for p in profile.projects if p.id == int(identifier))
+            draft = project.content
+            if field == "stack":
+                draft = replace(draft, stack_en=lines)
+            elif field == "name":
+                draft = replace(draft, name=Text(draft.name.fr, english))
+            elif field == "problem":
+                draft = replace(draft, problem=Text(draft.problem.fr, english))
+            elif field == "work":
+                draft = replace(draft, work=Text(draft.work.fr, english))
+            else:
+                draft = replace(draft, results=Text(draft.results.fr, english))
+            self.update_project(project.id, draft)
+        elif kind == "experience":
+            experience = next(e for e in profile.experiences if e.id == int(identifier))
+            job = experience.content
+            if field == "bullets":
+                job = replace(job, bullets_en=lines)
+            else:
+                job = replace(job, title=Text(job.title.fr, english))
+            self.update_experience(experience.id, job)
+        else:
+            raise ProfileInputError("Ce texte n'est plus dans ton profil.")
 
     # Import
 

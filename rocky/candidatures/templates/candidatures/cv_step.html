@@ -18,6 +18,12 @@
     <p><a class="btn" href="/profil/traduction?retour={{ base | urlencode }}">Traduire les champs manquants</a></p>
   </div>
   {% endif %}
+  {% if to_review %}
+  <details class="note"><summary>⚠ {{ to_review | length }} texte{{ "s" if to_review | length > 1 }} anglais à revoir : le français a changé depuis sa traduction</summary>
+    <ul class="small">{% for where in to_review %}<li>{{ where }}</li>{% endfor %}</ul>
+    <p><a class="btn" href="/profil/traduction?retour={{ base | urlencode }}">Revoir la traduction</a></p>
+  </details>
+  {% endif %}
   {% if view.outdated %}<p class="alert alert-info">Ton CV maître a changé (ses groupes de compétences) depuis ton ajustement : Rocky repart de sa proposition.</p>{% endif %}
   <p class="muted">Rocky part de ton CV maître : les compétences citées par l'annonce passent en tête, les projets qui en prouvent le plus sont choisis. Rien n'est réécrit.
     {% if view.adjusted %}Tu as ajusté cette sélection.{% endif %}</p>

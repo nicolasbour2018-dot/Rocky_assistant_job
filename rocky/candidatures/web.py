@@ -58,6 +58,7 @@ from rocky.offres.decisions import (
     application_decision,
 )
 from rocky.offres.model import OfferHeading
+from rocky.profil import translation_web
 from rocky.profil import web as profil_web
 from rocky.profil.cv import layout as cv_layout
 from rocky.profil.cv.layout import check_layout
@@ -632,6 +633,7 @@ def _dossier_page(
         "view": found.view,
         "error": error,
         "cv_refusal": cv_refusal,
+        "to_review": translation_web.to_review(request, account),
         "importance_labels": IMPORTANCE_LABELS,
         "coverage_labels": COVERAGE_LABELS,
     }

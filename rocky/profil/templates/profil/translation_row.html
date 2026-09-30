@@ -1,0 +1,24 @@
+{# One proposal to review (decision D3, Q13): accept (possibly corrected) or ignore; nothing kept otherwise. #}
+{% set row_id = "traduction-" ~ (key | replace(":", "-")) %}
+<li class="item" id="{{ row_id }}">
+  <strong>{{ where }}</strong>
+  {% if accepted %}
+  <p class="line-good">✅ Enregistré dans ton profil.</p>
+  {% else %}
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if source %}<p class="muted small description-text">{{ source }}</p>{% endif %}
+  {% if from_memory %}<p class="badge badge-accent">Déjà validée pour ce même texte</p>{% endif %}
+  {% for warning in warnings or () %}<p class="badge badge-warn">{{ warning }}</p>{% endfor %}
+  <form method="post" action="/profil/traduction/accepter" hx-post="/profil/traduction/accepter" hx-target="#{{ row_id }}" hx-swap="outerHTML" class="stack">
+    <input type="hidden" name="cle" value="{{ key }}">
+    <input type="hidden" name="empreinte" value="{{ empreinte }}">
+    <input type="hidden" name="ou" value="{{ where }}">
+    <input type="hidden" name="retour" value="{{ retour }}">
+    <textarea name="anglais" rows="{{ [english.count('\n') + 2, 2] | max }}" aria-label="Anglais de {{ where }}">{{ english }}</textarea>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Accepter</button>
+      <button type="submit" class="btn btn-ghost" formaction="/profil/traduction/ignorer" hx-post="/profil/traduction/ignorer">Ignorer</button>
+    </div>
+  </form>
+  {% endif %}
+</li>

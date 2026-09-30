@@ -62,7 +62,7 @@
     <a class="btn btn-primary" href="/profil/cv/pdf?langue=fr" download>Télécharger en français</a>
     <a class="btn btn-ghost" href="/profil/cv/pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu</a>
     {% if cv_missing_en %}
-    <span class="btn btn-ghost" aria-disabled="true">Anglais : textes à compléter</span>
+    <a class="btn" href="/profil/traduction?retour=/profil/kit">Anglais : traduire les champs manquants</a>
     {% else %}
     <a class="btn btn-primary" href="/profil/cv/pdf?langue=en" download>Download in English</a>
     <a class="btn btn-ghost" href="/profil/cv/pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
@@ -87,6 +87,7 @@
   {% if cv_missing_en %}
   <details class="note"><summary>Pour le CV anglais, il manque {{ cv_missing_en | length }} texte{{ "s" if cv_missing_en | length > 1 }} en anglais</summary>
     <ul class="small">{% for where in cv_missing_en %}<li>{{ where }}</li>{% endfor %}</ul>
+    <p><a class="btn" href="/profil/traduction?retour=/profil/kit">Traduire les champs manquants</a></p>
   </details>
   {% endif %}
 </div>

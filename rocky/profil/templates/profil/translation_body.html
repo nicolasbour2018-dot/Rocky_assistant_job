@@ -1,0 +1,58 @@
+{# The screen « Traduire en anglais » (decision D3): what is missing, the review field by field, the glossary. #}
+<section id="traduction" class="translation" aria-label="Traduction du profil">
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if message %}<p class="alert alert-info" role="status">{{ message }}</p>{% endif %}
+
+  {% if proposals %}
+  <h2>Relis chaque proposition</h2>
+  <p class="muted">Rien n'est enregistré tant que tu n'acceptes pas. Chaque texte accepté va dans ton profil et resservira à tous tes CV anglais.</p>
+  <ul class="item-list">
+    {% for proposal in proposals %}
+    {% set key = proposal.segment.key %}
+    {% set where = proposal.segment.where %}
+    {% set english = proposal.english %}
+    {% set empreinte = proposal.segment.source_sha256 %}
+    {% set source = proposal.segment.source %}
+    {% set warnings = proposal.warnings %}
+    {% set from_memory = proposal.from_memory %}
+    {% include "profil/translation_row.html" %}
+    {% endfor %}
+  </ul>
+  {% else %}
+  <h2>Textes sans anglais</h2>
+  {% if missing or stale %}
+  <p>Rocky envoie à Gemini le <strong>texte</strong> de ces champs, avec ton glossaire, pour te proposer une traduction. Ni ton nom, ni tes coordonnées, ni aucun fichier ne sont envoyés. Un texte déjà validé ne repart pas.</p>
+  <ul class="compact item-list">
+    {% for segment in missing %}<li class="small"><strong>{{ segment.where }}</strong> — <span class="muted">{{ segment.source | truncate(90) }}</span></li>{% endfor %}
+    {% for segment in stale %}<li class="small"><strong>{{ segment.where }}</strong> <span class="badge badge-warn">à revoir : le français a changé</span></li>{% endfor %}
+  </ul>
+  <form method="post" action="/profil/traduction" hx-post="/profil/traduction" hx-target="#traduction" hx-swap="outerHTML" class="stack">
+    <input type="hidden" name="retour" value="{{ retour }}">
+    <label><input type="checkbox" name="consentement" value="1"> J'accepte l'envoi du texte de ces {{ missing | length + stale | length }} champs à Gemini.</label>
+    <button type="submit" class="btn btn-primary">Proposer une traduction</button>
+  </form>
+  {% else %}
+  <p class="muted">Tout ce que ton CV peut montrer a déjà son anglais.</p>
+  {% endif %}
+  {% endif %}
+
+  <h2>Glossaire</h2>
+  <p class="muted">Un terme français et l'anglais qu'il doit devenir ; écris le même texte pour qu'il ne soit jamais traduit. Les libellés anglais de tes compétences en font déjà partie.</p>
+  <ul class="compact item-list">
+    {% for term in glossary %}
+    <li class="small">{{ term.fr }} → <strong>{{ term.en }}</strong>
+      <form method="post" action="/profil/glossaire/{{ term.id }}/supprimer" hx-post="/profil/glossaire/{{ term.id }}/supprimer" hx-target="#traduction" hx-swap="outerHTML" class="inline-form">
+        <input type="hidden" name="retour" value="{{ retour }}">
+        <button type="submit" class="btn btn-ghost btn-mini" aria-label="Retirer {{ term.fr }} du glossaire">✕</button>
+      </form>
+    </li>
+    {% else %}<li class="muted small">Aucun terme pour l'instant.</li>
+    {% endfor %}
+  </ul>
+  <form method="post" action="/profil/glossaire" hx-post="/profil/glossaire" hx-target="#traduction" hx-swap="outerHTML" class="inline-form">
+    <input type="hidden" name="retour" value="{{ retour }}">
+    <label>Français <input type="text" name="fr" required></label>
+    <label>Anglais <input type="text" name="en" required></label>
+    <button type="submit" class="btn btn-ghost">Ajouter au glossaire</button>
+  </form>
+</section>
