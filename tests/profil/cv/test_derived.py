@@ -221,6 +221,7 @@ def _in_english(profile: Profile) -> Profile:
                     p.content,
                     name=Text(p.content.name.fr, "Message triage"),
                     problem=Text(p.content.problem.fr, "Thousands of messages"),
+                    stack_en=p.content.stack,
                 ),
             )
             for p in profile.projects

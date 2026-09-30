@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from typing import Any
 
 from rocky.offres.analysis.model import IMPORTANCE_LABELS, Importance, PostingAnalysis
 from rocky.profil.cv.template import Slots
@@ -244,3 +245,34 @@ def coverage(
         for requirement in analysis.requirements
     ]
     return tuple(lines)
+
+
+def selection_json(layout: CvLayout) -> dict[str, Any]:
+    """What an application keeps of an adjusted selection (Q4): its three variable blocks, the groups by their name."""
+    return {
+        "groups": [
+            {"name": group.name.fr, "skill_ids": list(group.skill_ids)}
+            for group in layout.groups
+        ],
+        "transversal": list(layout.transversal),
+        "projects": list(layout.projects),
+    }
+
+
+def selection_of(stored: Mapping[str, Any], master: CvLayout) -> CvLayout | None:
+    """The kept selection on the master CV's groups, names and hobbies; None when the master's groups changed since
+    (the selection can no longer be placed: the rules propose again, and the screen says so)."""
+    groups = stored.get("groups", [])
+    if [group["name"] for group in groups] != [
+        group.name.fr for group in master.groups
+    ]:
+        return None
+    return replace(
+        master,
+        groups=tuple(
+            replace(group, skill_ids=tuple(kept["skill_ids"]))
+            for group, kept in zip(master.groups, groups, strict=True)
+        ),
+        transversal=tuple(stored.get("transversal", [])),
+        projects=tuple(stored.get("projects", [])),
+    )

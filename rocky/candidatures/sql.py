@@ -6,6 +6,7 @@ action are computed from them (``rules.dossier``).
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
@@ -26,6 +27,7 @@ from sqlalchemy import (
     UniqueConstraint,
     select,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from rocky.candidatures.model import (
@@ -95,6 +97,19 @@ application_changes = Table(
         "decision_id IS NULL OR kind = 'created'", name="decision_on_creation"
     ),
     Index("ix_application_changes_application_id", "application_id", "id"),
+)
+
+# The CV selection of an application (decision D3, Q4): appended at each adjustment, the latest in force; a null
+# layout goes back to the rules' proposal.
+application_cv_selections = Table(
+    "application_cv_selections",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("layout", JSONB),
+    Column("changed_at", DateTime(timezone=True), nullable=False),
+    Index("ix_application_cv_selections_application_id", "application_id", "id"),
 )
 
 
@@ -203,6 +218,31 @@ class SqlApplicationStore:
             .returning(application_changes)
         ).one()
         return _change(row)
+
+    def cv_selection(self, application_id: int) -> Mapping[str, Any] | None:
+        layout = self._conn.execute(
+            select(application_cv_selections.c.layout)
+            .where(application_cv_selections.c.application_id == application_id)
+            .order_by(application_cv_selections.c.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        return None if layout is None else dict(layout)
+
+    def insert_cv_selection(
+        self,
+        account_id: int,
+        application_id: int,
+        layout: Mapping[str, Any] | None,
+        now: datetime,
+    ) -> None:
+        self._conn.execute(
+            application_cv_selections.insert().values(
+                application_id=application_id,
+                account_id=account_id,
+                layout=None if layout is None else dict(layout),
+                changed_at=now,
+            )
+        )
 
     def append_event(self, event: NewEvent) -> None:
         append_event(self._conn, event)

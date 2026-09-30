@@ -435,6 +435,7 @@ def _project_values(project: Project | None) -> dict[str, Any]:
     content = project.content
     values: dict[str, Any] = {
         "stack": content.stack,
+        "stack_en": content.stack_en or (),
         "url": content.url,
         "skills": content.skill_ids,
     }
@@ -916,6 +917,7 @@ def _project_from(form: FormData) -> Any:
         stack=_text(form, "stack"),
         url=_text(form, "url"),
         skill_ids=_ids(form, "skills"),
+        stack_en=_text(form, "stack_en"),
     )
 
 

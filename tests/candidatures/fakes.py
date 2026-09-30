@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
+from typing import Any
 
 from rocky.candidatures.model import Application, Change, NewChange
 from rocky.offres.decisions import Author, Decision, DecisionValue
@@ -18,6 +20,7 @@ class FakeStore:
     applications: list[Application] = field(default_factory=list)
     rows: list[Change] = field(default_factory=list)
     events: list[NewEvent] = field(default_factory=list)
+    selections: list[tuple[int, Mapping[str, Any] | None]] = field(default_factory=list)
 
     def application_for_offer(
         self, account_id: int, offer_id: int, now: datetime
@@ -67,6 +70,19 @@ class FakeStore:
         )
         self.rows.append(row)
         return row
+
+    def cv_selection(self, application_id: int) -> Mapping[str, Any] | None:
+        mine = [layout for owner, layout in self.selections if owner == application_id]
+        return mine[-1] if mine else None
+
+    def insert_cv_selection(
+        self,
+        account_id: int,
+        application_id: int,
+        layout: Mapping[str, Any] | None,
+        now: datetime,
+    ) -> None:
+        self.selections.append((application_id, layout))
 
     def append_event(self, event: NewEvent) -> None:
         self.events.append(event)

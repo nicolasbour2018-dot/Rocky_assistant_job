@@ -12,6 +12,7 @@ from rocky.profil.model import (
     CvTemplateRecord,
     Experience,
     ExperienceDraft,
+    GlossaryTerm,
     Identity,
     Language,
     LanguageDraft,
@@ -20,6 +21,7 @@ from rocky.profil.model import (
     Profile,
     Project,
     ProjectDraft,
+    Remembered,
     Skill,
     SkillDraft,
     StoredPhoto,
@@ -27,6 +29,7 @@ from rocky.profil.model import (
     TrackDraft,
     TrackStatus,
 )
+from rocky.profil.rules import text_sha256
 from rocky.system.events import NewEvent
 
 
@@ -53,6 +56,8 @@ class InMemoryProfileStore:
         self.terms: dict[tuple[int, str], int] = {}
         self.events: list[NewEvent] = []
         self.templates: dict[int, list[CvTemplateRecord]] = {}
+        self.glossaries: dict[int, dict[str, GlossaryTerm]] = {}
+        self.memory: dict[int, dict[str, Remembered]] = {}
         self._ids = count(1)
 
     def event_types(self) -> list[str]:
@@ -278,13 +283,16 @@ class InMemoryProfileStore:
         name: str,
         language: str,
         now: datetime,
+        source_sha256: str | None = None,
     ) -> tuple[int, bool]:
         for record in self.templates.get(profile_id, []):
             if record.sha256 == sha256:
                 return record.id, False
         template_id = next(self._ids)
         self.templates.setdefault(profile_id, []).append(
-            CvTemplateRecord(template_id, path, sha256, name, language, False, now)
+            CvTemplateRecord(
+                template_id, path, sha256, name, language, False, now, source_sha256
+            )
         )
         return template_id, True
 
@@ -303,6 +311,37 @@ class InMemoryProfileStore:
             for r in records
         ]
         return True
+
+    def glossary(self, profile_id: int) -> tuple[GlossaryTerm, ...]:
+        terms = self.glossaries.get(profile_id, {})
+        return tuple(terms[key] for key in sorted(terms))
+
+    def save_glossary_term(
+        self, profile_id: int, term: str, fr: str, en: str, now: datetime
+    ) -> int:
+        terms = self.glossaries.setdefault(profile_id, {})
+        known = terms.get(term)
+        term_id = known.id if known else next(self._ids)
+        terms[term] = GlossaryTerm(term_id, fr, en)
+        return term_id
+
+    def delete_glossary_term(self, profile_id: int, term_id: int) -> bool:
+        terms = self.glossaries.get(profile_id, {})
+        for key, found in list(terms.items()):
+            if found.id == term_id:
+                del terms[key]
+                return True
+        return False
+
+    def translation_memory(self, profile_id: int) -> dict[str, Remembered]:
+        return dict(self.memory.get(profile_id, {}))
+
+    def remember_translation(
+        self, profile_id: int, source: str, translation: str, now: datetime
+    ) -> None:
+        self.memory.setdefault(profile_id, {})[text_sha256(source)] = Remembered(
+            source, translation
+        )
 
     def append_event(self, event: NewEvent) -> None:
         self.events.append(event)

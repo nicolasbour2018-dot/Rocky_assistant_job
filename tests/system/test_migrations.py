@@ -41,6 +41,9 @@ HEAD_TABLES = {
     "hobbies",
     "skill_groups",
     "cv_templates",
+    "application_cv_selections",
+    "glossary_terms",
+    "translation_memory",
 }
 
 

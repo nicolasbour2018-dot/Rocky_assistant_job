@@ -8,10 +8,11 @@ shown to the user (French).
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Protocol
+from typing import Any, Protocol
 
 from rocky.offres.decisions import Author, Decision, DecisionValue
 from rocky.system.events import NewEvent
@@ -169,6 +170,20 @@ class ApplicationStore(Protocol):
         author: Author,
         now: datetime,
     ) -> Change: ...
+
+    def cv_selection(self, application_id: int) -> Mapping[str, Any] | None:
+        """The CV selection in force (decision D3, Q4); None: the rules' proposal."""
+        ...
+
+    def insert_cv_selection(
+        self,
+        account_id: int,
+        application_id: int,
+        layout: Mapping[str, Any] | None,
+        now: datetime,
+    ) -> None:
+        """Append an adjustment; None goes back to the rules' proposal."""
+        ...
 
     def append_event(self, event: NewEvent) -> None: ...
 

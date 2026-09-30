@@ -267,6 +267,8 @@ class ProjectDraft:
     stack: tuple[str, ...] = ()
     url: str | None = None
     skill_ids: tuple[int, ...] = ()
+    # The stack in English (decision D3, Q12); None: not translated yet.
+    stack_en: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -314,6 +316,25 @@ class CvTemplateRecord:
     language: str  # fr, en: the language of the imported CV (decision D2, Q33)
     active: bool
     created_at: datetime
+    # The French template an English one was translated from (decision D3, Q18, Q19).
+    source_sha256: str | None = None
+
+
+@dataclass(frozen=True)
+class GlossaryTerm:
+    """A French term and the English it must become; the same text: never translated (decision D3, Q6)."""
+
+    id: int
+    fr: str
+    en: str
+
+
+@dataclass(frozen=True)
+class Remembered:
+    """A French text and the English the user validated for it (decision D3, Q14, Q19)."""
+
+    source: str
+    translation: str
 
 
 @dataclass(frozen=True)
@@ -393,6 +414,7 @@ class ProfileStore(Protocol):
         name: str,
         language: str,
         now: datetime,
+        source_sha256: str | None = None,
     ) -> tuple[int, bool]:
         """The template's id, and whether it is new (the same bundle is recorded once)."""
         ...
@@ -406,6 +428,28 @@ class ProfileStore(Protocol):
     ) -> bool:
         """Only ``template_id`` active in ``language`` (None: the neutral template); False when it is not of this
         profile or not in that language."""
+        ...
+
+    def glossary(self, profile_id: int) -> tuple[GlossaryTerm, ...]:
+        """In the order of their French terms."""
+        ...
+
+    def save_glossary_term(
+        self, profile_id: int, term: str, fr: str, en: str, now: datetime
+    ) -> int:
+        """Add the term, or give a new English to the one already there (``term``: the normalized French)."""
+        ...
+
+    def delete_glossary_term(self, profile_id: int, term_id: int) -> bool: ...
+
+    def translation_memory(self, profile_id: int) -> dict[str, Remembered]:
+        """By the SHA-256 of the French text."""
+        ...
+
+    def remember_translation(
+        self, profile_id: int, source: str, translation: str, now: datetime
+    ) -> None:
+        """Keep (or replace) the English validated for ``source``."""
         ...
 
     def mark_onboarding_completed(self, profile_id: int, now: datetime) -> None: ...

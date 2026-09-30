@@ -33,6 +33,7 @@ from sqlalchemy import (
     text,
     update,
 )
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 
 from rocky.profil import model
@@ -62,6 +63,7 @@ from rocky.profil.model import (
     TrackInUseError,
     TrackStatus,
 )
+from rocky.profil.rules import text_sha256
 from rocky.system.db import metadata
 from rocky.system.events import NewEvent, append_event
 
@@ -282,6 +284,8 @@ projects = Table(
     Column("results_en", Text),
     Column("stack", _list(), nullable=False, server_default=_empty_list()),
     Column("url", Text),
+    # None: the stack is not translated yet (decision D3, Q12).
+    Column("stack_en", _list()),
     _created(),
     Column("cv_position", Integer),
     UniqueConstraint("profile_id", "id"),
@@ -300,6 +304,7 @@ cv_templates = Table(
     Column("active", Boolean, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("language", Text, nullable=False, server_default=text("'fr'")),
+    Column("source_sha256", Text),
     UniqueConstraint("profile_id", "sha256"),
     CheckConstraint("language IN ('fr', 'en')", name="language"),
     Index(
@@ -309,6 +314,32 @@ cv_templates = Table(
         unique=True,
         postgresql_where=text("active"),
     ),
+)
+
+# The account's glossary (decision D3, Q6): a French term and the English it must become (the same: never translated).
+glossary_terms = Table(
+    "glossary_terms",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("profile_id", BigInteger, ForeignKey("profiles.id"), nullable=False),
+    Column("term", Text, nullable=False),  # the French term, normalized
+    Column("fr", Text, nullable=False),
+    Column("en", Text, nullable=False),
+    _created(),
+    UniqueConstraint("profile_id", "term"),
+)
+
+# French texts and the English the user validated for them (decision D3, Q14, Q19): reused without calling the model,
+# and what tells an English text translated from an older French one (« à revoir »).
+translation_memory = Table(
+    "translation_memory",
+    metadata,
+    Column("profile_id", BigInteger, ForeignKey("profiles.id"), nullable=False),
+    Column("source_sha256", Text, nullable=False),
+    Column("source", Text, nullable=False),
+    Column("translation", Text, nullable=False),
+    Column("validated_at", DateTime(timezone=True), nullable=False),
+    PrimaryKeyConstraint("profile_id", "source_sha256"),
 )
 
 
@@ -730,6 +761,7 @@ class SqlProfileStore:
         name: str,
         language: str,
         now: datetime,
+        source_sha256: str | None = None,
     ) -> tuple[int, bool]:
         found = self._conn.execute(
             select(cv_templates.c.id).where(
@@ -749,6 +781,7 @@ class SqlProfileStore:
                 language=language,
                 active=False,
                 created_at=now,
+                source_sha256=source_sha256,
             )
             .returning(cv_templates.c.id)
         )
@@ -769,8 +802,67 @@ class SqlProfileStore:
                 language=row.language,
                 active=row.active,
                 created_at=row.created_at,
+                source_sha256=row.source_sha256,
             )
             for row in rows
+        )
+
+    def glossary(self, profile_id: int) -> tuple[model.GlossaryTerm, ...]:
+        rows = self._conn.execute(
+            select(glossary_terms)
+            .where(glossary_terms.c.profile_id == profile_id)
+            .order_by(glossary_terms.c.term)
+        )
+        return tuple(model.GlossaryTerm(row.id, row.fr, row.en) for row in rows)
+
+    def save_glossary_term(
+        self, profile_id: int, term: str, fr: str, en: str, now: datetime
+    ) -> int:
+        statement = (
+            pg_insert(glossary_terms)
+            .values(profile_id=profile_id, term=term, fr=fr, en=en, created_at=now)
+            .on_conflict_do_update(
+                index_elements=["profile_id", "term"], set_={"fr": fr, "en": en}
+            )
+            .returning(glossary_terms.c.id)
+        )
+        return int(self._conn.execute(statement).scalar_one())
+
+    def delete_glossary_term(self, profile_id: int, term_id: int) -> bool:
+        result = self._conn.execute(
+            delete(glossary_terms).where(
+                glossary_terms.c.id == term_id,
+                glossary_terms.c.profile_id == profile_id,
+            )
+        )
+        return result.rowcount > 0
+
+    def translation_memory(self, profile_id: int) -> dict[str, model.Remembered]:
+        rows = self._conn.execute(
+            select(translation_memory).where(
+                translation_memory.c.profile_id == profile_id
+            )
+        )
+        return {
+            row.source_sha256: model.Remembered(row.source, row.translation)
+            for row in rows
+        }
+
+    def remember_translation(
+        self, profile_id: int, source: str, translation: str, now: datetime
+    ) -> None:
+        values = {"translation": translation, "validated_at": now}
+        self._conn.execute(
+            pg_insert(translation_memory)
+            .values(
+                profile_id=profile_id,
+                source_sha256=text_sha256(source),
+                source=source,
+                **values,
+            )
+            .on_conflict_do_update(
+                index_elements=["profile_id", "source_sha256"], set_=values
+            )
         )
 
     def activate_cv_template(
@@ -913,6 +1005,7 @@ class SqlProfileStore:
                     stack=tuple(row.stack),
                     url=row.url,
                     skill_ids=links.get(row.id, ()),
+                    stack_en=None if row.stack_en is None else tuple(row.stack_en),
                 ),
             )
             for row in rows
@@ -1084,5 +1177,6 @@ def _project_values(project: ProjectDraft) -> dict[str, Any]:
         "results_fr": project.results.fr or None,
         "results_en": project.results.en,
         "stack": list(project.stack),
+        "stack_en": None if project.stack_en is None else list(project.stack_en),
         "url": project.url,
     }

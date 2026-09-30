@@ -146,6 +146,7 @@ def sample_profile(*, english: bool = True) -> Profile:
                         "85% of messages routed unattended.",
                     ),
                     stack=("Python", "FastAPI", "Docker"),
+                    stack_en=("Python", "FastAPI", "Docker"),
                 ),
             ),
             Project(
@@ -160,6 +161,7 @@ def sample_profile(*, english: bool = True) -> Profile:
                         "Modèle de prévision hebdomadaire.", "Weekly forecasting model."
                     ),
                     stack=("Python", "Pandas"),
+                    stack_en=("Python", "Pandas"),
                 ),
             ),
         ),

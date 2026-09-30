@@ -40,6 +40,22 @@ def test_an_english_cv_lists_every_text_still_in_french() -> None:
     assert cv_content(sample_profile(), "en", TODAY).age == "36 years old"
 
 
+def test_an_untranslated_stack_is_missing_in_english() -> None:
+    profile = sample_profile()
+    project = profile.projects[1]
+    untranslated = replace(
+        project,
+        content=replace(project.content, stack=("Base vectorielle",), stack_en=None),
+    )
+    profile = replace(profile, projects=(profile.projects[0], untranslated))
+
+    content = cv_content(profile, "en", TODAY)
+
+    assert content.missing == ("Projet « Prévision des stocks » : stack",)
+    assert content.projects[1].stack == ("Base vectorielle",)
+    assert cv_content(profile, "fr", TODAY).missing == ()
+
+
 def test_the_age_is_shown_only_when_asked() -> None:
     profile = sample_profile()
     hidden = replace(profile, identity=replace(profile.identity, show_age=False))

@@ -5,6 +5,7 @@ Error messages here are shown to the user, hence in French.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import unicodedata
 from collections.abc import Iterable, Sequence
@@ -44,6 +45,11 @@ _NOT_ALPHANUMERIC = re.compile(r"[^0-9a-z]+")
 
 class ProfileInputError(ValueError):
     """Input that cannot become part of a profile; the message is shown as is."""
+
+
+def text_sha256(value: str) -> str:
+    """The key of a French text in the translation memory (decision D3, Q19)."""
+    return hashlib.sha256(value.encode()).hexdigest()
 
 
 def normalize_term(value: str) -> str:
@@ -406,6 +412,7 @@ def make_project(
     stack: str | Iterable[str] = (),
     url: str | None = None,
     skill_ids: Iterable[int] = (),
+    stack_en: str | Iterable[str] | None = None,
 ) -> ProjectDraft:
     name = optional(name_fr)
     if name is None:
@@ -418,4 +425,5 @@ def make_project(
         stack=clean_lines(stack),
         url=_url(url, "du projet"),
         skill_ids=tuple(dict.fromkeys(skill_ids)),
+        stack_en=None if stack_en is None else clean_lines(stack_en) or None,
     )

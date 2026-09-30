@@ -6,7 +6,11 @@ between declared tables and migrations.
 
 from __future__ import annotations
 
-from rocky.candidatures.sql import application_changes, applications
+from rocky.candidatures.sql import (
+    application_changes,
+    application_cv_selections,
+    applications,
+)
 from rocky.offres.sql import (
     job_decisions,
     job_offers,
@@ -20,6 +24,7 @@ from rocky.profil.sql import (
     cv_templates,
     experience_skills,
     experiences,
+    glossary_terms,
     hobbies,
     languages,
     profile_links,
@@ -30,6 +35,7 @@ from rocky.profil.sql import (
     skill_groups,
     skill_terms,
     skills,
+    translation_memory,
 )
 from rocky.system.auth.sql import account_tokens, accounts, sessions
 from rocky.system.events import events
@@ -38,11 +44,13 @@ __all__ = [
     "account_tokens",
     "accounts",
     "application_changes",
+    "application_cv_selections",
     "applications",
     "cv_templates",
     "events",
     "experience_skills",
     "experiences",
+    "glossary_terms",
     "hobbies",
     "job_decisions",
     "job_offers",
@@ -59,6 +67,7 @@ __all__ = [
     "skill_groups",
     "skill_terms",
     "skills",
+    "translation_memory",
     "watch_run_sources",
     "watch_runs",
 ]

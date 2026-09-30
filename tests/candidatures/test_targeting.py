@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
-from rocky.candidatures.targeting import Coverage, cited_skills, coverage, target
+from rocky.candidatures.targeting import (
+    Coverage,
+    cited_skills,
+    coverage,
+    selection_json,
+    selection_of,
+    target,
+)
 from rocky.offres.analysis.model import (
     RULES_VERSION,
     Importance,
@@ -197,3 +205,21 @@ def test_coverage_says_where_each_required_skill_stands() -> None:
         ("Spark", Coverage.IN_PROFILE),
         ("Expérience impérative sur Informatica", Coverage.OUTSIDE),
     ]
+
+
+def test_a_kept_selection_is_placed_on_the_master_cv() -> None:
+    adjusted = target(
+        MASTER, profile(), analysis(("SQL", Importance.PREFERRED)), SLOTS
+    ).layout
+
+    assert selection_of(selection_json(adjusted), MASTER) == adjusted
+
+
+def test_a_kept_selection_is_dropped_when_the_master_groups_changed() -> None:
+    kept = selection_json(MASTER)
+    renamed = replace(
+        MASTER,
+        groups=(replace(MASTER.groups[0], name=Text("Code")), MASTER.groups[1]),
+    )
+
+    assert selection_of(kept, renamed) is None

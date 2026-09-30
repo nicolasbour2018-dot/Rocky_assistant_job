@@ -21,6 +21,7 @@ from rocky.profil.model import (
     LanguageLevel,
     Profile,
     Project,
+    ProjectDraft,
     Text,
 )
 from rocky.profil.rules import age_on, link_icon
@@ -258,5 +259,12 @@ def _project(project: Project, text: Translate) -> CvProject:
         problem=text(content.problem, f"{where} : problème"),
         work=text(content.work, f"{where} : réalisation"),
         results=text(content.results, f"{where} : résultats"),
-        stack=content.stack,
+        stack=_stack(content, text, where),
     )
+
+
+def _stack(content: ProjectDraft, text: Translate, where: str) -> tuple[str, ...]:
+    """The stack in the CV's language: in English, a stack not translated yet is missing like any text (D3, Q12)."""
+    english = None if content.stack_en is None else "\n".join(content.stack_en)
+    shown = text(Text("\n".join(content.stack), english), f"{where} : stack")
+    return tuple(line for line in shown.split("\n") if line)

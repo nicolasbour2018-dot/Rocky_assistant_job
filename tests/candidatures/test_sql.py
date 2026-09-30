@@ -422,3 +422,29 @@ def test_an_application_of_another_account_is_not_found(db: Connection) -> None:
 
     assert store.locked_application(other.account_id, application.id) is None
     assert store.locked_application(seeker.account_id, application.id) == application
+
+
+def test_the_latest_cv_selection_of_an_application_is_in_force(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = record_offer(
+        SqlStore(db),
+        account_id=seeker.account_id,
+        offer=posting("d3-selection"),
+        inputs=scoring_inputs(seeker.profile(db)),
+        origin=Origin.WATCH,
+        track_ids=[seeker.tracks["Data"]],
+        now=NOW,
+        today=TODAY,
+    ).offer_id
+    store = SqlApplicationStore(db)
+    application = store.application_for_offer(seeker.account_id, offer_id, NOW)
+    assert store.cv_selection(application.id) is None
+
+    first = {"groups": [], "transversal": [1], "projects": [2]}
+    second = {"groups": [], "transversal": [], "projects": [3]}
+    store.insert_cv_selection(seeker.account_id, application.id, first, NOW)
+    store.insert_cv_selection(seeker.account_id, application.id, second, NOW)
+    assert store.cv_selection(application.id) == second
+
+    store.insert_cv_selection(seeker.account_id, application.id, None, NOW)
+    assert store.cv_selection(application.id) is None

@@ -279,6 +279,7 @@ def _project(reader: _Reader, value: object, path: str) -> ImportedProject:
         {
             **{key: key for key in texts},
             "stack": "stack",
+            "stack_en": "stack_en",
             "url": "url",
             "skills": "skills",
         },
@@ -421,6 +422,9 @@ def export_profile(profile: Profile) -> dict[str, JsonValue]:
                     "work": _export_text(item.content.work),
                     "results": _export_text(item.content.results),
                     "stack": list(item.content.stack),
+                    "stack_en": None
+                    if item.content.stack_en is None
+                    else list(item.content.stack_en),
                     "url": item.content.url,
                     "skills": [labels[s] for s in item.content.skill_ids],
                 }

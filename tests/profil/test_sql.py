@@ -331,3 +331,78 @@ def test_one_active_template_per_language(db: Connection) -> None:
     assert english_active.id == english
     assert editor.activate_cv_template(None, "en")
     assert editor.active_cv_template("en") is None
+
+
+def test_the_english_stack_of_a_project_round_trips(db: Connection) -> None:
+    editor = new_editor(db)
+    untranslated = editor.add_project(
+        make_project(name_fr="Tri", stack="Python\nBase vectorielle")
+    )
+    translated = editor.add_project(
+        make_project(name_fr="Prévision", stack="Python", stack_en="Python\n")
+    )
+
+    projects = {project.id: project.content for project in editor.profile().projects}
+
+    assert projects[untranslated].stack_en is None
+    assert projects[translated].stack_en == ("Python",)
+
+
+def test_a_glossary_term_is_replaced_by_its_french_term(db: Connection) -> None:
+    editor = new_editor(db)
+    profile_id = editor.profile().id
+    store = SqlProfileStore(db)
+    first = store.save_glossary_term(
+        profile_id, "pilotage", "Pilotage", "Steering", FakeClock()()
+    )
+    again = store.save_glossary_term(
+        profile_id, "pilotage", "pilotage", "Oversight", FakeClock()()
+    )
+    kept = store.save_glossary_term(
+        profile_id, "eure et loir", "Eure-et-Loir", "Eure-et-Loir", FakeClock()()
+    )
+
+    assert first == again
+    assert [(term.fr, term.en) for term in store.glossary(profile_id)] == [
+        ("Eure-et-Loir", "Eure-et-Loir"),
+        ("pilotage", "Oversight"),
+    ]
+    assert store.delete_glossary_term(profile_id, kept)
+    assert not store.delete_glossary_term(new_editor(db).profile().id, first)
+
+
+def test_the_translation_memory_keeps_the_latest_validation(db: Connection) -> None:
+    editor = new_editor(db)
+    profile_id = editor.profile().id
+    store = SqlProfileStore(db)
+    store.remember_translation(
+        profile_id, "Analyse de sentiment", "Sentiment analysis", FakeClock()()
+    )
+    store.remember_translation(
+        profile_id, "Analyse de sentiment", "Sentiment analytics", FakeClock()()
+    )
+
+    memory = store.translation_memory(profile_id)
+
+    assert [(entry.source, entry.translation) for entry in memory.values()] == [
+        ("Analyse de sentiment", "Sentiment analytics")
+    ]
+
+
+def test_an_english_template_keeps_the_french_one_it_comes_from(db: Connection) -> None:
+    editor = new_editor(db)
+    profile_id = editor.profile().id
+    store = SqlProfileStore(db)
+    store.add_cv_template(
+        profile_id,
+        "comptes/1/gabarits/en",
+        "en",
+        "CV anglais",
+        "en",
+        FakeClock()(),
+        source_sha256="fr",
+    )
+
+    (template,) = store.cv_templates(profile_id)
+
+    assert template.source_sha256 == "fr"
