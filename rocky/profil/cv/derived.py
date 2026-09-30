@@ -38,7 +38,13 @@ from rocky.profil.cv.pdf_page import (
     page_svg,
     photo_candidate,
 )
-from rocky.profil.cv.rendering import CvPdf, CvRefusedError, Photo, problems
+from rocky.profil.cv.rendering import (
+    MISSING_ENGLISH,
+    CvPdf,
+    CvRefusedError,
+    Photo,
+    problems,
+)
 from rocky.profil.cv.semantics import PROJECT_ROLES, BlockRole, Role
 from rocky.profil.cv.template import Slots
 from rocky.system.render import Rendered, render_image, render_pdf
@@ -560,13 +566,7 @@ def render_derived(files: Mapping[str, bytes], content: CvContent) -> CvPdf:
     # Only the variable blocks come from the profile (Q29): the rest of the CV is the imported one.
     missing = [m for m in content.missing if m.startswith(VARIABLE_TEXTS)]
     if missing:
-        raise CvRefusedError(
-            (
-                "Le CV anglais attend encore ces textes en anglais (profil) : "
-                + " ; ".join(missing)
-                + ".",
-            )
-        )
+        raise CvRefusedError((MISSING_ENGLISH + " ; ".join(missing) + ".",))
     rendered, html, reasons = draw_derived(files, content)
     if reasons:
         raise CvRefusedError(reasons)

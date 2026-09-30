@@ -168,6 +168,7 @@ def install(app: FastAPI) -> None:
         choices=CHOICES,
     )
     templates.env.filters["month"] = month
+    templates.env.filters["html_id"] = translation_web.html_id
     # Before the profile's routes: ``/profil/{key}`` would take ``/profil/traduction``.
     app.include_router(translation_web.router)
     app.include_router(router)

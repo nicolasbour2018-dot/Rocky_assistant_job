@@ -106,15 +106,13 @@ def neutral_headings(content: CvContent) -> tuple[str, ...]:
     return tuple(labels[key] for key, shown in present.items() if shown)
 
 
+# How a refusal for English still missing begins: the screens offer the translation after it (decision D3, Q5).
+MISSING_ENGLISH = "Le CV anglais attend encore ces textes en anglais (profil) : "
+
+
 def render_neutral(content: CvContent, photo: Photo | None) -> CvPdf:
     if content.missing:
-        raise CvRefusedError(
-            (
-                "Le CV anglais attend encore ces textes en anglais (profil) : "
-                + " ; ".join(content.missing)
-                + ".",
-            )
-        )
+        raise CvRefusedError((MISSING_ENGLISH + " ; ".join(content.missing) + ".",))
     html = neutral_html(
         content,
         with_photo=photo is not None,

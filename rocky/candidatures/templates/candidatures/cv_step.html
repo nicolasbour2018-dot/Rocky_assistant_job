@@ -15,7 +15,7 @@
   <div class="alert alert-error" role="alert">
     <p>Ce CV ne peut pas être produit :</p>
     <ul>{% for reason in cv_refusal %}<li>{{ reason }}</li>{% endfor %}</ul>
-    <p><a class="btn" href="/profil/traduction?retour={{ base | urlencode }}">Traduire les champs manquants</a></p>
+    {% if missing_english %}<p><a class="btn" href="/profil/traduction?retour={{ base | urlencode }}">Traduire les champs manquants</a></p>{% endif %}
   </div>
   {% endif %}
   {% if to_review %}
@@ -30,9 +30,10 @@
     {% if view.adjusted %}Tu as ajusté cette sélection.{% endif %}</p>
 
   <div class="cv-downloads">
-    <a class="btn btn-primary" href="{{ base }}/cv.pdf?langue=fr" download>CV français</a>
+    {# Plain navigations (never boosted): the PDF downloads; a refused CV comes back as this page with its reasons. #}
+    <a class="btn btn-primary" href="{{ base }}/cv.pdf?langue=fr" hx-boost="false">CV français</a>
     <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu</a>
-    <a class="btn btn-primary" href="{{ base }}/cv.pdf?langue=en" download>CV anglais</a>
+    <a class="btn btn-primary" href="{{ base }}/cv.pdf?langue=en" hx-boost="false">CV anglais</a>
     <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
     {% if view.adjusted %}
     <form method="post" action="{{ base }}/cv/proposition" hx-post="{{ base }}/cv/proposition" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
@@ -88,7 +89,7 @@
         {% endfor %}
       </ol>
       {% for item in view.other_projects %}
-      <p class="small">{{ item.label }} <span class="muted">— {{ item.reason }}</span> {{ gesture("projet-basculer", "Ajouter", item.id) }}</p>
+      <div class="small">{{ item.label }} <span class="muted">— {{ item.reason }}</span> {{ gesture("projet-basculer", "Ajouter", item.id) }}</div>
       {% endfor %}
       <h3 class="group-title">Ce que l'annonce demande</h3>
       {% if view.coverage %}

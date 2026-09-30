@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import io
+import re
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -63,6 +64,11 @@ def _editor(request: Request, account: Account) -> Iterator[ProfileEditor]:
             account_id=account.id,
             email=account.email,
         )
+
+
+def html_id(key: str) -> str:
+    """A key made fit for an HTML id and a CSS selector (« label:Stack technique » → « label-Stack-technique »)."""
+    return re.sub(r"[^\w-]+", "-", key).strip("-")
 
 
 def back_to(value: str) -> str:

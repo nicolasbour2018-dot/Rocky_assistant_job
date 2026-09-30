@@ -62,7 +62,7 @@ from rocky.profil import translation_web
 from rocky.profil import web as profil_web
 from rocky.profil.cv import layout as cv_layout
 from rocky.profil.cv.layout import check_layout
-from rocky.profil.cv.rendering import CvRefusedError
+from rocky.profil.cv.rendering import MISSING_ENGLISH, CvRefusedError
 from rocky.profil.cv.template import Slots
 from rocky.profil.model import CvLayout, Profile, SkillCategory
 from rocky.profil.rules import ProfileInputError
@@ -633,6 +633,8 @@ def _dossier_page(
         "view": found.view,
         "error": error,
         "cv_refusal": cv_refusal,
+        # The English CV waits for texts in English: the translation screen is the way out.
+        "missing_english": any(r.startswith(MISSING_ENGLISH) for r in cv_refusal),
         "to_review": translation_web.to_review(request, account),
         "english_outdated": translation_web.english_cv_outdated(request, account),
         "importance_labels": IMPORTANCE_LABELS,

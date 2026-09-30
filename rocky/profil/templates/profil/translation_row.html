@@ -1,5 +1,5 @@
 {# One proposal to review (decision D3, Q13): accept (possibly corrected) or ignore; nothing kept otherwise. #}
-{% set row_id = "traduction-" ~ (key | replace(":", "-")) %}
+{% set row_id = "traduction-" ~ (key | html_id) %}
 <li class="item" id="{{ row_id }}">
   <strong>{{ where }}</strong>
   {% if accepted %}

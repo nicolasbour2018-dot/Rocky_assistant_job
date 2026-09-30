@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 
+from rocky.profil.translation_web import html_id
 from rocky.system.pdf_read import read_pdf
 from tests.profil.cv.fixtures import ReaderModel, designed_cv
 from tests.profil.cv.test_english import ENGLISH
@@ -104,3 +105,8 @@ def accept(client: TestClient, key: str, footprint: str, english: str) -> None:
         headers=HTMX,
     ).text
     assert "Enregistré" in accepted
+
+
+def test_a_row_id_is_a_valid_selector() -> None:
+    assert html_id("label:Stack technique") == "label-Stack-technique"
+    assert html_id("project:12:stack") == "project-12-stack"
