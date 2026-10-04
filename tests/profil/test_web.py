@@ -563,6 +563,17 @@ def test_the_cv_is_downloaded_as_one_pdf_page(client: TestClient) -> None:
     assert response.content.startswith(b"%PDF")
 
 
+def test_a_cv_download_link_is_a_plain_navigation(client: TestClient) -> None:
+    # The layout boosts every link: a boosted download swaps the PDF bytes into the page and freezes the tab.
+    kit = section(client.get("/profil").text, "kit")
+
+    links = re.findall(r'<a [^>]*href="/profil/cv/pdf[^"]*"[^>]*>', kit)
+
+    assert links
+    for link in links:
+        assert 'target="_blank"' in link or 'hx-boost="false"' in link, link
+
+
 def test_an_english_cv_waits_for_its_english_texts(client: TestClient) -> None:
     client.post(
         "/profil/identite",

@@ -40,9 +40,17 @@
     <li>CV {{ language_name }} : {% if active_template %}{{ active_template.name }}
       {{ m.form_open(key, "/profil/gabarit/neutre", "inline-form") }}<input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost btn-mini">Revenir au gabarit neutre</button></form>
       {% else %}gabarit neutre de Rocky{% endif %}
-      {% for template in cv_templates if not template.active and template.language == code %}
-      {{ m.form_open(key, "/profil/gabarit/" ~ template.id ~ "/activer", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Utiliser « {{ template.name }} »</button></form>
-      {% endfor %}
+      {% set others = cv_templates | rejectattr("active") | selectattr("language", "equalto", code) | list %}
+      {% if others %}
+      <details class="field-more"><summary>Autres gabarits ({{ others | length }})</summary>
+        <ul class="compact">
+          {% for template in others %}
+          <li>{{ template.name }} <span class="muted">· créé le {{ template.created_at | paris_time }}</span>
+            {{ m.form_open(key, "/profil/gabarit/" ~ template.id ~ "/activer", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Utiliser</button></form></li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>
@@ -59,12 +67,12 @@
     </form>
   </details>
   <p class="cv-downloads">
-    <a class="btn btn-primary" href="/profil/cv/pdf?langue=fr" download>Télécharger en français</a>
+    <a class="btn btn-primary" href="/profil/cv/pdf?langue=fr" download hx-boost="false">Télécharger en français</a>
     <a class="btn btn-ghost" href="/profil/cv/pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu</a>
     {% if cv_missing_en %}
     <a class="btn" href="/profil/traduction?retour=/profil/kit">Anglais : traduire les champs manquants</a>
     {% else %}
-    <a class="btn btn-primary" href="/profil/cv/pdf?langue=en" download>Download in English</a>
+    <a class="btn btn-primary" href="/profil/cv/pdf?langue=en" download hx-boost="false">Download in English</a>
     <a class="btn btn-ghost" href="/profil/cv/pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
     {% endif %}
   </p>
@@ -74,17 +82,7 @@
     {{ m.form_open(key, "/profil/cv/verifier", "inline-form") }}<input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost">{{ label }}</button></form>
     {% endfor %}
   </div>
-  {% if state.check %}{% set check = state.check %}
-  <div class="cv-check" role="status">
-    {% if check.readable %}
-    <p class="alert alert-info">Les {{ check.readers | length }} lecteurs de PDF retrouvent les {{ check.facts | length }} éléments attendus de ton CV{{ " anglais" if language == "en" }}.</p>
-    {% else %}
-    <p class="alert alert-error">{{ check.found_by_all }} éléments sur {{ check.facts | length }} lus par les {{ check.readers | length }} lecteurs. À regarder :</p>
-    <ul class="small">{% for warning in check.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
-    {% endif %}
-    <p class="muted small">{% for reader in check.readers %}{{ reader.reader }} : {{ reader.error or (reader.words ~ " mots") }}{% if not loop.last %} · {% endif %}{% endfor %} · accord entre lecteurs {{ "%.0f" | format(check.agreement * 100) }} %</p>
-  </div>
-  {% endif %}
+  {% if state.check %}{% with check = state.check %}{% include "profil/cv_check.html" %}{% endwith %}{% endif %}
   {% if cv_missing_en %}
   <details class="note"><summary>Pour le CV anglais, il manque {{ cv_missing_en | length }} texte{{ "s" if cv_missing_en | length > 1 }} en anglais</summary>
     <ul class="small">{% for where in cv_missing_en %}<li>{{ where }}</li>{% endfor %}</ul>
