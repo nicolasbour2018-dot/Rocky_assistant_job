@@ -152,8 +152,8 @@ aucun identifiant interne affiché.
 |---|---|---|---|
 | E1. Collecte | Gmail lecture seule, plusieurs boîtes ; requête filtrée (`-category:promotions -category:social`…) ; message **enregistré avant toute décision**, de façon idempotente | Une resynchronisation ne retraite rien ; aucun statut ne change sans message enregistré | ✅ |
 | E2. Classification | 3 étages : expéditeur → domaine exact de l'employeur (plus de sous-chaîne) → LLM pour l'ambigu ; confiance réelle (plus de valeurs constantes) ; preuve : règle, extrait, auteur | 100 % des décisions ont une preuve lisible ; le digest Quora n'est plus rattaché à « French bee » ; jeu de test issu de l'archive | 🔄 |
-| E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | ⬜ |
 | E4. Décisions et écran | Transition de candidature appliquée dans la même transaction que la décision ; « ce qui a bougé depuis ta dernière visite » ; correction humaine → nouvelle règle ; corrections conservées comme jeu étiqueté | Aucun changement de statut ne passe inaperçu | ⬜ |
+| E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | ⬜ |
 | E5. Lecture assistée | Sur le geste de l'utilisateur, Rocky ouvre la fiche d'une offre incomplète dans un navigateur visible sur le poste, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte affiché (`parse_page`, `enriched`) ; geste « Enrichir » dans la fiche de l'offre ; jamais dans la veille automatique (décision C1, Q6 ; étape ajoutée par la décision D2, Q3) | Une offre Apec incomplète enrichie depuis sa fiche | ⬜ |
 
 ### F. Bascule
@@ -651,4 +651,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(E2 → Nicolas)** L'application de développement tourne encore avec l'image d'E1. Relancée
   (`docker compose up -d --build --wait app`), elle classe après chaque collecte et appelle Gemini dans les plafonds du
   compte (20 par heure, 60 par jour).
-
+- **(E2 → plan, Nicolas 05/10)** **E4 passe avant E3** : à la recette d'E2, une vue « À vérifier » sans geste ne sert à
+  rien ; les corrections et transitions (E4) d'abord, les alertes comme source (E3) ensuite. E4 reprend aussi le
+  rattachement aux candidatures faites hors de Rocky (employeur cité, `employer.cited`, décision E2 Q22) et le
+  regroupement des messages d'une même candidature (Q21).

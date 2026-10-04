@@ -42,6 +42,22 @@ Critère de sortie (plan) : « 100 % des décisions ont une preuve lisible ; le 
 | Q17 | Signaux de recherche | Expéditeur ATS connu, ou domaine exact d'un employeur candidaté ; nom exact d'une entreprise candidatée dans le nom affiché ou l'objet (pas le corps) ; **expression** de candidature dans l'objet ou les 2 000 premiers caractères du corps (« votre candidature », « your application », « entretien », « interview », « processus de recrutement », « suite à votre candidature »…), jamais un mot isolé. Mesurés sur l'archive avant d'être figés. |
 | Q18 | Plafonds | Par compte : **20 appels par passage, 60 par jour**, modifiables par configuration. Au-delà : « en attente (plafond du jour atteint) ». Une ligne par appel en base. La reprise des messages déjà collectés passe par les mêmes règles et plafonds. Mesure en deux temps : règles seules, puis LLM borné. |
 
+
+### Affinage après le premier essai (Nicolas, 05/10)
+
+Constats sur sa boîte : la vue par défaut montrait 92 messages, dont 62 accusés de réception (36 « Votre candidature
+est arrivée chez… » de Hellowork) ; « Message de l'employeur » ne contenait que des rappels de Hellowork ; aucun message
+n'était rattaché, ses candidatures faites hors de Rocky n'y existant pas. Une vue « À vérifier » sans geste ne sert à
+rien : les corrections sont l'objet d'E4, avancée avant E3.
+
+| # | Sujet | Décision |
+|---|---|---|
+| Q19 | Vue par défaut | « À regarder » = ce qui demande une lecture ou une action : refus, entretiens, tests, offres, messages d'employeurs, approches, avis de plateforme qui demandent une action, « À vérifier », messages en attente. Les accusés de réception ont leur vue « Accusés » et un compteur en tête. |
+| Q20 | Avis des plateformes | 10ᵉ catégorie `platform_notice` « Avis de plateforme » (candidature à finaliser, offre retirée, candidature vue, rappels) ; « Message de l'employeur » ne garde que ce qu'écrit l'employeur. « Finalisez votre candidature sur le site de… » reste dans la vue par défaut (règle `relay.to_finish`). |
+| Q21 | Doublons d'une candidature | Regroupement par candidature en E4 (« ce qui a bougé »), qui dépend du rattachement. |
+| Q22 | Candidatures inconnues de Rocky | L'employeur que nomme la plateforme est gardé dans la preuve, tel qu'écrit (règle `employer.cited`), pour qu'E4 retrouve ou crée la candidature. |
+| — | Ordre des étapes | **E4 avant E3** (Nicolas, 05/10) : les corrections et transitions d'abord, les alertes comme source ensuite. |
+
 ## Décisions techniques
 
 | Sujet | Décision | Raison |
@@ -58,7 +74,8 @@ Critère de sortie (plan) : « 100 % des décisions ont une preuve lisible ; le 
 | Plafonds (Q18) | **20 appels sur l'heure glissante, 60 sur 24 h**, par compte (`ROCKY_LLM_MAIL_HOUR_LIMIT`, `ROCKY_LLM_MAIL_DAY_LIMIT`), comptés en base ; `--limite` borne un passage | « Par passage » devient « par heure » : un passage suit chaque collecte de chaque boîte |
 | Modèle | Identifiants opaques (`C1`, `C2`) ; corps coupé à 8 000 caractères ; citation vérifiée sans casse, accents ni espaces, 12 caractères pliés au moins ; une réponse refusée garde la citation du modèle dans sa preuve. Sans clé Gemini : aucun appel, messages « en attente » avec la raison | Q12 ; diagnostic des refus |
 | Reclassement | `rocky-admin messages-classer <email> --reclasser` ajoute une décision par message (jamais par-dessus une décision de l'utilisateur) ; un message que les nouvelles règles laissent au modèle garde sa décision précédente jusqu'à la réponse du modèle | Q13 ; aucun appel au démarrage |
-| Écran | Liste triée (50 derniers messages de la vue), vues `?vue=` ; « À regarder » (par défaut) = retours d'employeurs, « À vérifier » et messages en attente ; « Pourquoi ? » en `<details>` ; lien vers le dossier. Domaine de l'employeur dans l'étape « Suivi » du dossier (`/candidatures/{id}/domaine`) | Q14, Q3 |
+| Écran | Liste triée (50 derniers messages de la vue), vues `?vue=` (À regarder, À vérifier, Retours d'employeurs, Accusés, Avis de plateforme, Alertes, Approches, Hors recherche, En attente, Tous) ; « Pourquoi ? » en `<details>` ; lien vers le dossier. Domaine de l'employeur dans l'étape « Suivi » du dossier (`/candidatures/{id}/domaine`) | Q14, Q19, Q3 |
+| Avis de plateforme (Q20) | Catégorie ajoutée par la migration `0015` (contrainte élargie ; le retour arrière remet ces décisions en « Message de l'employeur ») ; règles `relay.to_finish` (Finalisez, problème d'envoi : dans la vue par défaut, `ACTION_RULES`), `relay.reminder`, `relay.closed`, `relay.seen`, `relay.withdrawn` | Une migration commitée ne se modifie pas |
 | Commandes | `rocky-admin messages-classer <email> [--sans-llm] [--limite N] [--reclasser]`. `rocky-admin messages` reste une collecte seule : la classification suit dans l'application, ou par `messages-classer` | Pas d'appel au modèle caché dans une commande de collecte |
 | Jeu de test (Q7) | `tests/messages/data/archive_sample.csv` (92 messages) et `archive_applications.csv` ; les messages récents de la base de développement sont reproduits **anonymisés et réécrits** dans les tests des règles (Devoteam, Hellowork, Talan, Team.is), pas copiés tels quels | Aucune donnée personnelle brute dans le dépôt |
 
@@ -80,7 +97,8 @@ Critère de sortie (plan) : « 100 % des décisions ont une preuve lisible ; le 
 | Règles seules (`--sans-llm`) | 504 décisions (97,5 %), 13 messages laissés au modèle |
 | Modèle (Gemini, `--limite`) | 13 appels, 13 décisions, 0 réponse refusée ; durée moyenne 1 s |
 | Appels au total pendant l'étape | **42** (plafond fixé par Nicolas : 200) : 29 au premier passage (9 refusés, cause trouvée : corps à entités HTML), 13 au dernier |
-| Répartition (en vigueur) | Hors recherche 254 (57 sûrs), alertes 170, accusés 62, refus 15, messages d'employeur 15, approche de recruteur 1 |
+| Répartition (en vigueur, `.6`) | Hors recherche 254 (57 sûrs), alertes 170, accusés 62, refus 15, avis de plateforme 15, approche de recruteur 1 |
+| Vue par défaut (Q19) | 92 messages avant l'affinage, **23** après : 15 refus, 7 « Finalisez votre candidature… », 1 approche ; 62 accusés comptés hors de la vue |
 
 Erreurs relevées et corrigées en cours de mesure (versions `.2` à `.5`) : questionnaire Hellowork lu comme un refus, refus
 conditionnels, newsletter « case study » classée en test, alertes eFinancialCareers et Hellowork non reconnues, avis de
