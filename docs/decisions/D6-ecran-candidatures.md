@@ -78,3 +78,17 @@ retour arrière du navigateur sur la fiche n'a pas été essayé.
 Essai dans Chromium après ces corrections (instance à part) : étape CV en puces, info-bulle visible après 2 s,
 aperçu du CV à côté ; « + SQL » ajoute la compétence et redessine l'aperçu ; « Fait » dans la liste affiche le
 message et « Annuler ». Console sans erreur.
+
+## Clôture (Nicolas, 04/10)
+
+| Critère | Résultat |
+|---|---|
+| Une relance due est retrouvée en moins de 3 clics | Tenu : deux clics (navigation → « À faire » → dossier ouvert sur « Suivi »), test `test_screen_web.py`, essai navigateur et recette de Nicolas |
+| Contenu de l'étape (liste filtrable par étape, dossier en 4 étapes, chronologie, notes) | Liste à onglets, dossier CV → Lettre → Envoi → Suivi, chronologie lue dans le journal, notes en ajout seul |
+| Constats repris (Q8) | Date limite, raccourci du tri, fiche d'offre, suppression d'un gabarit inactif |
+| Validation de Nicolas | « C'est bon tu peux clôturer D6 » |
+
+Limites reprises en section 8 : durée de la vérification globale (1 min 51 à 1 min 58) à traiter avant E1 ; page du
+dossier qui recalcule toutes les étapes pour en afficher une ; frappes perdues du tri (B4 → C7).
+
+Suite : E1 (collecte Gmail).
