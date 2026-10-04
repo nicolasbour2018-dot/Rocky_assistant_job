@@ -43,7 +43,9 @@ Critère de sortie (plan) : « CV anglais ciblé sans ressaisie », précisé pa
 | Q20 | Placement de l'anglais | Éléments d'une ligne (dates, intitulés, écoles, langues, titre) : position et style gardés. Paragraphes et puces sur plusieurs lignes : recalculés dans la zone de leur rubrique. Gras conservé (`**…**`). Trop long : erreur visible qui nomme la rubrique, vue dans l'aperçu **avant** de valider ; aucune réduction. |
 | Q21 | Protections | **Jamais envoyés** au modèle, recopiés : nom, e-mail, téléphone, adresses, liens. **Jamais traduits** : employeurs, écoles, lieux, noms de projet déjà en anglais. Le glossaire explicite l'emporte. |
 | Q22 | Périmètre | Les limites notées à la clôture de D2 (blocs projets approximatifs, un seul design, gabarit neutre court) ne sont pas reprises, sauf si l'une bloque le critère. Hors D3 : lettre (D4), révisions et envoi (D5), écran Candidatures complet (D6), adaptation des expériences (bêtas). |
-| Q23 | Écran | Nouvelle **page du dossier** `/candidatures/<dossier>`, avec pour l'instant la seule étape « CV » ; on y arrive depuis la liste et l'encart de la fiche d'offre. D6 y ajoutera lettre, envoi et suivi. |
+| Q23 | Écran | Nouvelle **page du dossier** `/candidatures/<dossier>`, avec pour l'instant la seule étape « CV » ; on y arrive depuis la liste et l'encart de la fiche d'offre. D6 y ajoutera lettre, envoi et suivi. **Élargie par Q25 (recette, 04/10).** |
+| Q25 | Parcours du dossier (recette, 04/10, plan de conception inspiré du dossier en 3 cartes de V1) | La page du dossier montre un **fil 1. CV → 2. Lettre → 3. Envoi**, calculé de l'étape du dossier. « Préparer la candidature » **atterrit sur le dossier**. « **CV prêt : passer à l'envoi** » passe à « Prête à envoyer » (tant que la lettre n'existe pas, « prête » = CV prêt ; D4 tranchera). L'étape Envoi propose les CV, « **Ouvrir le site de candidature ↗** » (`application_url`, à défaut l'annonce, domaine affiché) et « **J'ai envoyé ma candidature** » (étape « Envoyée », relance à J+7), sans case à cocher : tout se défait par « Annuler ». Rocky ne remplit ni n'envoie rien. L'étape Lettre dit « à venir ». Gestes par les cas d'usage existants (journal). Objectif : « Prête à envoyer » en 2 clics depuis une offre « Intéressé ». |
+| Q26 | Offres retenues sans dossier | La page 📝 Candidatures montre aussi « **À préparer** » : les offres dont la dernière décision est « Intéressé » et qui n'ont pas de dossier ouvert, avec « Préparer la candidature » qui mène au dossier. Le raccourci depuis le mode tri reste pour D6. |
 | Q24 | Source du CV anglais | Le gabarit passe au **format 4** : il garde aussi le calque sans texte et les rubriques gardées mesurées ; le PDF n'est toujours pas conservé (D2, Q14). Nicolas réimporte son Canva français une fois ; la réponse du modèle déjà conservée est réutilisée si le texte du PDF est identique. |
 
 ## Décisions techniques
@@ -61,8 +63,35 @@ Critère de sortie (plan) : « CV anglais ciblé sans ressaisie », précisé pa
 | Version anglaise | Gabarit à part (langue `en`, `source_sha256` du gabarit français) : calque sans texte, chaque unité écrite dans son anglais validé ; une ligne garde sa place et peut s'étendre jusqu'au texte voisin à sa droite ; un paragraphe s'écoule dans sa boîte, plus une ligne d'air ; les étiquettes des cartes projets (« Problématique ») se traduisent une fois. Nom, e-mail, téléphone, ville, liens : recopiés, jamais envoyés | Q20, Q21 ; même mesure du débordement qu'en D2. |
 | Titres anglais | Dessinés en tracés (`fonttools`, MIT, réintroduit par `uv add`) avec l'espacement mesuré, et leurs mots en texte invisible pour les lecteurs de PDF | Décision D2 « Titres des sections » : un titre espacé en texte se lit lettre par lettre. |
 | Réimport identique (Q24) | L'import garde l'empreinte du texte envoyé (`texte-lu.sha256`) ; un nouvel import du même texte reprend la réponse gardée (`FileStore.find_bundle`, dossier relu et vérifié) | Aucun appel inutile ; aucun fichier modifiable hors des dossiers immuables. |
+| Découpage en unités (recette, 03/10) | Une ligne prolonge le paragraphe du dessus si elle garde son **retrait** et que la ligne du dessus est remplie **ou** trop pleine pour son premier mot ; une ligne qui ouvre en gras comme la première, après une fin de phrase ou une autre ligne ouvrant en gras, commence un **nouvel élément** (langues, puces). Deux lignes de titre empilées de même colonne forment **un seul titre**, traduit d'un bloc puis réparti sur les lignes françaises (`title_lines`) | Sur le Canva de Nicolas : les trois langues étaient un seul paragraphe (« French (Native) English… »), deux puces étaient réunies (puce dessinée devant le mauvais mot), « COMPÉTENCES / TECHNIQUES » donnait « SKILLS / TECHNICAL ». Un réimport refait le gabarit (réponse du modèle reprise). |
+| Corriger un texte validé (recette, 03/10) | Geste « Modifier » sur chaque texte validé de l'écran CV anglais, ouvert d'office quand l'aperçu déborde ; la correction remplace l'entrée de la mémoire | Le message de débordement demande de raccourcir un texte (Q20) : sans ce geste, rien ne le permettait. |
+| Aperçus (recette, 03/10) | Aperçus de l'import et du CV anglais à 150 dpi (70 et 80 avant) ; les liens de téléchargement de Profil & kit ne sont plus « boostés » par HTMX | Aperçus flous sur écran haute densité ; un téléchargement boosté collait le PDF dans la page et figeait l'onglet. |
+| Place d'un texte anglais (recette, 04/10) | Une ligne s'étend jusqu'au texte voisin à sa droite, **sans dépasser le bord droit le plus lointain des textes de sa colonne** (un trait dessiné peut se tenir au-delà) ; un paragraphe s'arrête **au texte qui le suit en dessous** (plus de ligne de marge qui le recouvre). Au-delà : débordement visible, nommé | Sur le CV de Nicolas, « Project management… » passait à 3 lignes et recouvrait la puce suivante, « B2 » était coupé par le trait bleu : aucun n'était signalé. |
+| Vérifier le CV d'une candidature (recette, 04/10) | « Vérifier ce CV / Check this CV » dans l'étape CV du dossier : mêmes trois lecteurs que « Vérifier mon CV », sur le CV ciblé (sélection du dossier, langue choisie) ; affichage commun (`profil/cv_check.html`). Un vrai ATS pourra s'y brancher plus tard | Le CV envoyé est le CV ciblé, pas le CV maître (Q15). |
+| Gabarits dans Profil & kit (recette, 04/10) | Seul le gabarit en service reste visible ; les autres sont repliés sous « Autres gabarits », avec leur date de création | Quinze boutons « Utiliser » indiscernables. La suppression d'un gabarit reste à faire (section 8). |
 | Tests | Un seul import du CV fictif pour toute l'exécution (`tests/profil/cv/conftest.py`, portée session) : chaque dérivation dessine deux calques à 300 dpi | Vérification globale sous 2 min (68 s de tests). |
 
-## Mesures et clôture
+## Mesures et clôture (Nicolas, 04/10)
 
-*(À compléter à la fin de l'étape.)*
+| Critère (Q15) | Résultat |
+|---|---|
+| 2 à 3 annonces réelles de pistes différentes, dossier préparé, ciblage appliqué | 5 dossiers : « Data scientist / IA » (offres 337, 81, 861) et « Data analyst » (offres 222, 141) ; parcours complet jusqu'à « Envoyée » pour 861 et 222 |
+| Champs manquants traduits, vrais appels Gemini | Textes du CV importé (49, puis 12 après le nouveau découpage des unités) et champs du profil (stacks des projets…), un appel par geste, après consentement |
+| Validation sans écrire de phrase anglaise | Nicolas n'a écrit aucune phrase anglaise. Trois traductions ont été **raccourcies par l'agent** pour tenir dans leur place (« Leading complex projects end to end… », « (written & spoken) » ×2), modifiables par « Modifier » |
+| CV anglais sans débordement, « Vérifier mon CV » vert | Les 10 CV ciblés (5 dossiers × FR/EN) rendus sans débordement signalé ; trois lecteurs : 36 à 38 éléments sur 36 à 38 |
+| Validation visuelle de Nicolas | « Ça va nous servir de base » : validé comme version de base |
+
+Corrections de la recette (voir les lignes « recette » ci-dessus) : liens de téléchargement non boostés, aperçus à 150 dpi,
+découpage en unités (listes, puces, retraits, titres sur deux lignes), geste « Modifier » d'un texte validé, place d'un
+texte anglais (colonne, texte suivant), « Vérifier ce CV » dans le dossier, gabarits repliés, parcours du dossier (Q25)
+et « À préparer » (Q26).
+
+**Étape validée par Nicolas comme base, avec ces limites** (section 8 du plan) :
+- la carte projet « Pilotage d'association sportive » du CV français sort visuellement de son cadre sans être signalée ;
+- règles de découpage et de place mises au point sur un seul design (le Canva de Nicolas) ;
+- un débordement est signalé mais pas résolu : l'utilisateur raccourcit (idée : proposition automatique plus courte) ;
+- gabarits non supprimables (19 au compte de Nicolas, repliés) ;
+- envois confirmés sans canal ni révision avant D5 ; « Prête à envoyer » = CV prêt avant D4 ;
+- accent grave en trop dans le Canva (formation Jedha), repris en anglais.
+
+Suite : D4 (lettre et message), qui remplit l'étape 2 du dossier.

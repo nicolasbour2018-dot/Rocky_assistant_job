@@ -141,7 +141,7 @@ aucun identifiant interne affiché.
 |---|---|---|---|
 | D1. Dossier et statuts | Étapes (préparée, préremplie, envoyée, suivie…) ; transitions et **annulation dans une seule transaction** ; prochaine action datée, différable | Une panne injectée pendant l'annulation ne laisse aucun état contradictoire | ✅ |
 | D2. CV maître et rendu | CV structuré FR/EN ; gabarit HTML/CSS → PDF (Playwright) ; listes déterministes ; fin du verrou Canva (SHA-256, coordonnées pixels) et de LibreOffice ; « Vérifier mon CV » (ATS V3 porté) ; import d'un CV PDF et **gabarit par compte déduit du CV importé**, gabarit neutre à défaut (décision D2) | CV FR validé visuellement par Nicolas (EN aussi quand un CV anglais est importé : import facultatif, décision D2, Q33) ; parsing du PDF vérifié ; le gabarit déduit du CV Canva de Nicolas le reproduit à l'identique, seuls compétences et projets variant (Q17, Q29) ; un PDF image est refusé avec sa raison et se rabat sur le gabarit neutre | ✅ |
-| D3. Ciblage et traduction | Sélection et ordre des éléments selon l'annonce ; traduction champ par champ avec glossaire et validation | CV anglais ciblé sans ressaisie | 🔄 |
+| D3. Ciblage et traduction | Sélection et ordre des éléments selon l'annonce ; traduction champ par champ avec glossaire et validation | CV anglais ciblé sans ressaisie | ✅ |
 | D4. Lettre et message | Même moteur ; storytelling de préparation ; ton des prompts revu (pas de jugement dévalorisant sur la reconversion) | Lettres FR et EN validées sur 3 annonces réelles | ⬜ |
 | D5. Révisions et envoi | Chaque génération dans un chemin immuable avec hash, vérifié au téléchargement ; préremplissage navigateur porté (confirmation avant) ; confirmation d'envoi au retour avec date et canal | Deux générations → deux PDF distincts récupérables ; l'envoi est lié à la révision exacte | ⬜ |
 | D6. Écran Candidatures | Kanban ou liste dense avec filtres par étape ; dossier en 4 étapes (CV → lettre → envoi → suivi) ; chronologie, notes | Une relance due est retrouvée en moins de 3 clics | ⬜ |
@@ -531,6 +531,19 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   gabarit neutre trop court pour un parcours long (CV anglais de Nicolas sans CV anglais importé : 77 mm de trop).
   À affiner proprement dans une étape dédiée.
 - **(D2 → Nicolas)** Ordre des projets du CV maître (Water Potability avant Pilotage, inverse du Canva) : à vérifier.
+- **(D3 → D6 ou F1)** Les gabarits ne se suppriment pas : le compte de Nicolas en a 19 (dont 13 essais de mise au point
+  de D2). Ils sont repliés sous « Autres gabarits » dans Profil & kit (D3) ; prévoir de retirer un gabarit inactif.
+- **(D3 → plus tard, remarque de Nicolas)** CV français d'une candidature : le texte du bloc projet « Pilotage
+  d'association sportive » sort visuellement de sa carte sans être signalé. Même famille que les limites des blocs
+  projets notées à la clôture de D2 (zone mesurée plus large que la carte dessinée).
+- **(D3 → D4, D5, D6)** Parcours du dossier (décision D3, Q25, Q26) : « Prête à envoyer » veut dire « CV prêt » tant
+  que la lettre n'existe pas (D4 tranchera) ; les envois confirmés en D3 n'ont ni canal ni révision (D5 les accepte tels
+  quels) ; raccourci « Intéressé et préparer » depuis le mode tri, 4e étape « Suivi » : D6.
+- **(D3 → Nicolas)** Le CV Canva français finit la formation Jedha par « restitution des résultats. ` » (accent grave en
+  trop) : il passe tel quel dans le CV anglais. À corriger dans Canva puis réimporter.
+- **(D3 → plus tard, idée de Nicolas)** Quand une traduction déborde de sa place dans le gabarit, Rocky pourrait
+  **proposer lui-même une version raccourcie** qui y tient (mesure du débordement → demande de reformulation plus courte
+  → nouvelle mesure), à valider comme les autres ; aujourd'hui l'erreur nomme la zone et l'utilisateur corrige.
 - **(D2 → bêtas, §5)** Adapter aussi les expériences et les formations d'un CV importé à l'offre (décision D2, Q34) :
   seulement si les bêtas en montrent le besoin ; aujourd'hui, le CV importé est tenu pour à jour.
 - **(D2 → F2, §5 VPS)** Le dépôt GitHub est **public** et n'a **aucune licence**. Aucune dépendance AGPL n'est ajoutée
