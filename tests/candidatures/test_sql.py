@@ -50,7 +50,7 @@ from rocky.candidatures.usecases import (
     record_revisions,
     skip_letter,
 )
-from rocky.candidatures.web import OffresDecisions
+from rocky.candidatures.web_common import OffresDecisions
 from rocky.offres import web as offres_web
 from rocky.offres.decisions import (
     Author,
