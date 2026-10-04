@@ -14,10 +14,12 @@ from rocky.candidatures.model import (
     Stage,
 )
 from rocky.candidatures.rules import (
+    Step,
     automatic_transition_allowed,
     deferred,
     dossier,
     is_overdue,
+    journey,
     make_next_action,
     proposal,
     to_cancel,
@@ -182,3 +184,41 @@ def test_automatic_transitions_never_go_back_nor_leave_an_outcome(
     current: Stage, proposed: Stage, allowed: bool
 ) -> None:
     assert automatic_transition_allowed(current, proposed) is allowed
+
+
+@pytest.mark.parametrize(
+    ("stage", "current", "done", "sent"),
+    [
+        (Stage.PREPARING, Step.CV, set(), False),
+        (Stage.READY, Step.SEND, {Step.CV}, False),
+        (Stage.PREFILLED, Step.SEND, {Step.CV}, False),
+        (Stage.SENT, None, {Step.CV, Step.SEND}, True),
+        (Stage.IN_DISCUSSION, None, {Step.CV, Step.SEND}, True),
+        (Stage.INTERVIEW, None, {Step.CV, Step.SEND}, True),
+        (Stage.OFFER, None, {Step.CV, Step.SEND}, True),
+    ],
+)
+def test_the_journey_of_an_open_application_follows_its_stage(
+    stage: Stage, current: Step | None, done: set[Step], sent: bool
+) -> None:
+    found = journey(stage)
+
+    assert (found.current, set(found.done), found.sent, found.closed) == (
+        current,
+        done,
+        sent,
+        False,
+    )
+    assert Step.LETTER not in found.done  # the letter comes with D4
+
+
+@pytest.mark.parametrize(
+    "stage", [None, Stage.REJECTED, Stage.WITHDRAWN, Stage.NO_RESPONSE]
+)
+def test_a_cancelled_or_finished_application_has_no_step_to_work_on(
+    stage: Stage | None,
+) -> None:
+    found = journey(stage)
+
+    assert found.closed
+    assert found.current is None

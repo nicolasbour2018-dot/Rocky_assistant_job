@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import date, timedelta
+from enum import StrEnum
 
 from rocky.candidatures.model import (
     DEFER_DAYS,
@@ -104,3 +106,39 @@ def automatic_transition_allowed(current: Stage, proposed: Stage) -> bool:
     if proposed in ISSUES:
         return True
     return FORWARD.index(proposed) > FORWARD.index(current)
+
+
+# The journey of the application's page (decision D3, Q25): 1. CV, 2. Letter (to come, D4), 3. Sending.
+
+
+class Step(StrEnum):
+    CV = "cv"
+    LETTER = "lettre"
+    SEND = "envoi"
+
+
+@dataclass(frozen=True)
+class Journey:
+    """Where the application stands on its page: the step to work on, the steps done, sent or closed."""
+
+    current: Step | None  # None once sent, or closed
+    done: frozenset[Step]
+    sent: bool
+    closed: bool  # an outcome reached, or the creation cancelled
+
+
+_SENT_OR_BEYOND = frozenset(
+    {Stage.SENT, Stage.IN_DISCUSSION, Stage.INTERVIEW, Stage.OFFER}
+)
+
+
+def journey(stage: Stage | None) -> Journey:
+    """``stage``: the stage in force, None for an application whose creation is cancelled. « Prête à envoyer » means
+    the CV is ready while there is no letter (Q25); the letter is never done before D4."""
+    if stage is None or stage in ISSUES:
+        return Journey(None, frozenset(), sent=False, closed=True)
+    if stage is Stage.PREPARING:
+        return Journey(Step.CV, frozenset(), sent=False, closed=False)
+    if stage in _SENT_OR_BEYOND:
+        return Journey(None, frozenset({Step.CV, Step.SEND}), sent=True, closed=False)
+    return Journey(Step.SEND, frozenset({Step.CV}), sent=False, closed=False)

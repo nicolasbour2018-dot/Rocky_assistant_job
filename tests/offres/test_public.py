@@ -54,3 +54,30 @@ def test_an_offer_of_another_account_has_no_analysis(db: Connection) -> None:
         )
         is None
     )
+
+
+def test_the_heading_of_an_offer_says_where_to_apply(db: Connection) -> None:
+    seeker = new_seeker(db)
+    profile = seeker.profile(db)
+    offer_ids = [
+        record_offer(
+            SqlStore(db),
+            account_id=seeker.account_id,
+            offer=found,
+            inputs=scoring_inputs(profile),
+            origin=Origin.WATCH,
+            track_ids=[seeker.tracks["Data"]],
+            now=NOW,
+            today=TODAY,
+        ).offer_id
+        for found in (
+            posting("form", application_url="https://employeur.example/postuler"),
+            posting("plain"),
+        )
+    ]
+
+    headings = offres_web.offer_headings(db, seeker.account_id, offer_ids)
+
+    with_form, plain = (headings[offer_id] for offer_id in offer_ids)
+    assert with_form.apply_at == "https://employeur.example/postuler"
+    assert plain.apply_at == "https://apec.example/offres/plain"

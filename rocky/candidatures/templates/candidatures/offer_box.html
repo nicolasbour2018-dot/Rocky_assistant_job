@@ -2,7 +2,7 @@
 <section class="application-box" aria-label="Candidature">
   {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
   {% if state %}
-  <p>{% if prepared %}Candidature ouverte. {% endif %}Candidature : <strong>{{ stage_labels[state.stage] }}</strong>
+  <p>Candidature : <strong>{{ stage_labels[state.stage] }}</strong>
     {% if state.next_action %}— {{ state.next_action.label }} le {{ state.next_action.due.strftime("%d/%m/%Y") }}{% endif %}</p>
   <p><a class="btn btn-primary" href="/candidatures/{{ application_id }}">Ouvrir le dossier</a>
     <a class="btn" href="/candidatures">📝 Voir mes candidatures</a></p>

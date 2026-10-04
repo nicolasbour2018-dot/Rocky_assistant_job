@@ -524,7 +524,7 @@ class SqlStore:
     def headings(
         self, account_id: int, offer_ids: Iterable[int]
     ) -> dict[int, OfferHeading]:
-        """Title, employer and place of the account's offers among ``offer_ids``."""
+        """Title, employer, place and links of the account's offers among ``offer_ids``."""
         ids = list(offer_ids)
         if not ids:
             return {}
@@ -534,10 +534,19 @@ class SqlStore:
                 job_offers.c.title,
                 job_offers.c.company,
                 job_offers.c.location,
+                job_offers.c.url,
+                job_offers.c.application_url,
             ).where(job_offers.c.account_id == account_id, job_offers.c.id.in_(ids))
         )
         return {
-            row.id: OfferHeading(row.id, row.title, row.company, row.location)
+            row.id: OfferHeading(
+                row.id,
+                row.title,
+                row.company,
+                row.location,
+                row.url,
+                row.application_url,
+            )
             for row in rows
         }
 

@@ -35,12 +35,26 @@
     <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu</a>
     <a class="btn btn-primary" href="{{ base }}/cv.pdf?langue=en" hx-boost="false">CV anglais</a>
     <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
+    {% for code, label in (("fr", "Vérifier ce CV"), ("en", "Check this CV")) %}
+    <form method="post" action="{{ base }}/cv/verifier" hx-post="{{ base }}/cv/verifier" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
+      <input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost">{{ label }}</button>
+    </form>
+    {% endfor %}
     {% if view.adjusted %}
     <form method="post" action="{{ base }}/cv/proposition" hx-post="{{ base }}/cv/proposition" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
       <button type="submit" class="btn btn-ghost">Revenir à la proposition de Rocky</button>
     </form>
     {% endif %}
   </div>
+  {% if check %}{% include "profil/cv_check.html" %}{% endif %}
+  {% if dossier.stage == Stage.PREPARING %}
+  {# A plain form (never boosted): the page comes back at its step « Envoi » (decision D3, Q25). #}
+  <form method="post" action="{{ base }}/etape" hx-boost="false" class="inline-form">
+    <input type="hidden" name="etape" value="{{ Stage.READY.value }}"><input type="hidden" name="retour" value="dossier">
+    <button type="submit" class="btn btn-primary">CV prêt : passer à l'envoi</button>
+    <span class="muted small">La candidature passe en « Prête à envoyer ».</span>
+  </form>
+  {% endif %}
 
   <div class="two-columns">
     <div>

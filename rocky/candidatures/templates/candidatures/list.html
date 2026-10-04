@@ -1,11 +1,36 @@
 {# Plain list of step D1; the screen 📝 Candidatures proper is step D6. #}
 <section id="candidatures" class="applications">
   {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if to_prepare %}
+  {# The offers « Intéressé » without an application (decision D3, Q26): one click opens the application's page. #}
+  <h2>À préparer</h2>
+  <table class="offer-table application-table">
+    <tbody>
+    {% for offer in to_prepare %}
+    <tr id="a-preparer-{{ offer.id }}">
+      <td><a href="/offres/{{ offer.id }}/fiche">{{ offer.title }}</a>
+        <div class="muted">{{ offer.company or "Employeur inconnu" }}{% if offer.location %} · {{ offer.location }}{% endif %}</div></td>
+      <td>
+        <form method="post" action="/candidatures/offre/{{ offer.id }}/preparer" hx-boost="false" class="inline-form">
+          <button type="submit" class="btn btn-primary">Préparer la candidature</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <h2>Dossiers ouverts</h2>
+  {% endif %}
   {% if not rows %}
   <div class="empty-state">
     <p class="empty-lead">Aucune candidature en cours.</p>
-    <p class="muted">Ouvre la fiche d'une offre et choisis « Préparer la candidature ».</p>
-    <p><a class="btn" href="/offres?vue=liste">🔎 Voir les offres</a></p>
+    {% if to_prepare %}
+    <p class="muted">Prépare une des offres ci-dessus : son dossier s'ouvre aussitôt.</p>
+    {% else %}
+    <p class="muted">Un dossier s'ouvre depuis une offre qui t'intéresse : « Préparer la candidature ».</p>
+    <p><a class="btn" href="/offres?vue=liste">🔎 Voir les offres</a>
+      <a class="btn btn-ghost" href="/offres?vue=liste&amp;decision=plus_tard">Offres mises de côté</a></p>
+    {% endif %}
   </div>
   {% else %}
   <table class="offer-table application-table">
@@ -13,7 +38,7 @@
     <tbody>
     {% for row in rows %}
     <tr id="candidature-{{ row.id }}">
-      <td><a href="/offres/{{ row.offer.id }}/fiche">{{ row.offer.title }}</a>
+      <td><a href="/candidatures/{{ row.id }}">{{ row.offer.title }}</a>
         <div class="muted">{{ row.offer.company or "Employeur inconnu" }}{% if row.offer.location %} · {{ row.offer.location }}{% endif %}</div></td>
       <td>
         {% if stage_form and stage_form.id == row.id %}

@@ -656,6 +656,17 @@ def decision_in_force(
     return None if row is None or row.decision is None else row.decision.value
 
 
+def interested_offers(connection: Connection, account_id: int) -> list[int]:
+    """The account's offers whose decision in force is « Intéressé », the latest decided first (D3, Q26)."""
+    rows = effective_decisions(SqlStore(connection).decision_rows(account_id))
+    kept = [
+        row
+        for row in rows.values()
+        if row.decision is not None and row.decision.value is DecisionValue.INTERESTED
+    ]
+    return [row.offer_id for row in sorted(kept, key=lambda row: row.id, reverse=True)]
+
+
 def record_application_decision(
     connection: Connection,
     *,

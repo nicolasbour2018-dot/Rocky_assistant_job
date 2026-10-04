@@ -60,6 +60,15 @@ class OfferHeading:
     title: str
     company: str | None
     location: str | None
+    url: str = ""  # the posting where it was found
+    application_url: str | None = (
+        None  # where to apply, when the source gives it (D3, Q25)
+    )
+
+    @property
+    def apply_at(self) -> str:
+        """Where the user applies: the source's application link, else the posting."""
+        return self.application_url or self.url
 
 
 @dataclass(frozen=True)

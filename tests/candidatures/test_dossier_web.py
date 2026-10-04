@@ -138,6 +138,83 @@ def test_an_english_cv_still_in_french_is_refused_with_what_is_missing(
     assert "Projet « Prévision » : stack" in response.text
 
 
+def test_checking_the_cv_of_the_application_reads_its_targeted_pdf(
+    desk: Desk,
+) -> None:
+    base = f"/candidatures/{desk.application_id()}/cv/verifier"
+
+    checked = desk.client.post(base, data={"langue": "fr"}, headers=HTMX).text
+    refused = desk.client.post(base, data={"langue": "en"}, headers=HTMX).text
+
+    assert 'class="cv-check"' in checked
+    assert "pypdf :" in checked  # each reader says what it read
+    assert 'id="dossier-cv"' in checked  # the step is swapped whole
+    assert "Traduire les champs manquants" in refused
+
+
+def test_an_application_goes_from_its_cv_to_sent_on_its_page(
+    desk: Desk, migrated_engine: Engine
+) -> None:
+    base = f"/candidatures/{desk.application_id()}"
+    start = page(desk)
+    assert '<li aria-current="step">\n      <a href="#dossier-cv">1. CV</a>' in start
+    assert "CV prêt : passer à l'envoi" in start
+    assert "Disponible quand ton CV est prêt." in start
+
+    ready = desk.client.post(
+        f"{base}/etape", data={"etape": "ready", "retour": "dossier"}
+    )
+
+    assert (ready.status_code, ready.headers["location"]) == (303, f"{base}#envoi")
+    sending = page(desk)
+    assert "<strong>Prête à envoyer</strong>" in sending
+    assert "1. CV ✓" in sending
+    # No application link from the source: the posting itself, its domain shown.
+    assert 'href="https://apec.example/offres/d1" target="_blank"' in sending
+    assert "apec.example" in sending
+    assert "CV prêt : passer à l'envoi" not in sending
+
+    desk.client.post(f"{base}/etape", data={"etape": "sent", "retour": "dossier"})
+    sent = page(desk)
+    assert "✅ Envoyée — Relancer le" in sent
+    assert "J&#39;ai envoyé ma candidature" not in sent
+
+    undone = desk.client.post(f"{base}/annuler", data={"retour": "dossier"})
+    assert undone.headers["location"] == f"{base}#envoi"
+    assert "J&#39;ai envoyé ma candidature" in page(desk)
+    with migrated_engine.connect() as connection:
+        types = (
+            connection.execute(
+                select(events.c.type).where(
+                    events.c.subject_type == "application",
+                    events.c.subject_id == str(desk.application_id()),
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert types.count("candidatures.stage_changed") == 2
+
+
+def test_a_gesture_never_returns_to_an_address_it_is_given(desk: Desk) -> None:
+    response = desk.client.post(
+        f"/candidatures/{desk.application_id()}/etape",
+        data={"etape": "ready", "retour": "https://ailleurs.example"},
+    )
+
+    assert response.headers["location"] == "/candidatures"
+
+
+def test_a_cancelled_application_says_so_without_steps(desk: Desk) -> None:
+    desk.client.post(
+        f"/candidatures/{desk.application_id()}/annuler", data={"retour": "dossier"}
+    )
+
+    html = page(desk)
+    assert "Candidature annulée" in html
+    assert 'class="steps"' not in html
+
+
 def test_the_application_of_another_account_is_not_found(
     app: FastAPI, migrated_engine: Engine, desk: Desk
 ) -> None:

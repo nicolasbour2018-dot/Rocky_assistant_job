@@ -7,11 +7,12 @@ Decision ``docs/decisions/D1-dossier-statuts.md``.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -26,7 +27,15 @@ from rocky.candidatures.model import (
     NextAction,
     Stage,
 )
-from rocky.candidatures.rules import dossier, is_overdue, make_next_action, proposal
+from rocky.candidatures.rules import (
+    Journey,
+    Step,
+    dossier,
+    is_overdue,
+    journey,
+    make_next_action,
+    proposal,
+)
 from rocky.candidatures.sql import SqlApplicationStore
 from rocky.candidatures.targeting import (
     COVERAGE_LABELS,
@@ -61,6 +70,7 @@ from rocky.offres.model import OfferHeading
 from rocky.profil import translation_web
 from rocky.profil import web as profil_web
 from rocky.profil.cv import layout as cv_layout
+from rocky.profil.cv.check import CvCheck, check_cv
 from rocky.profil.cv.layout import check_layout
 from rocky.profil.cv.rendering import MISSING_ENGLISH, CvRefusedError
 from rocky.profil.cv.template import Slots
@@ -149,6 +159,20 @@ def rows_of(connection: Connection, account_id: int, today: date) -> list[Row]:
     )
 
 
+def to_prepare_of(
+    connection: Connection, account_id: int, rows: Iterable[Row]
+) -> list[OfferHeading]:
+    """The offers « Intéressé » without an open application (decision D3, Q26), the latest decided first."""
+    opened = {row.offer.id for row in rows}
+    ids = [
+        offer_id
+        for offer_id in offres_web.interested_offers(connection, account_id)
+        if offer_id not in opened
+    ]
+    headings = offres_web.offer_headings(connection, account_id, ids)
+    return [headings[offer_id] for offer_id in ids if offer_id in headings]
+
+
 def _engine(request: Request) -> Engine:
     engine: Engine = request.app.state.engine
     return engine
@@ -183,8 +207,10 @@ def _list(
     today = _today(request)
     with _engine(request).begin() as connection:
         rows = rows_of(connection, account.id, today)
+        to_prepare = to_prepare_of(connection, account.id, rows)
     context = {
         "rows": rows,
+        "to_prepare": to_prepare,
         "today": today,
         "stages": list(Stage),
         "defer_days": DEFER_DAYS,
@@ -199,7 +225,17 @@ def _list(
     )
 
 
-def _after_change(request: Request, account: Account) -> Response:
+# ``retour`` of a gesture made on the application's page: a fixed value, never a URL (no open redirection).
+BACK_TO_DOSSIER = "dossier"
+
+
+def _after_change(
+    request: Request, account: Account, application_id: int, retour: str = ""
+) -> Response:
+    if retour == BACK_TO_DOSSIER:
+        return RedirectResponse(
+            f"/candidatures/{application_id}#envoi", status_code=303
+        )
     if not wants_fragment(request):
         return RedirectResponse("/candidatures", status_code=303)
     return _list(request, account)
@@ -225,9 +261,11 @@ def move(
     saisie: Annotated[str, Form()] = "",
     action: Annotated[str, Form()] = "",
     echeance: Annotated[date | None, Form()] = None,
+    retour: Annotated[str, Form()] = "",
 ) -> Response:
     """A stage change in one gesture, with the proposed next action; the user enters it (``saisie``) when the
-    proposal has no date (Q3, « Entretien »)."""
+    proposal has no date (Q3, « Entretien »). From the application's page (« CV prêt », « J'ai envoyé », D3 Q25), back
+    to it."""
     if etape not in Stage or not _owned(request, account, application_id):
         return Response(status_code=404)
     stage = Stage(etape)
@@ -255,7 +293,7 @@ def move(
             next_action=chosen,
             now=_now(request),
         )
-    return _after_change(request, account)
+    return _after_change(request, account, application_id, retour)
 
 
 @router.post("/{application_id}/action", response_class=HTMLResponse)
@@ -281,7 +319,7 @@ def next_action(
             next_action=chosen,
             now=_now(request),
         )
-    return _after_change(request, account)
+    return _after_change(request, account, application_id)
 
 
 @router.get("/{application_id}/action", response_class=HTMLResponse)
@@ -314,11 +352,16 @@ def defer(
             )
     except InvalidChangeError as error:
         return _list(request, account, error=str(error))
-    return _after_change(request, account)
+    return _after_change(request, account, application_id)
 
 
 @router.post("/{application_id}/annuler", response_class=HTMLResponse)
-def undo(request: Request, account: CurrentAccount, application_id: int) -> Response:
+def undo(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    retour: Annotated[str, Form()] = "",
+) -> Response:
     """« Annuler » the latest change of the application (Q6); its creation takes the decision written with it (Q9)."""
     try:
         with _engine(request).begin() as connection:
@@ -331,7 +374,7 @@ def undo(request: Request, account: CurrentAccount, application_id: int) -> Resp
             )
     except LookupError:
         return Response(status_code=404)
-    response = _after_change(request, account)
+    response = _after_change(request, account, application_id, retour)
     response.headers["HX-Trigger"] = OFFERS_CHANGED
     return response
 
@@ -345,7 +388,6 @@ def _box(
     offer_id: int,
     *,
     error: str | None = None,
-    prepared: bool = False,
 ) -> Response:
     with _engine(request).begin() as connection:
         if not offres_web.offer_headings(connection, account.id, [offer_id]):
@@ -366,7 +408,6 @@ def _box(
         "rejected": in_force is DecisionValue.REJECTED,
         "needs_reasons": needs_reasons(in_force),
         "error": error,
-        "prepared": prepared,
     }
     return _fragment(request, "candidatures/offer_box.html", context)
 
@@ -440,7 +481,7 @@ def prepare(
             )
     try:
         with engine.begin() as connection:
-            prepare_application(
+            application_id = prepare_application(
                 SqlApplicationStore(connection),
                 OffresDecisions(connection),
                 account_id=account.id,
@@ -453,14 +494,15 @@ def prepare(
         if not wants_fragment(request):
             return RedirectResponse(f"/offres/{offer_id}/fiche", status_code=303)
         return _box(request, account, offer_id, error=str(error))
+    # Straight to the application's page (decision D3, Q25).
+    target_url = f"/candidatures/{application_id}"
     if not wants_fragment(request):
-        return RedirectResponse("/candidatures", status_code=303)
-    response = _box(request, account, offer_id, prepared=True)
-    response.headers["HX-Trigger"] = OFFERS_CHANGED
-    return response
+        return RedirectResponse(target_url, status_code=303)
+    return Response(status_code=200, headers={"HX-Redirect": target_url})
 
 
-# The page of an application (decision D3, Q23): for now its step « CV », the CV targeted at the offer (Q1–Q4, Q9–Q11).
+# The page of an application (decision D3, Q23, Q25): 1. CV targeted at the offer (Q1–Q4, Q9–Q11), 2. Letter (D4),
+# 3. Sending, by the user on the site where the offer is applied for.
 
 
 @dataclass(frozen=True)
@@ -490,6 +532,8 @@ class ApplicationFile:
     application_id: int
     offer: OfferHeading
     stage: Stage | None
+    next_action: NextAction | None
+    journey: Journey
     profile: Profile
     layout: CvLayout
     slots: Slots
@@ -524,6 +568,8 @@ def _dossier(
         application_id=application.id,
         offer=heading,
         stage=state.stage if state.open else None,
+        next_action=state.next_action if state.open else None,
+        journey=journey(state.stage if state.open else None),
         profile=profile,
         layout=layout,
         slots=slots,
@@ -623,6 +669,8 @@ def _dossier_page(
     *,
     error: str | None = None,
     cv_refusal: tuple[str, ...] = (),
+    check: CvCheck | None = None,
+    check_language: str = "fr",
     status_code: int = 200,
 ) -> Response:
     found = _dossier(request, account, application_id)
@@ -633,12 +681,17 @@ def _dossier_page(
         "view": found.view,
         "error": error,
         "cv_refusal": cv_refusal,
+        "check": check,
+        "language": check_language,
         # The English CV waits for texts in English: the translation screen is the way out.
         "missing_english": any(r.startswith(MISSING_ENGLISH) for r in cv_refusal),
         "to_review": translation_web.to_review(request, account),
         "english_outdated": translation_web.english_cv_outdated(request, account),
         "importance_labels": IMPORTANCE_LABELS,
         "coverage_labels": COVERAGE_LABELS,
+        "apply_domain": urlsplit(found.offer.apply_at).hostname or "",
+        "Stage": Stage,
+        "Step": Step,
     }
     if wants_fragment(request):
         return _fragment(request, "candidatures/cv_step.html", context)
@@ -710,6 +763,36 @@ def _save_selection(
     if not wants_fragment(request):
         return RedirectResponse(f"/candidatures/{application_id}", status_code=303)
     return _dossier_page(request, account, application_id)
+
+
+@router.post("/{application_id}/cv/verifier", response_class=HTMLResponse)
+def check_application_cv(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    langue: Annotated[str, Form()] = "fr",
+) -> Response:
+    """« Vérifier ce CV » (decision D2, Q12) on the CV this application sends: its selection, its language."""
+    language = "en" if langue == "en" else "fr"
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+    profile = replace(found.profile, cv=found.layout)
+    try:
+        document, facts = profil_web.cv_document(request, account, profile, language)
+    except CvRefusedError as error:
+        return _dossier_page(request, account, application_id, cv_refusal=error.reasons)
+    except RenderError as error:
+        return _dossier_page(
+            request, account, application_id, cv_refusal=(error.reason,)
+        )
+    return _dossier_page(
+        request,
+        account,
+        application_id,
+        check=check_cv(document.pdf, facts),
+        check_language=language,
+    )
 
 
 @router.get("/{application_id}/cv.pdf")

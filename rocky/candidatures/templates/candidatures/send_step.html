@@ -1,0 +1,35 @@
+{# Steps 2 and 3 of an application (decision D3, Q25): the letter comes with D4; the user applies on the site. #}
+{% set base = "/candidatures/" ~ dossier.application_id %}
+{# Plain forms (never boosted): the page comes back at its step « Envoi ». #}
+{% macro back_form(path, label, stage="", primary=false) -%}
+<form method="post" action="{{ base }}/{{ path }}" hx-boost="false" class="inline-form">
+  {% if stage %}<input type="hidden" name="etape" value="{{ stage }}">{% endif %}
+  <input type="hidden" name="retour" value="dossier">
+  <button type="submit" class="btn {{ 'btn-primary' if primary else 'btn-ghost' }}">{{ label }}</button>
+</form>
+{%- endmacro %}
+<section id="lettre" class="dossier-step" aria-label="Lettre de la candidature">
+  <h2>2. Lettre</h2>
+  <p class="muted">Rocky ne prépare pas encore la lettre : elle arrive bientôt. Si l'annonce en demande une, joins la tienne.</p>
+</section>
+<section id="envoi" class="dossier-step" aria-label="Envoi de la candidature">
+  <h2>3. Envoi</h2>
+  {% if dossier.journey.current == Step.SEND %}
+  <p>Rocky ne postule jamais à ta place : tu déposes ta candidature toi-même.</p>
+  <ol class="send-list">
+    <li>Télécharge ton CV :
+      <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=fr" hx-boost="false">CV français</a>
+      <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=en" hx-boost="false">CV anglais</a></li>
+    <li>Dépose-le sur le site :
+      <a class="btn btn-primary" href="{{ dossier.offer.apply_at }}" target="_blank" rel="noopener noreferrer" hx-boost="false">Ouvrir le site de candidature ↗</a>
+      <span class="muted small">{{ apply_domain }}</span></li>
+    <li>Reviens ici : {{ back_form("etape", "J'ai envoyé ma candidature", stage=Stage.SENT.value, primary=true) }}</li>
+  </ol>
+  <p>{{ back_form("annuler", "Annuler le dernier changement") }}</p>
+  {% elif dossier.journey.sent %}
+  <p class="line-good">✅ {{ stage_labels[dossier.stage] }}{% if dossier.next_action %} — {{ dossier.next_action.label }} le {{ dossier.next_action.due.strftime("%d/%m/%Y") }}{% endif %}. Le suivi viendra ici.</p>
+  <p>{{ back_form("annuler", "Annuler le dernier changement") }}</p>
+  {% else %}
+  <p class="muted">Disponible quand ton CV est prêt.</p>
+  {% endif %}
+</section>

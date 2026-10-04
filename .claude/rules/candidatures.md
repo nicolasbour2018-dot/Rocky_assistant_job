@@ -33,5 +33,8 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 - `offres` ne connaît `candidatures` que par l'URL de l'encart (`/candidatures/offre/{id}`, chargé par la fiche).
 
 ## Écran
-- Liste brute de D1 ; l'écran 📝 Candidatures est l'étape D6. Mêmes règles d'écran que `offres` (fragments HTMX,
-  `wants_fragment`, `hx-swap` explicite, chaque route répond aussi sans HTMX, 404 pour le dossier d'un autre compte).
+- Liste brute de D1, avec « À préparer » (offres « Intéressé » sans dossier, D3 Q26) ; l'écran 📝 Candidatures est D6.
+- Page du dossier (D3, Q25) : fil 1. CV / 2. Lettre / 3. Envoi calculé par `rules.journey` ; « Préparer » y atterrit.
+  Un geste fait depuis le dossier envoie `retour=dossier`, valeur fixe et jamais une URL (pas de redirection ouverte).
+- Mêmes règles d'écran que `offres` (fragments HTMX, `wants_fragment`, `hx-swap` explicite, chaque route répond aussi
+  sans HTMX, 404 pour le dossier d'un autre compte).

@@ -130,16 +130,20 @@ def test_preparing_asks_the_reasons_of_interested(desk: Desk) -> None:
     assert desk.decision() is None
 
 
-def test_preparing_opens_the_application_and_records_interested(desk: Desk) -> None:
+def test_preparing_opens_the_application_and_lands_on_it(desk: Desk) -> None:
     response = desk.client.post(
         f"/candidatures/offre/{desk.offer_id}/preparer",
         data={"motifs": ["target_job"]},
         headers=HTMX,
     )
 
-    assert "Candidature : <strong>En préparation</strong>" in response.text
-    assert "Finir le dossier le 01/10/2026" in response.text
-    assert response.headers["HX-Trigger"] == "offers-changed"
+    application = f"/candidatures/{desk.application_id()}"
+    assert response.headers["HX-Redirect"] == application
+    page = desk.client.get(application).text
+    assert "<strong>En préparation</strong>" in page
+    assert "Finir le dossier le 01/10/2026" in page
+    box = desk.client.get(f"/candidatures/offre/{desk.offer_id}", headers=HTMX).text
+    assert "Candidature : <strong>En préparation</strong>" in box
     assert desk.decision() is DecisionValue.INTERESTED
     assert desk.reasons() == (APPLICATION_STARTED, "target_job")
 
@@ -153,8 +157,38 @@ def test_an_interested_offer_opens_its_application_without_reasons(
     box = desk.client.get(f"/candidatures/offre/{desk.offer_id}", headers=HTMX).text
     assert f'hx-post="/candidatures/offre/{desk.offer_id}/preparer"' in box
 
-    assert "En préparation" in desk.prepare()
+    desk.prepare()
+    assert (
+        "En préparation"
+        in desk.client.get(f"/candidatures/{desk.application_id()}").text
+    )
     assert desk.reasons() == ("salary",)
+
+
+def test_an_interested_offer_without_application_is_to_prepare_in_one_click(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    desk = desk_with(
+        app, migrated_engine, Decision(DecisionValue.INTERESTED, ("salary",))
+    )
+    listed = desk.client.get("/candidatures").text
+    assert "À préparer" in listed
+    assert f'action="/candidatures/offre/{desk.offer_id}/preparer"' in listed
+
+    opened = desk.client.post(f"/candidatures/offre/{desk.offer_id}/preparer")
+
+    assert opened.headers["location"] == f"/candidatures/{desk.application_id()}"
+    after = desk.client.get("/candidatures").text
+    assert "À préparer" not in after
+    assert f'href="/candidatures/{desk.application_id()}"' in after
+
+
+def test_an_offer_put_aside_is_not_to_prepare(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    desk = desk_with(app, migrated_engine, Decision(DecisionValue.LATER, ("reread",)))
+
+    assert "À préparer" not in desk.client.get("/candidatures").text
 
 
 def test_a_rejected_offer_cannot_be_prepared(
@@ -233,14 +267,16 @@ def test_annuler_undoes_the_changes_then_the_application_and_its_decision(
     assert not dossier(changes).open
 
 
-def test_without_htmx_changes_redirect_to_the_list(desk: Desk) -> None:
+def test_without_htmx_preparing_goes_to_the_application_and_changes_to_the_list(
+    desk: Desk,
+) -> None:
     response = desk.client.post(
         f"/candidatures/offre/{desk.offer_id}/preparer",
         data={"motifs": ["target_job"]},
     )
     assert (response.status_code, response.headers["location"]) == (
         303,
-        "/candidatures",
+        f"/candidatures/{desk.application_id()}",
     )
 
     response = desk.client.post(
