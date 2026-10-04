@@ -30,5 +30,5 @@ Extraits de `backups/rocky-v1-20260924/exports/csv/` (archive A1, lecture seule)
 Anonymisation : le nom et les adresses de Nicolas deviennent « Camille Martin » et `candidat@example.com` ; les
 personnes nommées (recruteurs, réseau) deviennent « Recrutement » ou « Une personne » ; numéros de client, de colis et
 noms de domaine personnels remplacés. Les employeurs restent : ils sont la matière du rattachement.
-Étiquettes : proposées par l'agent, vérifiées une à une par Nicolas (`checked = oui`). Une catégorie vide veut dire « À
-vérifier ».
+Étiquettes : proposées par l'agent, acceptées par Nicolas à la clôture d'E2 sans relecture ligne à ligne (`checked`
+reste vide ; `oui` quand une ligne est relue). Une catégorie vide veut dire « À vérifier ».

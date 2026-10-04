@@ -114,6 +114,18 @@ sécurité Google envoyés au modèle, corps à entités HTML, fil des avis de p
 | Migration `0014` (base de développement) | `upgrade` → `downgrade -1` → `upgrade head` |
 | Essai dans Chromium (instance à part, schéma jetable, compte et messages fictifs, modèle simulé) | Vue « À regarder » : refus French bee et accusé Covéa liés à leur dossier, message du modèle, message en attente avec sa raison ; « Alertes » : l'alerte LinkedIn seule ; « Pourquoi ? » lisible ; domaine « rh@frenchbee.com » enregistré « frenchbee.com » dans le dossier. Console sans erreur. Corrigé : libellé « Modèle de langage » en double, colonne du classement trop étroite |
 
+
+## Recette (Nicolas, 05/10)
+
+| Point | Résultat |
+|---|---|
+| Premier essai | Tri à affiner, « À vérifier » sans geste : affinage Q19–Q22 (vue par défaut de 92 à 23 messages), corrections reportées en E4, avancée avant E3 |
+| Étiquettes de l'échantillon | Proposées par l'agent, acceptées par Nicolas à la clôture sans relecture ligne à ligne (colonne `checked` vide) : à reprendre avec les corrections d'E4, qui donneront des étiquettes de Nicolas |
+| Appels Gemini pendant l'étape | 42 (plafond fixé : 200) |
+
+**Étape close** (Nicolas, 05/10) : critère vérifié par les tests (preuve exigée par le schéma, Quora jamais rattaché à
+« French bee », jeu issu de l'archive) et sur sa boîte de développement ; vérification globale verte.
+
 ## Hors E2
 
 Transitions des candidatures, corrections et règles par compte (E4) ; offres tirées des alertes (E3) ; InMail de
