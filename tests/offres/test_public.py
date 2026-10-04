@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from sqlalchemy import Connection
 
 from rocky.offres import web as offres_web
@@ -81,3 +83,39 @@ def test_the_heading_of_an_offer_says_where_to_apply(db: Connection) -> None:
     with_form, plain = (headings[offer_id] for offer_id in offer_ids)
     assert with_form.apply_at == "https://employeur.example/postuler"
     assert plain.apply_at == "https://apec.example/offres/plain"
+
+
+def test_the_deadlines_of_the_accounts_offers(db: Connection) -> None:
+    owner, other = new_seeker(db), new_seeker(db)
+
+    def recorded(seeker_id: int, track: int, external_id: str, text: str) -> int:
+        return record_offer(
+            SqlStore(db),
+            account_id=seeker_id,
+            offer=posting(external_id, description=text),
+            inputs=scoring_inputs(owner.profile(db)),
+            origin=Origin.WATCH,
+            track_ids=[track],
+            now=NOW,
+            today=TODAY,
+        ).offer_id
+
+    with_deadline = recorded(
+        owner.account_id,
+        owner.tracks["Data"],
+        "d6-limite",
+        "Analyse de données. Candidatures jusqu'au 12 octobre 2026.",
+    )
+    without = recorded(owner.account_id, owner.tracks["Data"], "d6-sans", "Analyse.")
+    elsewhere = recorded(
+        other.account_id,
+        other.tracks["Data"],
+        "d6-autre",
+        "Date limite de candidature : 15/10/2026.",
+    )
+
+    found = offres_web.offer_deadlines(
+        db, owner.account_id, [with_deadline, without, elsewhere], TODAY
+    )
+
+    assert found == {with_deadline: date(2026, 10, 12)}

@@ -18,7 +18,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import Connection, Engine
 
 from rocky.offres.analysis.model import PostingAnalysis
-from rocky.offres.analysis.rules import analyze
+from rocky.offres.analysis.rules import analyze, deadline_of
 from rocky.offres.analysis.text import formatted_description
 from rocky.offres.analysis.usecases import Summary, SummaryResult, summarize
 from rocky.offres.decisions import (
@@ -646,6 +646,17 @@ def offer_analysis(
     if stored is None:
         return None
     return analyze(stored.offer, scoring_inputs(profile).skills, today=today)
+
+
+def offer_deadlines(
+    connection: Connection, account_id: int, offer_ids: Iterable[int], today: date
+) -> dict[int, date]:
+    """The deadline of the account's offers among ``offer_ids`` that have one (the applications, decision D6, Q8)."""
+    return {
+        stored.id: deadline
+        for stored in SqlStore(connection).offers_of(account_id, offer_ids)
+        if (deadline := deadline_of(stored.offer, today=today)) is not None
+    }
 
 
 def decision_in_force(

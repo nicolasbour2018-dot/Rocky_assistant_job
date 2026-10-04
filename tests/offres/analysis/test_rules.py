@@ -15,7 +15,12 @@ from rocky.offres.analysis.model import (
     PostingAnalysis,
     SalaryPeriod,
 )
-from rocky.offres.analysis.rules import account_skills, analyze, deduced_period
+from rocky.offres.analysis.rules import (
+    account_skills,
+    analyze,
+    deadline_of,
+    deduced_period,
+)
 from rocky.offres.sources.model import CollectedOffer
 from rocky.profil.model import Contract, LanguageLevel, RemoteMode
 from rocky.profil.rules import make_skill
@@ -516,6 +521,17 @@ def test_the_closing_date_of_the_source_wins() -> None:
 )
 def test_a_closing_date_written_in_the_text(text: str, deadline: date | None) -> None:
     assert analysis(text).deadline == deadline
+    # The deadline alone (decision D6, Q8) reads the same date.
+    offer = posting(text)
+    assert deadline_of(offer, today=TODAY) == deadline
+
+
+def test_the_deadline_alone_prefers_the_source() -> None:
+    offer = posting(
+        "Date limite de candidature : 15/10/2026.", deadline=date(2026, 10, 20)
+    )
+
+    assert deadline_of(offer, today=TODAY) == date(2026, 10, 20)
 
 
 # The whole analysis.

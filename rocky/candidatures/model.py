@@ -83,6 +83,22 @@ class ChangeKind(StrEnum):
     STAGE = "stage"
     NEXT_ACTION = "next_action"
     CANCELLATION = "cancellation"
+    # « Fait » (decision D6, Q5): the action in force is done; the change sets the next one, as a next action does.
+    ACTION_DONE = "action_done"
+
+
+# The stages where « Fait » is offered (D6, Q5): before the sending, the action is done by the step's own gesture.
+FOLLOW_UP_STAGES = frozenset(
+    {Stage.SENT, Stage.IN_DISCUSSION, Stage.INTERVIEW, Stage.OFFER}
+)
+
+# The stages whose proposed next action stops at the offer's deadline (D6, Q8): the application is not sent yet.
+BEFORE_SENDING = frozenset({Stage.PREPARING, Stage.READY, Stage.PREFILLED})
+
+# The language of an application (D6, Q4): one for its CV, letter, message and PDFs; French without a choice.
+LANGUAGES = ("fr", "en")
+DEFAULT_LANGUAGE = "fr"
+LANGUAGE_LABELS = {"fr": "Français", "en": "Anglais"}
 
 
 class InvalidChangeError(ValueError):
@@ -337,6 +353,30 @@ class Prefill:
     created_at: datetime
 
 
+# The notes of an application (decision D6, Q6): appended, never rewritten; a removal is a row of its own.
+
+
+NOTE_MAX_LENGTH = 4000
+
+
+@dataclass(frozen=True)
+class NoteRow:
+    """One stored row: a note (``text``), or the removal of one (``removes``)."""
+
+    id: int
+    application_id: int
+    text: str | None
+    removes: int | None
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class Note:
+    id: int
+    text: str
+    created_at: datetime
+
+
 @dataclass(frozen=True)
 class Dossier:
     """What the changes of an application amount to (computed, never stored)."""
@@ -447,6 +487,28 @@ class ApplicationStore(Protocol):
         prefill: NewPrefill,
         now: datetime,
     ) -> int: ...
+
+    def notes(self, application_id: int) -> list[NoteRow]:
+        """The notes and their removals, in the order they were written."""
+        ...
+
+    def insert_note(
+        self,
+        account_id: int,
+        application_id: int,
+        *,
+        text: str | None,
+        removes: int | None,
+        now: datetime,
+    ) -> int: ...
+
+    def language(self, application_id: int) -> str | None:
+        """The language chosen last; None when none was chosen."""
+        ...
+
+    def insert_language(
+        self, account_id: int, application_id: int, language: str, now: datetime
+    ) -> None: ...
 
     def append_event(self, event: NewEvent) -> None: ...
 

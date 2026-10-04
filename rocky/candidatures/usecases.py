@@ -14,6 +14,9 @@ from urllib.parse import urlsplit
 
 from rocky.candidatures.letter import letter_state
 from rocky.candidatures.model import (
+    FOLLOW_UP_STAGES,
+    LANGUAGES,
+    NOTE_MAX_LENGTH,
     PROPOSALS,
     Application,
     ApplicationStore,
@@ -38,6 +41,8 @@ from rocky.candidatures.rules import (
     automatic_transition_allowed,
     deferred,
     dossier,
+    language_in_force,
+    notes_in_force,
     proposal,
     to_cancel,
 )
@@ -62,9 +67,10 @@ def prepare_application(
     interest: Decision | None,
     now: datetime,
     today: date,
+    deadline: date | None = None,
 ) -> int:
     """« Préparer la candidature » (Q2, Q8): opens the application of the offer, « En préparation », with the proposed
-    next action; idempotent (an open application is returned as it is).
+    next action (no later than the offer's ``deadline``, D6 Q8); idempotent (an open application is returned as it is).
 
     On an offer without decision or « Plus tard », ``interest`` (``application_decision``) is recorded with it; an
     offer « Écarté » is refused.
@@ -80,7 +86,7 @@ def prepare_application(
         if interest is None:
             raise InvalidChangeError(REASONS_NEEDED)
         decision_id = offers.record_interested(account_id, offer_id, interest, now)
-    next_action = _proposed(Stage.PREPARING, today)
+    next_action = _proposed(Stage.PREPARING, today, deadline)
     store.insert_change(
         account_id,
         application.id,
@@ -347,6 +353,7 @@ def skip_letter(
     application_id: int,
     now: datetime,
     today: date,
+    deadline: date | None = None,
 ) -> None:
     """« Pas de lettre pour cette candidature » (Q4, Q16): kept, and an application in preparation becomes « Prête à
     envoyer » with it, in the same transaction."""
@@ -354,7 +361,7 @@ def skip_letter(
     store.insert_letter(account_id, application.id, None, now)
     _event(store, application, "candidatures.letter_skipped", Author.USER, {})
     if current.stage is Stage.PREPARING:
-        _ready(store, account_id, application.id, now, today)
+        _ready(store, account_id, application.id, now, today, deadline)
 
 
 def letter_ready(
@@ -364,6 +371,7 @@ def letter_ready(
     application_id: int,
     now: datetime,
     today: date,
+    deadline: date | None = None,
 ) -> bool:
     """« Lettre prête : passer à l'envoi » (Q16): refused until a letter is validated or set aside. False when the
     application is already past its preparation (nothing written)."""
@@ -372,7 +380,7 @@ def letter_ready(
         raise InvalidChangeError(NO_LETTER_YET)
     if current.stage is not Stage.PREPARING:
         return False
-    return _ready(store, account_id, application.id, now, today)
+    return _ready(store, account_id, application.id, now, today, deadline)
 
 
 def _ready(
@@ -381,13 +389,14 @@ def _ready(
     application_id: int,
     now: datetime,
     today: date,
+    deadline: date | None,
 ) -> bool:
     return change_stage(
         store,
         account_id=account_id,
         application_id=application_id,
         stage=Stage.READY,
-        next_action=_proposed(Stage.READY, today),
+        next_action=_proposed(Stage.READY, today, deadline),
         now=now,
     )
 
@@ -607,6 +616,135 @@ def _check_documents(
         raise InvalidChangeError(NOT_YOURS)
 
 
+# The follow-up of an application (decision D6): « Fait », notes, language.
+
+NOTHING_DONE = "Aucune prochaine action à marquer comme faite."
+NOT_FOLLOWED_UP = (
+    "« Fait » vient après l'envoi : avant, fais avancer le dossier par son étape."
+)
+NOTE_EMPTY = "Écris ta note."
+NOTE_TOO_LONG = f"Une note tient en {NOTE_MAX_LENGTH} caractères au plus."
+UNKNOWN_NOTE = "Cette note n'existe pas ou a déjà été retirée."
+
+
+def mark_action_done(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    now: datetime,
+    today: date,
+) -> NextAction | None:
+    """« Fait » (Q5): the action in force is done; the next one proposed for the stage follows it (« Relancer » at
+    J+7), or none when its date is to be entered (« Préparer l'entretien »). Returns the next action. The action done
+    is the one in force before this change: « Annuler » brings it back."""
+    application, current = _open(store, account_id, application_id)
+    if current.next_action is None:
+        raise InvalidChangeError(NOTHING_DONE)
+    if current.stage not in FOLLOW_UP_STAGES:
+        raise InvalidChangeError(NOT_FOLLOWED_UP)
+    following = _proposed(current.stage, today)
+    store.insert_change(
+        account_id,
+        application.id,
+        NewChange(ChangeKind.ACTION_DONE, next_action=following),
+        author=Author.USER,
+        now=now,
+    )
+    _event(
+        store,
+        application,
+        "candidatures.action_done",
+        Author.USER,
+        {
+            "done": _action_json(current.next_action),
+            "next_action": _action_json(following),
+        },
+    )
+    return following
+
+
+def add_note(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    text: str,
+    now: datetime,
+) -> int:
+    """A dated note (Q6), never rewritten."""
+    written = text.strip()
+    if not written:
+        raise InvalidChangeError(NOTE_EMPTY)
+    if len(written) > NOTE_MAX_LENGTH:
+        raise InvalidChangeError(NOTE_TOO_LONG)
+    application = _locked(store, account_id, application_id)
+    note_id = store.insert_note(
+        account_id, application.id, text=written, removes=None, now=now
+    )
+    _event(
+        store, application, "candidatures.note_added", Author.USER, {"note_id": note_id}
+    )
+    return note_id
+
+
+def remove_note(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    note_id: int,
+    now: datetime,
+) -> None:
+    """Remove a note (Q6): a row of its own; the note stays, out of the notes in force."""
+    application = _locked(store, account_id, application_id)
+    if note_id not in {note.id for note in notes_in_force(store.notes(application.id))}:
+        raise InvalidChangeError(UNKNOWN_NOTE)
+    store.insert_note(account_id, application.id, text=None, removes=note_id, now=now)
+    _event(
+        store,
+        application,
+        "candidatures.note_removed",
+        Author.USER,
+        {"note_id": note_id},
+    )
+
+
+def choose_language(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    language: str,
+    now: datetime,
+) -> bool:
+    """The language of the application (Q4): its CV, letter, message and PDFs. False when unchanged."""
+    if language not in LANGUAGES:
+        raise InvalidChangeError("Langue inconnue.")
+    application = _locked(store, account_id, application_id)
+    previous = language_in_force(store.language(application.id))
+    if language == previous:
+        return False
+    store.insert_language(account_id, application.id, language, now)
+    _event(
+        store,
+        application,
+        "candidatures.language_chosen",
+        Author.USER,
+        {"language": language, "previous": previous},
+    )
+    return True
+
+
+def _locked(
+    store: ApplicationStore, account_id: int, application_id: int
+) -> Application:
+    application = store.locked_application(account_id, application_id)
+    if application is None:
+        raise LookupError(f"application {application_id} is not of the account")
+    return application
+
+
 def _open(
     store: ApplicationStore, account_id: int, application_id: int
 ) -> tuple[Application, Dossier]:
@@ -619,8 +757,10 @@ def _open(
     return application, current
 
 
-def _proposed(stage: Stage, today: date) -> NextAction | None:
-    proposed = proposal(stage, today)
+def _proposed(
+    stage: Stage, today: date, deadline: date | None = None
+) -> NextAction | None:
+    proposed = proposal(stage, today, deadline)
     if proposed is None or proposed[1] is None:
         return None
     return NextAction(proposed[0], proposed[1])

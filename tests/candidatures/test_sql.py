@@ -33,18 +33,23 @@ from rocky.candidatures.model import (
     RevisionKind,
     Stage,
 )
-from rocky.candidatures.rules import dossier, sending_in_force
+from rocky.candidatures.rules import dossier, notes_in_force, sending_in_force
 from rocky.candidatures.sql import (
     SqlApplicationStore,
     application_changes,
+    application_languages,
     application_letters,
+    application_notes,
     application_sendings,
     applications,
 )
 from rocky.candidatures.usecases import (
+    add_note,
     cancel_last_change,
     change_stage,
+    choose_language,
     confirm_sending,
+    mark_action_done,
     prepare_application,
     record_prefill,
     record_revisions,
@@ -62,7 +67,7 @@ from rocky.offres.model import Origin
 from rocky.offres.rules import scoring_inputs
 from rocky.offres.sql import SqlStore, job_decisions
 from rocky.offres.usecases import record_decision, record_offer
-from rocky.system.events import NewEvent, events
+from rocky.system.events import NewEvent, events, events_about
 from tests.offres.fakes import NOW, TODAY, Seeker, new_seeker, posting
 
 INTEREST = application_decision(["target_job"])
@@ -178,6 +183,16 @@ class Case:
                 account_id=self.account_id,
                 application_id=self.application_id,
                 now=NOW,
+            )
+
+    def done(self, store: SqlApplicationStore | None = None) -> None:
+        with self.engine.begin() as connection:
+            mark_action_done(
+                store or SqlApplicationStore(connection),
+                account_id=self.account_id,
+                application_id=self.application_id,
+                now=NOW,
+                today=TODAY,
             )
 
     def move(self, stage: Stage, action: NextAction | None) -> None:
@@ -832,3 +847,153 @@ def test_a_letter_revision_names_its_letter_version(db: Connection) -> None:
             NewRevision(RevisionKind.LETTER, "fr", "c/y.pdf", "s", "i"),
             NOW,
         )
+
+
+# The follow-up (decision D6): « Fait » is a change like the others, cancelled under the same guarantee.
+
+
+@pytest.mark.parametrize("point", ["change", "event"])
+def test_a_failure_while_cancelling_fait_changes_nothing(
+    migrated_engine: Engine, point: str
+) -> None:
+    case = prepared(migrated_engine)
+    case.move(Stage.SENT, FOLLOW_UP)
+    case.done()
+    before = case.snapshot()
+    assert before.state.next_action == NextAction("Relancer", date(2026, 10, 6))
+
+    with pytest.raises(InjectedFailureError):
+        case.cancel(point)
+
+    assert case.snapshot() == before
+
+
+class FailingDoneStore(SqlApplicationStore):
+    """Fails right after the event of « Fait »: its change was written."""
+
+    def append_event(self, event: NewEvent) -> None:
+        super().append_event(event)
+        if event.type == "candidatures.action_done":
+            raise InjectedFailureError
+
+
+def test_a_failure_while_marking_fait_changes_nothing(migrated_engine: Engine) -> None:
+    case = prepared(migrated_engine)
+    case.move(Stage.SENT, FOLLOW_UP)
+    before = case.snapshot()
+
+    with pytest.raises(InjectedFailureError), migrated_engine.begin() as connection:
+        mark_action_done(
+            FailingDoneStore(connection),
+            account_id=case.account_id,
+            application_id=case.application_id,
+            now=NOW,
+            today=TODAY,
+        )
+
+    assert case.snapshot() == before
+
+
+def follow_up_application(db: Connection) -> tuple[int, int, SqlApplicationStore]:
+    seeker = new_seeker(db)
+    store = SqlApplicationStore(db)
+    application = store.application_for_offer(
+        seeker.account_id, recorded(db, seeker, "suivi"), NOW
+    )
+    return seeker.account_id, application.id, store
+
+
+def test_notes_come_back_and_a_removal_is_written_once(db: Connection) -> None:
+    account_id, application_id, store = follow_up_application(db)
+    note_id = store.insert_note(
+        account_id, application_id, text="Appel de Julie", removes=None, now=NOW
+    )
+    store.insert_note(account_id, application_id, text=None, removes=note_id, now=NOW)
+
+    assert notes_in_force(store.notes(application_id)) == []
+    with pytest.raises(IntegrityError), db.begin_nested():
+        store.insert_note(
+            account_id, application_id, text=None, removes=note_id, now=NOW
+        )
+
+
+@pytest.mark.parametrize(
+    ("text", "removes"), [(None, None), ("", None), ("x" * 4001, None), ("x", 1)]
+)
+def test_the_base_refuses_an_inconsistent_note(
+    db: Connection, text: str | None, removes: int | None
+) -> None:
+    account_id, application_id, _ = follow_up_application(db)
+
+    with pytest.raises(IntegrityError), db.begin_nested():
+        db.execute(
+            insert(application_notes).values(
+                application_id=application_id,
+                account_id=account_id,
+                text=text,
+                removes_id=removes,
+                created_at=NOW,
+            )
+        )
+
+
+def test_the_latest_language_is_in_force(db: Connection) -> None:
+    account_id, application_id, store = follow_up_application(db)
+    assert store.language(application_id) is None
+
+    store.insert_language(account_id, application_id, "en", NOW)
+    store.insert_language(account_id, application_id, "fr", NOW)
+
+    assert store.language(application_id) == "fr"
+    with pytest.raises(IntegrityError), db.begin_nested():
+        db.execute(
+            insert(application_languages).values(
+                application_id=application_id,
+                account_id=account_id,
+                language="de",
+                chosen_at=NOW,
+            )
+        )
+
+
+def test_the_journal_of_an_application_is_read_by_its_subject(
+    migrated_engine: Engine,
+) -> None:
+    case = prepared(migrated_engine)
+    case.move(Stage.SENT, FOLLOW_UP)
+    with migrated_engine.begin() as connection:
+        store = SqlApplicationStore(connection)
+        add_note(
+            store,
+            account_id=case.account_id,
+            application_id=case.application_id,
+            text="Relancé par téléphone",
+            now=NOW,
+        )
+        choose_language(
+            store,
+            account_id=case.account_id,
+            application_id=case.application_id,
+            language="en",
+            now=NOW,
+        )
+
+    with migrated_engine.connect() as connection:
+        found = events_about(
+            connection, case.account_id, "application", str(case.application_id)
+        )
+        other = events_about(
+            connection,
+            case.account_id + 10_000,
+            "application",
+            str(case.application_id),
+        )
+
+    assert [event.type for event in found] == [
+        "candidatures.application_created",
+        "candidatures.stage_changed",
+        "candidatures.note_added",
+        "candidatures.language_chosen",
+    ]
+    assert found[-1].payload == {"language": "en", "previous": "fr"}
+    assert other == []

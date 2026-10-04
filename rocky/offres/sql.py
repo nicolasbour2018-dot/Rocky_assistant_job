@@ -521,6 +521,18 @@ class SqlStore:
         ).one_or_none()
         return None if row is None else _stored(row)
 
+    def offers_of(self, account_id: int, offer_ids: Iterable[int]) -> list[StoredOffer]:
+        """The account's offers among ``offer_ids``."""
+        ids = list(offer_ids)
+        if not ids:
+            return []
+        rows = self._conn.execute(
+            select(job_offers).where(
+                job_offers.c.account_id == account_id, job_offers.c.id.in_(ids)
+            )
+        )
+        return [_stored(row) for row in rows]
+
     def headings(
         self, account_id: int, offer_ids: Iterable[int]
     ) -> dict[int, OfferHeading]:

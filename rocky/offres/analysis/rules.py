@@ -432,7 +432,7 @@ def analyze(
         contracts=_contracts(offer, posting),
         remote=_remote(offer, posting),
         salary=_salary(offer, posting),
-        deadline=offer.deadline or _deadline(posting, today),
+        deadline=offer.deadline or _deadline(posting.folded.text, today),
         experience=_experience(posting),
         languages=_languages(posting),
     )
@@ -797,8 +797,18 @@ def _languages(posting: _Posting) -> tuple[LanguageNeed, ...]:
     return tuple(found.values())
 
 
-def _deadline(posting: _Posting, today: date) -> date | None:
-    match = _DEADLINE.search(posting.folded.text)
+def deadline_of(offer: CollectedOffer, *, today: date) -> date | None:
+    """The offer's deadline as ``analyze`` reads it, without the rest of the analysis (decision D6, Q8)."""
+    if offer.deadline is not None:
+        return offer.deadline
+    description = formatted_description(offer.description)
+    title = offer.title.strip()
+    text = f"{title}\n{description}" if title else description
+    return _deadline(fold(text).text, today)
+
+
+def _deadline(folded: str, today: date) -> date | None:
+    match = _DEADLINE.search(folded)
     if match is None:
         return None
     day, month_raw, year_raw = match.groups()

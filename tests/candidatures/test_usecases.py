@@ -26,16 +26,24 @@ from rocky.candidatures.model import (
     RevisionKind,
     Stage,
 )
-from rocky.candidatures.rules import dossier
+from rocky.candidatures.rules import dossier, notes_in_force
 from rocky.candidatures.usecases import (
+    NOT_FOLLOWED_UP,
+    NOTE_EMPTY,
+    NOTHING_DONE,
+    UNKNOWN_NOTE,
+    add_note,
     cancel_last_change,
     change_stage,
+    choose_language,
     confirm_sending,
     defer_next_action,
     letter_ready,
+    mark_action_done,
     prepare_application,
     record_prefill,
     record_revisions,
+    remove_note,
     set_next_action,
     skip_letter,
     validate_letter,
@@ -566,3 +574,160 @@ def test_a_form_is_prefilled_only_when_the_application_is_ready() -> None:
             today=TODAY,
         )
     assert store.prefills(1) == []
+
+
+# The follow-up (decision D6).
+
+
+def sent(store: FakeStore, offers: FakeOffers) -> None:
+    prepare(store, offers)
+    change_stage(
+        store,
+        account_id=ACCOUNT,
+        application_id=1,
+        stage=Stage.SENT,
+        next_action=FOLLOW_UP,
+        now=NOW,
+    )
+
+
+def done(store: FakeStore) -> NextAction | None:
+    return mark_action_done(
+        store, account_id=ACCOUNT, application_id=1, now=NOW, today=TODAY
+    )
+
+
+def test_preparing_stops_the_proposed_action_at_the_deadline() -> None:
+    store = FakeStore()
+
+    prepare_application(
+        store,
+        FakeOffers(),
+        account_id=ACCOUNT,
+        offer_id=OFFER,
+        interest=INTEREST,
+        now=NOW,
+        today=TODAY,
+        deadline=date(2026, 9, 30),
+    )
+
+    assert state(store).next_action == NextAction("Finir le dossier", date(2026, 9, 30))
+
+
+def test_fait_records_the_action_done_and_proposes_the_next_one() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    sent(store, offers)
+
+    following = done(store)
+
+    assert following == NextAction("Relancer", date(2026, 10, 6))  # J+7 from today
+    assert store.rows[-1].kind is ChangeKind.ACTION_DONE
+    assert state(store).stage is Stage.SENT
+    assert store.event_types[-1] == "candidatures.action_done"
+    assert store.events[-1].payload == {
+        "done": {"label": "Relancer", "due": "2026-10-06"},
+        "next_action": {"label": "Relancer", "due": "2026-10-06"},
+    }
+
+
+def test_fait_is_undone_by_annuler() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    sent(store, offers)
+    set_action(store, NextAction("Relancer", date(2026, 10, 2)))
+    done(store)
+
+    cancelled = undo(store, offers)
+
+    assert cancelled is not None and cancelled.kind is ChangeKind.ACTION_DONE
+    assert state(store).next_action == NextAction("Relancer", date(2026, 10, 2))
+
+
+def test_fait_at_an_interview_leaves_the_next_date_to_enter() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+    change_stage(
+        store,
+        account_id=ACCOUNT,
+        application_id=1,
+        stage=Stage.INTERVIEW,
+        next_action=NextAction("Préparer l'entretien", date(2026, 10, 3)),
+        now=NOW,
+    )
+
+    assert done(store) is None
+    assert state(store).next_action is None
+
+
+def test_fait_needs_an_action_and_a_sent_application() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    with pytest.raises(InvalidChangeError, match=NOT_FOLLOWED_UP):
+        done(store)
+    set_action(store, None)
+    with pytest.raises(InvalidChangeError, match=NOTHING_DONE):
+        done(store)
+
+
+def test_a_note_is_added_and_removed_never_rewritten() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    note_id = add_note(
+        store, account_id=ACCOUNT, application_id=1, text="  Appel de Julie  ", now=NOW
+    )
+    remove_note(store, account_id=ACCOUNT, application_id=1, note_id=note_id, now=NOW)
+
+    assert [(row.text, row.removes) for row in store.note_rows] == [
+        ("Appel de Julie", None),
+        (None, note_id),
+    ]
+    assert notes_in_force(store.notes(1)) == []
+    assert store.event_types[-2:] == [
+        "candidatures.note_added",
+        "candidatures.note_removed",
+    ]
+    with pytest.raises(InvalidChangeError, match=UNKNOWN_NOTE):
+        remove_note(
+            store, account_id=ACCOUNT, application_id=1, note_id=note_id, now=NOW
+        )
+    with pytest.raises(InvalidChangeError, match=NOTE_EMPTY):
+        add_note(store, account_id=ACCOUNT, application_id=1, text="  ", now=NOW)
+
+
+def test_a_note_does_not_move_annuler() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    sent(store, offers)
+    add_note(
+        store, account_id=ACCOUNT, application_id=1, text="Relancé par tél.", now=NOW
+    )
+
+    cancelled = undo(store, offers)
+
+    assert cancelled is not None and cancelled.stage is Stage.SENT
+    assert len(notes_in_force(store.notes(1))) == 1
+
+
+def test_the_language_is_chosen_once_and_journalized() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    def choose(code: str) -> bool:
+        return choose_language(
+            store, account_id=ACCOUNT, application_id=1, language=code, now=NOW
+        )
+
+    assert not choose("fr")  # French already, nothing written
+    assert choose("en")
+    assert store.language(1) == "en"
+    assert store.events[-1].payload == {"language": "en", "previous": "fr"}
+    with pytest.raises(InvalidChangeError):
+        choose("de")
+
+
+def test_the_follow_up_of_another_account_is_not_found() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    with pytest.raises(LookupError):
+        add_note(store, account_id=99, application_id=1, text="x", now=NOW)

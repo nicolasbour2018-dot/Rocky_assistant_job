@@ -50,6 +50,8 @@ HEAD_TABLES = {
     "document_revisions",
     "application_sendings",
     "application_prefills",
+    "application_notes",
+    "application_languages",
 }
 
 

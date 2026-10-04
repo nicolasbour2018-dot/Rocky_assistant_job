@@ -20,6 +20,7 @@ from rocky.candidatures.model import (
     NewRevision,
     NewSending,
     NoLetter,
+    NoteRow,
     Prefill,
     Revision,
     Sending,
@@ -42,6 +43,8 @@ class FakeStore:
     revision_rows: list[Revision] = field(default_factory=list)
     sending_rows: list[Sending] = field(default_factory=list)
     prefill_rows: list[Prefill] = field(default_factory=list)
+    note_rows: list[NoteRow] = field(default_factory=list)
+    language_rows: list[tuple[int, str]] = field(default_factory=list)
 
     def application_for_offer(
         self, account_id: int, offer_id: int, now: datetime
@@ -231,6 +234,31 @@ class FakeStore:
             )
         )
         return prefill_id
+
+    def notes(self, application_id: int) -> list[NoteRow]:
+        return [n for n in self.note_rows if n.application_id == application_id]
+
+    def insert_note(
+        self,
+        account_id: int,
+        application_id: int,
+        *,
+        text: str | None,
+        removes: int | None,
+        now: datetime,
+    ) -> int:
+        note_id = len(self.note_rows) + 1
+        self.note_rows.append(NoteRow(note_id, application_id, text, removes, now))
+        return note_id
+
+    def language(self, application_id: int) -> str | None:
+        mine = [code for owner, code in self.language_rows if owner == application_id]
+        return mine[-1] if mine else None
+
+    def insert_language(
+        self, account_id: int, application_id: int, language: str, now: datetime
+    ) -> None:
+        self.language_rows.append((application_id, language))
 
     def append_event(self, event: NewEvent) -> None:
         self.events.append(event)

@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import StrEnum
 
 from sqlalchemy import (
@@ -23,6 +24,7 @@ from sqlalchemy import (
     Text,
     func,
     insert,
+    select,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -117,3 +119,39 @@ def append_event(connection: Connection, event: NewEvent) -> int:
         .returning(events.c.id)
     )
     return int(connection.execute(statement).scalar_one())
+
+
+@dataclass(frozen=True)
+class StoredEvent:
+    """An event as the journal keeps it."""
+
+    id: int
+    occurred_at: datetime
+    type: str
+    actor: Actor
+    payload: Mapping[str, JsonValue]
+
+
+def events_about(
+    connection: Connection, account_id: int, subject_type: str, subject_id: str
+) -> list[StoredEvent]:
+    """The events of the account about one subject, in the order they were appended (index ``ix_events_subject``)."""
+    rows = connection.execute(
+        select(events)
+        .where(
+            events.c.subject_type == subject_type,
+            events.c.subject_id == subject_id,
+            events.c.account_id == account_id,
+        )
+        .order_by(events.c.id)
+    )
+    return [
+        StoredEvent(
+            id=row.id,
+            occurred_at=row.occurred_at,
+            type=row.type,
+            actor=Actor(row.actor),
+            payload=dict(row.payload),
+        )
+        for row in rows
+    ]

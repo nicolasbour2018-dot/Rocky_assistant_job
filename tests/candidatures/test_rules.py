@@ -13,6 +13,7 @@ from rocky.candidatures.model import (
     InvalidChangeError,
     LetterState,
     NextAction,
+    NoteRow,
     Revision,
     RevisionKind,
     Sending,
@@ -20,19 +21,25 @@ from rocky.candidatures.model import (
 )
 from rocky.candidatures.rules import (
     Step,
+    Tab,
     automatic_transition_allowed,
     deferred,
     dossier,
+    is_due,
     is_overdue,
     is_stale,
     journey,
+    language_in_force,
     latest_revisions,
     make_next_action,
+    notes_in_force,
     proposal,
     proposed_channel,
     revision_filename,
     sending_in_force,
     sent_change,
+    stage_tab,
+    tabs_of,
     to_cancel,
 )
 from rocky.offres.decisions import Author
@@ -203,14 +210,14 @@ def test_automatic_transitions_never_go_back_nor_leave_an_outcome(
         (Stage.PREPARING, Step.CV, set(), False),
         (Stage.READY, Step.SEND, {Step.CV}, False),
         (Stage.PREFILLED, Step.SEND, {Step.CV}, False),
-        (Stage.SENT, None, {Step.CV, Step.SEND}, True),
-        (Stage.IN_DISCUSSION, None, {Step.CV, Step.SEND}, True),
-        (Stage.INTERVIEW, None, {Step.CV, Step.SEND}, True),
-        (Stage.OFFER, None, {Step.CV, Step.SEND}, True),
+        (Stage.SENT, Step.FOLLOW, {Step.CV, Step.SEND}, True),
+        (Stage.IN_DISCUSSION, Step.FOLLOW, {Step.CV, Step.SEND}, True),
+        (Stage.INTERVIEW, Step.FOLLOW, {Step.CV, Step.SEND}, True),
+        (Stage.OFFER, Step.FOLLOW, {Step.CV, Step.SEND}, True),
     ],
 )
 def test_the_journey_of_an_open_application_follows_its_stage(
-    stage: Stage, current: Step | None, done: set[Step], sent: bool
+    stage: Stage, current: Step, done: set[Step], sent: bool
 ) -> None:
     found = journey(stage)
 
@@ -241,13 +248,13 @@ def test_a_letter_validated_or_set_aside_is_done(letter: LetterState) -> None:
 @pytest.mark.parametrize(
     "stage", [None, Stage.REJECTED, Stage.WITHDRAWN, Stage.NO_RESPONSE]
 )
-def test_a_cancelled_or_finished_application_has_no_step_to_work_on(
+def test_a_cancelled_or_finished_application_opens_on_its_follow_up(
     stage: Stage | None,
 ) -> None:
     found = journey(stage)
 
     assert found.closed
-    assert found.current is None
+    assert found.current is Step.FOLLOW
 
 
 # Revisions and sendings (decision D5).
@@ -354,3 +361,86 @@ def test_a_change_sent_before_d5_has_no_sending() -> None:
     assert sent_change([CREATED, SENT]) == SENT
     assert sending_in_force([CREATED, SENT], []) is None
     assert sent_change([CREATED]) is None
+
+
+# The screen 📝 Candidatures and the follow-up (decision D6).
+
+
+def test_the_proposal_stops_at_the_deadline_before_the_sending() -> None:
+    deadline = date(2026, 9, 30)
+
+    assert proposal(Stage.PREPARING, TODAY, deadline) == ("Finir le dossier", deadline)
+    assert proposal(Stage.READY, TODAY, deadline) == (
+        "Envoyer la candidature",
+        deadline,
+    )
+    # After the sending, the deadline is no limit; a deadline past or far changes nothing.
+    assert proposal(Stage.SENT, TODAY, deadline) == ("Relancer", date(2026, 10, 6))
+    assert proposal(Stage.PREPARING, TODAY, date(2026, 9, 28)) == (
+        "Finir le dossier",
+        date(2026, 10, 1),
+    )
+    assert proposal(Stage.PREPARING, TODAY, date(2026, 12, 1)) == (
+        "Finir le dossier",
+        date(2026, 10, 1),
+    )
+    assert proposal(Stage.PREPARING, TODAY, TODAY) == ("Finir le dossier", TODAY)
+
+
+def test_a_done_action_sets_the_next_one() -> None:
+    relaunch_again = NextAction("Relancer", date(2026, 10, 13))
+    done = change(3, ChangeKind.ACTION_DONE, action=relaunch_again)
+
+    assert dossier([CREATED, SENT, done]).next_action == relaunch_again
+    # « Annuler » brings back the action done.
+    cancelled = change(4, ChangeKind.CANCELLATION, cancels=3)
+    assert dossier([CREATED, SENT, done, cancelled]).next_action == FOLLOW_UP
+    assert to_cancel([CREATED, SENT, done]) == done
+
+
+@pytest.mark.parametrize(
+    ("stage", "tab"),
+    [
+        (Stage.PREPARING, Tab.PREPARING),
+        (Stage.READY, Tab.READY),
+        (Stage.PREFILLED, Tab.READY),
+        (Stage.SENT, Tab.FOLLOW_UP),
+        (Stage.IN_DISCUSSION, Tab.FOLLOW_UP),
+        (Stage.INTERVIEW, Tab.FOLLOW_UP),
+        (Stage.OFFER, Tab.FOLLOW_UP),
+        (Stage.REJECTED, Tab.CLOSED),
+        (Stage.WITHDRAWN, Tab.CLOSED),
+        (Stage.NO_RESPONSE, Tab.CLOSED),
+    ],
+)
+def test_each_stage_has_its_tab(stage: Stage, tab: Tab) -> None:
+    assert stage_tab(stage) is tab
+
+
+def test_an_action_due_today_or_overdue_is_to_do() -> None:
+    assert is_due(NextAction("Relancer", TODAY), TODAY)
+    assert is_due(NextAction("Relancer", date(2026, 9, 1)), TODAY)
+    assert not is_due(NextAction("Relancer", date(2026, 9, 30)), TODAY)
+    assert not is_due(None, TODAY)
+    assert tabs_of(Stage.SENT, NextAction("Relancer", TODAY), TODAY) == {
+        Tab.FOLLOW_UP,
+        Tab.TO_DO,
+    }
+    assert tabs_of(Stage.SENT, None, TODAY) == {Tab.FOLLOW_UP}
+
+
+def test_the_notes_in_force_leave_out_the_removed_ones() -> None:
+    rows = [
+        NoteRow(1, 1, "Appel de Julie", None, AT),
+        NoteRow(2, 1, "Entretien à préparer", None, AT),
+        NoteRow(3, 1, None, 1, AT),
+    ]
+
+    assert [(note.id, note.text) for note in notes_in_force(rows)] == [
+        (2, "Entretien à préparer")
+    ]
+
+
+def test_french_until_a_language_is_chosen() -> None:
+    assert language_in_force(None) == "fr"
+    assert language_in_force("en") == "en"

@@ -9,6 +9,8 @@ from enum import StrEnum
 from urllib.parse import urlsplit
 
 from rocky.candidatures.model import (
+    BEFORE_SENDING,
+    DEFAULT_LANGUAGE,
     DEFER_DAYS,
     FORWARD,
     ISSUES,
@@ -20,6 +22,8 @@ from rocky.candidatures.model import (
     InvalidChangeError,
     LetterState,
     NextAction,
+    Note,
+    NoteRow,
     Revision,
     RevisionKind,
     Sending,
@@ -27,7 +31,14 @@ from rocky.candidatures.model import (
 )
 
 # The changes that set the next action: a creation and a stage change set it too (None: no action).
-_SETS_ACTION = frozenset({ChangeKind.CREATED, ChangeKind.STAGE, ChangeKind.NEXT_ACTION})
+_SETS_ACTION = frozenset(
+    {
+        ChangeKind.CREATED,
+        ChangeKind.STAGE,
+        ChangeKind.NEXT_ACTION,
+        ChangeKind.ACTION_DONE,
+    }
+)
 
 
 def standing(rows: Iterable[Change]) -> list[Change]:
@@ -69,13 +80,22 @@ def to_cancel(rows: Iterable[Change]) -> Change | None:
     return changes[-1] if changes else None
 
 
-def proposal(stage: Stage, today: date) -> tuple[str, date | None] | None:
+def proposal(
+    stage: Stage, today: date, deadline: date | None = None
+) -> tuple[str, date | None] | None:
     """The next action proposed on reaching ``stage`` (Q3): its label and its date (None: a date to enter); None for
-    an outcome."""
+    an outcome. Before the sending, the date stops at the offer's ``deadline`` when it is not past (decision D6, Q8)."""
     proposed = PROPOSALS.get(stage)
     if proposed is None:
         return None
     due = None if proposed.days is None else today + timedelta(days=proposed.days)
+    if (
+        due is not None
+        and deadline is not None
+        and stage in BEFORE_SENDING
+        and today <= deadline < due
+    ):
+        due = deadline
     return proposed.label, due
 
 
@@ -121,13 +141,22 @@ class Step(StrEnum):
     CV = "cv"
     LETTER = "lettre"
     SEND = "envoi"
+    FOLLOW = "suivi"  # decision D6, Q2
+
+
+STEP_LABELS = {
+    Step.CV: "CV",
+    Step.LETTER: "Lettre",
+    Step.SEND: "Envoi",
+    Step.FOLLOW: "Suivi",
+}
 
 
 @dataclass(frozen=True)
 class Journey:
     """Where the application stands on its page: the step to work on, the steps done, sent or closed."""
 
-    current: Step | None  # None once sent, or closed
+    current: Step  # « Suivi » once sent, or closed
     done: frozenset[Step]
     sent: bool
     closed: bool  # an outcome reached, or the creation cancelled
@@ -143,7 +172,7 @@ def journey(stage: Stage | None, letter: LetterState = LetterState.NONE) -> Jour
     one is validated or « Pas de lettre » chosen (D4, Q16); « Lettre prête » or « Pas de lettre » then leads to
     « Prête à envoyer ». An application made ready before D4 shows its letter not done."""
     if stage is None or stage in ISSUES:
-        return Journey(None, frozenset(), sent=False, closed=True)
+        return Journey(Step.FOLLOW, frozenset(), sent=False, closed=True)
     letter_done = (
         frozenset({Step.LETTER}) if letter is not LetterState.NONE else frozenset()
     )
@@ -155,11 +184,77 @@ def journey(stage: Stage | None, letter: LetterState = LetterState.NONE) -> Jour
         )
     if stage in _SENT_OR_BEYOND:
         return Journey(
-            None, frozenset({Step.CV, Step.SEND}) | letter_done, sent=True, closed=False
+            Step.FOLLOW,
+            frozenset({Step.CV, Step.SEND}) | letter_done,
+            sent=True,
+            closed=False,
         )
     return Journey(
         Step.SEND, frozenset({Step.CV}) | letter_done, sent=False, closed=False
     )
+
+
+# The screen 📝 Candidatures (decision D6, Q1): tabs by stage, and « À faire » across them.
+
+
+class Tab(StrEnum):
+    TO_DO = "a-faire"
+    TO_PREPARE = "a-preparer"
+    PREPARING = "preparation"
+    READY = "pretes"
+    FOLLOW_UP = "suivi"
+    CLOSED = "closes"
+
+
+TAB_LABELS = {
+    Tab.TO_DO: "À faire",
+    Tab.TO_PREPARE: "À préparer",
+    Tab.PREPARING: "En préparation",
+    Tab.READY: "Prêtes",
+    Tab.FOLLOW_UP: "Suivi",
+    Tab.CLOSED: "Closes",
+}
+
+
+def is_due(action: NextAction | None, today: date) -> bool:
+    """The action is for today or overdue: the application is « À faire »."""
+    return action is not None and action.due <= today
+
+
+def stage_tab(stage: Stage) -> Tab:
+    """The tab of an application by its stage; « À faire » shows it too while its action is due."""
+    if stage is Stage.PREPARING:
+        return Tab.PREPARING
+    if stage in ISSUES:
+        return Tab.CLOSED
+    if stage in BEFORE_SENDING:
+        return Tab.READY
+    return Tab.FOLLOW_UP
+
+
+def tabs_of(stage: Stage, action: NextAction | None, today: date) -> frozenset[Tab]:
+    tabs = {stage_tab(stage)}
+    if is_due(action, today):
+        tabs.add(Tab.TO_DO)
+    return frozenset(tabs)
+
+
+# Notes and language of an application (decision D6, Q4, Q6).
+
+
+def notes_in_force(rows: Iterable[NoteRow]) -> list[Note]:
+    """The notes not removed, the latest first."""
+    ordered = sorted(rows, key=lambda row: row.id)
+    removed = {row.removes for row in ordered if row.removes is not None}
+    return [
+        Note(row.id, row.text, row.created_at)
+        for row in reversed(ordered)
+        if row.text is not None and row.id not in removed
+    ]
+
+
+def language_in_force(chosen: str | None) -> str:
+    return chosen or DEFAULT_LANGUAGE
 
 
 # Revisions and sendings (decision D5).

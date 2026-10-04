@@ -31,6 +31,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from rocky.candidatures.model import (
+    LANGUAGES,
+    NOTE_MAX_LENGTH,
     Application,
     Change,
     ChangeKind,
@@ -50,6 +52,7 @@ from rocky.candidatures.model import (
     NewSending,
     NextAction,
     NoLetter,
+    NoteRow,
     Prefill,
     Revision,
     RevisionKind,
@@ -251,6 +254,44 @@ application_prefills = Table(
     Column("missing", JSONB, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Index("ix_application_prefills_application_id", "application_id", "id"),
+)
+
+
+# The notes of an application (decision D6, Q6): appended, never rewritten; a row with ``removes_id`` removes one.
+application_notes = Table(
+    "application_notes",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("text", Text),
+    Column("removes_id", BigInteger, ForeignKey("application_notes.id")),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    UniqueConstraint("removes_id"),
+    CheckConstraint(
+        "(text IS NULL) = (removes_id IS NOT NULL)", name="note_or_removal"
+    ),
+    CheckConstraint(
+        f"text IS NULL OR char_length(text) BETWEEN 1 AND {NOTE_MAX_LENGTH}",
+        name="text_length",
+    ),
+    Index("ix_application_notes_application_id", "application_id", "id"),
+)
+
+# The language of an application (decision D6, Q4): appended at each choice, the latest in force.
+application_languages = Table(
+    "application_languages",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("language", Text, nullable=False),
+    Column("chosen_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint(
+        "language IN ({})".format(", ".join(f"'{code}'" for code in LANGUAGES)),
+        name="language",
+    ),
+    Index("ix_application_languages_application_id", "application_id", "id"),
 )
 
 
@@ -610,6 +651,66 @@ class SqlApplicationStore:
             .returning(application_prefills.c.id)
         ).scalar_one()
         return prefill_id
+
+    def notes(self, application_id: int) -> list[NoteRow]:
+        rows = self._conn.execute(
+            select(application_notes)
+            .where(application_notes.c.application_id == application_id)
+            .order_by(application_notes.c.id)
+        )
+        return [
+            NoteRow(
+                id=row.id,
+                application_id=row.application_id,
+                text=row.text,
+                removes=row.removes_id,
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+
+    def insert_note(
+        self,
+        account_id: int,
+        application_id: int,
+        *,
+        text: str | None,
+        removes: int | None,
+        now: datetime,
+    ) -> int:
+        note_id: int = self._conn.execute(
+            application_notes.insert()
+            .values(
+                application_id=application_id,
+                account_id=account_id,
+                text=text,
+                removes_id=removes,
+                created_at=now,
+            )
+            .returning(application_notes.c.id)
+        ).scalar_one()
+        return note_id
+
+    def language(self, application_id: int) -> str | None:
+        language: str | None = self._conn.execute(
+            select(application_languages.c.language)
+            .where(application_languages.c.application_id == application_id)
+            .order_by(application_languages.c.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        return language
+
+    def insert_language(
+        self, account_id: int, application_id: int, language: str, now: datetime
+    ) -> None:
+        self._conn.execute(
+            application_languages.insert().values(
+                application_id=application_id,
+                account_id=account_id,
+                language=language,
+                chosen_at=now,
+            )
+        )
 
     def append_event(self, event: NewEvent) -> None:
         append_event(self._conn, event)
