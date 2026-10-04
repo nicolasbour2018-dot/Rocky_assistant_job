@@ -9,6 +9,7 @@ from __future__ import annotations
 from rocky.candidatures.sql import (
     application_changes,
     application_cv_selections,
+    application_domains,
     application_languages,
     application_letters,
     application_messages,
@@ -18,7 +19,13 @@ from rocky.candidatures.sql import (
     applications,
     document_revisions,
 )
-from rocky.messages.sql import email_messages, mail_syncs, mailboxes
+from rocky.messages.sql import (
+    email_messages,
+    mail_model_calls,
+    mail_syncs,
+    mailboxes,
+    message_decisions,
+)
 from rocky.offres.sql import (
     job_decisions,
     job_offers,
@@ -54,6 +61,7 @@ __all__ = [
     "accounts",
     "application_changes",
     "application_cv_selections",
+    "application_domains",
     "application_languages",
     "application_letters",
     "application_messages",
@@ -73,8 +81,10 @@ __all__ = [
     "job_decisions",
     "job_offers",
     "languages",
+    "mail_model_calls",
     "mail_syncs",
     "mailboxes",
+    "message_decisions",
     "offer_scores",
     "offer_summaries",
     "offer_tracks",

@@ -26,6 +26,7 @@ from rocky.candidatures.model import (
     FOLLOW_UP_STAGES,
     STAGE_LABELS,
     InvalidChangeError,
+    MailTarget,
     NextAction,
     Stage,
 )
@@ -138,6 +139,81 @@ def rows_of(connection: Connection, account_id: int, today: date) -> list[Row]:
         for application, changes in found
         if (state := dossier(changes)).stage is not None
     ]
+
+
+# The stages a received message may concern (decision E2, Q11): from « Préremplie » on, the outcomes included.
+MAIL_STAGES = frozenset(
+    {
+        Stage.PREFILLED,
+        Stage.SENT,
+        Stage.IN_DISCUSSION,
+        Stage.INTERVIEW,
+        Stage.OFFER,
+        Stage.REJECTED,
+        Stage.WITHDRAWN,
+        Stage.NO_RESPONSE,
+    }
+)
+
+
+def mail_targets(connection: Connection, account_id: int) -> list[MailTarget]:
+    """For the module ``messages`` (decision E2, Q3, Q11), on the caller's connection: the applications of the account
+    a received message may concern, with what recognises their employer."""
+    store = SqlApplicationStore(connection)
+    found = [
+        (application, state.stage)
+        for application, changes in store.applications_of(account_id)
+        if (state := dossier(changes)).stage in MAIL_STAGES
+    ]
+    headings = offres_web.offer_headings(
+        connection, account_id, [application.offer_id for application, _ in found]
+    )
+    targets: list[MailTarget] = []
+    for application, stage in found:
+        heading = headings.get(application.offer_id)
+        if heading is None or stage is None:
+            continue
+        sendings = store.sendings(application.id)
+        targets.append(
+            MailTarget(
+                application_id=application.id,
+                company=heading.company or "",
+                title=heading.title,
+                stage=stage,
+                sent_on=sendings[-1].sent_on if sendings else None,
+                employer_domain=store.employer_domain(application.id),
+                links=tuple(
+                    link for link in (heading.url, heading.application_url) if link
+                ),
+            )
+        )
+    return targets
+
+
+def application_labels(
+    connection: Connection, account_id: int, application_ids: Iterable[int]
+) -> dict[int, str]:
+    """« Employeur — intitulé » of the account's applications among ``application_ids`` (the module ``messages``)."""
+    wanted = set(application_ids)
+    if not wanted:
+        return {}
+    found = [
+        application
+        for application, _ in SqlApplicationStore(connection).applications_of(
+            account_id
+        )
+        if application.id in wanted
+    ]
+    headings = offres_web.offer_headings(
+        connection, account_id, [application.offer_id for application in found]
+    )
+    return {
+        application.id: " — ".join(
+            part for part in (heading.company, heading.title) if part
+        )
+        for application in found
+        if (heading := headings.get(application.offer_id)) is not None
+    }
 
 
 def to_prepare_of(

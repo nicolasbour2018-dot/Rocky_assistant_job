@@ -72,6 +72,8 @@ x-app-image: &app-image
     # Language model (docs/decisions/C3-analyse.md): summaries only; without a key they are "unavailable".
     ROCKY_GEMINI_API_KEY: ${ROCKY_GEMINI_API_KEY:-}
     ROCKY_GEMINI_MODEL: ${ROCKY_GEMINI_MODEL:-gemini-3.5-flash-lite}
+    ROCKY_LLM_MAIL_HOUR_LIMIT: ${ROCKY_LLM_MAIL_HOUR_LIMIT:-20}
+    ROCKY_LLM_MAIL_DAY_LIMIT: ${ROCKY_LLM_MAIL_DAY_LIMIT:-60}
     # Gmail read only (docs/decisions/E1-collecte.md): without these three values, Gmail is "not configured".
     ROCKY_GOOGLE_CLIENT_ID: ${ROCKY_GOOGLE_CLIENT_ID:-}
     ROCKY_GOOGLE_CLIENT_SECRET: ${ROCKY_GOOGLE_CLIENT_SECRET:-}

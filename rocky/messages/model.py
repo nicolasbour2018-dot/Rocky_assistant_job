@@ -132,18 +132,6 @@ class MailSync:
     counts: SyncCounts
 
 
-@dataclass(frozen=True)
-class StoredMessage:
-    """A stored message as the raw list shows it (Q8)."""
-
-    id: int
-    mailbox_address: str
-    received_at: datetime
-    sender: str
-    subject: str
-    found_by: tuple[Query, ...]
-
-
 class GmailError(Exception):
     """Gmail or Google gave no usable answer; ``reason`` is shown as is (French), without any token."""
 
@@ -243,8 +231,6 @@ class Store(Protocol):
     def last_completed_sync(self, mailbox_id: int) -> MailSync | None: ...
 
     def last_sync(self, mailbox_id: int) -> MailSync | None: ...
-
-    def recent_messages(self, account_id: int, limit: int) -> list[StoredMessage]: ...
 
     def append_event(self, event: NewEvent) -> int: ...
 

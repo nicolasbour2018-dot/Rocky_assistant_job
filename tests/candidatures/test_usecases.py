@@ -44,6 +44,7 @@ from rocky.candidatures.usecases import (
     record_prefill,
     record_revisions,
     remove_note,
+    set_employer_domain,
     set_next_action,
     skip_letter,
     validate_letter,
@@ -725,6 +726,30 @@ def test_the_language_is_chosen_once_and_journalized() -> None:
     assert store.events[-1].payload == {"language": "en", "previous": "fr"}
     with pytest.raises(InvalidChangeError):
         choose("de")
+
+
+def test_the_employer_domain_is_kept_normalized_and_journalized() -> None:
+    """Decision E2, Q3: the replies from this domain are attached to the application."""
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    def typed(value: str) -> bool:
+        return set_employer_domain(
+            store, account_id=ACCOUNT, application_id=1, typed=value, now=NOW
+        )
+
+    assert typed("RH@Recrutement.Covea.fr")
+    assert store.employer_domain(1) == "recrutement.covea.fr"
+    assert not typed("https://recrutement.covea.fr/offres")  # the same, nothing written
+    assert typed("")
+    assert store.employer_domain(1) is None
+    assert store.events[-1].type == "candidatures.employer_domain_set"
+    assert store.events[-1].payload == {
+        "domain": None,
+        "previous": "recrutement.covea.fr",
+    }
+    with pytest.raises(InvalidChangeError):
+        typed("pas un domaine")
 
 
 def test_the_follow_up_of_another_account_is_not_found() -> None:

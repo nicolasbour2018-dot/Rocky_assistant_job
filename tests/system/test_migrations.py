@@ -55,6 +55,9 @@ HEAD_TABLES = {
     "mailboxes",
     "mail_syncs",
     "email_messages",
+    "message_decisions",
+    "mail_model_calls",
+    "application_domains",
 }
 
 

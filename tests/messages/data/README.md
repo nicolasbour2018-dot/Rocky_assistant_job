@@ -1,4 +1,4 @@
-# Jeux de données Gmail (E1)
+# Jeux de données Gmail (E1, E2)
 
 Réponses **reconstruites** au format de l'API Gmail v1 et d'OAuth Google (`format=full`, corps en base64url, en-têtes
 décodés), d'après la documentation publique. Aucune n'est une capture d'une vraie boîte : personnes, adresses,
@@ -17,3 +17,18 @@ employeurs et liens sont fictifs (`example.com`, `exemple-conseil.fr`, `societe-
 
 Les noms évitent `token*.json`, réservé aux secrets par le garde-fou (`AGENTS.md`, §3).
 Générés une fois par un script jetable ; à remplacer par des captures anonymisées si une réponse réelle diffère.
+
+## Échantillon de l'archive A1 (E2)
+
+Extraits de `backups/rocky-v1-20260924/exports/csv/` (archive A1, lecture seule) par un script jetable, le 04/10/2026.
+
+| Fichier | Contenu |
+|---|---|
+| `archive_sample.csv` | 92 messages reçus du 21/08 au 24/09/2026 : retours d'employeurs, messages des plateformes, alertes, bruit, et les cas de l'ancien Rocky (Quora / French bee, METRO / Ministère de la justice, OVH et Google Agenda / Choisir le Service Public…). Colonnes : expéditeur, objet, extrait Gmail (l'archive n'a pas de corps), classement et rattachement de l'ancien Rocky (`v1_*`), **étiquettes** `category` et `application`, `note`, `checked` (vérifié par Nicolas) |
+| `archive_applications.csv` | Les candidatures de l'archive (une par offre) : employeur, intitulé, étape traduite dans le nouveau Rocky, liens de l'offre sans paramètres |
+
+Anonymisation : le nom et les adresses de Nicolas deviennent « Camille Martin » et `candidat@example.com` ; les
+personnes nommées (recruteurs, réseau) deviennent « Recrutement » ou « Une personne » ; numéros de client, de colis et
+noms de domaine personnels remplacés. Les employeurs restent : ils sont la matière du rattachement.
+Étiquettes : proposées par l'agent, vérifiées une à une par Nicolas (`checked = oui`). Une catégorie vide veut dire « À
+vérifier ».

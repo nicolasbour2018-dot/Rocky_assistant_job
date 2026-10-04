@@ -1,5 +1,5 @@
-"""📬 Messages (step E1, Q8): the Gmail mailboxes of the account, « Relever maintenant », the raw list of the last
-messages collected. Nothing is decided here (E2, E4).
+"""📬 Messages (steps E1, E2): the Gmail mailboxes of the account, « Relever maintenant », the last messages with
+their classification and its proof (« Messages triés », E2 Q14). No application changes stage here (E4).
 
 A collection runs in the planner's thread, never in a request: the screen follows it by polling a fragment. Only
 the return from Google (the exchange of its code) calls Google inside a request.
@@ -18,6 +18,15 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
+from rocky.messages.classification.model import (
+    CATEGORY_LABELS,
+    EMPLOYER_CATEGORIES,
+    LEVEL_LABELS,
+    TIER_LABELS,
+    VIEW_LABELS,
+    Level,
+    View,
+)
 from rocky.messages.model import (
     MAILBOX_STATUS_LABELS,
     QUERY_LABELS,
@@ -36,13 +45,15 @@ from rocky.messages.oauth import (
     redirect_uri,
     seal_pending,
 )
-from rocky.messages.service import MessagesService, nothing_decided
+from rocky.messages.service import MessagesService
 from rocky.messages.usecases import (
     CollectBusyError,
     MailboxNotConnectedError,
     MailboxNotFoundError,
 )
+from rocky.offres.decisions import Author
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.llm import GeminiModel
 from rocky.system.scheduler import Scheduler
 from rocky.system.shell import is_htmx, page, wants_fragment
 
@@ -80,23 +91,32 @@ router = APIRouter(prefix="/messages")
 
 def install(app: FastAPI) -> None:
     settings = app.state.settings
-    # E2 and E4 replace this hook on app.state: it is read again at each collection, never kept here.
-    app.state.messages_collected = nothing_decided
 
     def collected(account_id: int, message_ids: Sequence[int]) -> None:
+        # Read again at each collection, never kept here: a test or E4 may replace it on app.state.
         app.state.messages_collected(account_id, message_ids)
 
-    app.state.messages = MessagesService(
+    service = MessagesService(
         app.state.engine,
         settings=settings.gmail,
         clock=app.state.auth.clock,
         on_collected=collected,
+        llm=settings.llm,
+        model=GeminiModel(settings.llm) if settings.llm.api_key else None,
     )
+    app.state.messages = service
+    # E2: what follows a collection is the classification of the account's messages without a decision.
+    app.state.messages_collected = service.classify_after_collection
     templates: Jinja2Templates = app.state.templates
     templates.env.globals.update(
         mailbox_status_labels=MAILBOX_STATUS_LABELS,
         sync_status_labels=SYNC_STATUS_LABELS,
         query_labels=QUERY_LABELS,
+        category_labels=CATEGORY_LABELS,
+        employer_categories=EMPLOYER_CATEGORIES,
+        level_labels=LEVEL_LABELS,
+        tier_labels=TIER_LABELS,
+        view_labels=VIEW_LABELS,
     )
     app.include_router(router)
 
@@ -110,13 +130,22 @@ def _task_name(account_id: int) -> str:
     return f"messages-compte-{account_id}"
 
 
+def _view(vue: str) -> View:
+    return View(vue) if vue in set(View) else View.TO_LOOK_AT
+
+
 def _context(
-    request: Request, account_id: int, *, launched: bool = False, **extra: Any
+    request: Request,
+    account_id: int,
+    *,
+    launched: bool = False,
+    view: View = View.TO_LOOK_AT,
+    **extra: Any,
 ) -> dict[str, Any]:
     """``launched``: a collection was just asked. The planner may already have taken it from its queue without having
     written its row yet: the screen polls all the same, or it would show the previous collection."""
     service = _service(request)
-    state = service.state(account_id)
+    state = service.state(account_id, view)
     scheduler: Scheduler = request.app.state.scheduler
     return {
         "configured": service.configured,
@@ -126,6 +155,9 @@ def _context(
         or _task_name(account_id) in scheduler.pending(),
         "MailboxStatus": MailboxStatus,
         "SyncStatus": SyncStatus,
+        "View": View,
+        "Level": Level,
+        "Author": Author,
         **extra,
     }
 
@@ -143,19 +175,31 @@ def _page(
 
 
 @router.get("", response_class=HTMLResponse)
-def show(request: Request, account: CurrentAccount, boite: str = "") -> HTMLResponse:
+def show(
+    request: Request, account: CurrentAccount, boite: str = "", vue: str = ""
+) -> HTMLResponse:
     # After a connection, its first collection was just asked (``callback``).
     launched = boite in ("connectee", "reconnectee")
-    return _page(request, account.id, notice=NOTICES.get(boite), launched=launched)
+    return _page(
+        request,
+        account.id,
+        notice=NOTICES.get(boite),
+        launched=launched,
+        view=_view(vue),
+    )
 
 
 @router.get("/contenu", response_class=HTMLResponse)
-def content_fragment(request: Request, account: CurrentAccount) -> Response:
+def content_fragment(
+    request: Request, account: CurrentAccount, vue: str = ""
+) -> Response:
     """The mailboxes and the last messages, polled while a collection runs."""
     if not wants_fragment(request):
         return RedirectResponse("/messages", status_code=303)
     templates: Jinja2Templates = request.app.state.templates
-    return templates.TemplateResponse(request, CONTENT, _context(request, account.id))
+    return templates.TemplateResponse(
+        request, CONTENT, _context(request, account.id, view=_view(vue))
+    )
 
 
 @router.post("/relever", response_class=HTMLResponse)

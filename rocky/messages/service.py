@@ -1,7 +1,10 @@
-"""The mail collection assembled on the database and Google: used by the planner, the screen and ``rocky-admin``.
+"""The mail collection and classification assembled on the database, Google and the language model: used by the
+planner, the screen and ``rocky-admin``.
 
 Decision ``docs/decisions/E1-collecte.md``. After each collection, the hook ``on_collected`` receives the ids of the
-messages it wrote, once they are committed: the only way in for what decides about a message (E2, E4).
+messages it wrote, once they are committed: the only way in for what decides about a message (E2, E4). Decision
+``docs/decisions/E2-classification.md``: the classification takes every message of the account without a decision,
+so that a message a pass could not decide is taken up by the next one.
 """
 
 from __future__ import annotations
@@ -9,22 +12,33 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from datetime import timedelta
 
 import httpx2
 from sqlalchemy import Engine
 
+from rocky.candidatures import web as candidatures_web
+from rocky.candidatures.model import MailTarget
+from rocky.messages.classification.model import Limits, SortedMessage, View
+from rocky.messages.classification.usecases import (
+    DAY_LIMIT_REASON,
+    NOT_CONFIGURED_REASON,
+    WITHOUT_MODEL_REASON,
+    ClassifyBusyError,
+    ClassifyReport,
+    classify_messages,
+)
 from rocky.messages.gmail import GoogleGmail
 from rocky.messages.model import (
     Gmail,
     Mailbox,
     MailSync,
-    StoredMessage,
     SyncResult,
     SyncStatus,
     Trigger,
 )
 from rocky.messages.oauth import GoogleOAuth, Grant
-from rocky.messages.sql import SqlStorage
+from rocky.messages.sql import SqlStorage, SqlStore
 from rocky.messages.usecases import (
     Clock,
     CollectBusyError,
@@ -34,14 +48,16 @@ from rocky.messages.usecases import (
     disconnect_mailbox,
     recover_interrupted,
 )
-from rocky.system.config import GmailSettings
+from rocky.system.config import GmailSettings, LlmSettings
 from rocky.system.crypto import TokenCipher
+from rocky.system.llm import JsonModel
 
 logger = logging.getLogger(__name__)
 
 # The messages a collection wrote, after its commit: (account id, message ids), an empty list when nothing is new.
 type CollectedHook = Callable[[int, Sequence[int]], None]
-RECENT_MESSAGES = 50
+SHOWN_MESSAGES = 50
+NEXT_ROUND_REASON = "Classement au prochain passage (toutes les heures)."
 
 
 class GmailNotConfiguredError(Exception):
@@ -57,7 +73,13 @@ class MailboxView:
 @dataclass(frozen=True)
 class MessagesState:
     mailboxes: list[MailboxView]
-    recent: list[StoredMessage]
+    view: View
+    messages: list[SortedMessage]
+    # « Employeur — intitulé » of the applications the shown messages are attached to.
+    applications: dict[int, str]
+    # Messages without a decision yet, and why (Q14).
+    waiting: int
+    waiting_reason: str | None
 
     @property
     def running(self) -> bool:
@@ -68,7 +90,7 @@ class MessagesState:
 
 
 def nothing_decided(account_id: int, message_ids: Sequence[int]) -> None:
-    """E1 decides nothing about a message: E2 and E4 install their own hook."""
+    """No decision: the hook of a service built without one (the collection alone, in its tests)."""
 
 
 class MessagesService:
@@ -81,8 +103,17 @@ class MessagesService:
         on_collected: CollectedHook = nothing_decided,
         transport: httpx2.BaseTransport | None = None,
         gmail: Gmail | None = None,
+        llm: LlmSettings | None = None,
+        model: JsonModel | None = None,
     ) -> None:
+        self.engine = engine
         self.storage = SqlStorage(engine)
+        # The language model of the classification (E2); None: the rules only, the others wait for a key.
+        self.model = model
+        settings_llm = llm or LlmSettings()
+        self.limits = Limits(
+            per_hour=settings_llm.mail_per_hour, per_day=settings_llm.mail_per_day
+        )
         self.settings = settings
         self.oauth = GoogleOAuth(settings, transport=transport)
         self._gmail = gmail or GoogleGmail(self.oauth)
@@ -180,13 +211,90 @@ class MessagesService:
             )
         return closed
 
-    def state(self, account_id: int) -> MessagesState:
+    def targets(self, account_id: int) -> list[MailTarget]:
+        """The applications a message of the account may concern (the module ``candidatures``, Q11)."""
+        with self.engine.connect() as connection:
+            return candidatures_web.mail_targets(connection, account_id)
+
+    def classify(
+        self,
+        account_id: int,
+        *,
+        use_model: bool = True,
+        max_calls: int | None = None,
+        again: bool = False,
+    ) -> ClassifyReport:
+        """The messages of the account without a decision (``again``: all of them). Raises ``ClassifyBusyError``."""
+        report = classify_messages(
+            self.storage,
+            account_id=account_id,
+            targets=self.targets,
+            model=self.model if use_model else None,
+            clock=self._clock,
+            limits=self.limits,
+            max_calls=max_calls,
+            again=again,
+            no_model_reason=NOT_CONFIGURED_REASON
+            if use_model
+            else WITHOUT_MODEL_REASON,
+        )
+        logger.info(
+            "classification of account %s: %s by the rules, %s by the model, %s calls, %s waiting",
+            account_id,
+            report.by_rules,
+            report.by_model,
+            report.calls,
+            report.waiting,
+        )
+        return report
+
+    def classify_after_collection(
+        self, account_id: int, message_ids: Sequence[int]
+    ) -> None:
+        """The hook after a collection (E2): every message of the account still without a decision, not only these."""
+        try:
+            self.classify(account_id)
+        except ClassifyBusyError:
+            logger.info("account %s is already being classified", account_id)
+
+    def state(self, account_id: int, view: View = View.TO_LOOK_AT) -> MessagesState:
         with self.storage.transaction() as store:
             mailboxes = store.mailboxes(account_id)
-            return MessagesState(
-                mailboxes=[
-                    MailboxView(mailbox, store.last_sync(mailbox.id))
-                    for mailbox in mailboxes
-                ],
-                recent=store.recent_messages(account_id, RECENT_MESSAGES),
+            messages = store.sorted_messages(account_id, view, SHOWN_MESSAGES)
+            waiting = store.waiting(account_id)
+            reason = self._waiting_reason(store, account_id) if waiting else None
+            views = [
+                MailboxView(mailbox, store.last_sync(mailbox.id))
+                for mailbox in mailboxes
+            ]
+        attached = {
+            message.decision.application_id
+            for message in messages
+            if message.decision is not None
+            and message.decision.application_id is not None
+        }
+        with self.engine.connect() as connection:
+            labels = candidatures_web.application_labels(
+                connection, account_id, attached
             )
+        return MessagesState(
+            mailboxes=views,
+            view=view,
+            messages=messages,
+            applications=labels,
+            waiting=waiting,
+            waiting_reason=reason,
+        )
+
+    def _waiting_reason(self, store: SqlStore, account_id: int) -> str:
+        if self.model is None:
+            return NOT_CONFIGURED_REASON
+        now = self._clock()
+        if (
+            store.calls_since(account_id, now - timedelta(days=1))
+            >= self.limits.per_day
+        ):
+            return DAY_LIMIT_REASON
+        return (
+            store.last_failure(account_id, now - timedelta(days=1)) or NEXT_ROUND_REASON
+        )

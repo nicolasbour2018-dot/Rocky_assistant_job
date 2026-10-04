@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -15,6 +16,13 @@ from typing import TextIO
 
 from sqlalchemy import Engine
 
+from rocky.messages.classification.model import (
+    CATEGORY_LABELS,
+    CLASSIFY_VERSION,
+    LEVEL_LABELS,
+    View,
+)
+from rocky.messages.classification.usecases import ClassifyBusyError
 from rocky.messages.model import SYNC_STATUS_LABELS, SyncStatus
 from rocky.messages.model import Trigger as MailTrigger
 from rocky.messages.service import MessagesService
@@ -46,6 +54,7 @@ from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import Clock
 from rocky.system.config import load_settings
 from rocky.system.db import create_db_engine
+from rocky.system.llm import GeminiModel
 
 COUNT_LABELS = {
     "skills": "compétences",
@@ -266,6 +275,61 @@ def collect_messages(
     return 0 if succeeded else 1
 
 
+def classify_account_messages(
+    engine: Engine,
+    *,
+    email: str,
+    service: MessagesService,
+    use_model: bool,
+    max_calls: int | None,
+    again: bool,
+    out: TextIO,
+) -> int:
+    """Classify the messages of ``email`` (decision E2): those without a decision, or all of them again; the language
+    model is called within the account's limits and ``max_calls`` (network: with Nicolas's agreement)."""
+    try:
+        address = normalize_email(email)
+    except InvalidEmailError as error:
+        out.write(f"{error}\n")
+        return 2
+    with engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(address)
+    if account is None:
+        out.write(f"Aucun compte pour {address}.\n")
+        return 1
+    try:
+        report = service.classify(
+            account.id, use_model=use_model, max_calls=max_calls, again=again
+        )
+    except ClassifyBusyError:
+        out.write("Un classement de ce compte est déjà en cours.\n")
+        return 1
+    out.write(
+        f"Classement {CLASSIFY_VERSION} : {report.by_rules} décision(s) par les règles, "
+        f"{report.by_model} par le modèle ({report.refused} réponse(s) refusée(s)), "
+        f"{report.calls} appel(s) au modèle, {report.waiting} message(s) en attente.\n"
+    )
+    if report.reason:
+        out.write(f"raison de l'attente : {report.reason}\n")
+    with service.storage.transaction() as store:
+        shown = store.sorted_messages(account.id, View.ALL, 10_000)
+    counts = Counter(
+        (
+            CATEGORY_LABELS[m.decision.category]
+            if m.decision.category
+            else "À vérifier",
+            LEVEL_LABELS[m.decision.level],
+        )
+        for m in shown
+        if m.decision is not None
+    )
+    out.writelines(
+        f"  {category} · {level} : {count}\n"
+        for (category, level), count in sorted(counts.items())
+    )
+    return 0
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -322,6 +386,28 @@ def main(argv: Sequence[str] | None = None) -> int:
         "messages sont enregistrés, puis chaque collecte est résumée",
     )
     messages_parser.add_argument("email")
+    classify_parser = commands.add_parser(
+        "messages-classer",
+        help="classe les messages d'un compte qui n'ont pas de décision (règles, puis modèle de "
+        "langage dans les plafonds du compte), puis résume les décisions",
+    )
+    classify_parser.add_argument("email")
+    classify_parser.add_argument(
+        "--sans-llm",
+        action="store_true",
+        help="règles seules : aucun appel au modèle, les messages qu'elles ne tranchent pas restent en attente",
+    )
+    classify_parser.add_argument(
+        "--limite",
+        type=int,
+        default=None,
+        help="nombre maximal d'appels au modèle pendant ce classement",
+    )
+    classify_parser.add_argument(
+        "--reclasser",
+        action="store_true",
+        help="classe à nouveau tous les messages (jamais par-dessus une décision de l'utilisateur)",
+    )
     arguments = parser.parse_args(argv)
 
     settings = load_settings()
@@ -345,6 +431,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                 engine,
                 email=arguments.email,
                 service=MessagesService(engine, settings=settings.gmail, clock=utc_now),
+                out=sys.stdout,
+            )
+        if arguments.command == "messages-classer":
+            return classify_account_messages(
+                engine,
+                email=arguments.email,
+                service=MessagesService(
+                    engine,
+                    settings=settings.gmail,
+                    clock=utc_now,
+                    llm=settings.llm,
+                    model=GeminiModel(settings.llm) if settings.llm.api_key else None,
+                ),
+                use_model=not arguments.sans_llm,
+                max_calls=arguments.limite,
+                again=arguments.reclasser,
                 out=sys.stdout,
             )
         if arguments.command == "sources":

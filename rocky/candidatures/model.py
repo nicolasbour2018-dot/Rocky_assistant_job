@@ -147,6 +147,20 @@ class Application:
     offer_id: int
 
 
+@dataclass(frozen=True)
+class MailTarget:
+    """An application a received message may concern (decision E2, Q11), as the module ``messages`` sees it."""
+
+    application_id: int
+    company: str
+    title: str
+    stage: Stage
+    sent_on: date | None
+    # The employer's e-mail domain typed in the dossier (Q3), and the offer's links it may be deduced from.
+    employer_domain: str | None
+    links: tuple[str, ...]
+
+
 # The letter and the accompanying message of an application (decision D4).
 
 
@@ -508,6 +522,14 @@ class ApplicationStore(Protocol):
 
     def insert_language(
         self, account_id: int, application_id: int, language: str, now: datetime
+    ) -> None: ...
+
+    def employer_domain(self, application_id: int) -> str | None:
+        """The employer's e-mail domain typed last; None when none is (or it was removed)."""
+        ...
+
+    def insert_employer_domain(
+        self, account_id: int, application_id: int, domain: str | None, now: datetime
     ) -> None: ...
 
     def append_event(self, event: NewEvent) -> None: ...

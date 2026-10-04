@@ -90,6 +90,17 @@
           <button type="submit" class="btn btn-mini">Changer</button>
         </form>
       </details>
+      <details class="note">
+        <summary>E-mails de l'employeur{% if employer_domain %} : {{ employer_domain }}{% endif %}</summary>
+        {# Decision E2, Q3: the replies from this domain are attached to this application in 📬 Messages. #}
+        <form method="post" action="{{ base }}/domaine" hx-boost="false" class="inline-form">
+          {{ back() }}
+          <label>Domaine <input type="text" name="domaine" value="{{ employer_domain or '' }}" placeholder="covea.fr"></label>
+          <button type="submit" class="btn btn-mini">Enregistrer</button>
+        </form>
+        <p class="muted small">La partie après le @ des e-mails de l'employeur : Rocky y reconnaît ses réponses. Vide le
+          champ pour le retirer.</p>
+      </details>
       {% set sent = send.sent %}
       {% if sent %}
       <p class="muted small">Envoyée le {{ sent.on.strftime("%d/%m/%Y") }}{% if sent.linked %} via {{ sent.channel }}{% endif %} · <a href="{{ base }}?etape={{ Step.SEND.value }}">documents envoyés</a></p>

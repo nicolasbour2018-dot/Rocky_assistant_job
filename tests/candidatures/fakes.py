@@ -45,6 +45,7 @@ class FakeStore:
     prefill_rows: list[Prefill] = field(default_factory=list)
     note_rows: list[NoteRow] = field(default_factory=list)
     language_rows: list[tuple[int, str]] = field(default_factory=list)
+    domain_rows: list[tuple[int, str | None]] = field(default_factory=list)
 
     def application_for_offer(
         self, account_id: int, offer_id: int, now: datetime
@@ -259,6 +260,17 @@ class FakeStore:
         self, account_id: int, application_id: int, language: str, now: datetime
     ) -> None:
         self.language_rows.append((application_id, language))
+
+    def employer_domain(self, application_id: int) -> str | None:
+        found = [
+            domain for owner, domain in self.domain_rows if owner == application_id
+        ]
+        return found[-1] if found else None
+
+    def insert_employer_domain(
+        self, account_id: int, application_id: int, domain: str | None, now: datetime
+    ) -> None:
+        self.domain_rows.append((application_id, domain))
 
     def append_event(self, event: NewEvent) -> None:
         self.events.append(event)

@@ -154,6 +154,13 @@ def _language_chosen(payload: Payload, _: Mapping[int, str]) -> tuple[str, bool]
     return f"Langue de la candidature : {_language(payload.get('language'))}", False
 
 
+def _employer_domain_set(payload: Payload, _: Mapping[int, str]) -> tuple[str, bool]:
+    domain = payload.get("domain")
+    if not domain:
+        return "Domaine e-mail de l'employeur retiré", False
+    return f"Domaine e-mail de l'employeur : {domain}", False
+
+
 LINES: dict[str, Callable[[Payload, Mapping[int, str]], tuple[str, bool]]] = {
     "candidatures.application_created": _created,
     "candidatures.stage_changed": _stage_changed,
@@ -170,6 +177,7 @@ LINES: dict[str, Callable[[Payload, Mapping[int, str]], tuple[str, bool]]] = {
     "candidatures.note_added": _note_added,
     "candidatures.note_removed": _note_removed,
     "candidatures.language_chosen": _language_chosen,
+    "candidatures.employer_domain_set": _employer_domain_set,
 }
 
 

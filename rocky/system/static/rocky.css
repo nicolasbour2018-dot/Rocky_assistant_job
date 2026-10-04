@@ -616,3 +616,8 @@ button.chip { font: inherit; color: var(--text); }
   .chip-row { grid-template-columns: minmax(0, 1fr); }
   .chip-row-label { padding-top: 0; }
 }
+
+/* 📬 Messages triés (decision E2, Q14): the date on one line, room for the classification and its proof. */
+.messages-table td:first-child { white-space: nowrap; }
+.messages-table td:last-child { min-width: 18rem; }
+.messages-table details ul { padding-left: 1.1rem; margin: .4rem 0; }

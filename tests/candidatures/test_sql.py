@@ -14,6 +14,7 @@ import pytest
 from sqlalchemy import Connection, Engine, func, insert, select
 from sqlalchemy.exc import IntegrityError
 
+from rocky.candidatures import web as candidatures_web
 from rocky.candidatures.model import (
     Change,
     ChangeKind,
@@ -53,6 +54,7 @@ from rocky.candidatures.usecases import (
     prepare_application,
     record_prefill,
     record_revisions,
+    set_employer_domain,
     skip_letter,
 )
 from rocky.candidatures.web_common import OffresDecisions
@@ -997,3 +999,34 @@ def test_the_journal_of_an_application_is_read_by_its_subject(
     ]
     assert found[-1].payload == {"language": "en", "previous": "fr"}
     assert other == []
+
+
+def test_the_mail_targets_are_the_applications_sent(migrated_engine: Engine) -> None:
+    """Decision E2, Q11: from « Préremplie » on; with the offer's links and the employer's domain (Q3)."""
+    case = prepared(migrated_engine)
+    with migrated_engine.connect() as connection:
+        assert candidatures_web.mail_targets(connection, case.seeker.account_id) == []
+    case.move(Stage.SENT, None)
+    with migrated_engine.begin() as connection:
+        set_employer_domain(
+            SqlApplicationStore(connection),
+            account_id=case.seeker.account_id,
+            application_id=case.application_id,
+            typed="exemple.fr",
+            now=NOW,
+        )
+
+    with migrated_engine.connect() as connection:
+        [found] = candidatures_web.mail_targets(connection, case.seeker.account_id)
+        labels = candidatures_web.application_labels(
+            connection, case.seeker.account_id, [case.application_id]
+        )
+
+    assert (found.application_id, found.company, found.stage) == (
+        case.application_id,
+        "Exemple",
+        Stage.SENT,
+    )
+    assert found.employer_domain == "exemple.fr"
+    assert found.links == ("https://apec.example/offres/d1",)
+    assert labels == {case.application_id: "Exemple — Data analyst (H/F)"}

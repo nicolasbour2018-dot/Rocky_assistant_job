@@ -121,6 +121,7 @@ from rocky.candidatures.usecases import (
     record_prefill,
     record_revisions,
     remove_note,
+    set_employer_domain,
     skip_letter,
     validate_letter,
     validate_message,
@@ -575,6 +576,7 @@ def _dossier_page(
         "forward": [s for s in FORWARD if s is not Stage.PREFILLED],
         "issues": [s for s in Stage if s in ISSUES],
         "follow_up_stages": FOLLOW_UP_STAGES,
+        "employer_domain": _employer_domain(request, application_id),
     }
     if wants_fragment(request):
         return render_fragment(request, STEP_TEMPLATES[shown], context)
@@ -585,6 +587,11 @@ def _dossier_page(
         status_code=status_code,
         context=context,
     )
+
+
+def _employer_domain(request: Request, application_id: int) -> str | None:
+    with engine_of(request).connect() as connection:
+        return SqlApplicationStore(connection).employer_domain(application_id)
 
 
 def follow_up_refused(
@@ -667,6 +674,30 @@ def language(
     return RedirectResponse(
         dossier_url(application_id, _shown_step(etape)), status_code=303
     )
+
+
+@router.post("/{application_id}/domaine", response_class=HTMLResponse)
+def employer_domain(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    domaine: Annotated[str, Form()] = "",
+) -> Response:
+    """The employer's e-mail domain (decision E2, Q3): its replies are recognised by it in 📬 Messages."""
+    try:
+        with engine_of(request).begin() as connection:
+            set_employer_domain(
+                SqlApplicationStore(connection),
+                account_id=account.id,
+                application_id=application_id,
+                typed=domaine,
+                now=now_of(request),
+            )
+    except LookupError:
+        return Response(status_code=404)
+    except InvalidChangeError as error:
+        return follow_up_refused(request, account, application_id, str(error))
+    return _to_step(application_id, Step.FOLLOW)
 
 
 @router.post("/{application_id}/notes", response_class=HTMLResponse)

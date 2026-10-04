@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -276,6 +277,25 @@ def notes_in_force(rows: Iterable[NoteRow]) -> list[Note]:
 
 def language_in_force(chosen: str | None) -> str:
     return chosen or DEFAULT_LANGUAGE
+
+
+# The employer's e-mail domain (decision E2, Q3): what the replies are recognised by.
+_DOMAIN = re.compile(r"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$")
+
+
+def employer_domain(typed: str) -> str | None:
+    """The domain typed in the dossier, as Rocky keeps it: « RH@Recrutement.Covea.fr », « https://www.covea.fr/ » →
+    « recrutement.covea.fr », « covea.fr ». Empty → None (removed). Raises ``InvalidChangeError``."""
+    value = typed.strip().lower()
+    if not value:
+        return None
+    value = re.sub(r"^[a-z]+://", "", value).split("/", 1)[0]
+    value = value.rsplit("@", 1)[-1].removeprefix("www.").rstrip(".")
+    if len(value) > 253 or not _DOMAIN.match(value):
+        raise InvalidChangeError(
+            "Domaine invalide : écris par exemple « covea.fr » (la partie après le @ des e-mails de l'employeur)."
+        )
+    return value
 
 
 # Revisions and sendings (decision D5).

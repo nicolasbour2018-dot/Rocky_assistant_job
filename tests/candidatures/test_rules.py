@@ -25,6 +25,7 @@ from rocky.candidatures.rules import (
     automatic_transition_allowed,
     deferred,
     dossier,
+    employer_domain,
     is_due,
     is_overdue,
     is_stale,
@@ -449,3 +450,22 @@ def test_the_notes_in_force_leave_out_the_removed_ones() -> None:
 def test_french_until_a_language_is_chosen() -> None:
     assert language_in_force(None) == "fr"
     assert language_in_force("en") == "en"
+
+
+@pytest.mark.parametrize(
+    ("typed", "kept"),
+    [
+        ("covea.fr", "covea.fr"),
+        ("  RH@Recrutement.Covea.FR ", "recrutement.covea.fr"),
+        ("https://www.covea.fr/carrieres", "covea.fr"),
+        ("", None),
+    ],
+)
+def test_the_employer_domain_as_rocky_keeps_it(typed: str, kept: str | None) -> None:
+    assert employer_domain(typed) == kept
+
+
+@pytest.mark.parametrize("typed", ["covea", "covea .fr", "http://", "a@b"])
+def test_a_wrong_employer_domain_is_refused(typed: str) -> None:
+    with pytest.raises(InvalidChangeError):
+        employer_domain(typed)

@@ -1,6 +1,6 @@
 {# The mailboxes and the last messages, polled together while a collection runs: the list follows the collection. #}
 <div id="messages-contenu" class="profile-sections"
-  {% if running %}hx-get="/messages/contenu" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  {% if running %}hx-get="/messages/contenu?vue={{ state.view.value }}" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
   {% include "messages/mailboxes.html" %}
   {% include "messages/recent.html" %}
 </div>

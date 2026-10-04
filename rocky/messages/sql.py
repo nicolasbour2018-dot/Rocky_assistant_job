@@ -1,13 +1,15 @@
 """SQL access of the messages: the only place where the tables of the module ``messages`` are queried.
 
 Decision ``docs/decisions/E1-collecte.md``: a message is written once, alone in its transaction, and never changed;
-``SqlStorage`` opens the transactions and holds the collection lock of a mailbox.
+``SqlStorage`` opens the transactions and holds the collection lock of a mailbox. Decision
+``docs/decisions/E2-classification.md``: the decisions about a message are appended, the latest in force, each with
+its proof; every call to the language model is a row.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import asdict
 from datetime import datetime
 from enum import StrEnum
@@ -27,9 +29,11 @@ from sqlalchemy import (
     Integer,
     LargeBinary,
     Row,
+    Select,
     Table,
     Text,
     UniqueConstraint,
+    func,
     insert,
     select,
     text,
@@ -38,24 +42,41 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from rocky.messages.classification.model import (
+    CLASSIFY_VERSION,
+    EMPLOYER_CATEGORIES,
+    CallOutcome,
+    Category,
+    Level,
+    MailToClassify,
+    Proof,
+    SortedMessage,
+    StoredDecision,
+    Tier,
+    Verdict,
+    View,
+)
+from rocky.messages.classification.rules import readable
 from rocky.messages.model import (
     CollectedMessage,
     Mailbox,
     MailboxStatus,
     MailSync,
     Query,
-    StoredMessage,
     SyncCounts,
     SyncStatus,
     Trigger,
 )
 from rocky.messages.rules import QUERIES_VERSION
+from rocky.offres.decisions import Author
 from rocky.system.db import metadata
 from rocky.system.events import NewEvent, append_event
 
 # First key of the advisory locks of a mailbox's collection (the second is the mailbox): a hash of this name and of
 # the schema, since advisory locks are shared by the whole database (each test worker has its own schema).
 COLLECT_LOCK_SPACE = "rocky.messages.collect"
+# The same for the classification of an account's messages (two passes never decide the same message twice).
+CLASSIFY_LOCK_SPACE = "rocky.messages.classify"
 LOCK_KEY = "hashtext(CAST(:space AS text) || current_schema())"
 
 
@@ -143,6 +164,60 @@ email_messages = Table(
     # The idempotence of the collection: a message is stored once per mailbox.
     UniqueConstraint("mailbox_id", "gmail_id"),
     Index("ix_email_messages_account_id_received_at", "account_id", "received_at"),
+)
+
+
+# Q1, Q13: the decisions about a message, appended; the one in force is the latest. The proof is required by the
+# schema: a rule, a quotation and at least one reason (exit criterion of E2).
+message_decisions = Table(
+    "message_decisions",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("message_id", BigInteger, ForeignKey("email_messages.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    # None: nothing could be decided, the message is « À vérifier ».
+    Column("category", Text),
+    Column("application_id", BigInteger, ForeignKey("applications.id")),
+    Column("level", Text, nullable=False),
+    Column("author", Text, nullable=False),
+    # The rule of the first proof and its quotation, in columns for the training data (D14).
+    Column("rule", Text, nullable=False),
+    Column("excerpt", Text, nullable=False),
+    # [{"tier", "rule", "excerpt", "reason"}], the first one gave the category.
+    Column("proofs", JSONB, nullable=False),
+    Column("classify_version", Text, nullable=False),
+    _timestamp("decided_at"),
+    CheckConstraint(
+        "category IS NULL OR " + _in("category", Category), name="category"
+    ),
+    CheckConstraint(_in("level", Level), name="level"),
+    CheckConstraint(_in("author", Author), name="author"),
+    CheckConstraint("char_length(rule) > 0", name="rule_given"),
+    CheckConstraint("char_length(excerpt) > 0", name="excerpt_given"),
+    CheckConstraint(
+        "jsonb_typeof(proofs) = 'array' AND jsonb_array_length(proofs) > 0",
+        name="proofs_given",
+    ),
+    # Nothing decided is never « confident ».
+    CheckConstraint("category IS NOT NULL OR level = 'low'", name="undecided_low"),
+    Index("ix_message_decisions_message_id", "message_id", "id"),
+    Index("ix_message_decisions_account_id", "account_id", "id"),
+)
+
+# Q18: every call to the language model, for its limits per account and the training data (D14).
+mail_model_calls = Table(
+    "mail_model_calls",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("message_id", BigInteger, ForeignKey("email_messages.id"), nullable=False),
+    _timestamp("called_at"),
+    Column("classify_version", Text, nullable=False),
+    Column("outcome", Text, nullable=False),
+    Column("reason", Text),
+    Column("duration_ms", Integer, nullable=False),
+    CheckConstraint(_in("outcome", CallOutcome), name="outcome"),
+    Index("ix_mail_model_calls_account_id_called_at", "account_id", "called_at"),
 )
 
 
@@ -273,33 +348,6 @@ class SqlStore:
         found = self._conn.execute(statement).scalar_one_or_none()
         return None if found is None else int(found)
 
-    def recent_messages(self, account_id: int, limit: int) -> list[StoredMessage]:
-        query = (
-            select(
-                email_messages.c.id,
-                mailboxes.c.address,
-                email_messages.c.received_at,
-                email_messages.c.sender,
-                email_messages.c.subject,
-                email_messages.c.found_by,
-            )
-            .join(mailboxes, mailboxes.c.id == email_messages.c.mailbox_id)
-            .where(email_messages.c.account_id == account_id)
-            .order_by(email_messages.c.received_at.desc(), email_messages.c.id.desc())
-            .limit(limit)
-        )
-        return [
-            StoredMessage(
-                id=row.id,
-                mailbox_address=row.address,
-                received_at=row.received_at,
-                sender=row.sender,
-                subject=row.subject,
-                found_by=tuple(Query(value) for value in row.found_by),
-            )
-            for row in self._conn.execute(query)
-        ]
-
     # Collections
 
     def start_sync(
@@ -369,12 +417,244 @@ class SqlStore:
         ).one_or_none()
         return None if row is None else _sync(row)
 
+    # Classification (E2)
+
+    def undecided(
+        self, account_id: int, after_id: int, limit: int
+    ) -> list[MailToClassify]:
+        decided = select(message_decisions.c.id).where(
+            message_decisions.c.message_id == email_messages.c.id
+        )
+        query = (
+            select(email_messages)
+            .where(
+                email_messages.c.account_id == account_id,
+                email_messages.c.id > after_id,
+                ~decided.exists(),
+            )
+            .order_by(email_messages.c.id)
+            .limit(limit)
+        )
+        return [_to_classify(row) for row in self._conn.execute(query)]
+
+    def messages_of(
+        self, account_id: int, after_id: int, limit: int
+    ) -> list[MailToClassify]:
+        query = (
+            select(email_messages)
+            .where(
+                email_messages.c.account_id == account_id,
+                email_messages.c.id > after_id,
+            )
+            .order_by(email_messages.c.id)
+            .limit(limit)
+        )
+        return [_to_classify(row) for row in self._conn.execute(query)]
+
+    def waiting(self, account_id: int) -> int:
+        """Messages of the account without any decision yet."""
+        decided = select(message_decisions.c.id).where(
+            message_decisions.c.message_id == email_messages.c.id
+        )
+        return int(
+            self._conn.execute(
+                select(func.count())
+                .select_from(email_messages)
+                .where(email_messages.c.account_id == account_id, ~decided.exists())
+            ).scalar_one()
+        )
+
+    def has_decision(self, message_id: int) -> bool:
+        return (
+            self._conn.execute(
+                select(message_decisions.c.id)
+                .where(message_decisions.c.message_id == message_id)
+                .limit(1)
+            ).first()
+            is not None
+        )
+
+    def lock_message(self, message_id: int) -> None:
+        self._conn.execute(
+            select(email_messages.c.id)
+            .where(email_messages.c.id == message_id)
+            .with_for_update()
+        )
+
+    def attached_threads(self, account_id: int) -> dict[tuple[int, str], int]:
+        """The threads whose message has an application in its decision in force."""
+        current = _current_decisions(account_id).subquery()
+        query = (
+            select(
+                email_messages.c.mailbox_id,
+                email_messages.c.thread_id,
+                current.c.application_id,
+            )
+            .join(current, current.c.message_id == email_messages.c.id)
+            .where(current.c.application_id.is_not(None))
+            .order_by(email_messages.c.received_at)
+        )
+        return {
+            (row.mailbox_id, row.thread_id): row.application_id
+            for row in self._conn.execute(query)
+        }
+
+    def current_author(self, message_id: int) -> Author | None:
+        author = self._conn.execute(
+            select(message_decisions.c.author)
+            .where(message_decisions.c.message_id == message_id)
+            .order_by(message_decisions.c.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        return None if author is None else Author(author)
+
+    def add_decision(
+        self, account_id: int, message_id: int, verdict: Verdict, now: datetime
+    ) -> int:
+        first = verdict.proofs[0]
+        return int(
+            self._conn.execute(
+                insert(message_decisions)
+                .values(
+                    message_id=message_id,
+                    account_id=account_id,
+                    category=None
+                    if verdict.category is None
+                    else verdict.category.value,
+                    application_id=verdict.application_id,
+                    level=verdict.level.value,
+                    author=verdict.author.value,
+                    rule=first.rule,
+                    excerpt=first.excerpt,
+                    proofs=[asdict(proof) for proof in verdict.proofs],
+                    classify_version=CLASSIFY_VERSION,
+                    decided_at=now,
+                )
+                .returning(message_decisions.c.id)
+            ).scalar_one()
+        )
+
+    def add_call(
+        self,
+        account_id: int,
+        message_id: int,
+        *,
+        outcome: CallOutcome,
+        reason: str | None,
+        duration_ms: int,
+        now: datetime,
+    ) -> None:
+        self._conn.execute(
+            insert(mail_model_calls).values(
+                account_id=account_id,
+                message_id=message_id,
+                called_at=now,
+                classify_version=CLASSIFY_VERSION,
+                outcome=outcome.value,
+                reason=reason,
+                duration_ms=duration_ms,
+            )
+        )
+
+    def calls_since(self, account_id: int, since: datetime) -> int:
+        return int(
+            self._conn.execute(
+                select(func.count())
+                .select_from(mail_model_calls)
+                .where(
+                    mail_model_calls.c.account_id == account_id,
+                    mail_model_calls.c.called_at > since,
+                )
+            ).scalar_one()
+        )
+
+    def last_failure(self, account_id: int, since: datetime) -> str | None:
+        """The reason of the last call that gave no answer since ``since``, if the last call failed."""
+        row = self._conn.execute(
+            select(mail_model_calls.c.outcome, mail_model_calls.c.reason)
+            .where(
+                mail_model_calls.c.account_id == account_id,
+                mail_model_calls.c.called_at > since,
+            )
+            .order_by(mail_model_calls.c.id.desc())
+            .limit(1)
+        ).one_or_none()
+        if row is None or row.outcome != CallOutcome.FAILED.value:
+            return None
+        reason: str | None = row.reason
+        return reason
+
+    def sorted_messages(
+        self, account_id: int, view: View, limit: int
+    ) -> list[SortedMessage]:
+        """The last messages of ``view`` with their decision in force (Q14)."""
+        current = _current_decisions(account_id).subquery()
+        query = (
+            select(
+                email_messages.c.id,
+                mailboxes.c.address,
+                email_messages.c.received_at,
+                email_messages.c.sender,
+                email_messages.c.subject,
+                email_messages.c.found_by,
+                current.c.id.label("decision_id"),
+                current.c.message_id,
+                current.c.category,
+                current.c.application_id,
+                current.c.level,
+                current.c.author,
+                current.c.proofs,
+                current.c.classify_version,
+                current.c.decided_at,
+            )
+            .join(mailboxes, mailboxes.c.id == email_messages.c.mailbox_id)
+            .outerjoin(current, current.c.message_id == email_messages.c.id)
+            .where(email_messages.c.account_id == account_id)
+            .order_by(email_messages.c.received_at.desc(), email_messages.c.id.desc())
+            .limit(limit)
+        )
+        employers = [category.value for category in EMPLOYER_CATEGORIES]
+        low = current.c.level == Level.LOW.value
+        match view:
+            case View.TO_LOOK_AT:
+                waiting = current.c.id.is_(None)
+                query = query.where(current.c.category.in_(employers) | low | waiting)
+            case View.TO_CHECK:
+                query = query.where(low)
+            case View.EMPLOYERS:
+                query = query.where(current.c.category.in_(employers))
+            case View.ALERTS:
+                query = query.where(current.c.category == Category.JOB_ALERT.value)
+            case View.APPROACHES:
+                query = query.where(
+                    current.c.category == Category.RECRUITER_APPROACH.value
+                )
+            case View.UNRELATED:
+                query = query.where(current.c.category == Category.UNRELATED.value)
+            case View.WAITING:
+                query = query.where(current.c.id.is_(None))
+            case View.ALL:
+                pass
+        return [
+            SortedMessage(
+                id=row.id,
+                mailbox_address=row.address,
+                received_at=row.received_at,
+                sender=row.sender,
+                subject=row.subject,
+                found_by=tuple(Query(value) for value in row.found_by),
+                decision=None if row.level is None else _decision(row),
+            )
+            for row in self._conn.execute(query)
+        ]
+
     def append_event(self, event: NewEvent) -> int:
         return append_event(self._conn, event)
 
 
 class SqlStorage:
-    """``Storage`` on an engine: one transaction per call, and the advisory lock of a mailbox's collection."""
+    """``Storage`` on an engine: one transaction per call, and the advisory locks of a mailbox's collection and of an
+    account's classification."""
 
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
@@ -384,8 +664,14 @@ class SqlStorage:
         with self._engine.begin() as connection:
             yield SqlStore(connection)
 
+    def lock(self, mailbox_id: int) -> AbstractContextManager[bool]:
+        return self._advisory(COLLECT_LOCK_SPACE, mailbox_id)
+
+    def classify_lock(self, account_id: int) -> AbstractContextManager[bool]:
+        return self._advisory(CLASSIFY_LOCK_SPACE, account_id)
+
     @contextmanager
-    def lock(self, mailbox_id: int) -> Iterator[bool]:
+    def _advisory(self, space: str, key: int) -> Iterator[bool]:
         """A session lock on its own connection, held while open: a killed process releases it with its session."""
         with self._engine.connect() as connection:
             locked = bool(
@@ -393,7 +679,7 @@ class SqlStorage:
                     text(
                         f"SELECT pg_try_advisory_lock({LOCK_KEY}, CAST(:id AS integer))"
                     ),
-                    {"space": COLLECT_LOCK_SPACE, "id": mailbox_id},
+                    {"space": space, "id": key},
                 ).scalar_one()
             )
             connection.commit()
@@ -405,9 +691,50 @@ class SqlStorage:
                         text(
                             f"SELECT pg_advisory_unlock({LOCK_KEY}, CAST(:id AS integer))"
                         ),
-                        {"space": COLLECT_LOCK_SPACE, "id": mailbox_id},
+                        {"space": space, "id": key},
                     )
                     connection.commit()
+
+
+def _current_decisions(account_id: int) -> Select[Any]:
+    """The decision in force of each message of the account: its latest."""
+    return (
+        select(message_decisions)
+        .where(message_decisions.c.account_id == account_id)
+        .distinct(message_decisions.c.message_id)
+        .order_by(message_decisions.c.message_id, message_decisions.c.id.desc())
+    )
+
+
+def _to_classify(row: Row[Any]) -> MailToClassify:
+    return MailToClassify(
+        id=row.id,
+        mailbox_id=row.mailbox_id,
+        thread_id=row.thread_id,
+        received_at=row.received_at,
+        sender=row.sender,
+        sender_address=row.sender_address,
+        subject=row.subject,
+        body_text=readable(row.body_text),
+        found_by=tuple(Query(value) for value in row.found_by),
+    )
+
+
+def _decision(row: Row[Any]) -> StoredDecision:
+    return StoredDecision(
+        id=row.decision_id,
+        message_id=row.message_id,
+        category=None if row.category is None else Category(row.category),
+        application_id=row.application_id,
+        level=Level(row.level),
+        author=Author(row.author),
+        proofs=tuple(
+            Proof(Tier(item["tier"]), item["rule"], item["excerpt"], item["reason"])
+            for item in row.proofs
+        ),
+        version=row.classify_version,
+        decided_at=row.decided_at,
+    )
 
 
 def _mailbox(row: Row[Any]) -> Mailbox:

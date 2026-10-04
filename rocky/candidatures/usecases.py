@@ -41,6 +41,7 @@ from rocky.candidatures.rules import (
     automatic_transition_allowed,
     deferred,
     dossier,
+    employer_domain,
     language_in_force,
     notes_in_force,
     proposal,
@@ -732,6 +733,32 @@ def choose_language(
         "candidatures.language_chosen",
         Author.USER,
         {"language": language, "previous": previous},
+    )
+    return True
+
+
+def set_employer_domain(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    typed: str,
+    now: datetime,
+) -> bool:
+    """The employer's e-mail domain (decision E2, Q3), by which its replies are recognised; empty removes it. False
+    when unchanged. Raises ``InvalidChangeError``."""
+    domain = employer_domain(typed)
+    application = _locked(store, account_id, application_id)
+    previous = store.employer_domain(application.id)
+    if domain == previous:
+        return False
+    store.insert_employer_domain(account_id, application.id, domain, now)
+    _event(
+        store,
+        application,
+        "candidatures.employer_domain_set",
+        Author.USER,
+        {"domain": domain, "previous": previous},
     )
     return True
 

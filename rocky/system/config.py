@@ -25,6 +25,8 @@ FRANCE_TRAVAIL_CLIENT_SECRET_VAR = "ROCKY_FRANCE_TRAVAIL_CLIENT_SECRET"  # noqa:
 RESULTS_PER_QUERY_VAR = "ROCKY_SOURCES_RESULTS_PER_QUERY"
 GEMINI_API_KEY_VAR = "ROCKY_GEMINI_API_KEY"
 GEMINI_MODEL_VAR = "ROCKY_GEMINI_MODEL"
+MAIL_MODEL_HOUR_LIMIT_VAR = "ROCKY_LLM_MAIL_HOUR_LIMIT"
+MAIL_MODEL_DAY_LIMIT_VAR = "ROCKY_LLM_MAIL_DAY_LIMIT"
 SCHEDULER_ENABLED_VAR = "ROCKY_SCHEDULER_ENABLED"
 STORAGE_ROOT_VAR = "ROCKY_STORAGE_ROOT"
 WORKSTATION_URL_VAR = "ROCKY_WORKSTATION_URL"
@@ -34,6 +36,9 @@ SECRET_KEY_VAR = "ROCKY_SECRET_KEY"  # noqa: S105  (variable name, not a key)
 # The workstation runs on the user's computer (decision D5, Q1); Docker reaches it under this name.
 DEFAULT_WORKSTATION_URL = "http://host.docker.internal:8765"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+# The calls to the model per account for the classification of the messages (decision E2, Q18).
+DEFAULT_MAIL_MODEL_HOUR_LIMIT = 20
+DEFAULT_MAIL_MODEL_DAY_LIMIT = 60
 
 DEFAULT_SMTP_PORT = 587
 DEFAULT_RESULTS_PER_QUERY = 20
@@ -76,10 +81,13 @@ class SourcesSettings:
 
 @dataclass(frozen=True)
 class LlmSettings:
-    """The language model (C3: summaries only). Without a key, the features that need it say so."""
+    """The language model (C3: summaries; E2: the messages the rules leave). Without a key, the features that need it
+    say so."""
 
     api_key: str | None = None
     model: str = DEFAULT_GEMINI_MODEL
+    mail_per_hour: int = DEFAULT_MAIL_MODEL_HOUR_LIMIT
+    mail_per_day: int = DEFAULT_MAIL_MODEL_DAY_LIMIT
 
 
 @dataclass(frozen=True)
@@ -129,6 +137,12 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         llm=LlmSettings(
             api_key=_value(env, GEMINI_API_KEY_VAR) or None,
             model=_value(env, GEMINI_MODEL_VAR) or DEFAULT_GEMINI_MODEL,
+            mail_per_hour=_count(
+                env, MAIL_MODEL_HOUR_LIMIT_VAR, DEFAULT_MAIL_MODEL_HOUR_LIMIT
+            ),
+            mail_per_day=_count(
+                env, MAIL_MODEL_DAY_LIMIT_VAR, DEFAULT_MAIL_MODEL_DAY_LIMIT
+            ),
         ),
         gmail=_gmail(env),
         scheduler_enabled=_boolean(env, SCHEDULER_ENABLED_VAR, default=True),
@@ -234,6 +248,15 @@ def _port(env: Mapping[str, str]) -> int:
         return DEFAULT_SMTP_PORT
     if not raw.isdigit():
         raise ConfigError(f"{SMTP_PORT_VAR} must be a number")
+    return int(raw)
+
+
+def _count(env: Mapping[str, str], name: str, default: int) -> int:
+    raw = _value(env, name)
+    if not raw:
+        return default
+    if not raw.isdigit():
+        raise ConfigError(f"{name} must be a whole number")
     return int(raw)
 
 

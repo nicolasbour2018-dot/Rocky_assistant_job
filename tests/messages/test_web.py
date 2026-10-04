@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 
+from rocky.messages.classification.model import View
 from rocky.messages.model import AccessLostError, MailboxStatus
 from rocky.messages.oauth import ACCESS_LOST_REASON
 from rocky.messages.service import MessagesService
@@ -145,8 +146,9 @@ def test_a_mailbox_is_connected_through_google_then_collected(
     assert "Boîte connectée : sa première collecte est lancée." in page.text
     assert "Votre candidature : Data Analyst" in page.text
     assert "3 nouveaux messages" in re.sub(r"\s+", " ", page.text)
-    assert "Expéditeur d&#39;alertes" in page.text
-    assert "Messages non triés." in page.text
+    # The hook was replaced: nothing is decided, the messages wait in the default view.
+    assert "3 messages en attente" in re.sub(r"\s+", " ", page.text)
+    assert "Messages triés" in page.text
     assert len(collected) == 1 and len(collected[0]) == 3
     assert [request.method for request in fake_google.requests] == ["POST", "GET"]
 
@@ -306,7 +308,9 @@ def test_disconnecting_revokes_at_google_and_keeps_the_messages(
     assert fake_google.requests[-1].url == REVOKE_URL
     after = service.state(account_of(migrated_engine, email))
     assert after.mailboxes[0].mailbox.status is MailboxStatus.DISCONNECTED
-    assert len(after.recent) == 3
+    assert (
+        len(service.state(account_of(migrated_engine, email), View.ALL).messages) == 3
+    )
     page = client.get("/messages?boite=deconnectee")
     assert "Déconnectée" in page.text
     assert "Votre candidature : Data Analyst" in page.text

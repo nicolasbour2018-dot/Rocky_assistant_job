@@ -295,6 +295,23 @@ application_languages = Table(
 )
 
 
+# The employer's e-mail domain (decision E2, Q3): appended at each entry, the latest in force; a null domain removes it.
+application_domains = Table(
+    "application_domains",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("domain", Text),
+    Column("chosen_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint(
+        "domain IS NULL OR (domain = lower(domain) AND domain LIKE '%_._%' AND domain NOT LIKE '% %')",
+        name="domain_form",
+    ),
+    Index("ix_application_domains_application_id", "application_id", "id"),
+)
+
+
 class SqlApplicationStore:
     """``ApplicationStore`` on a connection, inside the caller's transaction; never commits."""
 
@@ -708,6 +725,27 @@ class SqlApplicationStore:
                 application_id=application_id,
                 account_id=account_id,
                 language=language,
+                chosen_at=now,
+            )
+        )
+
+    def employer_domain(self, application_id: int) -> str | None:
+        domain: str | None = self._conn.execute(
+            select(application_domains.c.domain)
+            .where(application_domains.c.application_id == application_id)
+            .order_by(application_domains.c.id.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        return domain
+
+    def insert_employer_domain(
+        self, account_id: int, application_id: int, domain: str | None, now: datetime
+    ) -> None:
+        self._conn.execute(
+            application_domains.insert().values(
+                application_id=application_id,
+                account_id=account_id,
+                domain=domain,
                 chosen_at=now,
             )
         )

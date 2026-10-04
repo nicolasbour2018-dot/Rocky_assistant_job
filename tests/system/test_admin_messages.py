@@ -1,4 +1,5 @@
-"""``rocky-admin messages``: a real collection of an account's Gmail mailboxes, written, then told."""
+"""``rocky-admin messages``: a real collection of an account's Gmail mailboxes, written, then told;
+``rocky-admin messages-classer``: their classification, told."""
 
 from __future__ import annotations
 
@@ -6,12 +7,20 @@ import io
 
 from sqlalchemy import Engine
 
+from rocky.messages.classification.model import CLASSIFY_VERSION
 from rocky.messages.service import MessagesService
 from rocky.messages.usecases import connect_mailbox
-from rocky.system.admin import collect_messages
+from rocky.system.admin import classify_account_messages, collect_messages
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.config import GmailSettings
-from tests.messages.fakes import GMAIL, NOW, FakeGmail, cipher, new_account
+from tests.messages.fakes import (
+    GMAIL,
+    NOW,
+    FakeGmail,
+    ScriptedModel,
+    cipher,
+    new_account,
+)
 
 
 def run(engine: Engine, email: str, settings: GmailSettings = GMAIL) -> tuple[int, str]:
@@ -69,6 +78,67 @@ def test_an_account_without_mailbox_or_settings_says_so(
     assert code == 1
     assert output.startswith("Gmail n'est pas configuré")
     assert run(migrated_engine, "personne@example.fr") == (
+        1,
+        "Aucun compte pour personne@example.fr.\n",
+    )
+
+
+# ``rocky-admin messages-classer`` (decision E2, Q15, Q18): rules first, the model bounded by ``--limite``.
+
+
+def classify(
+    engine: Engine,
+    email: str,
+    *,
+    use_model: bool,
+    max_calls: int | None = None,
+    model: ScriptedModel | None = None,
+) -> tuple[int, str]:
+    out = io.StringIO()
+    service = MessagesService(
+        engine, settings=GMAIL, clock=lambda: NOW, gmail=FakeGmail(), model=model
+    )
+    code = classify_account_messages(
+        engine,
+        email=email,
+        service=service,
+        use_model=use_model,
+        max_calls=max_calls,
+        again=False,
+        out=out,
+    )
+    return code, out.getvalue()
+
+
+def test_the_messages_are_classified_and_told(migrated_engine: Engine) -> None:
+    email = account_with_mailbox(migrated_engine)
+    run(migrated_engine, email)
+    model = ScriptedModel(
+        {
+            "categorie": "unrelated",
+            "candidature": "",
+            "extrait": "x" * 20,
+            "raison": ".",
+        }
+    )
+
+    code, output = classify(migrated_engine, email, use_model=False)
+    again, second = classify(
+        migrated_engine, email, use_model=True, max_calls=0, model=model
+    )
+
+    assert (code, again) == (0, 0)
+    assert output.startswith(
+        f"Classement {CLASSIFY_VERSION} : 3 décision(s) par les règles, 0 par le modèle"
+    )
+    assert "Accusé de réception · Confiance moyenne : 1" in output
+    assert "Alerte emploi · Confiance haute : 1" in output
+    assert "0 décision(s) par les règles" in second
+    assert model.prompts == []  # nothing left for the model, and --limite 0 anyway
+
+
+def test_classifying_an_unknown_account_says_so(migrated_engine: Engine) -> None:
+    assert classify(migrated_engine, "personne@example.fr", use_model=False) == (
         1,
         "Aucun compte pour personne@example.fr.\n",
     )

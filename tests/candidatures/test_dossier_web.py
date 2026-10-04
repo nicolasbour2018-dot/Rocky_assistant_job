@@ -296,3 +296,25 @@ def test_the_cv_of_the_application_is_previewed_as_an_image(desk: Desk) -> None:
     refused = desk.client.get(f"{base}/cv/apercu", headers=HTMX).text
     assert "<img" not in refused
     assert "Projet « Prévision » : stack" in refused
+
+
+def test_the_employer_domain_is_typed_in_the_follow_up(desk: Desk) -> None:
+    """Decision E2, Q3: « E-mails de l'employeur » in the step « Suivi »; a wrong domain says how to write it."""
+    base = f"/candidatures/{desk.application_id()}"
+
+    saved = desk.client.post(
+        f"{base}/domaine", data={"domaine": "rh@exemple.fr", "retour": "suivi"}
+    )
+    refused = desk.client.post(
+        f"{base}/domaine", data={"domaine": "exemple", "retour": "suivi"}
+    )
+
+    assert saved.status_code == 303
+    assert "E-mails de l'employeur : exemple.fr" in page(desk, "?etape=suivi")
+    assert "Domaine invalide" in refused.text
+    assert (
+        desk.client.post(
+            "/candidatures/999999/domaine", data={"domaine": "x.fr"}
+        ).status_code
+        == 404
+    )

@@ -1,26 +1,56 @@
-{# The raw list of the last messages collected (decision E1, Q8): no decision, no classification. #}
+{# « Messages triés » (decision E2, Q14): the last messages of a view with their decision in force and its proof
+   behind « Pourquoi ? ». Nothing is corrected here (E4); no application changes stage (Q1). #}
 <section class="profile-section messages-recent" aria-labelledby="derniers-messages">
   <div class="section-head">
-    <h2 id="derniers-messages">Derniers messages relevés</h2>
+    <h2 id="derniers-messages">Messages triés</h2>
   </div>
-  <p class="alert alert-info" role="note"><strong>Messages non triés.</strong> Rocky les garde tels que Gmail les a
-    donnés, du plus récent au plus ancien, sans savoir encore lesquels parlent de ta recherche d'emploi : le classement
-    arrive à l'étape suivante. « Recherche » dit seulement comment Rocky a trouvé le message.</p>
-  {% if state.recent %}
+  <nav class="segmented app-tabs" aria-label="Messages par catégorie">
+    {% for found in View %}
+    <a href="/messages{{ '' if found == View.TO_LOOK_AT else '?vue=' ~ found.value }}"
+      {% if found == state.view %}aria-current="page"{% endif %}>{{ view_labels[found] }}</a>
+    {% endfor %}
+  </nav>
+  {% if state.waiting %}
+  <p class="alert alert-info" role="status"><strong>{{ state.waiting }} message{{ 's' if state.waiting > 1 }} en attente
+    de classement.</strong> {{ state.waiting_reason }}</p>
+  {% endif %}
+  {% if state.messages %}
   <table class="offer-table messages-table">
-    <thead><tr><th>Reçu le</th><th>De</th><th>Objet</th><th>Recherche</th></tr></thead>
+    <thead><tr><th>Reçu le</th><th>De</th><th>Objet</th><th>Classement</th></tr></thead>
     <tbody>
-      {% for message in state.recent %}
+      {% for message in state.messages %}
+      {% set decision = message.decision %}
       <tr>
         <td class="small">{{ message.received_at | paris_time }}</td>
         <td>{{ message.sender }}{% if state.mailboxes | length > 1 %}<br><span class="muted small">→ {{ message.mailbox_address }}</span>{% endif %}</td>
         <td>{{ message.subject or "(sans objet)" }}</td>
-        <td>{% for query in message.found_by %}<span class="badge badge-muted">{{ query_labels[query] }}</span> {% endfor %}</td>
+        <td>
+          {% if decision is none %}
+          <span class="badge badge-muted">En attente</span>
+          {% else %}
+          {% if decision.category %}<span class="badge {{ 'badge-accent' if decision.category in employer_categories else 'badge-muted' }}">{{ category_labels[decision.category] }}</span>{% endif %}
+          {% if decision.level == Level.LOW %}<span class="badge badge-warn">À vérifier</span>{% endif %}
+          {% if decision.application_id %}
+          <br><a class="small" href="/candidatures/{{ decision.application_id }}">{{ state.applications.get(decision.application_id, 'Candidature') }}</a>
+          {% endif %}
+          <details class="note small">
+            <summary>Pourquoi ?</summary>
+            <p>{{ level_labels[decision.level] }} · {{ 'Modèle de langage' if decision.author == Author.AI else 'Règles' }}
+              · version {{ decision.version }}</p>
+            <ul>
+              {% for proof in decision.proofs %}
+              <li><strong>{{ tier_labels[proof.tier] }}</strong> : {{ proof.reason }}<br><q>{{ proof.excerpt }}</q></li>
+              {% endfor %}
+            </ul>
+            <p class="muted">Recherche : {% for query in message.found_by %}{{ query_labels[query] }}{{ ', ' if not loop.last }}{% endfor %}</p>
+          </details>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   {% else %}
-  <p class="empty-lead">Aucun message relevé pour l'instant.</p>
+  <p class="empty-lead">Aucun message dans cette vue pour l'instant.</p>
   {% endif %}
 </section>

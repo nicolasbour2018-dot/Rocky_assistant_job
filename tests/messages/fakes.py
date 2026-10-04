@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import copy
 import json
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from email.utils import parseaddr
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -16,11 +17,31 @@ import httpx2
 from cryptography.fernet import Fernet
 from sqlalchemy import Connection
 
-from rocky.messages.model import GmailError, MailReader, MessageUnreadableError
+from rocky.candidatures.model import Stage
+from rocky.candidatures.sql import SqlApplicationStore
+from rocky.candidatures.usecases import change_stage, prepare_application
+from rocky.candidatures.web_common import OffresDecisions
+from rocky.messages.model import (
+    CollectedMessage,
+    GmailError,
+    MailReader,
+    MessageUnreadableError,
+    Query,
+    SyncCounts,
+    SyncStatus,
+    Trigger,
+)
 from rocky.messages.oauth import GoogleOAuth
+from rocky.messages.sql import SqlStorage
+from rocky.offres.decisions import application_decision
+from rocky.offres.model import Origin
+from rocky.offres.rules import scoring_inputs
+from rocky.offres.sql import SqlStore as OffresStore
+from rocky.offres.usecases import record_offer
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.config import GmailSettings
 from rocky.system.crypto import TokenCipher
+from tests.offres.fakes import Seeker, posting
 
 DATA = Path(__file__).parent / "data"
 NOW = datetime(2026, 10, 4, 12, 0, tzinfo=UTC)
@@ -138,3 +159,113 @@ class Google:
 
     def transport(self) -> httpx2.MockTransport:
         return httpx2.MockTransport(self)
+
+
+# The classification (E2): a stored message, a sent application, a model that answers in turn.
+
+
+def store_mail(
+    storage: SqlStorage,
+    mailbox_id: int,
+    *,
+    sender: str,
+    subject: str,
+    body: str = "",
+    thread: str | None = None,
+    received_at: datetime = NOW,
+) -> int:
+    """A message written as a collection writes it, in a collection of its own."""
+    with storage.transaction() as store:
+        mailbox = store.mailbox(mailbox_id)
+        assert mailbox is not None
+        sync_id = store.start_sync(mailbox, Trigger.MANUAL, NOW, NOW)
+        gmail_id = uuid4().hex
+        address = parseaddr(sender)[1].lower()
+        message_id = store.add_message(
+            mailbox,
+            CollectedMessage(
+                gmail_id=gmail_id,
+                thread_id=thread or gmail_id,
+                received_at=received_at,
+                sender=sender,
+                sender_address=address or None,
+                recipients="camille@example.com",
+                subject=subject,
+                snippet=body[:200],
+                body_text=body,
+                body_html="",
+                truncated=False,
+                labels=(),
+                attachments=(),
+                rfc822_id=None,
+            ),
+            found_by=[Query.REPLIES],
+            sync_id=sync_id,
+            now=NOW,
+        )
+        store.finish_sync(
+            sync_id,
+            status=SyncStatus.COMPLETED,
+            reason=None,
+            counts=SyncCounts(new=1),
+            now=NOW,
+        )
+    assert message_id is not None
+    return message_id
+
+
+def sent_application(
+    connection: Connection,
+    seeker: Seeker,
+    *,
+    company: str,
+    title: str,
+    external_id: str | None = None,
+) -> int:
+    """An offer of ``company``, its application prepared then « Envoyée »."""
+    offer_id = record_offer(
+        OffresStore(connection),
+        account_id=seeker.account_id,
+        offer=posting(external_id or uuid4().hex, company=company, title=title),
+        inputs=scoring_inputs(seeker.profile(connection)),
+        origin=Origin.WATCH,
+        track_ids=[seeker.tracks["Data"]],
+        now=NOW,
+        today=NOW.date(),
+    ).offer_id
+    store = SqlApplicationStore(connection)
+    application_id = prepare_application(
+        store,
+        OffresDecisions(connection),
+        account_id=seeker.account_id,
+        offer_id=offer_id,
+        interest=application_decision(["target_job"]),
+        now=NOW,
+        today=NOW.date(),
+    )
+    change_stage(
+        store,
+        account_id=seeker.account_id,
+        application_id=application_id,
+        stage=Stage.SENT,
+        next_action=None,
+        now=NOW,
+    )
+    return application_id
+
+
+class ScriptedModel:
+    """A language model answering with ``answers`` in turn (an exception is raised), and keeping the prompts."""
+
+    def __init__(self, *answers: object) -> None:
+        self.answers = list(answers)
+        self.prompts: list[str] = []
+
+    def complete_json(
+        self, instructions: str, prompt: str, schema: Mapping[str, Any]
+    ) -> Any:
+        self.prompts.append(prompt)
+        answer = self.answers.pop(0) if len(self.answers) > 1 else self.answers[0]
+        if isinstance(answer, BaseException):
+            raise answer
+        return answer
