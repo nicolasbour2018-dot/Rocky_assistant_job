@@ -7,6 +7,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from rocky.system.crypto import is_valid_key
+
 DATABASE_URL_VAR = "ROCKY_DATABASE_URL"
 PUBLIC_URL_VAR = "ROCKY_PUBLIC_URL"
 SMTP_HOST_VAR = "ROCKY_SMTP_HOST"
@@ -26,6 +28,9 @@ GEMINI_MODEL_VAR = "ROCKY_GEMINI_MODEL"
 SCHEDULER_ENABLED_VAR = "ROCKY_SCHEDULER_ENABLED"
 STORAGE_ROOT_VAR = "ROCKY_STORAGE_ROOT"
 WORKSTATION_URL_VAR = "ROCKY_WORKSTATION_URL"
+GOOGLE_CLIENT_ID_VAR = "ROCKY_GOOGLE_CLIENT_ID"
+GOOGLE_CLIENT_SECRET_VAR = "ROCKY_GOOGLE_CLIENT_SECRET"  # noqa: S105  (variable name)
+SECRET_KEY_VAR = "ROCKY_SECRET_KEY"  # noqa: S105  (variable name, not a key)
 # The workstation runs on the user's computer (decision D5, Q1); Docker reaches it under this name.
 DEFAULT_WORKSTATION_URL = "http://host.docker.internal:8765"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
@@ -78,12 +83,26 @@ class LlmSettings:
 
 
 @dataclass(frozen=True)
+class GmailSettings:
+    """Gmail (decision E1, Q2, Q3): the Google OAuth client and the key that encrypts the refresh tokens."""
+
+    client_id: str | None = None
+    client_secret: str | None = None
+    secret_key: str | None = None
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.client_id and self.client_secret and self.secret_key)
+
+
+@dataclass(frozen=True)
 class Settings:
     database_url: str
     public_url: str
     smtp: SmtpSettings | None = None
     sources: SourcesSettings = SourcesSettings()
     llm: LlmSettings = LlmSettings()
+    gmail: GmailSettings = GmailSettings()
     # The planner (daily watch, rescoring, purge; D12): on for the application (``load_settings``), off by default
     # for settings built in code, so that the tests never start its thread.
     scheduler_enabled: bool = False
@@ -111,9 +130,24 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
             api_key=_value(env, GEMINI_API_KEY_VAR) or None,
             model=_value(env, GEMINI_MODEL_VAR) or DEFAULT_GEMINI_MODEL,
         ),
+        gmail=_gmail(env),
         scheduler_enabled=_boolean(env, SCHEDULER_ENABLED_VAR, default=True),
         storage_root=_storage_root(env),
         workstation_url=_workstation_url(env),
+    )
+
+
+def _gmail(env: Mapping[str, str]) -> GmailSettings:
+    """Missing values leave Gmail "not configured"; a key that is not a Fernet key stops the start (E1)."""
+    secret_key = _value(env, SECRET_KEY_VAR) or None
+    if secret_key is not None and not is_valid_key(secret_key):
+        raise ConfigError(
+            f"{SECRET_KEY_VAR} is not a Fernet key (see docs/procedures/e1-gmail/)"
+        )
+    return GmailSettings(
+        client_id=_value(env, GOOGLE_CLIENT_ID_VAR) or None,
+        client_secret=_value(env, GOOGLE_CLIENT_SECRET_VAR) or None,
+        secret_key=secret_key,
     )
 
 

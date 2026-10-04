@@ -67,7 +67,7 @@ NAVIGATION = (
         "/messages",
         True,
         "Les retours des recruteurs et les alertes emploi, avec leurs preuves.",
-        "E4",
+        "E1",
     ),
     NavEntry(
         "report",
@@ -168,5 +168,5 @@ def _empty_page(key: str) -> None:
     )
 
 
-for _key in ("today", "messages", "report", "system"):
+for _key in ("today", "report", "system"):
     _empty_page(_key)

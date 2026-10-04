@@ -52,6 +52,9 @@ HEAD_TABLES = {
     "application_prefills",
     "application_notes",
     "application_languages",
+    "mailboxes",
+    "mail_syncs",
+    "email_messages",
 }
 
 

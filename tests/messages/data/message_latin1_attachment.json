@@ -1,0 +1,74 @@
+{
+  "id": "18f0c3d4e5f60718",
+  "threadId": "18f0a1b2c3d4e5f6",
+  "labelIds": [
+    "INBOX",
+    "CATEGORY_UPDATES"
+  ],
+  "snippet": "Madame, Monsieur, Vous trouverez ci-joint la fiche de poste d&#39;Exemple.",
+  "historyId": "912500",
+  "internalDate": "1759420000000",
+  "sizeEstimate": 120000,
+  "payload": {
+    "partId": "",
+    "mimeType": "multipart/mixed",
+    "filename": "",
+    "headers": [
+      {
+        "name": "From",
+        "value": "rh@societe-fictive.fr"
+      },
+      {
+        "name": "To",
+        "value": "camille.dupont@example.com"
+      },
+      {
+        "name": "Cc",
+        "value": "manager@societe-fictive.fr"
+      },
+      {
+        "name": "Subject",
+        "value": "Fiche de poste"
+      },
+      {
+        "name": "Content-Type",
+        "value": "multipart/mixed; boundary=\"m1\""
+      }
+    ],
+    "body": {
+      "size": 0
+    },
+    "parts": [
+      {
+        "partId": "0",
+        "mimeType": "text/plain",
+        "filename": "",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/plain; charset=ISO-8859-1"
+          }
+        ],
+        "body": {
+          "size": 81,
+          "data": "TWFkYW1lLCBNb25zaWV1ciwKVm91cyB0cm91dmVyZXogY2ktam9pbnQgbGEgZmljaGUgZGUgcG9zdGUgZOl0YWlsbOllLgrAIGJpZW509HQu"
+        }
+      },
+      {
+        "partId": "1",
+        "mimeType": "application/pdf",
+        "filename": "fiche-de-poste.pdf",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/pdf; name=\"fiche-de-poste.pdf\""
+          }
+        ],
+        "body": {
+          "attachmentId": "ANGjdJ-exemple",
+          "size": 104857
+        }
+      }
+    ]
+  }
+}

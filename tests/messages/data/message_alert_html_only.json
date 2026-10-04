@@ -1,0 +1,43 @@
+{
+  "id": "18f0b2c3d4e5f607",
+  "threadId": "18f0b2c3d4e5f607",
+  "labelIds": [
+    "INBOX",
+    "CATEGORY_PROMOTIONS"
+  ],
+  "snippet": "3 nouvelles offres pour &laquo; Data analyst &raquo; Data Analyst H/F &ndash; Exemple SAS",
+  "historyId": "912400",
+  "internalDate": "1759410000000",
+  "sizeEstimate": 20450,
+  "payload": {
+    "partId": "",
+    "mimeType": "text/html",
+    "filename": "",
+    "headers": [
+      {
+        "name": "From",
+        "value": "Indeed <alert@indeed.com>"
+      },
+      {
+        "name": "To",
+        "value": "camille.dupont@example.com"
+      },
+      {
+        "name": "Subject",
+        "value": "3 nouvelles offres pour Data analyst"
+      },
+      {
+        "name": "Message-ID",
+        "value": "<alerte-indeed-1@indeed.com>"
+      },
+      {
+        "name": "Content-Type",
+        "value": "text/html; charset=UTF-8"
+      }
+    ],
+    "body": {
+      "size": 428,
+      "data": "PGh0bWw-PGhlYWQ-PHN0eWxlPnB7Y29sb3I6cmVkfTwvc3R5bGU-PC9oZWFkPjxib2R5PjxoMT4zIG5vdXZlbGxlcyBvZmZyZXMgcG91ciDCqyBEYXRhIGFuYWx5c3Qgwrs8L2gxPjxwPjxhIGhyZWY9Imh0dHBzOi8vZnIuaW5kZWVkLmNvbS9yYy9jbGs_ams9MGExYjJjM2Q0ZTVmNjc4OSZhbXA7ZnJvbT1qYSI-RGF0YSBBbmFseXN0IEgvRjwvYT4gJm5kYXNoOyBFeGVtcGxlIFNBUyAmbmRhc2g7IFBhcmlzICg3NSk8L3A-PHA-PGEgaHJlZj0iaHR0cHM6Ly9mci5pbmRlZWQuY29tL3JjL2Nsaz9qaz0xYTJiM2M0ZDVlNmY3ODkwJmFtcDtmcm9tPWphIj5BbmFseXN0ZSBkZSBkb25uw6llczwvYT4gJm5kYXNoOyBTb2Npw6l0w6kgRmljdGl2ZSAmbmRhc2g7IENoYXJ0cmVzICgyOCk8L3A-PHNjcmlwdD50cmFjaygpPC9zY3JpcHQ-PC9ib2R5PjwvaHRtbD4"
+    }
+  }
+}

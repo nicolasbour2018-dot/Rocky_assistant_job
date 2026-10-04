@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{# 📬 Messages (decision E1, Q8): the mailboxes, then the raw list of the last messages collected, without decision. #}
+{% block title %}Messages · Rocky{% endblock %}
+{% block content %}
+<header class="page-header"><h1><span aria-hidden="true">📬</span> Messages</h1></header>
+{% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+{% if notice %}<p class="alert alert-done" role="status">{{ notice }}</p>{% endif %}
+
+{% include "messages/content.html" %}
+{% endblock %}

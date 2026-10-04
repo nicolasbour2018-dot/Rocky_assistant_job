@@ -1,0 +1,25 @@
+{# The raw list of the last messages collected (decision E1, Q8): no decision, no classification. #}
+<section class="profile-section messages-recent" aria-labelledby="derniers-messages">
+  <div class="section-head">
+    <h2 id="derniers-messages">Derniers messages relevés</h2>
+  </div>
+  <p class="muted small">Tels que Gmail les a donnés, du plus récent au plus ancien. Le tri des retours et des alertes
+    arrive aux étapes suivantes.</p>
+  {% if state.recent %}
+  <table class="offer-table messages-table">
+    <thead><tr><th>Reçu le</th><th>De</th><th>Objet</th><th>Trouvé par</th></tr></thead>
+    <tbody>
+      {% for message in state.recent %}
+      <tr>
+        <td class="small">{{ message.received_at | paris_time }}</td>
+        <td>{{ message.sender }}{% if state.mailboxes | length > 1 %}<br><span class="muted small">→ {{ message.mailbox_address }}</span>{% endif %}</td>
+        <td>{{ message.subject or "(sans objet)" }}</td>
+        <td>{% for query in message.found_by %}<span class="badge badge-muted">{{ query_labels[query] }}</span> {% endfor %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-lead">Aucun message relevé pour l'instant.</p>
+  {% endif %}
+</section>

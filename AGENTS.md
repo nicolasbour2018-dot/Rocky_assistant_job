@@ -135,6 +135,10 @@ docs/
 - Veille réelle d'un compte, offres **enregistrées** (réseau réel : avec l'accord de Nicolas) :
   `docker compose run --rm app rocky-admin veille <email> [--piste <nom>]`. L'application lance aussi la veille chaque
   jour à 12 h (heure de Paris) tant qu'elle tourne ; `ROCKY_SCHEDULER_ENABLED=false` éteint le planificateur.
+- Gmail (lecture seule) : procédure `docs/procedures/e1-gmail/` (client Google et clé de chiffrement, posés par
+  Nicolas) ; boîtes connectées depuis 📬 Messages, collecte chaque heure tant que l'application tourne. Collecte réelle
+  d'un compte, messages **enregistrés** (réseau réel : avec l'accord de Nicolas) :
+  `docker compose run --rm app rocky-admin messages <email>`.
 - Poste Rocky (préremplissage dans un navigateur visible, sur l'ordinateur, hors Docker) : **en sommeil** depuis la
   recette de D5 (`candidatures.web.PREFILL_ENABLED = False`), inutile à lancer ; procédure gardée dans
   `docs/procedures/d5-poste/`.

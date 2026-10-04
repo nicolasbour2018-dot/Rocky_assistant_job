@@ -37,7 +37,10 @@ class RecordingScheduler:
 
 @pytest.mark.parametrize(
     ("enabled", "calls"),
-    [(True, ["submit reprise", "start", "stop"]), (False, ["stop"])],
+    [
+        (True, ["submit reprise", "submit reprise-messages", "start", "stop"]),
+        (False, ["stop"]),
+    ],
 )
 def test_the_planner_lives_with_the_application_when_enabled(
     migrated_engine: Engine, enabled: bool, calls: list[str]
@@ -50,5 +53,5 @@ def test_the_planner_lives_with_the_application_when_enabled(
     with TestClient(app):
         pass
 
-    # First task: close the runs a stopped process left open.
+    # First tasks: close the watch runs and the mail collections a stopped process left open.
     assert scheduler.calls == calls

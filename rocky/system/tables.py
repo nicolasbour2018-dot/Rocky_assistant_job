@@ -18,6 +18,7 @@ from rocky.candidatures.sql import (
     applications,
     document_revisions,
 )
+from rocky.messages.sql import email_messages, mail_syncs, mailboxes
 from rocky.offres.sql import (
     job_decisions,
     job_offers,
@@ -62,6 +63,7 @@ __all__ = [
     "applications",
     "cv_templates",
     "document_revisions",
+    "email_messages",
     "events",
     "experience_skills",
     "experiences",
@@ -71,6 +73,8 @@ __all__ = [
     "job_decisions",
     "job_offers",
     "languages",
+    "mail_syncs",
+    "mailboxes",
     "offer_scores",
     "offer_summaries",
     "offer_tracks",

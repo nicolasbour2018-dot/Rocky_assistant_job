@@ -14,6 +14,9 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import Engine
 
 from rocky.candidatures import web as candidatures_web
+from rocky.messages import web as messages_web
+from rocky.messages.model import COLLECT_EVERY
+from rocky.messages.service import MessagesService
 from rocky.offres import web as offres_web
 from rocky.offres.watch.model import RESCORE_EVERY, WATCH_HOUR
 from rocky.offres.watch.service import WatchService
@@ -34,6 +37,7 @@ PURGE_HOUR = time(4, 0)
 TEMPLATE_DIRS = [
     Path(__file__).parent / "templates",
     candidatures_web.TEMPLATES,
+    messages_web.TEMPLATES,
     Path(offres_web.__file__).parent / "templates",
     Path(profil_web.__file__).parent / "templates",
 ]
@@ -83,6 +87,7 @@ def create_app(
     offres_web.install(app)
     profil_web.install(app)
     candidatures_web.install(app)
+    messages_web.install(app)
     _plan(app, engine, clock)
 
     @app.get("/health")
@@ -95,12 +100,17 @@ def create_app(
 def _plan(app: FastAPI, engine: Engine, clock: Clock) -> None:
     """The single planner (D12) and its tasks; started by ``_lifespan`` when the settings allow it."""
     watch: WatchService = app.state.watch
+    messages: MessagesService = app.state.messages
     scheduler = Scheduler(
         daily=[
             DailyTask("veille", WATCH_HOUR, watch.run_scheduled),
             DailyTask("purge", PURGE_HOUR, lambda: purge_expired(engine, clock)),
         ],
-        periodic=[PeriodicTask("recalcul", RESCORE_EVERY, watch.rescore_all)],
+        periodic=[
+            PeriodicTask("recalcul", RESCORE_EVERY, watch.rescore_all),
+            # Decision E1, Q7: every connected mailbox, every hour (the first at the start).
+            PeriodicTask("messages", COLLECT_EVERY, messages.collect_all),
+        ],
         clock=clock,
     )
     app.state.scheduler = scheduler
@@ -114,6 +124,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     if app.state.settings.scheduler_enabled:
         # First task: close the runs a stopped process left open.
         scheduler.submit("reprise", app.state.watch.recover)
+        scheduler.submit("reprise-messages", app.state.messages.recover)
         scheduler.start()
     try:
         yield

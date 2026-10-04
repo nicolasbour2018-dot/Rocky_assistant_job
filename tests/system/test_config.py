@@ -4,6 +4,7 @@ import pytest
 
 from rocky.system.config import (
     ConfigError,
+    GmailSettings,
     LlmSettings,
     Settings,
     SmtpSettings,
@@ -11,6 +12,9 @@ from rocky.system.config import (
     load_settings,
     load_sources_settings,
 )
+
+# A Fernet key made for the tests (not a secret).
+KEY = "dGVzdHMtb25seS1rZXktZm9yLXJvY2t5LWUxLTMyYnk="
 
 BASE = {
     "ROCKY_DATABASE_URL": "postgresql://u@h/db",
@@ -39,6 +43,31 @@ def test_the_language_model_is_optional_with_a_default_model() -> None:
     )
 
     assert settings.llm == LlmSettings(api_key="k-1", model="gemini-autre")
+
+
+def test_gmail_is_not_configured_until_the_client_and_the_key_are_given() -> None:
+    assert load_settings(BASE).gmail == GmailSettings()
+    assert GmailSettings().configured is False
+
+    settings = load_settings(
+        {
+            **BASE,
+            "ROCKY_GOOGLE_CLIENT_ID": " id.apps.googleusercontent.com ",
+            "ROCKY_GOOGLE_CLIENT_SECRET": "s",
+            "ROCKY_SECRET_KEY": KEY,
+        }
+    )
+
+    assert settings.gmail == GmailSettings(
+        client_id="id.apps.googleusercontent.com", client_secret="s", secret_key=KEY
+    )
+    assert settings.gmail.configured is True
+    assert GmailSettings(client_id="id", client_secret="s").configured is False
+
+
+def test_a_secret_key_that_is_not_a_fernet_key_stops_the_start() -> None:
+    with pytest.raises(ConfigError, match="ROCKY_SECRET_KEY"):
+        load_settings({**BASE, "ROCKY_SECRET_KEY": "trop-courte"})
 
 
 def test_the_workstation_is_reached_from_docker_by_default() -> None:

@@ -15,6 +15,9 @@ from typing import TextIO
 
 from sqlalchemy import Engine
 
+from rocky.messages.model import SYNC_STATUS_LABELS, SyncStatus
+from rocky.messages.model import Trigger as MailTrigger
+from rocky.messages.service import MessagesService
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import JobSource
 from rocky.offres.sources.registry import build_sources
@@ -219,6 +222,50 @@ def watch_account(
     return 0 if result.status in SUCCESSFUL else 1
 
 
+def collect_messages(
+    engine: Engine, *, email: str, service: MessagesService, out: TextIO
+) -> int:
+    """Collect every connected Gmail mailbox of ``email`` for real (decision E1), then tell each collection."""
+    try:
+        address = normalize_email(email)
+    except InvalidEmailError as error:
+        out.write(f"{error}\n")
+        return 2
+    if not service.configured:
+        out.write(
+            "Gmail n'est pas configuré : il manque le client Google ou ROCKY_SECRET_KEY "
+            "(docs/procedures/e1-gmail/).\n"
+        )
+        return 1
+    with engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(address)
+    if account is None:
+        out.write(f"Aucun compte pour {address}.\n")
+        return 1
+    results = service.collect_account(account.id, MailTrigger.MANUAL)
+    if not results:
+        out.write(f"Aucune boîte Gmail connectée ou libre pour {address}.\n")
+        return 1
+    with service.storage.transaction() as store:
+        addresses = {
+            mailbox.id: mailbox.address for mailbox in store.mailboxes(account.id)
+        }
+    for result in results:
+        counts = result.counts
+        out.write(
+            f"{addresses[result.mailbox_id]} : collecte "
+            f"{SYNC_STATUS_LABELS[result.status].lower()}, {counts.listed} message(s) "
+            f"trouvé(s), {counts.known} déjà relevé(s), {counts.new} nouveau(x), "
+            f"{counts.not_written} non écrit(s).\n"
+        )
+        if result.reason:
+            out.write(f"raison : {result.reason}\n")
+    succeeded = all(
+        r.status in (SyncStatus.COMPLETED, SyncStatus.PARTIAL) for r in results
+    )
+    return 0 if succeeded else 1
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -269,6 +316,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     watch_parser.add_argument("email")
     watch_parser.add_argument("--piste", help="seulement la piste de ce nom")
+    messages_parser = commands.add_parser(
+        "messages",
+        help="relève pour de vrai les boîtes Gmail connectées d'un compte : les nouveaux "
+        "messages sont enregistrés, puis chaque collecte est résumée",
+    )
+    messages_parser.add_argument("email")
     arguments = parser.parse_args(argv)
 
     settings = load_settings()
@@ -285,6 +338,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                     limit=settings.sources.results_per_query,
                     clock=utc_now,
                 ),
+                out=sys.stdout,
+            )
+        if arguments.command == "messages":
+            return collect_messages(
+                engine,
+                email=arguments.email,
+                service=MessagesService(engine, settings=settings.gmail, clock=utc_now),
                 out=sys.stdout,
             )
         if arguments.command == "sources":
