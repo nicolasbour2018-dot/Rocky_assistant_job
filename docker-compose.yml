@@ -171,7 +171,7 @@ services:
     depends_on:
       test-db:
         condition: service_healthy
-    command: ["sh", "-c", "ruff format --check && ruff check && mypy && pytest"]
+    command: ["sh", "-c", "ruff format --check && ruff check && mypy && pytest -n auto"]
 
 configs:
   db-init:

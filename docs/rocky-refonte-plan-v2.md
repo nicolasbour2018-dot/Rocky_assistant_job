@@ -150,7 +150,7 @@ aucun identifiant interne affiché.
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| E1. Collecte | Gmail lecture seule, plusieurs boîtes ; requête filtrée (`-category:promotions -category:social`…) ; message **enregistré avant toute décision**, de façon idempotente | Une resynchronisation ne retraite rien ; aucun statut ne change sans message enregistré | ⬜ |
+| E1. Collecte | Gmail lecture seule, plusieurs boîtes ; requête filtrée (`-category:promotions -category:social`…) ; message **enregistré avant toute décision**, de façon idempotente | Une resynchronisation ne retraite rien ; aucun statut ne change sans message enregistré | 🔄 |
 | E2. Classification | 3 étages : expéditeur → domaine exact de l'employeur (plus de sous-chaîne) → LLM pour l'ambigu ; confiance réelle (plus de valeurs constantes) ; preuve : règle, extrait, auteur | 100 % des décisions ont une preuve lisible ; le digest Quora n'est plus rattaché à « French bee » ; jeu de test issu de l'archive | ⬜ |
 | E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | ⬜ |
 | E4. Décisions et écran | Transition de candidature appliquée dans la même transaction que la décision ; « ce qui a bougé depuis ta dernière visite » ; correction humaine → nouvelle règle ; corrections conservées comme jeu étiqueté | Aucun changement de statut ne passe inaperçu | ⬜ |
@@ -595,6 +595,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   paralléliser pytest.
   *D6 : 1 min 49 (1 166 tests) ; après la recette (aperçus en image), 1 min 51 à 1 min 58 (1 169 tests) : marge trop
   mince, à traiter avant E1 (un rendu partagé par module comme D3, ou pytest en parallèle avec une dépendance justifiée).*
+  *Résolu en E1 (Nicolas, Q1) : pytest en parallèle (`pytest-xdist`, `pytest -n auto` dans le service `check`) ;
+  1 min 47 → 1 min 03 à 1 min 10 (1 169 tests, 8 processeurs pour Docker). Un paramètre de test doit avoir un identifiant
+  stable (les workers comparent leurs collectes) : `ids=` explicites quand la valeur change d'une exécution à l'autre.*
 - **(D5 → Nicolas)** Le poste ne reconnaît que des champs vides nommés par leurs attributs ou libellés usuels : sur les
   formulaires des ATS (Workday, Greenhouse, Lever, Taleo…), le rapport dira ce qui reste à faire. Des sélecteurs propres à
   une plateforme s'ajoutent si l'usage le demande.

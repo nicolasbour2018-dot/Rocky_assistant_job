@@ -121,7 +121,8 @@ docs/
 
 - Vérification globale : `docker compose run --rm --build check` (ruff format, ruff check, mypy strict, pytest
   sur la base de test) — doit rester verte en moins de 2 min.
-- Tests seuls, boucle rapide : `docker compose up -d test-db` puis `uv run pytest` (idem `uv run ruff check`, `uv run mypy`).
+- Tests seuls, boucle rapide : `docker compose up -d test-db` puis `uv run pytest` (`-n auto` pour tout lancer en
+  parallèle, comme `check` ; idem `uv run ruff check`, `uv run mypy`).
 - Lancer l'application : `docker compose up -d --build --wait app` → `http://127.0.0.1:8000/health`
   (le service `migrate` amène d'abord la base à la dernière migration).
 - Migrations sur la base de développement : `docker compose run --rm --build migrate` (`upgrade head`) ;

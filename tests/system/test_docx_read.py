@@ -73,6 +73,8 @@ def test_a_document_type_declaration_is_refused_before_parsing() -> None:
         (docx(paragraph(run("x")), name="word/other.xml"), "texte est introuvable"),
         (b"PK" + b"0" * (MAX_BYTES + 1), "dépasse 5 Mo"),
     ],
+    # Fixed ids: the zip carries its creation time, and parallel workers must collect the same names.
+    ids=["not-a-zip", "no-document", "too-large"],
 )
 def test_what_is_not_a_readable_docx_says_why(content: bytes, reason: str) -> None:
     with pytest.raises(DocxUnreadableError, match=reason):
