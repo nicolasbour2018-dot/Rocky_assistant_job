@@ -45,7 +45,7 @@ TEXT_FILE = "texte-lu.sha256"
 LANGUAGE_FILE = "langue.txt"
 PHOTO_FILE = "photo.jpg"
 MAX_BYTES = 10 * 1024 * 1024
-PREVIEW_DPI = 70
+PREVIEW_DPI = 150  # sharp on a high-density screen (preview about 500 CSS px wide)
 
 
 class ImportRefusedError(Exception):

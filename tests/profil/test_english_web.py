@@ -98,6 +98,26 @@ def test_the_english_cv_is_made_from_the_validated_texts(
     )
 
 
+def test_a_validated_text_can_be_corrected_when_it_is_too_long(
+    client: TestClient,
+) -> None:
+    proposed = client.post(
+        "/profil/cv-anglais", data={"consentement": "1"}, headers=HTMX
+    ).text
+    key, footprint, english = ROW.findall(proposed)[0]
+    accept(client, key, footprint, english)
+
+    reopened = client.post(
+        "/profil/cv-anglais/modifier", data={"cle": key}, headers=HTMX
+    ).text
+    assert ROW.findall(reopened) == [(key, footprint, english)]
+    accept(client, key, footprint, "Shorter")
+
+    screen = client.get("/profil/cv-anglais").text
+    assert "→ Shorter" in screen
+    assert "1 texte validé sur 10" in screen
+
+
 def accept(client: TestClient, key: str, footprint: str, english: str) -> None:
     accepted = client.post(
         "/profil/cv-anglais/accepter",

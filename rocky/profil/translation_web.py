@@ -28,7 +28,7 @@ from rocky.profil.cv.derived import (
     english_template,
     kept_texts,
 )
-from rocky.profil.cv.importer import TEMPLATES
+from rocky.profil.cv.importer import PREVIEW_DPI, TEMPLATES
 from rocky.profil.cv.rendering import CvRefusedError
 from rocky.profil.model import CvTemplateRecord
 from rocky.profil.rules import ProfileInputError, text_sha256
@@ -201,6 +201,7 @@ def _row(
     retour: str = "",
     empreinte: str = "",
     accept_url: str = "/profil/traduction/accepter",
+    source: str = "",
 ) -> Response:
     templates: Jinja2Templates = request.app.state.templates
     return templates.TemplateResponse(
@@ -215,6 +216,7 @@ def _row(
             "retour": back_to(retour),
             "empreinte": empreinte,
             "accept_url": accept_url,
+            "source": source,
         },
     )
 
@@ -340,7 +342,9 @@ def _english_screen(
         rendered, _, problems = draw_derived(
             files, cv_content(profile, "en", clock().date())
         )
-        preview = base64.b64encode(_png(rasterize(rendered.pdf, 80)[0])).decode()
+        preview = base64.b64encode(
+            _png(rasterize(rendered.pdf, PREVIEW_DPI)[0])
+        ).decode()
     context: Mapping[str, object] = {
         "state": state,
         "proposals": proposals,
@@ -447,6 +451,32 @@ def accept_cv_text(
         return RedirectResponse("/profil/cv-anglais", status_code=303)
     return _row(
         request, cle, ou, accepted=True, accept_url="/profil/cv-anglais/accepter"
+    )
+
+
+@router.post("/cv-anglais/modifier", response_class=HTMLResponse)
+def edit_cv_text(
+    request: Request, account: CurrentAccount, cle: Annotated[str, Form()]
+) -> Response:
+    """Reopen a validated text of the English version, its English ready to correct (too long for its place)."""
+    state = _english_state(request, account)
+    text = next((t for t in state.texts if t.id == cle), None)
+    if text is None or cle not in state.validated:
+        return _english_screen(
+            request, account, error="Ce texte n'est plus dans ton CV français."
+        )
+    if not wants_fragment(request):
+        segment = Segment(text.id, text.where, text.text, None)
+        proposal = Proposal(segment, state.validated[cle], from_memory=True)
+        return _english_screen(request, account, proposals=(proposal,))
+    return _row(
+        request,
+        text.id,
+        text.where,
+        english=state.validated[cle],
+        empreinte=text_sha256(text.text),
+        accept_url="/profil/cv-anglais/accepter",
+        source=text.text,
     )
 
 

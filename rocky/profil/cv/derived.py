@@ -18,7 +18,7 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from io import BytesIO
-from itertools import pairwise
+from itertools import combinations, pairwise
 from typing import Any, NoReturn
 
 from markupsafe import Markup, escape
@@ -407,29 +407,93 @@ def _units(kept: Sequence[tuple[BlockRole, Block]]) -> list[dict[str, Any]]:
             groups.append((role, [line]))
         else:
             home.append(line)
-    return [_unit(index, role, lines) for index, (role, lines) in enumerate(groups)]
+    units: list[dict[str, Any]] = []
+    for index, (role, lines) in enumerate(groups):
+        unit = _unit(index, role, lines)
+        above = next(
+            (other for other in reversed(units) if _stacks_on(other, unit)), None
+        )
+        if above is None:
+            units.append(unit)
+        else:
+            _stack(above, unit)
+    return units
+
+
+def _stacks_on(above: Mapping[str, Any], unit: Mapping[str, Any]) -> bool:
+    """A section title on two lines (« COMPÉTENCES » over « TECHNIQUES »): one title, translated as a whole."""
+    if above["kind"] != "heading" or unit["kind"] != "heading":
+        return False
+    last = above.get("lines", [above])[-1]
+    size = max(last["main"]["size"], unit["main"]["size"])
+    step = unit["baseline"] - last["baseline"]
+    left = max(last["box"]["x"], unit["box"]["x"])
+    right = min(
+        last["box"]["x"] + last["box"]["width"],
+        unit["box"]["x"] + unit["box"]["width"],
+    )
+    narrower = min(last["box"]["width"], unit["box"]["width"])
+    return bool(0 < step <= 2.2 * size and right - left >= 0.5 * narrower)
+
+
+_HEADING_LINE = ("text", "box", "baseline", "main", "letter_spacing", "spaced", "align")
+
+
+def _stack(above: dict[str, Any], unit: Mapping[str, Any]) -> None:
+    """Join a title line to the one above: one text, each line keeping its place and its style."""
+    lines = above.get("lines") or [{key: above[key] for key in _HEADING_LINE}]
+    above["lines"] = [*lines, {key: unit[key] for key in _HEADING_LINE}]
+    above["text"] = f"{above['text']} {unit['text']}"
+    above["box"] = _box_json(_unit_box(above).union(_unit_box(unit)))
 
 
 def _continues(
     lines: Sequence[Line], line: Line, role: Role, entries: Sequence[tuple[Role, Line]]
 ) -> bool:
-    """The next line of a paragraph: same column, the next baseline, the line above filled to its column's width
-    (a wrapped line), and not a new bullet."""
+    """The next line of a paragraph: the next baseline, the indent of the line above (past a text bullet, the indent
+    of its text), the line above filled to its column's width or too full for the next word (a wrapped line), and not
+    a new item: a bullet, or a line opening in bold like the first one, after a sentence or another line opening in
+    bold (« **Français** (Langue maternelle) » then « **Anglais** (écrit et parlé) - C1 »)."""
     if role in PROTECTED_ROLES or role in (Role.HEADING, Role.TITLE, Role.AGE):
         return False
     last, first = lines[-1], lines[0]
-    size = _main_style(lines).size
+    main = _main_style(lines)
+    size = main.size
     step = line.baseline - last.baseline
     if not 0 < step <= 1.8 * size or _BULLET.match(line.text):
         return False
-    if not first.box.x - 3 <= line.box.x <= first.box.x + 3 * size:
+    indent = line.box.x - last.box.x
+    past_bullet = len(lines) == 1 and _BULLET.match(first.text) and 0 < indent <= size
+    if abs(indent) > 0.5 * size and not past_bullet:
         return False
     widest = max(
         other.box.right - first.box.x
         for kind, other in entries
         if kind is role and abs(other.box.x - first.box.x) <= 3 * size
     )
-    return last.box.right - first.box.x >= 0.8 * widest
+    filled = last.box.right - first.box.x
+    if filled < 0.8 * widest and not _pushed_down(last, line, widest - filled):
+        return False
+    ended = last.text.rstrip().endswith(_ENDS) or _opens_strong(last, main)
+    return not (ended and _opens_strong(first, main) and _opens_strong(line, main))
+
+
+_ENDS = (".", ";", ":", "!", "?", ")")
+
+
+def _pushed_down(last: Line, line: Line, room: float) -> bool:
+    """The first word of ``line`` would not have fitted at the end of ``last``: a wrapped line, however short."""
+    words = line.text.split()
+    if not words:
+        return False
+    letter = line.box.width / max(len(line.text.strip()), 1)
+    return (len(words[0]) + 1) * letter > room
+
+
+def _opens_strong(line: Line, main: Style) -> bool:
+    """The line's first words are bold in a text that is not."""
+    run = next((run for run in line.runs if run.text.strip()), None)
+    return run is not None and run.style.bold and not main.bold
 
 
 def _main_style(lines: Sequence[Line]) -> Style:
@@ -872,23 +936,46 @@ def _label(label: str, translations: Mapping[str, str], partial: bool) -> str:
 
 
 def _with_room(template: Mapping[str, Any], unit: Mapping[str, Any]) -> dict[str, Any]:
-    """The width a single line may take in English: up to the next text on its right, or the page's margin."""
+    """The room a text may take in English. A line: up to the next text on its right, and no farther than the texts
+    of its column reach (a drawn line may stand past them). A paragraph: down to the next text below it."""
     box = unit["box"]
+    left, end = box["x"], box["x"] + box["width"]
     top, bottom = box["y"], box["y"] + box["height"]
-    others = [
-        other["box"] for other in template["units"] if other["id"] != unit["id"]
-    ] + [region["room"] for region in template["regions"]]
+    texts = [other["box"] for other in template["units"] if other["id"] != unit["id"]]
+    others = texts + [region["room"] for region in template["regions"]]
     right = min(
         (
             other["x"]
             for other in others
-            if other["x"] >= box["x"] + box["width"] - 1
+            if other["x"] >= end - 1
             and other["y"] < bottom
             and other["y"] + other["height"] > top
         ),
         default=template["page"]["width"] - 12,
     )
-    return {**unit, "room_width": round(max(right - box["x"] - 2, box["width"] + 2), 2)}
+    column = max(
+        (
+            other["x"] + other["width"]
+            for other in texts
+            if other["x"] < end and other["x"] + other["width"] > left
+        ),
+        default=end,
+    )
+    below = min(
+        (
+            other["y"]
+            for other in others
+            if other["y"] >= bottom - 1
+            and other["x"] < end
+            and other["x"] + other["width"] > left
+        ),
+        default=template["page"]["height"] - 12,
+    )
+    return {
+        **unit,
+        "room_width": round(max(min(right, column) - left - 2, box["width"] + 2), 2),
+        "room_bottom": round(below, 2),
+    }
 
 
 def _unit_where(unit: Mapping[str, Any]) -> str:
@@ -913,6 +1000,10 @@ def _unit_html(template: Mapping[str, Any], unit: Mapping[str, Any]) -> str:
     top = box["y"] - 1 - half
     if unit["kind"] == "paragraph":
         width, height = box["width"] + 2, box["height"] + 1 + half + line_height * ROOM
+        if "room_bottom" in unit:  # never over the text below
+            height = max(
+                min(height, unit["room_bottom"] - top), box["height"] + 1 + half
+            )
         left, wrap = box["x"] - 1, "normal"
     else:
         width, height = unit["room_width"], line_height + 1
@@ -950,29 +1041,63 @@ def _styled(style: Mapping[str, Any], text: str) -> Markup:
 def _heading_html(unit: Mapping[str, Any], text: str) -> str:
     """A section title drawn as outlines (its letter spacing kept, never read letter by letter), and its words as
     invisible text for PDF readers (decision D2, « Titres des sections »)."""
-    box, style = unit["box"], unit["main"]
     words = _plain(text)
+    lines = unit.get("lines") or [unit]
+    first = lines[0]
     hidden = (
-        f"left:{box['x']}pt; top:{box['y']}pt; width:{box['width'] + 60}pt; "
-        + _font_css(style)
+        f"left:{first['box']['x']}pt; top:{first['box']['y']}pt; width:{first['box']['width'] + 60}pt; "
+        + _font_css(first["main"])
         + "color:transparent; white-space:nowrap; overflow:visible;"
     )
+    shapes = "".join(
+        _heading_line(line, part)
+        for line, part in zip(
+            lines, title_lines(words, [line["text"] for line in lines]), strict=True
+        )
+        if part
+    )
+    return f'<div class="region" style="{hidden}">{escape(words)}</div>{shapes}'
+
+
+def _heading_line(line: Mapping[str, Any], words: str) -> str:
+    box, style = line["box"], line["main"]
     shape = text_path(
         words,
         style["family"],
         style["weight"],
         style["italic"],
         style["size"],
-        float(unit.get("letter_spacing") or 0),
+        float(line.get("letter_spacing") or 0),
     )
     left = box["x"]
-    if unit["align"] == "center" or unit["spaced"]:
+    if line["align"] == "center" or line["spaced"]:
         # A spaced title stands centred where the French one stood.
         left = box["x"] + (box["width"] - shape.width) / 2
-    top = float(unit["baseline"]) - shape.ascent
+    top = float(line["baseline"]) - shape.ascent
     return (
-        f'<div class="region" style="{hidden}">{escape(words)}</div>'
         f'<svg style="position:absolute; left:{left:.2f}pt; top:{top:.2f}pt; overflow:visible" '
         f'width="{shape.width}pt" height="{shape.height}pt" viewBox="0 0 {shape.width} {shape.height}">'
         f'<path d="{shape.d}" fill="{style["color"]}"/></svg>'
     )
+
+
+def title_lines(words: str, french: Sequence[str]) -> list[str]:
+    """The words of a translated title over the lines of the French one: the cut whose longest line, measured
+    against its French line, is the shortest (« TECHNICAL SKILLS » over « COMPÉTENCES / TECHNIQUES »)."""
+    tokens = words.split()
+    count = len(french)
+    if count <= 1 or len(tokens) <= 1:
+        return [" ".join(tokens), *[""] * (count - 1)]
+    if len(tokens) < count:
+        return [*tokens, *[""] * (count - len(tokens))]
+
+    def worst(cut: tuple[int, ...]) -> float:
+        bounds = (0, *cut, len(tokens))
+        return max(
+            len(" ".join(tokens[start:end])) / max(len(line), 1)
+            for (start, end), line in zip(pairwise(bounds), french, strict=True)
+        )
+
+    best = min(combinations(range(1, len(tokens)), count - 1), key=worst)
+    bounds = (0, *best, len(tokens))
+    return [" ".join(tokens[start:end]) for start, end in pairwise(bounds)]

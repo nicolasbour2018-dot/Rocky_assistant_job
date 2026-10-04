@@ -51,12 +51,20 @@
   {% endif %}
 
   {% if state.validated %}
-  <details class="field-more"><summary>Textes validés</summary>
+  {# Open when the preview overflows: shortening a validated text is the way out (Q20). #}
+  <details class="field-more"{% if problems %} open{% endif %}><summary>Textes validés</summary>
     <ul class="compact item-list">
       {% for text in state.texts if text.id in state.validated %}
-      <li class="small"><strong>{{ text.where }}</strong> → {{ state.validated[text.id] }}</li>
+      {% set row_id = "traduction-" ~ (text.id | html_id) %}
+      <li class="small" id="{{ row_id }}"><strong>{{ text.where }}</strong> → {{ state.validated[text.id] }}
+        <form method="post" action="/profil/cv-anglais/modifier" hx-post="/profil/cv-anglais/modifier" hx-target="#{{ row_id }}" hx-swap="outerHTML" class="inline-form">
+          <input type="hidden" name="cle" value="{{ text.id }}">
+          <button type="submit" class="btn btn-ghost btn-mini">Modifier</button>
+        </form>
+      </li>
       {% endfor %}
     </ul>
+    <p><a class="btn" href="/profil/cv-anglais">Voir l'aperçu à jour</a></p>
   </details>
   {% endif %}
   {% endif %}
