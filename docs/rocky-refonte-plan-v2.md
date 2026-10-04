@@ -142,7 +142,7 @@ aucun identifiant interne affiché.
 | D1. Dossier et statuts | Étapes (préparée, préremplie, envoyée, suivie…) ; transitions et **annulation dans une seule transaction** ; prochaine action datée, différable | Une panne injectée pendant l'annulation ne laisse aucun état contradictoire | ✅ |
 | D2. CV maître et rendu | CV structuré FR/EN ; gabarit HTML/CSS → PDF (Playwright) ; listes déterministes ; fin du verrou Canva (SHA-256, coordonnées pixels) et de LibreOffice ; « Vérifier mon CV » (ATS V3 porté) ; import d'un CV PDF et **gabarit par compte déduit du CV importé**, gabarit neutre à défaut (décision D2) | CV FR validé visuellement par Nicolas (EN aussi quand un CV anglais est importé : import facultatif, décision D2, Q33) ; parsing du PDF vérifié ; le gabarit déduit du CV Canva de Nicolas le reproduit à l'identique, seuls compétences et projets variant (Q17, Q29) ; un PDF image est refusé avec sa raison et se rabat sur le gabarit neutre | ✅ |
 | D3. Ciblage et traduction | Sélection et ordre des éléments selon l'annonce ; traduction champ par champ avec glossaire et validation | CV anglais ciblé sans ressaisie | ✅ |
-| D4. Lettre et message | Même moteur ; storytelling de préparation ; ton des prompts revu (pas de jugement dévalorisant sur la reconversion) | Lettres FR et EN validées sur 3 annonces réelles | ⬜ |
+| D4. Lettre et message | Même moteur ; storytelling de préparation ; ton des prompts revu (pas de jugement dévalorisant sur la reconversion) | Lettres FR et EN validées sur 3 annonces réelles | ✅ |
 | D5. Révisions et envoi | Chaque génération dans un chemin immuable avec hash, vérifié au téléchargement ; préremplissage navigateur porté (confirmation avant) ; confirmation d'envoi au retour avec date et canal | Deux générations → deux PDF distincts récupérables ; l'envoi est lié à la révision exacte | ⬜ |
 | D6. Écran Candidatures | Kanban ou liste dense avec filtres par étape ; dossier en 4 étapes (CV → lettre → envoi → suivi) ; chronologie, notes | Une relance due est retrouvée en moins de 3 clics | ⬜ |
 
@@ -549,3 +549,24 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D2 → F2, §5 VPS)** Le dépôt GitHub est **public** et n'a **aucune licence**. Aucune dépendance AGPL n'est ajoutée
   (décision D2, Q25) ; choisir une licence avant d'ouvrir Rocky à d'autres utilisateurs. Les données personnelles
   (photo, gabarits dérivés, rendus de CV) ne sont jamais versionnées.
+- **(D4 → D5)** Le PDF de la lettre est recalculé à chaque téléchargement et porte la **date du jour** : deux
+  téléchargements à des jours différents donnent deux PDF différents. La révision immuable de D5 doit figer la lettre
+  envoyée (date comprise) ; « Envoyée avec la version du … » se déduit aujourd'hui des dates (décision D4, Q20).
+- **(D4 → D6, remarque de Nicolas à la recette du 04/10 : « le parcours est juste horrible »)** Parcours de la
+  candidature à reprendre en entier avec l'écran Candidatures : page du dossier très longue (CV, lettre, envoi
+  empilés), chaque paragraphe de la lettre montré deux ou trois fois (« Ta lettre », « Version de Gemini », « Ma
+  version »), gestes dispersés (accord, adaptation, aperçu, validation, « Lettre prête »), langue de la lettre et du
+  message par des liens en haut de l'étape. Le fonctionnement (données, transactions, contrôles) est validé ; seule la
+  présentation est à refaire.
+- **(D4 → plus tard, prompt engineering)** Les consignes de Gemini pour la lettre (`ADAPT_INSTRUCTIONS`,
+  `rocky/candidatures/letter.py`) sont une première version : les régler **bloc par bloc** (ouverture, parcours,
+  apports, pourquoi vous, conclusion), sur les choix réels de Nicolas (paragraphes gardés ou remplacés, gardés comme
+  données D14 avec la version proposée).
+- **(D4 → Nicolas, recette)** Listes des formules convenues et du ton à éviter (`rocky/candidatures/letter.py`,
+  `FORMULAS_TO_AVOID`, `TONE_TO_AVOID`) : première version à valider par Nicolas sur les lettres réelles (décision D4,
+  Q8) ; toute modification change `CHECKS_VERSION`.
+- **(D4 → plus tard)** Le message d'accompagnement n'est pas collé par Rocky dans les formulaires : le préremplissage
+  (D5) pourra le proposer dans le champ libre, toujours avec confirmation.
+- **(D4 → D5, F2)** Clôture de D4 (Nicolas, 04/10) sur 2 lettres françaises réelles : la lettre anglaise d'un dossier et
+  le message d'accompagnement n'ont été éprouvés que dans l'essai navigateur. Les refaire sur des offres réelles à la
+  recette de D5 (envoi lié à la révision exacte) ou de F2.
