@@ -16,7 +16,13 @@ from rocky.candidatures.model import (
     NewChange,
     NewLetter,
     NewMessage,
+    NewPrefill,
+    NewRevision,
+    NewSending,
     NoLetter,
+    Prefill,
+    Revision,
+    Sending,
 )
 from rocky.offres.decisions import Author, Decision, DecisionValue
 from rocky.system.events import NewEvent
@@ -33,6 +39,9 @@ class FakeStore:
     selections: list[tuple[int, Mapping[str, Any] | None]] = field(default_factory=list)
     letter_rows: list[tuple[int, LetterEntry]] = field(default_factory=list)
     message_rows: list[tuple[int, MessageVersion]] = field(default_factory=list)
+    revision_rows: list[Revision] = field(default_factory=list)
+    sending_rows: list[Sending] = field(default_factory=list)
+    prefill_rows: list[Prefill] = field(default_factory=list)
 
     def application_for_offer(
         self, account_id: int, offer_id: int, now: datetime
@@ -142,6 +151,86 @@ class FakeStore:
             )
         )
         return message_id
+
+    def revisions(self, application_id: int) -> list[Revision]:
+        return [r for r in self.revision_rows if r.application_id == application_id]
+
+    def insert_revision(
+        self,
+        account_id: int,
+        application_id: int,
+        revision: NewRevision,
+        now: datetime,
+    ) -> int:
+        revision_id = len(self.revision_rows) + 1
+        self.revision_rows.append(
+            Revision(
+                id=revision_id,
+                application_id=application_id,
+                kind=revision.kind,
+                language=revision.language,
+                path=revision.path,
+                sha256=revision.sha256,
+                inputs_sha256=revision.inputs_sha256,
+                letter_id=revision.letter_id,
+                created_at=now,
+            )
+        )
+        return revision_id
+
+    def sendings(self, application_id: int) -> list[Sending]:
+        return [s for s in self.sending_rows if s.application_id == application_id]
+
+    def insert_sending(
+        self,
+        account_id: int,
+        application_id: int,
+        change_id: int,
+        sending: NewSending,
+        now: datetime,
+    ) -> int:
+        sending_id = len(self.sending_rows) + 1
+        self.sending_rows.append(
+            Sending(
+                id=sending_id,
+                application_id=application_id,
+                change_id=change_id,
+                sent_on=sending.sent_on,
+                channel=sending.channel,
+                channel_detail=sending.channel_detail,
+                cv_revision_id=sending.cv_revision_id,
+                letter_revision_id=sending.letter_revision_id,
+                message_id=sending.message_id,
+                created_at=now,
+            )
+        )
+        return sending_id
+
+    def prefills(self, application_id: int) -> list[Prefill]:
+        return [p for p in self.prefill_rows if p.application_id == application_id]
+
+    def insert_prefill(
+        self,
+        account_id: int,
+        application_id: int,
+        prefill: NewPrefill,
+        now: datetime,
+    ) -> int:
+        prefill_id = len(self.prefill_rows) + 1
+        self.prefill_rows.append(
+            Prefill(
+                id=prefill_id,
+                application_id=application_id,
+                target_url=prefill.target_url,
+                cv_revision_id=prefill.cv_revision_id,
+                letter_revision_id=prefill.letter_revision_id,
+                message_id=prefill.message_id,
+                filled=prefill.filled,
+                missing=prefill.missing,
+                created_at=now,
+            )
+        )
+        return prefill_id
 
     def append_event(self, event: NewEvent) -> None:
         self.events.append(event)

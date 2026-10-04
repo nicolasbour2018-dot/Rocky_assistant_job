@@ -213,7 +213,17 @@ def test_the_list_follows_the_stages_and_the_next_action(desk: Desk) -> None:
     assert "Data analyst (H/F)" in listed
     assert "Finir le dossier — 01/10/2026" in listed
 
-    sent = desk.post("etape", etape="sent")
+    # « Envoyée » is confirmed with its date, channel and documents (decision D5, Q5): the list leads to the form.
+    to_confirm = desk.client.post(
+        f"/candidatures/{desk.application_id()}/etape",
+        data={"etape": "sent"},
+        headers=HTMX,
+    )
+    assert to_confirm.headers["HX-Redirect"] == (
+        f"/candidatures/{desk.application_id()}/envoi#envoi"
+    )
+
+    sent = desk.post("etape", etape="in_discussion")
     assert "Relancer — 06/10/2026" in sent
 
     deferred = desk.post("differer", jours="3")
@@ -253,7 +263,7 @@ def test_annuler_undoes_the_changes_then_the_application_and_its_decision(
 ) -> None:
     desk = desk_with(app, migrated_engine, Decision(DecisionValue.LATER, ("reread",)))
     desk.prepare("target_job")
-    desk.post("etape", etape="sent")
+    desk.post("etape", etape="ready")
 
     back = desk.post("annuler")
     assert "Finir le dossier" in back

@@ -9,6 +9,7 @@ import pytest
 from rocky.candidatures.model import (
     Change,
     ChangeKind,
+    Channel,
     Dossier,
     InvalidChangeError,
     LetterHeader,
@@ -17,17 +18,24 @@ from rocky.candidatures.model import (
     MessageOrigin,
     NewLetter,
     NewMessage,
+    NewPrefill,
+    NewRevision,
+    NewSending,
     NextAction,
     NoLetter,
+    RevisionKind,
     Stage,
 )
 from rocky.candidatures.rules import dossier
 from rocky.candidatures.usecases import (
     cancel_last_change,
     change_stage,
+    confirm_sending,
     defer_next_action,
     letter_ready,
     prepare_application,
+    record_prefill,
+    record_revisions,
     set_next_action,
     skip_letter,
     validate_letter,
@@ -358,3 +366,203 @@ def test_a_validated_message_is_kept_and_journaled() -> None:
 
     assert store.messages(1)[-1].text == "Bonjour."
     assert store.event_types[-1] == "candidatures.message_validated"
+
+
+# Revisions, sending and prefilling (decision D5).
+
+
+def ready(store: FakeStore, offers: FakeOffers) -> tuple[int, int]:
+    """A prepared application with a validated letter, made ready; its CV and letter generated once."""
+    prepare(store, offers)
+    letter_id = validate_letter(
+        store, account_id=ACCOUNT, application_id=1, letter=LETTER, now=NOW
+    )
+    letter_ready(store, account_id=ACCOUNT, application_id=1, now=NOW, today=TODAY)
+    cv, letter = record_revisions(
+        store,
+        account_id=ACCOUNT,
+        application_id=1,
+        revisions=[
+            NewRevision(RevisionKind.CV, "fr", "c/cv.pdf", "s1", "html1"),
+            NewRevision(RevisionKind.LETTER, "fr", "c/l.pdf", "s2", "l1", letter_id),
+        ],
+        now=NOW,
+    )
+    return cv, letter
+
+
+def send(store: FakeStore, sending: NewSending) -> int:
+    return confirm_sending(
+        store,
+        account_id=ACCOUNT,
+        application_id=1,
+        sending=sending,
+        now=NOW,
+        today=TODAY,
+    )
+
+
+def test_generated_revisions_are_kept_with_one_event() -> None:
+    store, offers = FakeStore(), FakeOffers()
+
+    cv, letter = ready(store, offers)
+
+    assert [r.id for r in store.revisions(1)] == [cv, letter]
+    assert store.event_types[-1] == "candidatures.revisions_generated"
+    generated = store.events[-1].payload["revisions"]
+    assert isinstance(generated, list)
+    assert [r["kind"] for r in generated if isinstance(r, dict)] == [
+        "cv",
+        "letter",
+    ]
+
+
+def test_a_letter_revision_needs_a_letter_of_the_application() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    with pytest.raises(InvalidChangeError, match="appartient"):
+        record_revisions(
+            store,
+            account_id=ACCOUNT,
+            application_id=1,
+            revisions=[NewRevision(RevisionKind.LETTER, "fr", "p", "s", "i", 99)],
+            now=NOW,
+        )
+    assert store.revisions(1) == []
+
+
+def test_a_sending_documents_the_stage_change_with_the_exact_revisions() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    cv, letter = ready(store, offers)
+    yesterday = date(2026, 9, 28)
+
+    send(store, NewSending(yesterday, Channel.LINKEDIN, None, cv, letter))
+
+    current = state(store)
+    assert current.stage is Stage.SENT
+    # « Relancer » 7 days after the date of sending, not after today.
+    assert current.next_action == NextAction("Relancer", date(2026, 10, 5))
+    (sending,) = store.sendings(1)
+    assert sending.change_id == store.changes(1)[-1].id
+    assert (sending.cv_revision_id, sending.letter_revision_id) == (cv, letter)
+    assert store.event_types[-2:] == [
+        "candidatures.stage_changed",
+        "candidatures.sending_confirmed",
+    ]
+
+
+def test_a_sending_without_document_of_rocky_is_explicit() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    ready(store, offers)
+
+    send(store, NewSending(TODAY, Channel.OTHER, "Salon de l'emploi"))
+
+    assert store.sendings(1)[0].cv_revision_id is None
+
+
+@pytest.mark.parametrize(
+    ("sending", "message"),
+    [
+        (NewSending(date(2026, 9, 30), Channel.LINKEDIN), "futur"),
+        (NewSending(TODAY, Channel.OTHER, "  "), "Précise"),
+        (
+            NewSending(TODAY, Channel.EMAIL, None, 2),
+            "appartient",
+        ),  # a letter given as the CV
+        (NewSending(TODAY, Channel.EMAIL, None, None, 99), "appartient"),
+        (NewSending(TODAY, Channel.EMAIL, message_id=5), "appartient"),
+    ],
+)
+def test_a_sending_is_refused_with_its_reason(
+    sending: NewSending, message: str
+) -> None:
+    store, offers = FakeStore(), FakeOffers()
+    ready(store, offers)
+    before = len(store.rows)
+
+    with pytest.raises(InvalidChangeError, match=message):
+        send(store, sending)
+
+    assert (len(store.rows), store.sendings(1)) == (before, [])
+
+
+def test_an_application_sent_already_is_corrected_by_cancelling() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    ready(store, offers)
+    send(store, NewSending(TODAY, Channel.LINKEDIN))
+
+    with pytest.raises(InvalidChangeError, match="annule"):
+        send(store, NewSending(TODAY, Channel.INDEED))
+
+
+def prefill(cv: int, letter: int | None = None) -> NewPrefill:
+    return NewPrefill(
+        "https://jobs.acme.fr/apply?token=secret",
+        cv,
+        letter,
+        None,
+        ("Nom",),
+        ("Lettre",),
+    )
+
+
+def test_a_prefilled_form_makes_the_application_prefilled() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    cv, letter = ready(store, offers)
+
+    record_prefill(
+        store,
+        account_id=ACCOUNT,
+        application_id=1,
+        prefill=prefill(cv, letter),
+        now=NOW,
+        today=TODAY,
+    )
+
+    assert state(store).stage is Stage.PREFILLED
+    assert state(store).next_action == NextAction(
+        "Confirmer l'envoi", date(2026, 9, 30)
+    )
+    assert store.event_types[-2:] == [
+        "candidatures.prefilled",
+        "candidatures.stage_changed",
+    ]
+    # Only the domain is journaled: a link may carry a tracking token.
+    assert store.events[-2].payload["domain"] == "jobs.acme.fr"
+    assert "secret" not in str(store.events[-2].payload)
+
+    # Again from « Préremplie »: kept, the stage does not move.
+    record_prefill(
+        store,
+        account_id=ACCOUNT,
+        application_id=1,
+        prefill=prefill(cv),
+        now=NOW,
+        today=TODAY,
+    )
+    assert len(store.prefills(1)) == 2
+    assert store.event_types[-1] == "candidatures.prefilled"
+
+
+def test_a_form_is_prefilled_only_when_the_application_is_ready() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+    cv = record_revisions(
+        store,
+        account_id=ACCOUNT,
+        application_id=1,
+        revisions=[NewRevision(RevisionKind.CV, "fr", "p", "s", "i")],
+        now=NOW,
+    )[0]
+
+    with pytest.raises(InvalidChangeError, match="prête à envoyer"):
+        record_prefill(
+            store,
+            account_id=ACCOUNT,
+            application_id=1,
+            prefill=prefill(cv),
+            now=NOW,
+            today=TODAY,
+        )
+    assert store.prefills(1) == []

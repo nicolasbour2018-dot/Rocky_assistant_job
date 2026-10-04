@@ -219,6 +219,122 @@ class MessageVersion:
     created_at: datetime
 
 
+# The revisions of the documents sent, the sending and the prefilling (decision D5).
+
+
+class RevisionKind(StrEnum):
+    CV = "cv"
+    LETTER = "letter"
+
+
+REVISION_LABELS = {RevisionKind.CV: "CV", RevisionKind.LETTER: "Lettre"}
+
+
+@dataclass(frozen=True)
+class NewRevision:
+    """A generated PDF, stored under its hash (Q2). ``inputs_sha256``: what it was made from, to tell it is stale."""
+
+    kind: RevisionKind
+    language: str
+    path: str
+    sha256: str
+    inputs_sha256: str
+    letter_id: int | None = None  # the letter version a letter revision was made from
+
+
+@dataclass(frozen=True)
+class Revision:
+    id: int
+    application_id: int
+    kind: RevisionKind
+    language: str
+    path: str
+    sha256: str
+    inputs_sha256: str
+    letter_id: int | None
+    created_at: datetime
+
+
+class Channel(StrEnum):
+    """Where the application was sent (Q3). A code published is never renamed."""
+
+    COMPANY_SITE = "company_site"
+    LINKEDIN = "linkedin"
+    INDEED = "indeed"
+    WELCOME_TO_THE_JUNGLE = "welcome_to_the_jungle"
+    APEC = "apec"
+    HELLOWORK = "hellowork"
+    FRANCE_TRAVAIL = "france_travail"
+    EMAIL = "email"
+    OTHER = "other"
+
+
+CHANNEL_LABELS = {
+    Channel.COMPANY_SITE: "Site de l'entreprise",
+    Channel.LINKEDIN: "LinkedIn",
+    Channel.INDEED: "Indeed",
+    Channel.WELCOME_TO_THE_JUNGLE: "Welcome to the Jungle",
+    Channel.APEC: "Apec",
+    Channel.HELLOWORK: "Hellowork",
+    Channel.FRANCE_TRAVAIL: "France Travail",
+    Channel.EMAIL: "E-mail",
+    Channel.OTHER: "Autre",
+}
+
+
+@dataclass(frozen=True)
+class NewSending:
+    """« J'ai envoyé ma candidature » (Q3, Q5): when, where, and with what exactly (None: no document of Rocky)."""
+
+    sent_on: date
+    channel: Channel
+    channel_detail: str | None = None
+    cv_revision_id: int | None = None
+    letter_revision_id: int | None = None
+    message_id: int | None = None
+
+
+@dataclass(frozen=True)
+class Sending:
+    """A confirmed sending; in force while the stage change « Envoyée » it documents is (``change_id``)."""
+
+    id: int
+    application_id: int
+    change_id: int
+    sent_on: date
+    channel: Channel
+    channel_detail: str | None
+    cv_revision_id: int | None
+    letter_revision_id: int | None
+    message_id: int | None
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class NewPrefill:
+    """A form prefilled by the workstation (Q1, Q4, Q6): what it was given and what it reported."""
+
+    target_url: str
+    cv_revision_id: int
+    letter_revision_id: int | None
+    message_id: int | None
+    filled: tuple[str, ...]
+    missing: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Prefill:
+    id: int
+    application_id: int
+    target_url: str
+    cv_revision_id: int
+    letter_revision_id: int | None
+    message_id: int | None
+    filled: tuple[str, ...]
+    missing: tuple[str, ...]
+    created_at: datetime
+
+
 @dataclass(frozen=True)
 class Dossier:
     """What the changes of an application amount to (computed, never stored)."""
@@ -294,6 +410,39 @@ class ApplicationStore(Protocol):
         account_id: int,
         application_id: int,
         message: NewMessage,
+        now: datetime,
+    ) -> int: ...
+
+    def revisions(self, application_id: int) -> list[Revision]:
+        """The revisions of the application, in the order they were generated."""
+        ...
+
+    def insert_revision(
+        self,
+        account_id: int,
+        application_id: int,
+        revision: NewRevision,
+        now: datetime,
+    ) -> int: ...
+
+    def sendings(self, application_id: int) -> list[Sending]: ...
+
+    def insert_sending(
+        self,
+        account_id: int,
+        application_id: int,
+        change_id: int,
+        sending: NewSending,
+        now: datetime,
+    ) -> int: ...
+
+    def prefills(self, application_id: int) -> list[Prefill]: ...
+
+    def insert_prefill(
+        self,
+        account_id: int,
+        application_id: int,
+        prefill: NewPrefill,
         now: datetime,
     ) -> int: ...
 

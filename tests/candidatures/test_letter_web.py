@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -60,8 +61,8 @@ class LetterModel:
 
 
 @pytest.fixture
-def app(migrated_engine: Engine) -> FastAPI:
-    app = make_app(migrated_engine)
+def app(migrated_engine: Engine, tmp_path: Path) -> FastAPI:
+    app = make_app(migrated_engine, storage_root=tmp_path)
     app.state.import_today = lambda: TODAY
     app.state.llm_model = LetterModel()
     return app
@@ -69,6 +70,10 @@ def app(migrated_engine: Engine) -> FastAPI:
 
 @pytest.fixture
 def desk(app: FastAPI, migrated_engine: Engine) -> Desk:
+    return letter_desk(app, migrated_engine)
+
+
+def letter_desk(app: FastAPI, migrated_engine: Engine) -> Desk:
     """The application of ``test_dossier_web`` (an offer « Data analyst (H/F) » at Exemple), and a French generic
     letter with its empty place « pourquoi vous »."""
     desk = dossier_with(app, migrated_engine)
@@ -129,6 +134,25 @@ def form_of(html: str) -> dict[str, str]:
         re.findall(r'<input type="radio" name="(\w+)" value="(\w+)" checked>', form)
     )
     return {key: value.replace("&#39;", "'") for key, value in fields.items()}
+
+
+def sent_form(html: str) -> dict[str, str]:
+    """The fields of the form « J'ai envoyé ma candidature » as the page fills them (decision D5)."""
+    form = html[html.index('id="confirmer"') : html.index("Confirmer l'envoi</button>")]
+    fields = {
+        "langue": re.findall(r'name="langue" value="(\w+)"', form)[0],
+        "date": re.findall(r'name="date" value="([^"]+)"', form)[0],
+        "canal": re.findall(r'<option value="(\w+)" selected>', form)[0],
+    }
+    for name in ("cv", "lettre"):
+        checked = re.findall(
+            rf'name="{name}" value="(\w+)" (?:required )?checked', form
+        )
+        if checked:
+            fields[name] = checked[0]
+    if re.search(r'name="message" value="1" checked', form):
+        fields["message"] = "1"
+    return fields
 
 
 def test_the_letter_starts_from_the_generic_one_for_this_offer(desk: Desk) -> None:
@@ -214,7 +238,9 @@ def test_a_ready_letter_leads_to_sending_with_its_pdf(desk: Desk) -> None:
     assert ready.headers["location"] == f"{base(desk)}#envoi"
     html = page(desk)
     assert "<strong>Prête à envoyer</strong>" in html
-    assert f'href="{base(desk)}/lettre.pdf?langue=fr"' in html
+    # A draft in the step « Lettre »; the PDFs sent are generated in the step « Envoi » (decision D5, Q2).
+    assert f'href="{base(desk)}/lettre.pdf?langue=fr&amp;apercu=1"' in html
+    assert "Générer les PDF à envoyer" in html
     pdf = desk.client.get(f"{base(desk)}/lettre.pdf?langue=fr")
     assert pdf.headers["content-type"] == "application/pdf"
     assert (
@@ -266,7 +292,11 @@ def test_a_letter_changed_after_sending_says_which_one_was_sent(
 ) -> None:
     desk.client.post(f"{base(desk)}/lettre/valider", data=form_of(page(desk)))
     desk.client.post(f"{base(desk)}/lettre/prete")
-    desk.client.post(f"{base(desk)}/etape", data={"etape": "sent", "retour": "dossier"})
+    # Sent with the revisions generated (decision D5): the letter sent is the one of its revision.
+    desk.client.post(f"{base(desk)}/documents", data={"langue": "fr"})
+    sent_with = sent_form(page(desk, "/envoi"))
+    assert sent_with["lettre"] != "aucun"
+    desk.client.post(f"{base(desk)}/envoi", data=sent_with)
     app.state.auth.clock.advance(timedelta(hours=1))
 
     fields = form_of(page(desk, "?modifier=1"))

@@ -30,11 +30,10 @@
     {% if view.adjusted %}Tu as ajusté cette sélection.{% endif %}</p>
 
   <div class="cv-downloads">
-    {# Plain navigations (never boosted): the PDF downloads; a refused CV comes back as this page with its reasons. #}
-    <a class="btn btn-primary" href="{{ base }}/cv.pdf?langue=fr" hx-boost="false">CV français</a>
-    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu</a>
-    <a class="btn btn-primary" href="{{ base }}/cv.pdf?langue=en" hx-boost="false">CV anglais</a>
-    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
+    {# Plain navigations (never boosted): a draft, rendered again each time; the PDFs sent are generated and kept in
+       the step « Envoi » (decision D5, Q2). A refused CV comes back as this page with its reasons. #}
+    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu du CV français</a>
+    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Aperçu du CV anglais</a>
     {% for code, label in (("fr", "Vérifier ce CV"), ("en", "Check this CV")) %}
     <form method="post" action="{{ base }}/cv/verifier" hx-post="{{ base }}/cv/verifier" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
       <input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost">{{ label }}</button>

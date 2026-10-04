@@ -8,23 +8,30 @@ criterion of D1). Decision ``docs/decisions/D1-dossier-statuts.md``.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from datetime import date, datetime
+from collections.abc import Mapping, Sequence
+from datetime import date, datetime, timedelta
+from urllib.parse import urlsplit
 
 from rocky.candidatures.letter import letter_state
 from rocky.candidatures.model import (
+    PROPOSALS,
     Application,
     ApplicationStore,
     Change,
     ChangeKind,
+    Channel,
     Dossier,
     InvalidChangeError,
     LetterState,
     NewChange,
     NewLetter,
     NewMessage,
+    NewPrefill,
+    NewRevision,
+    NewSending,
     NextAction,
     OfferDecisions,
+    RevisionKind,
     Stage,
 )
 from rocky.candidatures.rules import (
@@ -117,15 +124,31 @@ def change_stage(
     is already at that stage (nothing written).
     """
     application, current = _open(store, account_id, application_id)
+    written = _stage_change(
+        store, application, current, stage, next_action, now, author
+    )
+    return written is not None
+
+
+def _stage_change(
+    store: ApplicationStore,
+    application: Application,
+    current: Dossier,
+    stage: Stage,
+    next_action: NextAction | None,
+    now: datetime,
+    author: Author,
+) -> Change | None:
+    """The stage change and its event, on an application already locked; None when it is already at ``stage``."""
     previous = current.stage
     if previous is None:
-        raise LookupError(f"application {application_id} has no stage")
+        raise LookupError(f"application {application.id} has no stage")
     if stage is previous:
-        return False
+        return None
     if author is not Author.USER and not automatic_transition_allowed(previous, stage):
         raise InvalidChangeError("Cette transition automatique n'est pas permise.")
-    store.insert_change(
-        account_id,
+    change = store.insert_change(
+        application.account_id,
         application.id,
         NewChange(ChangeKind.STAGE, stage=stage, next_action=next_action),
         author=author,
@@ -142,7 +165,7 @@ def change_stage(
             "next_action": _action_json(next_action),
         },
     )
-    return True
+    return change
 
 
 def set_next_action(
@@ -396,6 +419,190 @@ def validate_message(
         },
     )
     return message_id
+
+
+# Revisions, sending and prefilling (decision D5). The PDFs are rendered and stored, and the workstation called,
+# before: these only write the rows that point at them.
+
+ALREADY_SENT = "Cette candidature est déjà marquée envoyée : annule ce changement pour corriger l'envoi."
+NOT_YOURS = "Ce document n'appartient pas à cette candidature."
+# The stages a form can be prefilled at (Q6): ready to send, or prefilled already (again, on another tab).
+PREFILL_STAGES = frozenset({Stage.READY, Stage.PREFILLED})
+NOT_READY = "Le préremplissage se fait quand la candidature est prête à envoyer."
+
+
+def record_revisions(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    revisions: Sequence[NewRevision],
+    now: datetime,
+) -> tuple[int, ...]:
+    """Keep the PDFs just generated (Q2): one revision each, with one event; the earlier ones stay."""
+    application, _ = _open(store, account_id, application_id)
+    if not revisions:
+        raise ValueError("no revision to record")
+    letters = {entry.id for entry in store.letters(application.id)}
+    if any(
+        r.kind is RevisionKind.LETTER and r.letter_id not in letters for r in revisions
+    ):
+        raise InvalidChangeError(NOT_YOURS)
+    ids = tuple(
+        store.insert_revision(account_id, application.id, revision, now)
+        for revision in revisions
+    )
+    _event(
+        store,
+        application,
+        "candidatures.revisions_generated",
+        Author.USER,
+        {
+            "revisions": [
+                {
+                    "id": revision_id,
+                    "kind": revision.kind.value,
+                    "language": revision.language,
+                    "sha256": revision.sha256,
+                    "letter_id": revision.letter_id,
+                }
+                for revision_id, revision in zip(ids, revisions, strict=True)
+            ]
+        },
+    )
+    return ids
+
+
+def confirm_sending(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    sending: NewSending,
+    now: datetime,
+    today: date,
+) -> int:
+    """« J'ai envoyé ma candidature » (Q3, Q5): the stage « Envoyée », and the sending that documents it (date,
+    channel, the exact revisions and message), in the same transaction. « Relancer » falls 7 days after the date of
+    sending."""
+    application, current = _open(store, account_id, application_id)
+    if current.stage is Stage.SENT:
+        raise InvalidChangeError(ALREADY_SENT)
+    if sending.sent_on > today:
+        raise InvalidChangeError("La date d'envoi ne peut pas être dans le futur.")
+    if sending.channel is Channel.OTHER and not (sending.channel_detail or "").strip():
+        raise InvalidChangeError("Précise le canal d'envoi.")
+    _check_documents(
+        store,
+        application.id,
+        sending.cv_revision_id,
+        sending.letter_revision_id,
+        sending.message_id,
+    )
+    follow_up = PROPOSALS[Stage.SENT]
+    due = sending.sent_on + timedelta(days=follow_up.days or 0)
+    change = _stage_change(
+        store,
+        application,
+        current,
+        Stage.SENT,
+        NextAction(follow_up.label, due),
+        now,
+        Author.USER,
+    )
+    if change is None:  # unreachable: the stage is not « Envoyée » (checked above)
+        raise LookupError(f"application {application.id} is already sent")
+    sending_id = store.insert_sending(
+        account_id, application.id, change.id, sending, now
+    )
+    _event(
+        store,
+        application,
+        "candidatures.sending_confirmed",
+        Author.USER,
+        {
+            "sending_id": sending_id,
+            "change_id": change.id,
+            "sent_on": sending.sent_on.isoformat(),
+            "channel": sending.channel.value,
+            "cv_revision_id": sending.cv_revision_id,
+            "letter_revision_id": sending.letter_revision_id,
+            "message_id": sending.message_id,
+        },
+    )
+    return sending_id
+
+
+def record_prefill(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    prefill: NewPrefill,
+    now: datetime,
+    today: date,
+) -> int:
+    """The workstation took the form (Q6): its report is kept, and an application ready to send becomes
+    « Préremplie », in the same transaction. Only the domain of the form goes to the journal (a link may carry a
+    tracking token)."""
+    application, current = _open(store, account_id, application_id)
+    if current.stage not in PREFILL_STAGES:
+        raise InvalidChangeError(NOT_READY)
+    _check_documents(
+        store,
+        application.id,
+        prefill.cv_revision_id,
+        prefill.letter_revision_id,
+        prefill.message_id,
+    )
+    prefill_id = store.insert_prefill(account_id, application.id, prefill, now)
+    _event(
+        store,
+        application,
+        "candidatures.prefilled",
+        Author.USER,
+        {
+            "prefill_id": prefill_id,
+            "domain": urlsplit(prefill.target_url).hostname or "",
+            "cv_revision_id": prefill.cv_revision_id,
+            "letter_revision_id": prefill.letter_revision_id,
+            "message_id": prefill.message_id,
+            "filled": list(prefill.filled),
+            "missing": list(prefill.missing),
+        },
+    )
+    if current.stage is Stage.READY:
+        _stage_change(
+            store,
+            application,
+            current,
+            Stage.PREFILLED,
+            _proposed(Stage.PREFILLED, today),
+            now,
+            Author.USER,
+        )
+    return prefill_id
+
+
+def _check_documents(
+    store: ApplicationStore,
+    application_id: int,
+    cv_revision_id: int | None,
+    letter_revision_id: int | None,
+    message_id: int | None,
+) -> None:
+    """Each document given is one of the application's own, of the right kind."""
+    kinds = {r.id: r.kind for r in store.revisions(application_id)}
+    for revision_id, kind in (
+        (cv_revision_id, RevisionKind.CV),
+        (letter_revision_id, RevisionKind.LETTER),
+    ):
+        if revision_id is not None and kinds.get(revision_id) is not kind:
+            raise InvalidChangeError(NOT_YOURS)
+    if message_id is not None and message_id not in {
+        m.id for m in store.messages(application_id)
+    }:
+        raise InvalidChangeError(NOT_YOURS)
 
 
 def _open(

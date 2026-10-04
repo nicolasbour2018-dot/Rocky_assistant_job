@@ -1,6 +1,8 @@
-{# Step 3 of an application (decision D3, Q25; D4, Q5, Q12): the user applies on the site, with the CV, the letter
-   and the accompanying message to paste; Rocky never applies. #}
+{# Step 3 of an application (decision D3, Q25; D4, Q5, Q12; D5): the PDFs to send, generated and kept as they are;
+   the form prefilled by the Rocky workstation after confirmation; the sending confirmed with its date, its channel
+   and the exact revisions sent. Rocky never applies: the user sends the form themselves. #}
 {% set base = "/candidatures/" ~ dossier.application_id %}
+{% set lang_q = "?lettre=en" if letter.language == "en" else "" %}
 {# Plain forms (never boosted): the page comes back at its step « Envoi ». #}
 {% macro back_form(path, label, stage="", primary=false) -%}
 <form method="post" action="{{ base }}/{{ path }}" hx-boost="false" class="inline-form">
@@ -8,6 +10,102 @@
   <input type="hidden" name="retour" value="dossier">
   <button type="submit" class="btn {{ 'btn-primary' if primary else 'btn-ghost' }}">{{ label }}</button>
 </form>
+{%- endmacro %}
+{% macro revision(line, with_state=true) -%}
+<li class="revision">
+  {% set feminine = line.revision.kind == RevisionKind.LETTER %}
+  <a href="{{ base }}/documents/{{ line.revision.id }}.pdf" hx-boost="false" download>{{ line.label }}</a>
+  <span class="muted small">{{ "générée" if feminine else "généré" }} le {{ line.revision.created_at | paris_time }} · empreinte {{ line.short_hash }}</span>
+  {% if line.sent %}<span class="badge">{{ "envoyée" if feminine else "envoyé" }}</span>{% endif %}
+  {% if with_state and line.stale %}<span class="badge badge-warn">a changé depuis</span>{% endif %}
+</li>
+{%- endmacro %}
+{% macro documents() -%}
+<div class="stack">
+  <h3 class="group-title">Les PDF à envoyer {{ "(anglais)" if letter.language == "en" }}</h3>
+  {% if send.current %}
+  <ul class="revision-list">{% for line in send.current %}{{ revision(line) }}{% endfor %}</ul>
+  {% if send.stale %}<p class="alert alert-info">Ton CV ou ta lettre a changé depuis cette génération : régénère avant d'envoyer, ou envoie ces PDF tels quels.</p>{% endif %}
+  {% else %}
+  <p class="muted">Rocky fige ici le CV et la lettre que tu vas envoyer : ils restent téléchargeables à l'identique, même si tu modifies ton dossier ensuite.</p>
+  {% endif %}
+  {% if send.letter_note %}<p class="muted small">{{ send.letter_note }}</p>{% endif %}
+  <form method="post" action="{{ base }}/documents" hx-boost="false" class="inline-form">
+    <input type="hidden" name="langue" value="{{ letter.language }}">
+    <button type="submit" class="btn {{ 'btn-ghost' if send.current else 'btn-primary' }}">{{ "Régénérer les PDF" if send.current else "Générer les PDF à envoyer" }}</button>
+  </form>
+  {% if send.earlier %}
+  <details class="note"><summary>Versions précédentes ({{ send.earlier | length }})</summary>
+    <ul class="revision-list">{% for line in send.earlier %}{{ revision(line, with_state=false) }}{% endfor %}</ul>
+  </details>
+  {% endif %}
+</div>
+{%- endmacro %}
+{% macro prefill_block() -%}
+{% set cv = send.latest(RevisionKind.CV) %}
+{% set letter_line = send.latest(RevisionKind.LETTER) %}
+<div id="preremplir" class="note">
+  <h3 class="group-title">Préremplir le formulaire de {{ apply_domain or "candidature" }}</h3>
+  {% if prefill_error %}<p class="alert alert-error" role="alert">{{ prefill_error }}</p>{% endif %}
+  {% if cv %}
+  <p class="muted small">Le poste Rocky ouvre la page dans un navigateur sur ton ordinateur, remplit ce qu'il reconnaît, et te laisse la main : il ne clique sur rien, tu relis et tu envoies toi-même.</p>
+  <form method="post" action="{{ base }}/preremplir" hx-boost="false" class="stack">
+    <input type="hidden" name="langue" value="{{ letter.language }}">
+    <input type="hidden" name="cv" value="{{ cv.revision.id }}">
+    <input type="hidden" name="lettre" value="{{ letter_line.revision.id if letter_line else NONE }}">
+    <table class="offer-table">
+      <tbody>
+        {% for key, value in send.fields %}
+        <tr><th scope="row">{{ field_labels[key] }}</th><td>{{ value }}</td></tr>
+        {% endfor %}
+        <tr><th scope="row">CV</th><td>{{ cv.filename }} <span class="muted small">(empreinte {{ cv.short_hash }})</span>{% if cv.stale %} <span class="badge badge-warn">a changé depuis</span>{% endif %}</td></tr>
+        <tr><th scope="row">Lettre</th><td>{% if letter_line %}{{ letter_line.filename }} <span class="muted small">(empreinte {{ letter_line.short_hash }})</span>{% if letter_line.stale %} <span class="badge badge-warn">a changé depuis</span>{% endif %}{% else %}<span class="muted">aucune</span>{% endif %}</td></tr>
+      </tbody>
+    </table>
+    <label><input type="checkbox" name="consentement" value="1"> Je confirme ces données et ces fichiers pour le formulaire de {{ apply_domain or "ce site" }}.</label>
+    <p><button type="submit" class="btn btn-primary">Préremplir</button>
+      <a class="btn btn-ghost" href="{{ base }}{{ lang_q }}#envoi" hx-boost="false">Fermer</a></p>
+  </form>
+  {% else %}
+  <p>Génère d'abord les PDF à envoyer : le poste dépose exactement ceux-là.</p>
+  {% endif %}
+</div>
+{%- endmacro %}
+{% macro confirm_block() -%}
+<div id="confirmer" class="note">
+  <h3 class="group-title">J'ai envoyé ma candidature</h3>
+  {% if confirm.error %}<p class="alert alert-error" role="alert">{{ confirm.error }}</p>{% endif %}
+  <form method="post" action="{{ base }}/envoi" hx-boost="false" class="stack">
+    <input type="hidden" name="langue" value="{{ letter.language }}">
+    <label>Date d'envoi <input type="date" name="date" value="{{ confirm.sent_on.isoformat() }}" required></label>
+    <label>Canal
+      <select name="canal">
+        {% for channel in channels %}<option value="{{ channel.value }}" {{ "selected" if channel == confirm.channel }}>{{ channel_labels[channel] }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Précision <span class="muted small">(obligatoire pour « Autre »)</span> <input name="precision" value="{{ confirm.detail }}"></label>
+    <fieldset>
+      <legend>CV envoyé</legend>
+      {% for line in send.lines(RevisionKind.CV) %}
+      <label><input type="radio" name="cv" value="{{ line.revision.id }}" required {{ "checked" if confirm.cv == line.revision.id | string }}> {{ line.label }} du {{ line.revision.created_at | paris_time }} <span class="muted small">({{ line.short_hash }})</span>{% if line.stale %} <span class="badge badge-warn">a changé depuis</span>{% endif %}</label>
+      {% endfor %}
+      <label><input type="radio" name="cv" value="{{ NONE }}" required {{ "checked" if confirm.cv == NONE }}> Sans document de Rocky</label>
+      {% if not send.current %}<p class="muted small">Aucun PDF généré : génère-les d'abord, ou choisis « Sans document de Rocky ».</p>{% endif %}
+    </fieldset>
+    <fieldset>
+      <legend>Lettre envoyée</legend>
+      {% for line in send.lines(RevisionKind.LETTER) %}
+      <label><input type="radio" name="lettre" value="{{ line.revision.id }}" {{ "checked" if confirm.letter == line.revision.id | string }}> {{ line.label }} du {{ line.revision.created_at | paris_time }} <span class="muted small">({{ line.short_hash }})</span>{% if line.stale %} <span class="badge badge-warn">a changé depuis</span>{% endif %}</label>
+      {% endfor %}
+      <label><input type="radio" name="lettre" value="{{ NONE }}" {{ "checked" if confirm.letter == NONE }}> Pas de lettre de Rocky</label>
+    </fieldset>
+    {% if send.message %}
+    <label><input type="checkbox" name="message" value="1" {{ "checked" if confirm.with_message }}> Avec le message d'accompagnement validé le {{ send.message.created_at | paris_time }}</label>
+    {% endif %}
+    <p><button type="submit" class="btn btn-primary">Confirmer l'envoi</button>
+      <a class="btn btn-ghost" href="{{ base }}{{ lang_q }}#envoi" hx-boost="false">Fermer</a></p>
+  </form>
+</div>
 {%- endmacro %}
 {% macro message_block() -%}
 <div id="message" class="note">
@@ -36,28 +134,59 @@
   {% endif %}
 </div>
 {%- endmacro %}
+{% macro sent_block(sent) -%}
+<div class="stack">
+  <p class="line-good">✅ {{ stage_labels[dossier.stage] }}{% if dossier.next_action %} — {{ dossier.next_action.label }} le {{ dossier.next_action.due.strftime("%d/%m/%Y") }}{% endif %}.</p>
+  {% if sent and sent.linked %}
+  <p>Envoyée le {{ sent.on.strftime("%d/%m/%Y") }} via {{ sent.channel }}{% if not sent.cv and not sent.letter %}, sans document de Rocky{% endif %}.</p>
+  {% if sent.cv or sent.letter %}
+  <ul class="revision-list">
+    {% if sent.cv %}{{ revision(sent.cv, with_state=false) }}{% endif %}
+    {% if sent.letter %}{{ revision(sent.letter, with_state=false) }}{% endif %}
+  </ul>
+  {% endif %}
+  {% if sent.message %}<p class="muted small">Avec le message d'accompagnement validé le {{ sent.message.created_at | paris_time }}.</p>{% endif %}
+  {% elif sent %}
+  <p class="muted small">Envoyée le {{ sent.on.strftime("%d/%m/%Y") }}, avant que Rocky garde les documents envoyés : ni canal ni PDF liés.</p>
+  {% endif %}
+  <p class="muted small">Le suivi viendra ici.</p>
+</div>
+{%- endmacro %}
 <section id="envoi" class="dossier-step" aria-label="Envoi de la candidature">
   <h2>3. Envoi</h2>
+  {% if send_error %}<p class="alert alert-error" role="alert">{{ send_error }}</p>{% endif %}
   {% if dossier.journey.current == Step.SEND %}
   <p>Rocky ne postule jamais à ta place : tu déposes ta candidature toi-même.</p>
+  {{ documents() }}
+  {% if send.prefill %}
+  <p class="alert alert-info">Formulaire prérempli le {{ send.prefill.created_at | paris_time }}.
+    {% if send.prefill.filled %}Rempli : {{ send.prefill.filled | join(", ") }}.{% endif %}
+    {% if send.prefill.missing %}À faire toi-même : {{ send.prefill.missing | join(" ; ") }}.{% endif %}
+    Relis tout sur le site avant d'envoyer.</p>
+  {% endif %}
+  {% if confirm %}
+  {{ confirm_block() }}
+  {% elif prefilling %}
+  {{ prefill_block() }}
+  {% else %}
   <ol class="send-list">
-    <li>Télécharge ton CV :
-      <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=fr" hx-boost="false">CV français</a>
-      <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=en" hx-boost="false">CV anglais</a></li>
-    {% if letter.version %}
-    <li>Et ta lettre :
-      <a class="btn btn-ghost" href="{{ base }}/lettre.pdf?langue={{ letter.language }}" hx-boost="false">{{ "Lettre française" if letter.language == "fr" else "Lettre anglaise" }}</a>
-      <span class="muted small">(ou son texte, dans l'étape Lettre)</span></li>
-    {% endif %}
     <li>Dépose-les sur le site :
-      <a class="btn btn-primary" href="{{ dossier.offer.apply_at }}" target="_blank" rel="noopener noreferrer" hx-boost="false">Ouvrir le site de candidature ↗</a>
+      <a class="btn btn-ghost" href="{{ dossier.offer.apply_at }}" target="_blank" rel="noopener noreferrer" hx-boost="false">Ouvrir le site de candidature ↗</a>
+      {% if send.current %}<span class="muted">ou</span>
+      <a class="btn btn-ghost" href="{{ base }}/preremplir{{ lang_q }}#envoi" hx-boost="false">Préremplir avec le poste Rocky</a>{% endif %}
       <span class="muted small">{{ apply_domain }}</span></li>
-    <li>Reviens ici : {{ back_form("etape", "J'ai envoyé ma candidature", stage=Stage.SENT.value, primary=true) }}</li>
+    <li>Reviens ici : <a class="btn btn-primary" href="{{ base }}/envoi{{ lang_q }}#envoi" hx-boost="false">J'ai envoyé ma candidature</a></li>
   </ol>
+  {% endif %}
   {{ message_block() }}
   <p>{{ back_form("annuler", "Annuler le dernier changement") }}</p>
   {% elif dossier.journey.sent %}
-  <p class="line-good">✅ {{ stage_labels[dossier.stage] }}{% if dossier.next_action %} — {{ dossier.next_action.label }} le {{ dossier.next_action.due.strftime("%d/%m/%Y") }}{% endif %}. Le suivi viendra ici.</p>
+  {{ sent_block(send.sent) }}
+  {% if send.current or send.earlier %}
+  <details class="note"><summary>Tous les PDF générés</summary>
+    <ul class="revision-list">{% for line in send.current %}{{ revision(line, with_state=false) }}{% endfor %}{% for line in send.earlier %}{{ revision(line, with_state=false) }}{% endfor %}</ul>
+  </details>
+  {% endif %}
   {{ message_block() }}
   <p>{{ back_form("annuler", "Annuler le dernier changement") }}</p>
   {% else %}

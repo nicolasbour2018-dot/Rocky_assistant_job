@@ -43,6 +43,19 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 - « Pas de lettre » et le passage à « Prête à envoyer » s'écrivent dans la même transaction (test de panne de
   `test_sql.py`).
 
+## Révisions et envoi (décision `docs/decisions/D5-revisions-envoi.md`)
+- Un PDF envoyé est une **révision** : rendu hors transaction, écrit par `FileStore.put_file` (`candidatures`, adressé
+  par son hash) puis `record_revisions` ; jamais réécrit. Le téléchargement relit les octets avec leur hash
+  (`read_file`) ; un fichier altéré est refusé avec sa raison. Les aperçus des étapes CV et Lettre restent éphémères.
+- Empreinte d'entrée (`inputs_sha256`) : CV = `profil.web.cv_fingerprint` (HTML, gabarit, photo), lettre =
+  `letter_fingerprint` (HTML sans la date). Une révision dont l'empreinte diffère est « a changé depuis ».
+- Un envoi documente **un** changement « Envoyée » (`change_id`) : `confirm_sending` écrit le changement, l'envoi et
+  leurs événements dans la même transaction (test de panne de `test_sql.py`). Aucun envoi sans confirmation : la liste
+  renvoie au formulaire. Un envoi n'est en vigueur que si son changement l'est (`sending_in_force`).
+- Préremplissage : `record_prefill` seulement **après** que le poste a pris le formulaire (rien n'est écrit sinon) ;
+  passage à « Préremplie » depuis « Prête à envoyer ». Les révisions remises sont celles **montrées** à la
+  confirmation (identifiants cachés, refus si elles ont changé). Seul le domaine du formulaire va au journal.
+
 ## Écran
 - Liste brute de D1, avec « À préparer » (offres « Intéressé » sans dossier, D3 Q26) ; l'écran 📝 Candidatures est D6.
 - Page du dossier (D3, Q25) : fil 1. CV / 2. Lettre / 3. Envoi calculé par `rules.journey` (étape et état de la

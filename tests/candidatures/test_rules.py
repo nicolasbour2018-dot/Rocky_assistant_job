@@ -9,9 +9,13 @@ import pytest
 from rocky.candidatures.model import (
     Change,
     ChangeKind,
+    Channel,
     InvalidChangeError,
     LetterState,
     NextAction,
+    Revision,
+    RevisionKind,
+    Sending,
     Stage,
 )
 from rocky.candidatures.rules import (
@@ -20,9 +24,15 @@ from rocky.candidatures.rules import (
     deferred,
     dossier,
     is_overdue,
+    is_stale,
     journey,
+    latest_revisions,
     make_next_action,
     proposal,
+    proposed_channel,
+    revision_filename,
+    sending_in_force,
+    sent_change,
     to_cancel,
 )
 from rocky.offres.decisions import Author
@@ -238,3 +248,109 @@ def test_a_cancelled_or_finished_application_has_no_step_to_work_on(
 
     assert found.closed
     assert found.current is None
+
+
+# Revisions and sendings (decision D5).
+
+
+def revision(id_: int, kind: RevisionKind, language: str = "fr") -> Revision:
+    return Revision(
+        id=id_,
+        application_id=1,
+        kind=kind,
+        language=language,
+        path=f"comptes/1/candidatures/{id_}.pdf",
+        sha256=f"sha{id_}",
+        inputs_sha256=f"inputs{id_}",
+        letter_id=None if kind is RevisionKind.CV else 1,
+        created_at=AT,
+    )
+
+
+def sending(id_: int, change_id: int) -> Sending:
+    return Sending(
+        id=id_,
+        application_id=1,
+        change_id=change_id,
+        sent_on=TODAY,
+        channel=Channel.LINKEDIN,
+        channel_detail=None,
+        cv_revision_id=None,
+        letter_revision_id=None,
+        message_id=None,
+        created_at=AT,
+    )
+
+
+def test_the_latest_revision_of_each_kind_in_the_language_is_proposed() -> None:
+    revisions = [
+        revision(1, RevisionKind.CV),
+        revision(2, RevisionKind.LETTER),
+        revision(3, RevisionKind.CV),
+        revision(4, RevisionKind.CV, "en"),
+    ]
+
+    assert latest_revisions(revisions, "fr") == {
+        RevisionKind.CV: revisions[2],
+        RevisionKind.LETTER: revisions[1],
+    }
+    assert latest_revisions(revisions, "en") == {RevisionKind.CV: revisions[3]}
+
+
+def test_a_revision_is_stale_once_its_inputs_differ() -> None:
+    cv = revision(1, RevisionKind.CV)
+
+    assert not is_stale(cv, "inputs1")
+    assert is_stale(cv, "inputs2")
+    assert is_stale(cv, None)
+
+
+def test_the_file_name_the_recruiter_sees() -> None:
+    assert (
+        revision_filename(RevisionKind.CV, "Camille  Martin", "fr")
+        == "CV_Camille_Martin_FR.pdf"
+    )
+    assert revision_filename(RevisionKind.LETTER, "", "en") == "Lettre_EN.pdf"
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://www.linkedin.com/jobs/view/123", Channel.LINKEDIN),
+        ("https://fr.indeed.com/viewjob?jk=1", Channel.INDEED),
+        (
+            "https://www.welcometothejungle.com/fr/companies/a/jobs/b",
+            Channel.WELCOME_TO_THE_JUNGLE,
+        ),
+        ("https://www.apec.fr/candidat/offre.html", Channel.APEC),
+        ("https://www.hellowork.com/fr-fr/emplois/1.html", Channel.HELLOWORK),
+        ("https://candidat.francetravail.fr/offres/1", Channel.FRANCE_TRAVAIL),
+        ("mailto:jobs@acme.fr", Channel.EMAIL),
+        ("https://jobs.acme.fr/apply", Channel.COMPANY_SITE),
+        # A domain merely containing a platform's name is not that platform.
+        ("https://notlinkedin.com/x", Channel.COMPANY_SITE),
+        ("", Channel.COMPANY_SITE),
+    ],
+)
+def test_the_channel_is_proposed_from_the_link(url: str, expected: Channel) -> None:
+    assert proposed_channel(url) is expected
+
+
+def test_the_sending_in_force_is_that_of_the_latest_change_sent() -> None:
+    first_sent = change(2, ChangeKind.STAGE, Stage.SENT, FOLLOW_UP)
+    cancelled = change(3, ChangeKind.CANCELLATION, cancels=2)
+    sent_again = change(4, ChangeKind.STAGE, Stage.SENT, FOLLOW_UP)
+    sendings = [sending(1, 2), sending(2, 4)]
+
+    assert sending_in_force([CREATED, first_sent], sendings) == sendings[0]
+    assert sending_in_force([CREATED, first_sent, cancelled], sendings) is None
+    assert (
+        sending_in_force([CREATED, first_sent, cancelled, sent_again], sendings)
+        == sendings[1]
+    )
+
+
+def test_a_change_sent_before_d5_has_no_sending() -> None:
+    assert sent_change([CREATED, SENT]) == SENT
+    assert sending_in_force([CREATED, SENT], []) is None
+    assert sent_change([CREATED]) is None

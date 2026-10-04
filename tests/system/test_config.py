@@ -41,6 +41,15 @@ def test_the_language_model_is_optional_with_a_default_model() -> None:
     assert settings.llm == LlmSettings(api_key="k-1", model="gemini-autre")
 
 
+def test_the_workstation_is_reached_from_docker_by_default() -> None:
+    assert load_settings(BASE).workstation_url == "http://host.docker.internal:8765"
+    assert (
+        load_settings({**BASE, "ROCKY_WORKSTATION_URL": "http://127.0.0.1:9000/"})
+    ).workstation_url == "http://127.0.0.1:9000"
+    with pytest.raises(ConfigError, match="ROCKY_WORKSTATION_URL"):
+        load_settings({**BASE, "ROCKY_WORKSTATION_URL": "file:///poste"})
+
+
 def test_https_public_url_makes_cookies_secure() -> None:
     settings = load_settings({**BASE, "ROCKY_PUBLIC_URL": "https://rocky.example"})
 

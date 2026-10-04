@@ -98,8 +98,9 @@
     {% endfor %}
   </div>
   <div class="cv-downloads">
-    {# Plain navigations (never boosted): the PDF downloads; a refused letter comes back as this page with its reasons. #}
-    <a class="btn btn-primary" href="{{ base }}/lettre.pdf?langue={{ letter.language }}" hx-boost="false">{{ "Télécharger la lettre" if letter.language == "fr" else "Download the letter" }}</a>
+    {# Plain navigations (never boosted): a draft dated today; the letter sent is generated and kept in the step
+       « Envoi » (decision D5, Q2). A refused letter comes back as this page with its reasons. #}
+    <a class="btn btn-ghost" href="{{ base }}/lettre.pdf?langue={{ letter.language }}&amp;apercu=1" target="_blank" rel="noopener" hx-boost="false">{{ "Brouillon PDF" if letter.language == "fr" else "Draft PDF" }}</a>
     <form method="post" action="{{ base }}/lettre/apercu" hx-post="{{ base }}/lettre/apercu" {{ swap | safe }} class="inline-form">
       <input type="hidden" name="langue" value="{{ letter.language }}"><button type="submit" class="btn btn-ghost">{{ "Aperçu" if letter.language == "fr" else "Preview" }}</button>
     </form>

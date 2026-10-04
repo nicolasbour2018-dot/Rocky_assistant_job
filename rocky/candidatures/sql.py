@@ -34,6 +34,7 @@ from rocky.candidatures.model import (
     Application,
     Change,
     ChangeKind,
+    Channel,
     LetterEntry,
     LetterHeader,
     LetterOrigin,
@@ -44,8 +45,15 @@ from rocky.candidatures.model import (
     NewChange,
     NewLetter,
     NewMessage,
+    NewPrefill,
+    NewRevision,
+    NewSending,
     NextAction,
     NoLetter,
+    Prefill,
+    Revision,
+    RevisionKind,
+    Sending,
     Stage,
 )
 from rocky.offres.decisions import Author
@@ -167,6 +175,81 @@ application_messages = Table(
     CheckConstraint("language IN ('fr', 'en')", name="language"),
     CheckConstraint(_in("origin", MessageOrigin), name="origin"),
     Index("ix_application_messages_application_id", "application_id", "id"),
+)
+
+
+# The revisions of an application's documents (decision D5, Q2): each generated PDF, stored once under its hash and
+# never written again; the latest of a kind and a language is the one proposed for sending.
+document_revisions = Table(
+    "document_revisions",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("kind", Text, nullable=False),
+    Column("language", Text, nullable=False),
+    # Relative to the storage root, read back with its hash checked (``FileStore``).
+    Column("path", Text, nullable=False),
+    Column("sha256", Text, nullable=False),
+    # What the PDF was made from (the CV's HTML, template and photo; the letter version): it is stale once this differs.
+    Column("inputs_sha256", Text, nullable=False),
+    Column("letter_id", BigInteger, ForeignKey("application_letters.id")),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint(_in("kind", RevisionKind), name="kind"),
+    CheckConstraint("language IN ('fr', 'en')", name="language"),
+    CheckConstraint(
+        "(kind = 'letter') = (letter_id IS NOT NULL)", name="letter_has_version"
+    ),
+    Index("ix_document_revisions_application_id", "application_id", "id"),
+)
+
+# The sendings of an application (decision D5, Q3, Q5): each documents one stage change « Envoyée », and is in force
+# while that change is; cancelling the change needs no other write.
+application_sendings = Table(
+    "application_sendings",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column(
+        "change_id", BigInteger, ForeignKey("application_changes.id"), nullable=False
+    ),
+    Column("sent_on", Date, nullable=False),
+    Column("channel", Text, nullable=False),
+    Column("channel_detail", Text),
+    # None: sent without a document of Rocky, chosen explicitly (Q5).
+    Column("cv_revision_id", BigInteger, ForeignKey("document_revisions.id")),
+    Column("letter_revision_id", BigInteger, ForeignKey("document_revisions.id")),
+    Column("message_id", BigInteger, ForeignKey("application_messages.id")),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    UniqueConstraint("change_id"),
+    CheckConstraint(_in("channel", Channel), name="channel"),
+    CheckConstraint(
+        "channel <> 'other' OR channel_detail IS NOT NULL", name="other_detailed"
+    ),
+    Index("ix_application_sendings_application_id", "application_id", "id"),
+)
+
+# The forms prefilled by the workstation (decision D5, Q1, Q4, Q6): what it was given, what it reported.
+application_prefills = Table(
+    "application_prefills",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("target_url", Text, nullable=False),
+    Column(
+        "cv_revision_id",
+        BigInteger,
+        ForeignKey("document_revisions.id"),
+        nullable=False,
+    ),
+    Column("letter_revision_id", BigInteger, ForeignKey("document_revisions.id")),
+    Column("message_id", BigInteger, ForeignKey("application_messages.id")),
+    Column("filled", JSONB, nullable=False),
+    Column("missing", JSONB, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Index("ix_application_prefills_application_id", "application_id", "id"),
 )
 
 
@@ -388,6 +471,144 @@ class SqlApplicationStore:
             .returning(application_messages.c.id)
         ).scalar_one()
         return message_id
+
+    def revisions(self, application_id: int) -> list[Revision]:
+        rows = self._conn.execute(
+            select(document_revisions)
+            .where(document_revisions.c.application_id == application_id)
+            .order_by(document_revisions.c.id)
+        )
+        return [
+            Revision(
+                id=row.id,
+                application_id=row.application_id,
+                kind=RevisionKind(row.kind),
+                language=row.language,
+                path=row.path,
+                sha256=row.sha256,
+                inputs_sha256=row.inputs_sha256,
+                letter_id=row.letter_id,
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+
+    def insert_revision(
+        self,
+        account_id: int,
+        application_id: int,
+        revision: NewRevision,
+        now: datetime,
+    ) -> int:
+        revision_id: int = self._conn.execute(
+            document_revisions.insert()
+            .values(
+                application_id=application_id,
+                account_id=account_id,
+                kind=revision.kind.value,
+                language=revision.language,
+                path=revision.path,
+                sha256=revision.sha256,
+                inputs_sha256=revision.inputs_sha256,
+                letter_id=revision.letter_id,
+                created_at=now,
+            )
+            .returning(document_revisions.c.id)
+        ).scalar_one()
+        return revision_id
+
+    def sendings(self, application_id: int) -> list[Sending]:
+        rows = self._conn.execute(
+            select(application_sendings)
+            .where(application_sendings.c.application_id == application_id)
+            .order_by(application_sendings.c.id)
+        )
+        return [
+            Sending(
+                id=row.id,
+                application_id=row.application_id,
+                change_id=row.change_id,
+                sent_on=row.sent_on,
+                channel=Channel(row.channel),
+                channel_detail=row.channel_detail,
+                cv_revision_id=row.cv_revision_id,
+                letter_revision_id=row.letter_revision_id,
+                message_id=row.message_id,
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+
+    def insert_sending(
+        self,
+        account_id: int,
+        application_id: int,
+        change_id: int,
+        sending: NewSending,
+        now: datetime,
+    ) -> int:
+        sending_id: int = self._conn.execute(
+            application_sendings.insert()
+            .values(
+                application_id=application_id,
+                account_id=account_id,
+                change_id=change_id,
+                sent_on=sending.sent_on,
+                channel=sending.channel.value,
+                channel_detail=sending.channel_detail,
+                cv_revision_id=sending.cv_revision_id,
+                letter_revision_id=sending.letter_revision_id,
+                message_id=sending.message_id,
+                created_at=now,
+            )
+            .returning(application_sendings.c.id)
+        ).scalar_one()
+        return sending_id
+
+    def prefills(self, application_id: int) -> list[Prefill]:
+        rows = self._conn.execute(
+            select(application_prefills)
+            .where(application_prefills.c.application_id == application_id)
+            .order_by(application_prefills.c.id)
+        )
+        return [
+            Prefill(
+                id=row.id,
+                application_id=row.application_id,
+                target_url=row.target_url,
+                cv_revision_id=row.cv_revision_id,
+                letter_revision_id=row.letter_revision_id,
+                message_id=row.message_id,
+                filled=tuple(row.filled),
+                missing=tuple(row.missing),
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+
+    def insert_prefill(
+        self,
+        account_id: int,
+        application_id: int,
+        prefill: NewPrefill,
+        now: datetime,
+    ) -> int:
+        prefill_id: int = self._conn.execute(
+            application_prefills.insert()
+            .values(
+                application_id=application_id,
+                account_id=account_id,
+                target_url=prefill.target_url,
+                cv_revision_id=prefill.cv_revision_id,
+                letter_revision_id=prefill.letter_revision_id,
+                message_id=prefill.message_id,
+                filled=list(prefill.filled),
+                missing=list(prefill.missing),
+                created_at=now,
+            )
+            .returning(application_prefills.c.id)
+        ).scalar_one()
+        return prefill_id
 
     def append_event(self, event: NewEvent) -> None:
         append_event(self._conn, event)

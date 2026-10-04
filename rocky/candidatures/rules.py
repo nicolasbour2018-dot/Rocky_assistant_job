@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import StrEnum
+from urllib.parse import urlsplit
 
 from rocky.candidatures.model import (
     DEFER_DAYS,
@@ -14,10 +15,14 @@ from rocky.candidatures.model import (
     PROPOSALS,
     Change,
     ChangeKind,
+    Channel,
     Dossier,
     InvalidChangeError,
     LetterState,
     NextAction,
+    Revision,
+    RevisionKind,
+    Sending,
     Stage,
 )
 
@@ -155,3 +160,76 @@ def journey(stage: Stage | None, letter: LetterState = LetterState.NONE) -> Jour
     return Journey(
         Step.SEND, frozenset({Step.CV}) | letter_done, sent=False, closed=False
     )
+
+
+# Revisions and sendings (decision D5).
+
+
+def latest_revisions(
+    revisions: Iterable[Revision], language: str
+) -> dict[RevisionKind, Revision]:
+    """The latest revision of each kind in ``language``: the one proposed for sending (Q2, Q5)."""
+    latest: dict[RevisionKind, Revision] = {}
+    for revision in sorted(revisions, key=lambda found: found.id):
+        if revision.language == language:
+            latest[revision.kind] = revision
+    return latest
+
+
+def is_stale(revision: Revision, inputs_sha256: str | None) -> bool:
+    """The document has changed since this revision was generated (None: it cannot be made any more)."""
+    return inputs_sha256 != revision.inputs_sha256
+
+
+def revision_filename(kind: RevisionKind, full_name: str, language: str) -> str:
+    """The name the recruiter sees: ``CV_Camille_Martin_FR.pdf``, ``Lettre_Camille_Martin_EN.pdf``."""
+    prefix = "CV" if kind is RevisionKind.CV else "Lettre"
+    name = "_".join(full_name.split())
+    return (
+        f"{prefix}_{name}_{language.upper()}.pdf"
+        if name
+        else f"{prefix}_{language.upper()}.pdf"
+    )
+
+
+# Hosts of the job platforms (Q3); any other host is the company's own site.
+_CHANNEL_HOSTS: Mapping[str, Channel] = {
+    "linkedin.com": Channel.LINKEDIN,
+    "indeed.com": Channel.INDEED,
+    "indeed.fr": Channel.INDEED,
+    "welcometothejungle.com": Channel.WELCOME_TO_THE_JUNGLE,
+    "apec.fr": Channel.APEC,
+    "hellowork.com": Channel.HELLOWORK,
+    "francetravail.fr": Channel.FRANCE_TRAVAIL,
+    "pole-emploi.fr": Channel.FRANCE_TRAVAIL,
+}
+
+
+def proposed_channel(url: str) -> Channel:
+    """The channel proposed from the address of the application link (Q3): a platform by its exact domain or one
+    of its subdomains, else the company's site; ``mailto:`` is an e-mail."""
+    parts = urlsplit(url.strip())
+    if parts.scheme == "mailto":
+        return Channel.EMAIL
+    host = (parts.hostname or "").lower()
+    for domain, channel in _CHANNEL_HOSTS.items():
+        if host == domain or host.endswith("." + domain):
+            return channel
+    return Channel.COMPANY_SITE
+
+
+def sending_in_force(
+    rows: Iterable[Change], sendings: Iterable[Sending]
+) -> Sending | None:
+    """The sending of the latest stage change « Envoyée » still in force; None once it is cancelled, or for a
+    sending confirmed before D5 (a change « Envoyée » without sending)."""
+    change = sent_change(rows)
+    if change is None:
+        return None
+    return next((s for s in sendings if s.change_id == change.id), None)
+
+
+def sent_change(rows: Iterable[Change]) -> Change | None:
+    """The latest change « Envoyée » still in force, documented by a sending or not."""
+    sent = [row for row in standing(rows) if row.stage is Stage.SENT]
+    return sent[-1] if sent else None

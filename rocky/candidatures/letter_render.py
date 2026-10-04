@@ -6,6 +6,8 @@ font that did not load. Nothing is shrunk to fit: the user shortens a paragraph.
 
 from __future__ import annotations
 
+import hashlib
+from dataclasses import replace
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -41,6 +43,14 @@ def letter_html(sheet: LetterSheet) -> str:
         subject_label=SUBJECT_LABELS[sheet.language],
         font_faces=Markup(font_faces()),
     )
+
+
+def letter_fingerprint(sheet: LetterSheet) -> str:
+    """What the PDF of the letter is made from, its date aside (decision D5): a revision is stale once this changes;
+    the date it carries is frozen with it."""
+    return hashlib.sha256(
+        letter_html(replace(sheet, place_date="")).encode()
+    ).hexdigest()
 
 
 def draw_letter(sheet: LetterSheet) -> tuple[bytes, tuple[str, ...]]:

@@ -178,14 +178,30 @@ def test_an_application_goes_from_its_cv_to_sent_on_its_page(
     assert "apec.example" in sending
     assert "CV prêt : passer à la lettre" not in sending
 
-    desk.client.post(f"{base}/etape", data={"etape": "sent", "retour": "dossier"})
+    # « Envoyée » goes through its confirmation (decision D5, Q5): here, explicitly without document of Rocky.
+    moved = desk.client.post(
+        f"{base}/etape", data={"etape": "sent", "retour": "dossier"}
+    )
+    assert moved.headers["location"] == f"{base}/envoi#envoi"
+    confirmed = desk.client.post(
+        f"{base}/envoi",
+        data={
+            "langue": "fr",
+            "date": TODAY.isoformat(),
+            "canal": "apec",
+            "cv": "aucun",
+            "lettre": "aucun",
+        },
+    )
+    assert confirmed.headers["location"] == f"{base}#envoi"
     sent = page(desk)
     assert "✅ Envoyée — Relancer le" in sent
-    assert "J&#39;ai envoyé ma candidature" not in sent
+    assert "via Apec, sans document de Rocky" in sent
+    assert "J'ai envoyé ma candidature</a>" not in sent
 
     undone = desk.client.post(f"{base}/annuler", data={"retour": "dossier"})
     assert undone.headers["location"] == f"{base}#envoi"
-    assert "J&#39;ai envoyé ma candidature" in page(desk)
+    assert "J'ai envoyé ma candidature</a>" in page(desk)
     with migrated_engine.connect() as connection:
         types = (
             connection.execute(

@@ -143,7 +143,7 @@ aucun identifiant interne affiché.
 | D2. CV maître et rendu | CV structuré FR/EN ; gabarit HTML/CSS → PDF (Playwright) ; listes déterministes ; fin du verrou Canva (SHA-256, coordonnées pixels) et de LibreOffice ; « Vérifier mon CV » (ATS V3 porté) ; import d'un CV PDF et **gabarit par compte déduit du CV importé**, gabarit neutre à défaut (décision D2) | CV FR validé visuellement par Nicolas (EN aussi quand un CV anglais est importé : import facultatif, décision D2, Q33) ; parsing du PDF vérifié ; le gabarit déduit du CV Canva de Nicolas le reproduit à l'identique, seuls compétences et projets variant (Q17, Q29) ; un PDF image est refusé avec sa raison et se rabat sur le gabarit neutre | ✅ |
 | D3. Ciblage et traduction | Sélection et ordre des éléments selon l'annonce ; traduction champ par champ avec glossaire et validation | CV anglais ciblé sans ressaisie | ✅ |
 | D4. Lettre et message | Même moteur ; storytelling de préparation ; ton des prompts revu (pas de jugement dévalorisant sur la reconversion) | Lettres FR et EN validées sur 3 annonces réelles | ✅ |
-| D5. Révisions et envoi | Chaque génération dans un chemin immuable avec hash, vérifié au téléchargement ; préremplissage navigateur porté (confirmation avant) ; confirmation d'envoi au retour avec date et canal | Deux générations → deux PDF distincts récupérables ; l'envoi est lié à la révision exacte | ⬜ |
+| D5. Révisions et envoi | Chaque génération dans un chemin immuable avec hash, vérifié au téléchargement ; préremplissage navigateur porté (confirmation avant) ; confirmation d'envoi au retour avec date et canal | Deux générations → deux PDF distincts récupérables ; l'envoi est lié à la révision exacte | 🔄 |
 | D6. Écran Candidatures | Kanban ou liste dense avec filtres par étape ; dossier en 4 étapes (CV → lettre → envoi → suivi) ; chronologie, notes | Une relance due est retrouvée en moins de 3 clics | ⬜ |
 
 ### E. Messages
@@ -570,3 +570,19 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D4 → D5, F2)** Clôture de D4 (Nicolas, 04/10) sur 2 lettres françaises réelles : la lettre anglaise d'un dossier et
   le message d'accompagnement n'ont été éprouvés que dans l'essai navigateur. Les refaire sur des offres réelles à la
   recette de D5 (envoi lié à la révision exacte) ou de F2.
+- **(D5 → §5 VPS)** Le préremplissage passe par le **poste Rocky**, lancé sur l'ordinateur (`uv run rocky-poste`) : sur
+  un VPS sans écran, il n'existe pas ; l'utilisateur ouvre le site et télécharge les PDF générés. À revoir avec le
+  déploiement (poste sur l'ordinateur de l'utilisateur joint par le VPS, ou rien).
+- **(D5 → E5)** Le poste est l'adaptateur « navigateur visible » de la lecture assistée : E5 lui ajoute une demande
+  (ouvrir une fiche, laisser passer un défi, rendre le texte affiché) à côté de `/preremplir`.
+- **(D5)** Un PDF écrit avant une transaction qui échoue reste dans le stockage sans ligne (adressé par son hash, sans
+  effet) : aucune purge en D5 ; à prévoir avec les sauvegardes du VPS si le volume compte.
+- **(D5 → D6)** L'étape Envoi s'allonge (PDF générés, préremplissage, confirmation, message) : à reprendre avec le
+  parcours du dossier en D6 (constat D4 → D6).
+- **(D5 → B1, vérification)** La vérification globale prend 1 min 50 (tests 104 s), proche de la limite de 2 min :
+  rendus Chromium des tests d'envoi et de lettre. Si elle la dépasse : partager un rendu par module (comme D3) ou
+  paralléliser pytest.
+- **(D5 → Nicolas)** Le poste ne reconnaît que des champs vides nommés par leurs attributs ou libellés usuels : sur les
+  formulaires des ATS (Workday, Greenhouse, Lever, Taleo…), le rapport dira ce qui reste à faire. Des sélecteurs propres à
+  une plateforme s'ajoutent si l'usage le demande.
+

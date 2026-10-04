@@ -7,6 +7,7 @@ a time (``#section-<key>``); without HTMX, every route answers a whole page or a
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import mimetypes
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
@@ -27,8 +28,10 @@ from rocky.profil.cv import layout
 from rocky.profil.cv.check import CvCheck, Fact, check_cv, expected_facts
 from rocky.profil.cv.content import cv_content
 from rocky.profil.cv.derived import (
+    READABLE_FORMATS,
     TEMPLATE_FILE,
     derived_facts,
+    derived_html,
     render_derived,
     slots_of,
 )
@@ -49,6 +52,7 @@ from rocky.profil.cv.rendering import (
     CvRefusedError,
     Photo,
     neutral_headings,
+    neutral_html,
     render_neutral,
 )
 from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
@@ -1199,6 +1203,33 @@ def cv_document(
         return document, expected_facts(content, neutral_headings(content))
     _, files = active
     return render_derived(files, content), derived_facts(files, content)
+
+
+def cv_fingerprint(
+    request: Request, account: Account, profile: Profile, language: str
+) -> str | None:
+    """What the CV of ``profile`` is made from, without rendering it (decision D5): the HTML it renders and the
+    template and photo it is drawn with. The bytes of a PDF change with each render (creation date): this tells
+    whether a CV kept earlier is still the one Rocky would make. None: the CV cannot be made (its reasons are given
+    by ``cv_document``)."""
+    clock: Clock = request.app.state.auth.clock
+    content = cv_content(profile, language, clock().date())
+    try:
+        active = _active_template(request, account, language)
+    except CvRefusedError:
+        return None
+    if active is None:
+        photo = profile.photo
+        suffix = photo.path.rsplit(".", 1)[-1] if photo else "jpg"
+        html = neutral_html(content, with_photo=photo is not None, suffix=suffix)
+        parts: tuple[str, ...] = ("neutre", photo.sha256 if photo else "", html)
+    else:
+        record, files = active
+        template = json.loads(files[TEMPLATE_FILE])
+        if template.get("format") not in READABLE_FORMATS:
+            return None
+        parts = (record.sha256, derived_html(template, content))
+    return hashlib.sha256("\0".join(parts).encode()).hexdigest()
 
 
 def cv_slots(request: Request, account: Account) -> Slots:

@@ -25,6 +25,9 @@ GEMINI_API_KEY_VAR = "ROCKY_GEMINI_API_KEY"
 GEMINI_MODEL_VAR = "ROCKY_GEMINI_MODEL"
 SCHEDULER_ENABLED_VAR = "ROCKY_SCHEDULER_ENABLED"
 STORAGE_ROOT_VAR = "ROCKY_STORAGE_ROOT"
+WORKSTATION_URL_VAR = "ROCKY_WORKSTATION_URL"
+# The workstation runs on the user's computer (decision D5, Q1); Docker reaches it under this name.
+DEFAULT_WORKSTATION_URL = "http://host.docker.internal:8765"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 DEFAULT_SMTP_PORT = 587
@@ -86,6 +89,8 @@ class Settings:
     scheduler_enabled: bool = False
     # Root of the account files (photos, CV templates; D2). Without it, the features that store files say so.
     storage_root: Path | None = None
+    # The Rocky workstation that prefills forms in a visible browser (decision D5, Q1).
+    workstation_url: str = DEFAULT_WORKSTATION_URL
 
     @property
     def secure_cookies(self) -> bool:
@@ -107,7 +112,15 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         ),
         scheduler_enabled=_boolean(env, SCHEDULER_ENABLED_VAR, default=True),
         storage_root=_storage_root(env),
+        workstation_url=_workstation_url(env),
     )
+
+
+def _workstation_url(env: Mapping[str, str]) -> str:
+    url = (_value(env, WORKSTATION_URL_VAR) or DEFAULT_WORKSTATION_URL).rstrip("/")
+    if not url.startswith("http://"):
+        raise ConfigError(f"{WORKSTATION_URL_VAR} must start with http://")
+    return url
 
 
 def _storage_root(env: Mapping[str, str]) -> Path | None:

@@ -47,6 +47,9 @@ HEAD_TABLES = {
     "generic_letters",
     "application_letters",
     "application_messages",
+    "document_revisions",
+    "application_sendings",
+    "application_prefills",
 }
 
 

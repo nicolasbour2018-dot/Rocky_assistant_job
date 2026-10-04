@@ -14,7 +14,7 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from fastapi import APIRouter, Depends, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -33,7 +33,12 @@ from rocky.candidatures.letter import (
     propose_message,
     sources_text,
 )
-from rocky.candidatures.letter_render import LetterRefusedError, draw_letter
+from rocky.candidatures.letter_render import (
+    LetterRefusedError,
+    draw_letter,
+    letter_fingerprint,
+    render_letter,
+)
 from rocky.candidatures.letter_view import (
     ADAPTED,
     MINE,
@@ -51,15 +56,24 @@ from rocky.candidatures.letter_view import (
     read_message,
 )
 from rocky.candidatures.model import (
+    CHANNEL_LABELS,
     DEFER_DAYS,
     ISSUES,
     STAGE_LABELS,
+    Change,
+    Channel,
     InvalidChangeError,
     LetterEntry,
     LetterState,
     LetterVersion,
     MessageVersion,
+    NewPrefill,
+    NewRevision,
     NextAction,
+    Prefill,
+    Revision,
+    RevisionKind,
+    Sending,
     Stage,
 )
 from rocky.candidatures.rules import (
@@ -70,7 +84,17 @@ from rocky.candidatures.rules import (
     journey,
     make_next_action,
     proposal,
-    standing,
+    revision_filename,
+    sending_in_force,
+    sent_change,
+)
+from rocky.candidatures.send_view import (
+    NONE,
+    ConfirmForm,
+    SendView,
+    confirm_form,
+    read_sending,
+    send_view,
 )
 from rocky.candidatures.sql import SqlApplicationStore
 from rocky.candidatures.targeting import (
@@ -85,13 +109,18 @@ from rocky.candidatures.targeting import (
     target,
 )
 from rocky.candidatures.usecases import (
+    NOT_READY,
+    PREFILL_STAGES,
     adjust_cv_selection,
     cancel_last_change,
     change_stage,
+    confirm_sending,
     defer_next_action,
     letter_ready,
     needs_reasons,
     prepare_application,
+    record_prefill,
+    record_revisions,
     set_next_action,
     skip_letter,
     validate_letter,
@@ -121,8 +150,18 @@ from rocky.profil.rules import ProfileInputError
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.events import JsonValue
+from rocky.system.files import FileError, FileStore
 from rocky.system.render import RenderError, rasterize
 from rocky.system.shell import page, wants_fragment
+from rocky.system.workstation import (
+    FIELDS,
+    JobFile,
+    PrefillJob,
+    Workstation,
+    WorkstationClient,
+    WorkstationUnavailableError,
+    target_is_valid,
+)
 
 TEMPLATES = Path(__file__).parent / "templates"
 # Refreshes the offers list when « Préparer » records a decision (``offres.web.OFFERS_CHANGED``).
@@ -134,6 +173,8 @@ router = APIRouter(prefix="/candidatures")
 def install(app: FastAPI) -> None:
     templates: Jinja2Templates = app.state.templates
     templates.env.globals.update(stage_labels=STAGE_LABELS)
+    # The Rocky workstation that prefills forms (decision D5, Q1); replaced by the tests.
+    app.state.workstation = WorkstationClient(app.state.settings.workstation_url)
     app.include_router(router)
 
 
@@ -311,6 +352,12 @@ def move(
     if etape not in Stage or not _owned(request, account, application_id):
         return Response(status_code=404)
     stage = Stage(etape)
+    if stage is Stage.SENT:
+        # No sending without its date, channel and documents (decision D5, Q5): the confirmation form.
+        target = f"/candidatures/{application_id}/envoi#envoi"
+        if wants_fragment(request):
+            return Response(status_code=200, headers={"HX-Redirect": target})
+        return RedirectResponse(target, status_code=303)
     proposed = proposal(stage, _today(request))
     if not saisie and proposed is not None and proposed[1] is None:
         form = {"id": application_id, "stage": stage, "label": proposed[0]}
@@ -583,7 +630,15 @@ class ApplicationFile:
     analysis: PostingAnalysis
     letters: tuple[LetterEntry, ...] = ()
     messages: tuple[MessageVersion, ...] = ()
-    sent_at: datetime | None = None  # when the application was last marked sent (Q20)
+    # A stage « Envoyée » confirmed before D5, without sending: its letter is deduced from the dates (D4, Q20).
+    sent_at: datetime | None = None
+    sent_letter_id: int | None = (
+        None  # the letter version of the revision sent (decision D5)
+    )
+    changes: tuple[Change, ...] = ()
+    revisions: tuple[Revision, ...] = ()
+    sendings: tuple[Sending, ...] = ()
+    prefills: tuple[Prefill, ...] = ()
     summary: Summary | None = None
     interest: tuple[tuple[str, ...], str | None] | None = (
         None  # reasons and note of « Intéressé »
@@ -615,13 +670,19 @@ def _dossier(
         interest = offres_web.interested_reason(
             connection, account.id, application.offer_id
         )
-        changes = standing(store.changes(application.id))
+        every_change = tuple(store.changes(application.id))
+        revisions = tuple(store.revisions(application.id))
+        sendings = tuple(store.sendings(application.id))
+        prefills = tuple(store.prefills(application.id))
     if heading is None or analysis is None:
         return None
     proposal = target(profile.cv, profile, analysis, slots)
     kept = None if stored is None else selection_of(stored, profile.cv)
     layout = kept or proposal.layout
-    sent = [c.changed_at for c in changes if c.stage is Stage.SENT]
+    sending = sending_in_force(every_change, sendings)
+    sent = sent_change(every_change)
+    letter_sent = None if sending is None else sending.letter_revision_id
+    sent_letter_id = next((r.letter_id for r in revisions if r.id == letter_sent), None)
     return ApplicationFile(
         application_id=application.id,
         offer=heading,
@@ -635,7 +696,12 @@ def _dossier(
         analysis=analysis,
         letters=letters,
         messages=messages,
-        sent_at=sent[-1] if sent else None,
+        sent_at=sent.changed_at if sent is not None and sending is None else None,
+        sent_letter_id=sent_letter_id,
+        changes=every_change,
+        revisions=revisions,
+        sendings=sendings,
+        prefills=prefills,
         summary=summary,
         interest=interest,
     )
@@ -768,6 +834,7 @@ def _letter(
         entries=found.letters,
         messages=found.messages,
         sent_at=found.sent_at,
+        sent_letter_id=found.sent_letter_id,
         editing=editing,
         adaptation=adaptation,
         reference=reference,
@@ -802,11 +869,21 @@ def _dossier_page(
     message_error: str | None = None,
     submitted: Mapping[str, str] | None = None,
     letter_preview: LetterPreview | None = None,
+    send_error: str | None = None,
+    confirming: bool = False,
+    confirm_submitted: Mapping[str, str] | None = None,
+    confirm_error: str | None = None,
+    prefilling: bool = False,
+    prefill_error: str | None = None,
     fragment: str = CV_STEP,
 ) -> Response:
     found = _dossier(request, account, application_id)
     if found is None:
         return Response(status_code=404)
+    send = _send(request, account, found, language)
+    confirm: ConfirmForm | None = None
+    if confirming or confirm_submitted is not None:
+        confirm = confirm_form(send, _today(request), confirm_submitted, confirm_error)
     letter = _letter(
         request,
         account,
@@ -843,6 +920,16 @@ def _dossier_page(
         "LetterState": LetterState,
         "origin_labels": ORIGIN_LABELS,
         "choices": {"original": ORIGINAL, "adapted": ADAPTED, "mine": MINE},
+        "send": send,
+        "send_error": send_error,
+        "confirm": confirm,
+        "prefilling": prefilling and found.stage in PREFILL_STAGES,
+        "prefill_error": prefill_error,
+        "channels": list(Channel),
+        "channel_labels": CHANNEL_LABELS,
+        "field_labels": FIELDS,
+        "RevisionKind": RevisionKind,
+        "NONE": NONE,
     }
     if wants_fragment(request):
         return _fragment(request, fragment, context)
@@ -1407,4 +1494,351 @@ def validate_accompanying_message(
             proposed_message=(message.text, message.signals),
             fragment=SEND_STEP,
         )
+    return _to_dossier(application_id, "envoi", language)
+
+
+# The step « Envoi »: revisions, sending, prefilling (decision D5).
+
+
+def _files(request: Request) -> FileStore:
+    root = request.app.state.settings.storage_root
+    if root is None:
+        raise InvalidChangeError(
+            "Le stockage des fichiers n'est pas configuré (ROCKY_STORAGE_ROOT)."
+        )
+    return FileStore(root)
+
+
+def _letter_to_send(found: ApplicationFile, language: str) -> LetterVersion | None:
+    """The letter that goes with the CV: none once « Pas de lettre » is chosen (D4, Q4)."""
+    if letter_state(found.letters) is LetterState.SKIPPED:
+        return None
+    return in_force(found.letters, language)
+
+
+def _send(
+    request: Request, account: Account, found: ApplicationFile, language: str
+) -> SendView:
+    """The step « Envoi » in ``language``. What the documents are made from now is computed only when a revision of
+    that language exists (no rendering: the HTML only)."""
+    version = _letter_to_send(found, language)
+    inputs: dict[RevisionKind, str | None] = {}
+    if any(revision.language == language for revision in found.revisions):
+        profile = replace(found.profile, cv=found.layout)
+        inputs[RevisionKind.CV] = profil_web.cv_fingerprint(
+            request, account, profile, language
+        )
+        inputs[RevisionKind.LETTER] = (
+            None
+            if version is None
+            else letter_fingerprint(
+                letter_sheet(found.profile.identity, version, _today(request))
+            )
+        )
+    return send_view(
+        language=language,
+        revisions=found.revisions,
+        inputs=inputs,
+        letter=letter_state(found.letters),
+        letter_in_language=version is not None,
+        messages=found.messages,
+        changes=found.changes,
+        sendings=found.sendings,
+        prefills=found.prefills,
+        stage=found.stage,
+        identity=found.profile.identity,
+        apply_url=found.offer.apply_at,
+    )
+
+
+@dataclass(frozen=True)
+class Made:
+    """A PDF just rendered, before it is stored."""
+
+    kind: RevisionKind
+    inputs_sha256: str
+    letter_id: int | None
+    pdf: bytes
+
+
+def _make(
+    request: Request, account: Account, found: ApplicationFile, language: str
+) -> list[Made]:
+    """The CV of the application and the letter in force in ``language``, both rendered before anything is written;
+    raises ``CvRefusedError``, ``LetterRefusedError`` or ``RenderError`` with the reasons."""
+    profile = replace(found.profile, cv=found.layout)
+    inputs = profil_web.cv_fingerprint(request, account, profile, language)
+    document, _ = profil_web.cv_document(request, account, profile, language)
+    if inputs is None:  # the CV rendered: its template is readable
+        raise CvRefusedError(("Ton gabarit de CV est illisible.",))
+    made = [Made(RevisionKind.CV, inputs, None, document.pdf)]
+    version = _letter_to_send(found, language)
+    if version is not None:
+        sheet = letter_sheet(found.profile.identity, version, _today(request))
+        made.append(
+            Made(
+                RevisionKind.LETTER,
+                letter_fingerprint(sheet),
+                version.id,
+                render_letter(sheet),
+            )
+        )
+    return made
+
+
+@router.post("/{application_id}/documents", response_class=HTMLResponse)
+def generate(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    langue: Annotated[str, Form()] = "fr",
+) -> Response:
+    """« Générer les PDF à envoyer » (Q2): each PDF stored once under its hash, then its revision; the earlier ones
+    stay. A file written before a transaction that fails is left without row: it changes nothing."""
+    language = _language(langue)
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+    try:
+        files = _files(request)
+        revisions = []
+        for made in _make(request, account, found, language):
+            stored = files.put_file(account.id, "candidatures", made.pdf, "pdf")
+            revisions.append(
+                NewRevision(
+                    made.kind,
+                    language,
+                    stored.path,
+                    stored.sha256,
+                    made.inputs_sha256,
+                    made.letter_id,
+                )
+            )
+        with _engine(request).begin() as connection:
+            record_revisions(
+                SqlApplicationStore(connection),
+                account_id=account.id,
+                application_id=application_id,
+                revisions=revisions,
+                now=_now(request),
+            )
+    except (CvRefusedError, LetterRefusedError) as error:
+        reason = " ".join(error.reasons)
+    except RenderError as error:
+        reason = error.reason
+    except InvalidChangeError as error:
+        reason = str(error)
+    else:
+        return _to_dossier(application_id, "envoi", language)
+    return _dossier_page(
+        request,
+        account,
+        application_id,
+        language=language,
+        send_error=f"Rien n'a été généré : {reason}",
+        fragment=SEND_STEP,
+    )
+
+
+def _disposition(kind: str, filename: str) -> str:
+    """``Content-Disposition`` for any name: an ASCII fallback and the exact name (RFC 6266)."""
+    fallback = filename.encode("ascii", "replace").decode().replace("?", "_")
+    return f"{kind}; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename)}"
+
+
+@router.get("/{application_id}/documents/{revision_id}.pdf")
+def revision_pdf(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    revision_id: int,
+    apercu: bool = False,
+) -> Response:
+    """A revision exactly as it was generated: its bytes are read back with their hash checked (Q2)."""
+    with _engine(request).begin() as connection:
+        store = SqlApplicationStore(connection)
+        if store.locked_application(account.id, application_id) is None:
+            return Response(status_code=404)
+        revision = next(
+            (r for r in store.revisions(application_id) if r.id == revision_id), None
+        )
+    if revision is None:
+        return Response(status_code=404)
+    try:
+        content = _files(request).read_file(revision.path, revision.sha256)
+    except FileError as error:
+        reason = error.reason
+    except InvalidChangeError as error:
+        reason = str(error)
+    else:
+        name = profil_web.profile_of(request, account).identity.full_name
+        filename = revision_filename(revision.kind, name, revision.language)
+        return Response(
+            content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": _disposition(
+                    "inline" if apercu else "attachment", filename
+                ),
+                "Cache-Control": "no-store",
+            },
+        )
+    return _dossier_page(
+        request,
+        account,
+        application_id,
+        language=revision.language,
+        send_error=f"Ce PDF ne peut pas être servi : {reason}",
+        status_code=409,
+        fragment=SEND_STEP,
+    )
+
+
+@router.get("/{application_id}/envoi", response_class=HTMLResponse)
+def sending_form(
+    request: Request, account: CurrentAccount, application_id: int, lettre: str = "fr"
+) -> Response:
+    """« J'ai envoyé ma candidature »: the form of the sending (Q3, Q5), the latest revisions checked."""
+    return _dossier_page(
+        request,
+        account,
+        application_id,
+        language=_language(lettre),
+        confirming=True,
+        fragment=SEND_STEP,
+    )
+
+
+@router.post("/{application_id}/envoi", response_class=HTMLResponse)
+def confirm(
+    request: Request, account: CurrentAccount, application_id: int, form: FormFields
+) -> Response:
+    """The sending confirmed: the stage « Envoyée » and what documents it, in one transaction."""
+    language = _language(form.get("langue"))
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+    fields = {key: value for key, value in form.multi_items() if isinstance(value, str)}
+    try:
+        sending = read_sending(fields, _send(request, account, found, language))
+        with _engine(request).begin() as connection:
+            confirm_sending(
+                SqlApplicationStore(connection),
+                account_id=account.id,
+                application_id=application_id,
+                sending=sending,
+                now=_now(request),
+                today=_today(request),
+            )
+    except InvalidChangeError as error:
+        return _dossier_page(
+            request,
+            account,
+            application_id,
+            language=language,
+            confirm_submitted=fields,
+            confirm_error=str(error),
+            fragment=SEND_STEP,
+        )
+    return _to_dossier(application_id, "envoi", language)
+
+
+@router.get("/{application_id}/preremplir", response_class=HTMLResponse)
+def prefill_panel(
+    request: Request, account: CurrentAccount, application_id: int, lettre: str = "fr"
+) -> Response:
+    """What the workstation will put in the form, to confirm before it does (Q1, Q4)."""
+    return _dossier_page(
+        request,
+        account,
+        application_id,
+        language=_language(lettre),
+        prefilling=True,
+        fragment=SEND_STEP,
+    )
+
+
+CHANGED_SINCE_SHOWN = (
+    "Les PDF à envoyer ont changé depuis l'affichage : relis la confirmation."
+)
+
+
+@router.post("/{application_id}/preremplir", response_class=HTMLResponse)
+def prefill(
+    request: Request, account: CurrentAccount, application_id: int, form: FormFields
+) -> Response:
+    """« Préremplir le formulaire » (Q1, Q4, Q6): the exact revisions shown, read back and checked, handed to the
+    workstation; once it took the form, its report and the stage « Préremplie » are written. Nothing is written when
+    it did not."""
+    language = _language(form.get("langue"))
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+
+    def again(error: str) -> Response:
+        return _dossier_page(
+            request,
+            account,
+            application_id,
+            language=language,
+            prefilling=True,
+            prefill_error=error,
+            fragment=SEND_STEP,
+        )
+
+    if found.stage not in PREFILL_STAGES:
+        return again(NOT_READY)
+    if not form.get("consentement"):
+        return again(
+            "Coche la confirmation : ces données et ces fichiers vont dans le formulaire du site."
+        )
+    view = _send(request, account, found, language)
+    cv, letter = view.latest(RevisionKind.CV), view.latest(RevisionKind.LETTER)
+    if cv is None:
+        return again("Génère d'abord les PDF à envoyer.")
+    shown = (form.get("cv"), form.get("lettre"))
+    if shown != (str(cv.revision.id), str(letter.revision.id) if letter else NONE):
+        return again(CHANGED_SINCE_SHOWN)
+    target_url = found.offer.apply_at
+    if not target_is_valid(target_url):
+        return again("Le lien de candidature de cette offre n'est pas une page web.")
+    workstation: Workstation = request.app.state.workstation
+    try:
+        files = _files(request)
+        job = PrefillJob(
+            target_url,
+            view.fields,
+            tuple(
+                JobFile(
+                    line.revision.kind.value,
+                    line.filename,
+                    files.read_file(line.revision.path, line.revision.sha256),
+                )
+                for line in (cv, letter)
+                if line is not None
+            ),
+        )
+        report = workstation.prefill(job)
+        with _engine(request).begin() as connection:
+            record_prefill(
+                SqlApplicationStore(connection),
+                account_id=account.id,
+                application_id=application_id,
+                prefill=NewPrefill(
+                    target_url,
+                    cv.revision.id,
+                    None if letter is None else letter.revision.id,
+                    None if view.message is None else view.message.id,
+                    report.filled,
+                    report.missing,
+                ),
+                now=_now(request),
+                today=_today(request),
+            )
+    except FileError as error:
+        return again(error.reason)
+    except WorkstationUnavailableError as error:
+        return again(error.reason)
+    except InvalidChangeError as error:
+        return again(str(error))
     return _to_dossier(application_id, "envoi", language)

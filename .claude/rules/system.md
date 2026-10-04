@@ -38,6 +38,14 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - La clé ne figure jamais dans une raison, une URL ni un journal. Sans clé, les fonctions qui en dépendent le disent.
 - Tests : faux modèle ou `MockTransport`, jamais d'appel réel (AGENTS §7).
 
+## Poste Rocky (`rocky/system/workstation.py`, `workstation_host.py`, décision `docs/decisions/D5-revisions-envoi.md`)
+- L'application ne lance jamais de navigateur visible : elle remet un `PrefillJob` au poste (`app.state.workstation`,
+  faux poste dans les tests). Le poste tourne sur l'ordinateur (`uv run rocky-poste`), écoute sur `127.0.0.1`, refuse
+  `Origin`, exige JSON et un `Host` connu.
+- Le poste ne clique ni ne soumet jamais ; il remplit un champ vide reconnu et rend un rapport où chaque échec a sa
+  raison. Un seul fil possède Playwright (ses objets appartiennent au fil qui les a créés).
+- Tests : `fill_form` dans un Chromium headless sur un formulaire en `set_content` ; jamais de site réel.
+
 ## Planificateur (`rocky/system/scheduler.py`, décision `docs/decisions/C6-veille.md`)
 - **Seul déclencheur** (D12) : aucune tâche par cron ni par un autre fil. Tâches quotidiennes à heure de Paris (une heure
   déjà passée au démarrage n'est pas rattrapée : l'écran le propose), tâches périodiques réveillables (`wake`), tâches

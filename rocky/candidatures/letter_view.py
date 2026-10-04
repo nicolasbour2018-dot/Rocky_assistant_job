@@ -96,7 +96,7 @@ class LetterView:
     english_outdated: bool  # the English generic letter comes from an older French one: warned, never refused
     sent_with: (
         LetterVersion | None
-    )  # the version in force when the application was sent (Q20)
+    )  # the version sent: of the revision sent (D5), or in force at the date (Q20)
     message: MessageVersion | None
     why_you: str  # of the version in force, for the message (Q12)
 
@@ -115,6 +115,7 @@ def letter_view(
     messages: Sequence[MessageVersion],
     sent_at: datetime | None,
     editing: bool,
+    sent_letter_id: int | None = None,
     adaptation: Adaptation | None = None,
     reference: str = "",
     sources: str = "",
@@ -147,7 +148,17 @@ def letter_view(
         header = make_header(
             submitted.get("objet", ""), submitted.get("destinataire", ""), header
         )
-    sent_with = None if sent_at is None else version_at(entries, language, sent_at)
+    # The version of the revision sent (decision D5); before D5, the one in force when it was sent (D4, Q20).
+    sent_with = next(
+        (
+            entry
+            for entry in entries
+            if isinstance(entry, LetterVersion)
+            and entry.id == sent_letter_id
+            and entry.language == language
+        ),
+        None if sent_at is None else version_at(entries, language, sent_at),
+    )
     message = next((m for m in reversed(messages) if m.language == language), None)
     return LetterView(
         language=language,

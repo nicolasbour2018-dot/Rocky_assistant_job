@@ -17,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from rocky.candidatures.model import (
     Change,
     ChangeKind,
+    Channel,
     Dossier,
     LetterHeader,
     LetterOrigin,
@@ -24,21 +25,29 @@ from rocky.candidatures.model import (
     LetterVersion,
     NewChange,
     NewLetter,
+    NewPrefill,
+    NewRevision,
+    NewSending,
     NextAction,
     NoLetter,
+    RevisionKind,
     Stage,
 )
-from rocky.candidatures.rules import dossier
+from rocky.candidatures.rules import dossier, sending_in_force
 from rocky.candidatures.sql import (
     SqlApplicationStore,
     application_changes,
     application_letters,
+    application_sendings,
     applications,
 )
 from rocky.candidatures.usecases import (
     cancel_last_change,
     change_stage,
+    confirm_sending,
     prepare_application,
+    record_prefill,
+    record_revisions,
     skip_letter,
 )
 from rocky.candidatures.web import OffresDecisions
@@ -586,4 +595,240 @@ def test_a_letter_comes_back_as_it_was_validated(db: Connection) -> None:
                 language="fr",
                 created_at=NOW,
             )
+        )
+
+
+# A sending and a prefilled form are written with their stage change (decision D5, Q5, Q6).
+
+
+class FailingSendStore(SqlApplicationStore):
+    """Fails right after one write: the stage change, the sending or the prefill row, or one of their events."""
+
+    def __init__(self, connection: Connection, point: str) -> None:
+        super().__init__(connection)
+        self.point = point
+
+    def insert_change(
+        self,
+        account_id: int,
+        application_id: int,
+        change: NewChange,
+        *,
+        author: Author,
+        now: datetime,
+    ) -> Change:
+        row = super().insert_change(
+            account_id, application_id, change, author=author, now=now
+        )
+        if self.point == "stage":
+            raise InjectedFailureError
+        return row
+
+    def insert_sending(
+        self,
+        account_id: int,
+        application_id: int,
+        change_id: int,
+        sending: NewSending,
+        now: datetime,
+    ) -> int:
+        sending_id = super().insert_sending(
+            account_id, application_id, change_id, sending, now
+        )
+        if self.point == "sending":
+            raise InjectedFailureError
+        return sending_id
+
+    def insert_prefill(
+        self, account_id: int, application_id: int, prefill: NewPrefill, now: datetime
+    ) -> int:
+        prefill_id = super().insert_prefill(account_id, application_id, prefill, now)
+        if self.point == "prefill":
+            raise InjectedFailureError
+        return prefill_id
+
+    def append_event(self, event: NewEvent) -> None:
+        super().append_event(event)
+        if (self.point, event.type) in {
+            ("stage_event", "candidatures.stage_changed"),
+            ("sending_event", "candidatures.sending_confirmed"),
+            ("prefill_event", "candidatures.prefilled"),
+        }:
+            raise InjectedFailureError
+
+
+def ready_with_cv(engine: Engine) -> tuple[Case, int]:
+    """A committed application « Prête à envoyer » (without letter), its CV generated once."""
+    case = prepared(engine)
+    skipped(case)
+    with engine.begin() as connection:
+        (cv,) = record_revisions(
+            SqlApplicationStore(connection),
+            account_id=case.account_id,
+            application_id=case.application_id,
+            revisions=[NewRevision(RevisionKind.CV, "fr", "c/1/cv.pdf", "s", "i")],
+            now=NOW,
+        )
+    return case, cv
+
+
+def store_for(connection: Connection, point: str | None) -> SqlApplicationStore:
+    return (
+        SqlApplicationStore(connection)
+        if point is None
+        else FailingSendStore(connection, point)
+    )
+
+
+def sent(case: Case, cv: int, point: str | None = None) -> None:
+    with case.engine.begin() as connection:
+        confirm_sending(
+            store_for(connection, point),
+            account_id=case.account_id,
+            application_id=case.application_id,
+            sending=NewSending(TODAY, Channel.LINKEDIN, None, cv),
+            now=NOW,
+            today=TODAY,
+        )
+
+
+def prefilled(case: Case, cv: int, point: str | None = None) -> None:
+    with case.engine.begin() as connection:
+        record_prefill(
+            store_for(connection, point),
+            account_id=case.account_id,
+            application_id=case.application_id,
+            prefill=NewPrefill("https://jobs.acme.fr/a", cv, None, None, ("Nom",), ()),
+            now=NOW,
+            today=TODAY,
+        )
+
+
+def sending_rows(case: Case) -> tuple[int, int]:
+    with case.engine.connect() as connection:
+        store = SqlApplicationStore(connection)
+        return (
+            len(store.sendings(case.application_id)),
+            len(store.prefills(case.application_id)),
+        )
+
+
+@pytest.mark.parametrize("point", ["stage", "stage_event", "sending", "sending_event"])
+def test_a_failure_while_confirming_a_sending_changes_nothing(
+    migrated_engine: Engine, point: str
+) -> None:
+    case, cv = ready_with_cv(migrated_engine)
+    before = (case.snapshot(), sending_rows(case))
+
+    with pytest.raises(InjectedFailureError):
+        sent(case, cv, point)
+
+    assert (case.snapshot(), sending_rows(case)) == before
+
+
+@pytest.mark.parametrize("point", ["prefill", "prefill_event", "stage", "stage_event"])
+def test_a_failure_while_recording_a_prefill_changes_nothing(
+    migrated_engine: Engine, point: str
+) -> None:
+    case, cv = ready_with_cv(migrated_engine)
+    before = (case.snapshot(), sending_rows(case))
+
+    with pytest.raises(InjectedFailureError):
+        prefilled(case, cv, point)
+
+    assert (case.snapshot(), sending_rows(case)) == before
+
+
+def test_without_failure_the_sending_is_in_force_until_cancelled(
+    migrated_engine: Engine,
+) -> None:
+    case, cv = ready_with_cv(migrated_engine)
+    prefilled(case, cv)
+    assert case.snapshot().state.stage is Stage.PREFILLED
+
+    sent(case, cv)
+
+    with migrated_engine.connect() as connection:
+        store = SqlApplicationStore(connection)
+        in_force = sending_in_force(
+            store.changes(case.application_id), store.sendings(case.application_id)
+        )
+    assert in_force is not None and in_force.cv_revision_id == cv
+    assert case.snapshot().state.stage is Stage.SENT
+
+    # « Annuler » the change « Envoyée »: the sending is no longer in force, nothing else is written.
+    case.cancel()
+    with migrated_engine.connect() as connection:
+        store = SqlApplicationStore(connection)
+        assert (
+            sending_in_force(
+                store.changes(case.application_id), store.sendings(case.application_id)
+            )
+            is None
+        )
+        assert len(store.sendings(case.application_id)) == 1
+    assert case.snapshot().state.stage is Stage.PREFILLED
+
+
+def test_a_sending_documents_one_change_and_names_its_channel(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "d5")
+    store = SqlApplicationStore(db)
+    application = store.application_for_offer(seeker.account_id, offer_id, NOW)
+    change = store.insert_change(
+        seeker.account_id,
+        application.id,
+        NewChange(ChangeKind.CREATED, stage=Stage.SENT),
+        author=Author.USER,
+        now=NOW,
+    )
+    store.insert_sending(
+        seeker.account_id,
+        application.id,
+        change.id,
+        NewSending(TODAY, Channel.OTHER, "Salon"),
+        NOW,
+    )
+    assert store.sendings(application.id)[0].channel_detail == "Salon"
+
+    for values in (
+        {"change_id": change.id, "channel": "linkedin"},  # one sending per change
+        {"change_id": change.id + 10**9, "channel": "linkedin"},  # an unknown change
+        {"change_id": change.id, "channel": "other"},  # « Autre » without detail
+    ):
+        nested = db.begin_nested()
+        with pytest.raises(IntegrityError):
+            db.execute(
+                insert(application_sendings).values(
+                    application_id=application.id,
+                    account_id=seeker.account_id,
+                    sent_on=TODAY,
+                    created_at=NOW,
+                    **values,
+                )
+            )
+        nested.rollback()
+
+
+def test_a_letter_revision_names_its_letter_version(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "d5-letter")
+    store = SqlApplicationStore(db)
+    application = store.application_for_offer(seeker.account_id, offer_id, NOW)
+    cv = NewRevision(RevisionKind.CV, "en", "c/x.pdf", "s", "i")
+
+    revision_id = store.insert_revision(seeker.account_id, application.id, cv, NOW)
+
+    (stored,) = store.revisions(application.id)
+    assert (stored.id, stored.kind, stored.language) == (
+        revision_id,
+        RevisionKind.CV,
+        "en",
+    )
+    with pytest.raises(IntegrityError):
+        store.insert_revision(
+            seeker.account_id,
+            application.id,
+            NewRevision(RevisionKind.LETTER, "fr", "c/y.pdf", "s", "i"),
+            NOW,
         )

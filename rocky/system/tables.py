@@ -11,7 +11,10 @@ from rocky.candidatures.sql import (
     application_cv_selections,
     application_letters,
     application_messages,
+    application_prefills,
+    application_sendings,
     applications,
+    document_revisions,
 )
 from rocky.offres.sql import (
     job_decisions,
@@ -50,8 +53,11 @@ __all__ = [
     "application_cv_selections",
     "application_letters",
     "application_messages",
+    "application_prefills",
+    "application_sendings",
     "applications",
     "cv_templates",
+    "document_revisions",
     "events",
     "experience_skills",
     "experiences",
