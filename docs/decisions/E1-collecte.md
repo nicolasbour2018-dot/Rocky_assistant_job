@@ -66,9 +66,20 @@ le sont ensemble, `messages/content.html`) ; course entre la réponse à « Rele
 déjà sorti la tâche de sa file sans avoir écrit sa ligne : l'écran interrogeait trop tôt l'ancienne collecte
 (`launched`, comme la bannière de la veille ; test `test_the_screen_follows_a_collection_the_planner_already_took`).
 
-Recette avec Nicolas (réseau réel, à faire) : créer le client Google (`docs/procedures/e1-gmail/`), connecter ses boîtes,
-deux « Relever maintenant » de suite (la seconde : 0 nouveau), vérifier que les promotions n'arrivent que par la requête
-*alertes* et que Google accepte `http://127.0.0.1:8000` comme adresse de retour.
+## Recette (Nicolas, 04/10, réseau réel)
+
+| Point | Résultat |
+|---|---|
+| Client Google | Mode « Test » avec utilisateurs tests : le passage en production demande une page d'accueil et une page de confidentialité (page « Branding »), reporté au VPS (plan §5). Procédure corrigée |
+| Clé de Rocky | Premier démarrage refusé (`ROCKY_SECRET_KEY is not a Fernet key`) : le secret du client Google avait été pris pour la clé de Rocky. Le refus au démarrage a joué son rôle ; la procédure dit maintenant d'où vient chaque valeur |
+| Adresse de retour | `http://127.0.0.1:8000/messages/gmail/retour` acceptée par Google : boîte connectée |
+| Critère | Deux « Relever maintenant » de suite : la seconde n'apporte aucun nouveau message (« comportement attendu », Nicolas) |
+| Bruit | Des messages sans rapport avec la recherche arrivent par la boîte principale (une annonce Tony Dog, une alerte de sécurité GitHub, une publicité france.tv) ; certains portent les deux recherches. Attendu en E1 (collecte large, aucun tri) : cas de test d'E2 (plan §8) |
+
+Corrigé à la recette : l'écran laissait croire à un tri (« Trouvé par : Retours / Alertes »). La colonne s'appelle
+« Recherche » (« Boîte principale », « Expéditeur d'alertes ») et la liste dit « Messages non triés ».
+
+**Étape close** (Nicolas, 04/10) : critère vérifié par les tests et sur ses boîtes réelles ; vérification globale verte.
 
 ## Hors E1
 

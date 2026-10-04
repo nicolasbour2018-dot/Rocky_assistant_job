@@ -150,7 +150,7 @@ aucun identifiant interne affiché.
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| E1. Collecte | Gmail lecture seule, plusieurs boîtes ; requête filtrée (`-category:promotions -category:social`…) ; message **enregistré avant toute décision**, de façon idempotente | Une resynchronisation ne retraite rien ; aucun statut ne change sans message enregistré | 🔄 |
+| E1. Collecte | Gmail lecture seule, plusieurs boîtes ; requête filtrée (`-category:promotions -category:social`…) ; message **enregistré avant toute décision**, de façon idempotente | Une resynchronisation ne retraite rien ; aucun statut ne change sans message enregistré | ✅ |
 | E2. Classification | 3 étages : expéditeur → domaine exact de l'employeur (plus de sous-chaîne) → LLM pour l'ambigu ; confiance réelle (plus de valeurs constantes) ; preuve : règle, extrait, auteur | 100 % des décisions ont une preuve lisible ; le digest Quora n'est plus rattaché à « French bee » ; jeu de test issu de l'archive | ⬜ |
 | E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | ⬜ |
 | E4. Décisions et écran | Transition de candidature appliquée dans la même transaction que la décision ; « ce qui a bougé depuis ta dernière visite » ; correction humaine → nouvelle règle ; corrections conservées comme jeu étiqueté | Aucun changement de statut ne passe inaperçu | ⬜ |
@@ -628,4 +628,11 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `hashtext(nom || current_schema())` comme première clé.
 - **(E1)** Les dates de la liste des messages s'affichent sans l'année (`paris_time`) : suffisant sur la fenêtre de
   30 jours, ambigu au-delà.
+- **(E1 → E2, recette de Nicolas du 04/10)** La boîte principale apporte du bruit, comme prévu (E1 ne trie pas) : une
+  annonce Tony Dog, une alerte de sécurité GitHub, une publicité france.tv ; des messages trouvés par les deux
+  recherches (LinkedIn dans la boîte principale). Cas de test d'E2 : ils ne doivent jamais être rattachés à une
+  candidature. L'écran d'E1 dit « Messages non triés » et « Recherche : Boîte principale / Expéditeur d'alertes ».
+- **(E1 → §5 VPS)** Client Google en mode « Test » (utilisateurs tests, accès retiré au bout de 7 jours, « Reconnecter »
+  en un clic) : le passage en production demande page d'accueil, page de confidentialité et e-mail d'assistance
+  (page « Branding »), à faire avec le VPS et la validation de l'application.
 
