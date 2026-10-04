@@ -73,3 +73,16 @@ Vérification globale : verte, 1 114 tests, 1 min 50 (proche de la limite de 2 m
 |---|---|
 | Préremplissage : « un échec sur 2 annonces sur 2 » ; les sites des recruteurs n'affichent pas de formulaire tout de suite et passent par leurs propres connexions | **Révise Q1, Q4, Q6** : le préremplissage est **mis en sommeil**. Son code est gardé et testé (poste, routes, table `application_prefills`, panneau), marqué « DORMANT » en commentaire ; aucun bouton n'y mène et ses routes répondent 404 tant que `candidatures.web.PREFILL_ENABLED` vaut `False`. À réactiver plus tard (éventuellement avec la lecture assistée, E5). |
 | Parcours de l'envoi | **Simplifié** : générer les PDF ; « Ouvrir le site de candidature ↗ » (l'annonce chez le recruteur) ; remplir le formulaire soi-même ; revenir dans Rocky et confirmer par « J'ai envoyé ma candidature » (date, canal, révisions exactes : Q3, Q5 inchangées). |
+
+## Mesures et clôture (Nicolas, 04/10)
+
+| Critère (plan, Q7) | Résultat |
+|---|---|
+| Deux générations → deux PDF distincts récupérables | Tenu : tests (`test_send_web.py`), essai navigateur (4 révisions, hash vérifiés au téléchargement) et recette de Nicolas |
+| L'envoi est lié à la révision exacte | Tenu : la confirmation (date, canal) pointe vers les révisions choisies, l'ancienne comprise ; la lettre envoyée se lit de sa révision |
+| Préremplissage navigateur (contenu de l'étape) | Porté puis **mis en sommeil** à la recette (échec sur 2 annonces réelles sur 2) : code gardé et testé, fermé par `PREFILL_ENABLED` |
+| Restes de D4 (lettre anglaise, message) | Recette de Nicolas validée sans remarque |
+| Validation de Nicolas | « C'est bon, on peut clôturer D5 » |
+
+Suite : D6 (écran Candidatures), qui reprend le parcours du dossier (constats D4 → D6, D5 → D6).
+
