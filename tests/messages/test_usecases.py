@@ -204,7 +204,10 @@ def test_a_failed_search_keeps_what_the_other_one_found(
     result = run(box, FakeGmail(FakeReader(failures={"alerts": down})))
 
     assert result.status is SyncStatus.PARTIAL
-    assert result.reason == "Gmail est en panne (HTTP 503). (recherche « Alertes »)"
+    assert (
+        result.reason
+        == "Gmail est en panne (HTTP 503). (recherche « Expéditeur d'alertes »)"
+    )
     assert set(stored(migrated_engine, box)) == {REPLY_ID, LATIN_ID}
 
 
@@ -216,7 +219,10 @@ def test_a_collection_that_could_search_nothing_fails_with_its_reason(
     result = run(box, FakeGmail(FakeReader(failures={"replies": down, "alerts": down})))
 
     assert result.status is SyncStatus.FAILED
-    assert result.reason == "Gmail est en panne (HTTP 503). (recherche « Retours »)"
+    assert (
+        result.reason
+        == "Gmail est en panne (HTTP 503). (recherche « Boîte principale »)"
+    )
     assert stored(migrated_engine, box) == {}
 
 

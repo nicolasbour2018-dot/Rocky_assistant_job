@@ -7,8 +7,8 @@
   <p class="alert alert-info" role="status">Gmail n'est pas configuré : il manque le client Google ou la clé de Rocky.
     La procédure est dans <code>docs/procedures/e1-gmail/</code>.</p>
   {% else %}
-  <p class="muted small">Rocky lit tes e-mails sans jamais rien modifier ni envoyer : les retours (hors promotions,
-    réseaux sociaux et forums) et les alertes emploi, chaque heure.</p>
+  <p class="muted small">Rocky lit tes e-mails sans jamais rien modifier ni envoyer : ta boîte principale (hors
+    promotions, réseaux sociaux et forums) et les messages des sites d'alertes emploi, chaque heure.</p>
   {% if state.mailboxes %}
   <ul class="item-list">
     {% for view in state.mailboxes %}

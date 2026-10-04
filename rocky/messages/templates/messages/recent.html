@@ -3,11 +3,12 @@
   <div class="section-head">
     <h2 id="derniers-messages">Derniers messages relevés</h2>
   </div>
-  <p class="muted small">Tels que Gmail les a donnés, du plus récent au plus ancien. Le tri des retours et des alertes
-    arrive aux étapes suivantes.</p>
+  <p class="alert alert-info" role="note"><strong>Messages non triés.</strong> Rocky les garde tels que Gmail les a
+    donnés, du plus récent au plus ancien, sans savoir encore lesquels parlent de ta recherche d'emploi : le classement
+    arrive à l'étape suivante. « Recherche » dit seulement comment Rocky a trouvé le message.</p>
   {% if state.recent %}
   <table class="offer-table messages-table">
-    <thead><tr><th>Reçu le</th><th>De</th><th>Objet</th><th>Trouvé par</th></tr></thead>
+    <thead><tr><th>Reçu le</th><th>De</th><th>Objet</th><th>Recherche</th></tr></thead>
     <tbody>
       {% for message in state.recent %}
       <tr>

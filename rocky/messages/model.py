@@ -25,7 +25,11 @@ class Query(StrEnum):
     ALERTS = "alerts"
 
 
-QUERY_LABELS = {Query.REPLIES: "Retours", Query.ALERTS: "Alertes"}
+# Where a message comes from, never what it is (recette of E1): the sorting is step E2.
+QUERY_LABELS = {
+    Query.REPLIES: "Boîte principale",
+    Query.ALERTS: "Expéditeur d'alertes",
+}
 
 
 class MailboxStatus(StrEnum):

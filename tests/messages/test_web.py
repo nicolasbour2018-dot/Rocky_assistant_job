@@ -145,7 +145,8 @@ def test_a_mailbox_is_connected_through_google_then_collected(
     assert "Boîte connectée : sa première collecte est lancée." in page.text
     assert "Votre candidature : Data Analyst" in page.text
     assert "3 nouveaux messages" in re.sub(r"\s+", " ", page.text)
-    assert "Alertes" in page.text
+    assert "Expéditeur d&#39;alertes" in page.text
+    assert "Messages non triés." in page.text
     assert len(collected) == 1 and len(collected[0]) == 3
     assert [request.method for request in fake_google.requests] == ["POST", "GET"]
 
