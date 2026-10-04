@@ -612,3 +612,20 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `_dossier_page`) : rapide en local ; à mesurer sur le VPS, et ne calculer que l'étape montrée si c'est lent.
 - **(D6 → E4)** Une transition écrite par une règle ou l'IA apparaît dans la chronologie avec « par une règle » / « par
   l'IA » (`timeline._BY`) ; E4 ajoute ses types d'événements à `timeline.LINES` (test `test_timeline.py`).
+- **(E1 → E2)** Le seul point d'entrée des décisions est le crochet `app.state.messages_collected` (identifiants des
+  messages validés en base) ; un crochet en échec est journalisé, les messages restent. E2 doit donc aussi reprendre les
+  messages enregistrés sans classification (absence de ligne de décision), pas seulement ceux du crochet.
+- **(E1 → E2, E3)** La requête *alertes* prend tout `from:linkedin.com` : notifications du réseau comprises (messages de
+  recruteurs utiles, mais aussi du bruit). À mesurer à la recette d'E1 ; resserrer sur les adresses d'alerte
+  (`QUERIES_VERSION`) si le bruit gêne.
+- **(E1 → F1)** ⚙️ Système : état des boîtes et des collectes (`mailboxes`, `mail_syncs`, `MessagesService.state`).
+- **(E1 → §5 VPS)** `ROCKY_SECRET_KEY` se sauvegarde avec la base : sans elle, les jetons scellés ne s'ouvrent plus et
+  chaque boîte est à reconnecter. Validation de l'application Google (scope restreint `gmail.readonly`) avant les
+  alpha-testeurs.
+- **(E1 → C6, tests)** Les verrous consultatifs sont communs à toute la base PostgreSQL. Celui de la veille
+  (`WATCH_LOCK_SPACE`, identifiant du compte) peut donc se heurter d'un worker de test à l'autre depuis `pytest -n auto`
+  (même identifiant de compte dans deux schémas). Jamais vu dans les passages de E1. Parade d'E1 :
+  `hashtext(nom || current_schema())` comme première clé.
+- **(E1)** Les dates de la liste des messages s'affichent sans l'année (`paris_time`) : suffisant sur la fenêtre de
+  30 jours, ambigu au-delà.
+
