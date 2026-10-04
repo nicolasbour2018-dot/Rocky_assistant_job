@@ -674,3 +674,29 @@ def test_an_image_pdf_is_refused_and_the_neutral_template_stays(
     kit = section(refused.text, "kit")
     assert "pas de texte lisible" in kit
     assert "CV français : gabarit neutre de Rocky" in " ".join(kit.split())
+
+
+def test_a_template_no_longer_used_is_deleted_after_confirmation(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    """Decision D6, Q8: « Supprimer… » under « Autres gabarits »; the template in service has no such button."""
+    browser, email = logged_in(app, migrated_engine)
+    with migrated_engine.begin() as connection:
+        account = SqlAuthStore(connection).find_account(email)
+        assert account is not None
+        editor = Seeker(account.id, email).editor(connection)
+        used = editor.record_cv_template("comptes/x/u", "u", "CV en service", "fr")
+        trial = editor.record_cv_template(
+            "comptes/x/t", "t", "Essai de mise au point", "fr"
+        )
+        editor.activate_cv_template(used, "fr")
+    kit = section(browser.get("/profil").text, "kit")
+    assert f'action="/profil/gabarit/{trial}/supprimer"' in kit
+    assert f'action="/profil/gabarit/{used}/supprimer"' not in kit
+
+    deleted = browser.post(f"/profil/gabarit/{trial}/supprimer", headers=HTMX)
+
+    assert "Essai de mise au point" not in section(deleted.text, "kit")
+    assert "CV en service" in section(deleted.text, "kit")
+    refused = browser.post(f"/profil/gabarit/{used}/supprimer", headers=HTMX)
+    assert "celui de ton CV" in refused.text

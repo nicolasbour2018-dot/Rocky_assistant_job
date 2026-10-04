@@ -959,6 +959,16 @@ class SqlProfileStore:
             )
         return True
 
+    def delete_cv_template(self, profile_id: int, template_id: int) -> bool:
+        result = self._conn.execute(
+            delete(cv_templates).where(
+                cv_templates.c.id == template_id,
+                cv_templates.c.profile_id == profile_id,
+                ~cv_templates.c.active,
+            )
+        )
+        return result.rowcount == 1
+
     def append_event(self, event: NewEvent) -> None:
         append_event(self._conn, event)
 

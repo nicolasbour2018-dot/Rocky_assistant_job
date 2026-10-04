@@ -60,6 +60,7 @@ from rocky.system.events import Actor, JsonValue, NewEvent
 type Clock = Callable[[], datetime]
 
 TRACK_IN_USE = "Des offres sont rattachées à cette piste : archive-la plutôt."
+TEMPLATE_IN_SERVICE = "Ce gabarit est celui de ton CV : utilise d'abord un autre gabarit pour le supprimer."
 
 
 @dataclass(frozen=True)
@@ -190,6 +191,28 @@ class ProfileEditor:
             "profile",
             profile_id,
             {"template_id": template_id, "language": language},
+        )
+        return True
+
+    def delete_cv_template(self, template_id: int) -> bool:
+        """Remove a template no longer used (decision D6, Q8): its row goes, its immutable bundle stays in the files
+        root; the template in service is refused. False when it is not of this profile."""
+        record = next((t for t in self.cv_templates() if t.id == template_id), None)
+        if record is None:
+            return False
+        if record.active:
+            raise ProfileInputError(TEMPLATE_IN_SERVICE)
+        if not self._store.delete_cv_template(self._id(), template_id):
+            return False
+        self._event(
+            "profil.cv_template_deleted",
+            "cv_template",
+            template_id,
+            {
+                "sha256": record.sha256,
+                "name": record.name,
+                "language": record.language,
+            },
         )
         return True
 

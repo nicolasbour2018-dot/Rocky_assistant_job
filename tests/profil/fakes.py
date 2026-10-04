@@ -316,6 +316,12 @@ class InMemoryProfileStore:
         ]
         return True
 
+    def delete_cv_template(self, profile_id: int, template_id: int) -> bool:
+        records = self.templates.get(profile_id, [])
+        kept = [r for r in records if r.id != template_id or r.active]
+        self.templates[profile_id] = kept
+        return len(kept) < len(records)
+
     def glossary(self, profile_id: int) -> tuple[GlossaryTerm, ...]:
         terms = self.glossaries.get(profile_id, {})
         return tuple(terms[key] for key in sorted(terms))

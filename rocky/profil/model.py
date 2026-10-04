@@ -481,6 +481,11 @@ class ProfileStore(Protocol):
         profile or not in that language."""
         ...
 
+    def delete_cv_template(self, profile_id: int, template_id: int) -> bool:
+        """Remove the row of an inactive template of this profile (its bundle stays in the files root); False when
+        there is no such template (decision D6, Q8)."""
+        ...
+
     def glossary(self, profile_id: int) -> tuple[GlossaryTerm, ...]:
         """In the order of their French terms."""
         ...

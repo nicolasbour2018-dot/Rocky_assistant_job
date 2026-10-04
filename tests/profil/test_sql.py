@@ -19,6 +19,7 @@ from rocky.profil.model import (
     TrackStatus,
 )
 from rocky.profil.rules import (
+    ProfileInputError,
     make_experience,
     make_identity,
     make_language,
@@ -331,6 +332,30 @@ def test_one_active_template_per_language(db: Connection) -> None:
     assert english_active.id == english
     assert editor.activate_cv_template(None, "en")
     assert editor.active_cv_template("en") is None
+
+
+def test_a_template_no_longer_used_is_deleted_never_the_one_in_service(
+    db: Connection,
+) -> None:
+    """Decision D6, Q8: the row goes, journalized; the bundle stays in the files root."""
+    editor = new_editor(db)
+    used = editor.record_cv_template("comptes/1/gabarits/u", "u", "CV en service", "fr")
+    trial = editor.record_cv_template("comptes/1/gabarits/t", "t", "Essai", "fr")
+    editor.activate_cv_template(used, "fr")
+
+    with pytest.raises(ProfileInputError, match="celui de ton CV"):
+        editor.delete_cv_template(used)
+    assert editor.delete_cv_template(trial)
+
+    assert [t.id for t in editor.cv_templates()] == [used]
+    assert not editor.delete_cv_template(trial)  # gone already
+    payload = db.execute(
+        select(events.c.payload).where(
+            events.c.type == "profil.cv_template_deleted",
+            events.c.subject_id == str(trial),
+        )
+    ).scalar_one()
+    assert payload == {"sha256": "t", "name": "Essai", "language": "fr"}
 
 
 def test_the_english_stack_of_a_project_round_trips(db: Connection) -> None:

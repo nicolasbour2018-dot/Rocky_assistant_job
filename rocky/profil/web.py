@@ -1488,6 +1488,21 @@ def use_template(
     )
 
 
+@router.post("/gabarit/{template_id}/supprimer", response_class=HTMLResponse)
+def delete_template(
+    request: Request, account: CurrentAccount, form: Form, template_id: int
+) -> Response:
+    """Remove a template no longer used (decision D6, Q8), after the confirmation of the section."""
+    return _write(
+        request,
+        account,
+        form,
+        "kit",
+        "",
+        lambda e, _: e.delete_cv_template(template_id),
+    )
+
+
 def _activate(editor: ProfileEditor, template_id: int) -> bool:
     record = next((t for t in editor.cv_templates() if t.id == template_id), None)
     return record is not None and editor.activate_cv_template(

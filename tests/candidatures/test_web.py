@@ -350,3 +350,39 @@ def test_an_unknown_stage_is_refused(desk: Desk) -> None:
         headers=HTMX,
     )
     assert response.status_code == 404
+
+
+def test_the_triage_prepares_the_application_of_an_interesting_offer(
+    desk: Desk,
+) -> None:
+    """« Intéressé et préparer » from the triage (decision D6, Q8): the reasons chosen go with the application."""
+    panel = desk.client.get(
+        f"/offres/{desk.offer_id}/motifs?decision=interested&contexte=tri",
+        headers=HTMX,
+    ).text
+    assert 'data-key="d"' in panel
+    assert f'formaction="/candidatures/offre/{desk.offer_id}/preparer"' in panel
+    sheet = desk.client.get(
+        f"/offres/{desk.offer_id}/motifs?decision=interested&contexte=fiche",
+        headers=HTMX,
+    ).text
+    assert 'data-key="d"' not in sheet  # the sheet has its own box « Préparer »
+
+    refused = desk.client.post(
+        f"/candidatures/offre/{desk.offer_id}/preparer",
+        data={"contexte": "tri", "decision": "interested"},
+        headers=HTMX,
+    ).text
+    assert "Choisis au moins un motif" in refused
+    assert 'hx-target="#decision-area"' in refused  # back in the triage, not the sheet
+    assert desk.decision() is None
+
+    prepared = desk.client.post(
+        f"/candidatures/offre/{desk.offer_id}/preparer",
+        data={"contexte": "tri", "decision": "interested", "motifs": ["skills_match"]},
+        headers=HTMX,
+    )
+
+    assert prepared.headers["HX-Redirect"] == f"/candidatures/{desk.application_id()}"
+    assert desk.decision() is DecisionValue.INTERESTED
+    assert desk.reasons() == (APPLICATION_STARTED, "skills_match")

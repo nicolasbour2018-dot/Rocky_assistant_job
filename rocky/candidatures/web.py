@@ -463,7 +463,9 @@ def undo(
     return response
 
 
-# The box of an offer's sheet (loaded by the sheet of ``offres``).
+# The box of an offer's sheet (loaded by the sheet of ``offres``), and « Intéressé et préparer » of its triage.
+
+TRIAGE = "tri"
 
 
 def _box(
@@ -515,7 +517,10 @@ def _panel(
     checked: tuple[str, ...] = (),
     note: str = "",
     error: str | None = None,
+    triage: bool = False,
+    piste: str = "",
 ) -> Response:
+    """``triage``: asked from the triage of the offers (D6, Q8), the panel takes the place of its decision."""
     with engine_of(request).begin() as connection:
         if not offres_web.offer_headings(connection, account.id, [offer_id]):
             return Response(status_code=404)
@@ -525,6 +530,8 @@ def _panel(
         "checked": checked,
         "note": note,
         "error": error,
+        "context": TRIAGE if triage else "",
+        "piste": piste if piste.isdigit() else "",
     }
     if wants_fragment(request):
         return render_fragment(request, "candidatures/prepare.html", context)
@@ -543,8 +550,11 @@ def prepare(
     offer_id: int,
     motifs: Annotated[list[str] | None, Form()] = None,
     precision: Annotated[str, Form()] = "",
+    contexte: Annotated[str, Form()] = "",
+    piste: Annotated[str, Form()] = "",
 ) -> Response:
-    """« Préparer la candidature »: the decision « Intéressé » when needed, and the application, in one transaction."""
+    """« Préparer la candidature »: the decision « Intéressé » when needed, and the application, in one transaction.
+    From the offer's sheet, or from the triage (« Intéressé et préparer », D6 Q8)."""
     engine = engine_of(request)
     with engine.begin() as connection:
         if not offres_web.offer_headings(connection, account.id, [offer_id]):
@@ -565,6 +575,8 @@ def prepare(
                 checked=tuple(motifs or ()),
                 note=precision,
                 error=str(error),
+                triage=contexte == TRIAGE,
+                piste=piste,
             )
     try:
         with engine.begin() as connection:

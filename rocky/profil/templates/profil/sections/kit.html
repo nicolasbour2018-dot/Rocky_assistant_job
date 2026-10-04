@@ -46,7 +46,8 @@
         <ul class="compact">
           {% for template in others %}
           <li>{{ template.name }} <span class="muted">· créé le {{ template.created_at | paris_time }}</span>
-            {{ m.form_open(key, "/profil/gabarit/" ~ template.id ~ "/activer", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Utiliser</button></form></li>
+            {{ m.form_open(key, "/profil/gabarit/" ~ template.id ~ "/activer", "inline-form") }}<button type="submit" class="btn btn-ghost btn-mini">Utiliser</button></form>
+            {{ m.delete(key, "/profil/gabarit/" ~ template.id ~ "/supprimer", "Supprimer ce gabarit ? Il ne pourra plus être utilisé ; tes CV déjà envoyés restent téléchargeables.") }}</li>
           {% endfor %}
         </ul>
       </details>
