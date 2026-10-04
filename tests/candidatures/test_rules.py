@@ -30,6 +30,7 @@ from rocky.candidatures.rules import (
     is_stale,
     journey,
     language_in_force,
+    last_done,
     latest_revisions,
     make_next_action,
     notes_in_force,
@@ -396,6 +397,10 @@ def test_a_done_action_sets_the_next_one() -> None:
     cancelled = change(4, ChangeKind.CANCELLATION, cancels=3)
     assert dossier([CREATED, SENT, done, cancelled]).next_action == FOLLOW_UP
     assert to_cancel([CREATED, SENT, done]) == done
+    # The screen says what « Fait » did, while it is the latest change in force.
+    assert last_done([CREATED, SENT, done]) == (FOLLOW_UP, relaunch_again)
+    assert last_done([CREATED, SENT, done, cancelled]) is None
+    assert last_done([CREATED, SENT]) is None
 
 
 @pytest.mark.parametrize(

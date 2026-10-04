@@ -1,0 +1,18 @@
+{# A page as it would be sent, as an image (decision D6, recette): the CV or the letter seen at a glance; what spills
+   over is named under it. The PDF itself opens in a new tab. #}
+<figure class="sheet-preview">
+  {% if preview %}
+  <a href="{{ pdf_url }}" target="_blank" rel="noopener" hx-boost="false" title="Ouvrir le PDF">
+    <img src="data:image/png;base64,{{ preview.png_base64 }}" alt="Aperçu {{ 'du CV' if document == 'CV' else 'de la lettre' }}, page 1"></a>
+  <figcaption>
+    {% if preview.problems %}{% for problem in preview.problems %}<span class="badge badge-warn">{{ problem }}</span>{% endfor %}
+    {% else %}<span class="line-good small">✓ {{ "Le CV" if document == "CV" else "La lettre" }} tient sur une page.</span>{% endif %}
+    <a class="small" href="{{ pdf_url }}" target="_blank" rel="noopener" hx-boost="false">Ouvrir le PDF ↗</a>
+  </figcaption>
+  {% else %}
+  <div class="alert alert-error small" role="alert">
+    <p>{{ "Ce CV" if document == "CV" else "Cette lettre" }} ne peut pas être dessiné{{ "e" if document != "CV" }} :</p>
+    <ul>{% for reason in refusal %}<li>{{ reason }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+</figure>

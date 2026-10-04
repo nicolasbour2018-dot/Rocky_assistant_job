@@ -154,9 +154,10 @@ def test_fait_from_the_list_proposes_the_next_follow_up(board: Board) -> None:
         f"/candidatures/{board.sent}/fait", data={"vue": "a-faire"}, headers=HTMX
     ).text
 
-    # Nothing left to do today: the next follow-up is at J+7.
+    # The line left « À faire »: the screen says what the gesture did, with « Annuler » (recette of D6).
     assert "Rien à faire aujourd'hui." in done
-    assert "Prochaine échéance" in done
+    assert "« Relancer » est fait. Prochaine action : Relancer le 06/10/2026" in done
+    assert f'hx-post="/candidatures/{board.sent}/annuler"' in done
     dossier = html(board, f"/candidatures/{board.sent}")
     assert "Fait : Relancer ; ensuite : Relancer le 06/10/2026" in dossier
 
@@ -236,3 +237,17 @@ def test_the_follow_up_of_another_account_is_not_found(
         ("langue", {"langue": "en"}),
     ):
         assert stranger.post(f"{base}/{path}", data=data).status_code == 404, path
+
+
+def test_fait_from_the_follow_up_says_what_it_did(board: Board) -> None:
+    base = f"/candidatures/{board.sent}"
+
+    response = board.client.post(f"{base}/fait", data={"retour": "suivi"})
+
+    assert response.headers["location"] == f"{base}?etape=suivi&fait=1"
+    page = html(board, response.headers["location"])
+    assert 'class="alert alert-done"' in page
+    assert "« Relancer » est fait. Prochaine action : Relancer le 06/10/2026" in page
+    # Once another change is made, the notice no longer applies.
+    board.client.post(f"{base}/differer", data={"jours": "1", "retour": "suivi"})
+    assert "est fait." not in html(board, f"{base}?etape=suivi&fait=1")

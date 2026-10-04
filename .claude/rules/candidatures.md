@@ -77,6 +77,10 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 - Lettre : un seul texte par paragraphe (`texte_i`) ; l'origine se **calcule** en comparant au paragraphe générique et
   à la version de Gemini (`letter_view._version_of`). Le sélecteur « Ta lettre · Gemini · Ta version » est rendu par le
   serveur (`/lettre/basculer`, rien n'est stocké) : pas de JavaScript maison au-delà des raccourcis (décision B4, e).
+- Étape CV en **puces** (recette de D6) : un clic retire ou ajoute ; aucune flèche d'ordre à l'écran (les gestes
+  `*-monter`/`*-descendre` restent côté serveur). Les raisons s'affichent après 2 s par `.tip[data-why]` (CSS seul).
+- Aperçus en **image** à côté de l'étape (`/cv/apercu`, `GET /lettre/apercu`, `page_preview.html`), chargés par
+  `hx-trigger="load"` ; jamais gardés. Un geste (« Fait »…) qui peut passer inaperçu le dit par un message (`alert-done`).
 - Chronologie : `system.events.events_about` + `timeline.py` ; tout type `candidatures.*` écrit doit avoir sa ligne dans
   `timeline.LINES` (`test_timeline.py` le vérifie).
 - Mêmes règles d'écran que `offres` (fragments HTMX, `wants_fragment`, `hx-swap` explicite, chaque route répond aussi

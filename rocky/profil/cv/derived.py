@@ -627,10 +627,7 @@ def _png(image: Image.Image) -> bytes:
 
 def render_derived(files: Mapping[str, bytes], content: CvContent) -> CvPdf:
     """The CV in the account's template; refused with its reasons (English missing, overflow, beyond slots)."""
-    # Only the variable blocks come from the profile (Q29): the rest of the CV is the imported one.
-    missing = [m for m in content.missing if m.startswith(VARIABLE_TEXTS)]
-    if missing:
-        raise CvRefusedError((MISSING_ENGLISH + " ; ".join(missing) + ".",))
+    refuse_missing_variable_texts(content)
     rendered, html, reasons = draw_derived(files, content)
     if reasons:
         raise CvRefusedError(reasons)
@@ -640,6 +637,13 @@ def render_derived(files: Mapping[str, bytes], content: CvContent) -> CvPdf:
         html_sha256=hashlib.sha256(html.encode()).hexdigest(),
         template=str(template.get("name", "")),
     )
+
+
+def refuse_missing_variable_texts(content: CvContent) -> None:
+    """Only the variable blocks come from the profile (Q29): the rest of the CV is the imported one."""
+    missing = [m for m in content.missing if m.startswith(VARIABLE_TEXTS)]
+    if missing:
+        raise CvRefusedError((MISSING_ENGLISH + " ; ".join(missing) + ".",))
 
 
 def draw_derived(

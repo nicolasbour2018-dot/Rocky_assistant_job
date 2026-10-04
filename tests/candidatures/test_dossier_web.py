@@ -67,21 +67,35 @@ def in_english(desk: Desk) -> None:
     assert response.status_code == 303
 
 
+def chip(html: str, label: str, kind: str = "on") -> str:
+    """The chip of ``label`` (decision D6, recette): in the CV (``on``) or suggested (``add``), with its reason."""
+    start = html.index(f'class="chip chip-{kind} tip"')
+    while f">{label}" not in html[start : html.index("</button>", start)]:
+        start = html.index(f'class="chip chip-{kind} tip"', start + 1)
+    return html[start : html.index("</button>", start)]
+
+
 def test_the_page_of_an_application_shows_its_targeted_cv(desk: Desk) -> None:
     html = page(desk)
 
     assert "1. CV" in html
-    # Python is required: it comes before Tableau, welcome only.
-    assert html.index("<span>Python</span>") < html.index("<span>Tableau</span>")
-    assert "Citée par l&#39;annonce (éliminatoire)" in html
-    # Prévision proves SQL: it replaces Tri, and says so.
-    assert "<span>Prévision</span>" in html
-    assert (
-        "Remplacé par un projet qui prouve plus de compétences de l&#39;annonce" in html
+    # Chips, no arrows (recette of D6): Python is required, it comes before Tableau, welcome only.
+    assert html.index('Python<span class="chip-x"') < html.index(
+        'Tableau<span class="chip-x"'
     )
-    # SQL is required but outside the master CV: proposed, with its group to choose.
-    assert "Ajouter dans le groupe" in html
+    assert "↑" not in html and "↓" not in html
+    assert "Citée par l&#39;annonce (éliminatoire)" in chip(html, "Python")
+    # Prévision proves SQL: it replaces Tri, which stays one click away, and says why.
+    assert 'Prévision<span class="chip-x"' in html
+    assert "Remplacé par un projet qui prouve plus de compétences de l&#39;annonce" in (
+        chip(html, "+ Tri", "add")
+    )
+    # SQL is required but outside the master CV: suggested, added in one click to the only group.
+    assert 'name="groupe" value="0"' in html
+    assert "+ SQL" in html
     assert "Dans ton profil, pas dans le CV" in html
+    # The page itself, as an image, is loaded beside the step.
+    assert f'hx-get="/candidatures/{desk.application_id()}/cv/apercu"' in html
 
 
 def test_the_box_of_the_offer_links_to_its_application(desk: Desk) -> None:
@@ -267,3 +281,18 @@ def _skill(desk: Desk, label: str) -> str:
     with desk.engine.connect() as connection:
         skills = desk.seeker.profile(connection).skills
     return str(next(skill.id for skill in skills if skill.label.fr == label))
+
+
+def test_the_cv_of_the_application_is_previewed_as_an_image(desk: Desk) -> None:
+    """Decision D6, recette: the CV seen at a glance beside the step, not a PDF opened in a page."""
+    base = f"/candidatures/{desk.application_id()}"
+
+    preview = desk.client.get(f"{base}/cv/apercu", headers=HTMX).text
+
+    assert '<img src="data:image/png;base64,' in preview
+    assert "Le CV tient sur une page." in preview
+    assert f'href="{base}/cv.pdf?apercu=1"' in preview
+    in_english(desk)
+    refused = desk.client.get(f"{base}/cv/apercu", headers=HTMX).text
+    assert "<img" not in refused
+    assert "Projet « Prévision » : stack" in refused

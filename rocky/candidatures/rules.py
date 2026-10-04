@@ -74,6 +74,27 @@ def dossier(rows: Iterable[Change]) -> Dossier:
     )
 
 
+def last_done(rows: Iterable[Change]) -> tuple[NextAction, NextAction | None] | None:
+    """The action « Fait » and the one that followed it, when « Fait » is the latest change in force (decision D6,
+    recette: the screen says what the gesture did)."""
+    changes = standing(rows)
+    if not changes or changes[-1].kind is not ChangeKind.ACTION_DONE:
+        return None
+    done = dossier(changes[:-1]).next_action
+    return None if done is None else (done, changes[-1].next_action)
+
+
+def done_message(done: NextAction, following: NextAction | None) -> str:
+    """What the screen says after « Fait »: the action done, and what comes next."""
+    said = f"« {done.label} » est fait."
+    if following is None:
+        return f"{said} Aucune prochaine action proposée : ajoute la suite quand tu la connais."
+    return (
+        f"{said} Prochaine action : {following.label} le "
+        f"{following.due.strftime('%d/%m/%Y')}, à modifier ou différer si besoin."
+    )
+
+
 def to_cancel(rows: Iterable[Change]) -> Change | None:
     """The change that « Annuler » cancels: the latest one of the application still in force (Q6)."""
     changes = standing(rows)

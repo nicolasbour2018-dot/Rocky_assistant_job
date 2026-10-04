@@ -66,3 +66,15 @@ Constat de l'essai : une touche frappée juste après `i` dans le tri se perd pe
 Fiche d'offre à jour (constat D1 → D6) : « Préparer » quitte la fiche pour le dossier (`HX-Redirect`, D3 Q25), vérifié
 par `test_preparing_opens_the_application_and_lands_on_it` ; la fiche se relit en entier au prochain affichage. Le
 retour arrière du navigateur sur la fiche n'a pas été essayé.
+
+## Recette de Nicolas (04/10)
+
+| Constat de Nicolas | Décision |
+|---|---|
+| « Le bouton Fait ne déclenche rien de compréhensible : j'ai vu les annonces bouger mais aucune info » | Après « Fait », l'écran **dit ce qui a été fait** : « ✓ <offre> — « Relancer » est fait. Prochaine action : Relancer le …, à modifier ou différer si besoin », avec « ↶ Annuler » à côté. Dans la liste, le message reste même quand la ligne quitte l'onglet « À faire » ; dans le Suivi, il s'affiche tant que « Fait » est le dernier changement en vigueur (`rules.last_done`, adresse `?etape=suivi&fait=1`, valeur fixe). |
+| CV du dossier : « évite les compétences avec les flèches, c'est illisible ; mets des puces qu'on peut sélectionner, plus les puces suggérées à ajouter ; l'info de chaque puce quand on reste 2 secondes dessus » | Étape CV en **puces** : une puce du CV se retire d'un clic (✕, rouge au survol), une puce suggérée « + » s'ajoute d'un clic (compétences citées par l'annonce, projets hors du CV) ; une compétence technique suggérée, quand le CV a plusieurs groupes, demande son groupe dans un petit menu. Plus de flèches : l'ordre est celui de Rocky (citées en tête). La raison de chaque puce s'affiche après **2 secondes** de survol ou au focus clavier (CSS seul, `transition-delay`, aucun JavaScript : décision B4, e). « Ce que l'annonce demande » en puces colorées (✓ dans le CV, + dans le profil, ✕ absente), la citation de l'annonce en info-bulle. |
+| « L'aperçu du CV, mieux dans une image qui apparaît, pas une page entière qui se charge ; s'assurer en un coup d'œil que le CV tient la route. Pareil pour la lettre » | **Aperçu en image à côté de l'étape** : le CV (`/cv/apercu`) se charge avec l'étape et se redessine après chaque geste ; la lettre validée (`GET /lettre/apercu`) se charge avec l'étape, la lettre en cours d'écriture par « Aperçu de la page ». Ce qui déborde est nommé sous l'image (rendu sans refus : `profil.web.cv_drawing`, `rendering.draw_neutral`) ; un clic sur l'image ouvre le PDF. Rien n'est gardé. |
+
+Essai dans Chromium après ces corrections (instance à part) : étape CV en puces, info-bulle visible après 2 s,
+aperçu du CV à côté ; « + SQL » ajoute la compétence et redessine l'aperçu ; « Fait » dans la liste affiche le
+message et « Annuler ». Console sans erreur.

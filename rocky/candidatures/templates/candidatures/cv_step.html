@@ -1,13 +1,16 @@
-{# Step « CV » of an application (decision D3): the CV targeted at the offer, adjustable, with its reasons. #}
+{# Step « CV » of an application (decision D3; D6, recette of Nicolas): what the CV holds, as chips — a chip of the CV is
+   taken out in one click, a chip suggested is added in one click; its reason shows after two seconds on it. The page
+   of the CV beside it, as an image, drawn again after each gesture. #}
 {% set base = "/candidatures/" ~ dossier.application_id %}
-{% macro gesture(name, label, element, title="", group=none) -%}
-<form method="post" action="{{ base }}/cv" hx-post="{{ base }}/cv" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
+{% set swap = 'hx-target="#dossier-cv" hx-swap="outerHTML"' %}
+{% macro chip(name, label, element, reason, kind="on", group=none) -%}
+<form method="post" action="{{ base }}/cv" hx-post="{{ base }}/cv" {{ swap | safe }} class="inline-form">
   <input type="hidden" name="geste" value="{{ name }}"><input type="hidden" name="element" value="{{ element }}">
   {% if group is not none %}<input type="hidden" name="groupe" value="{{ group }}">{% endif %}
-  <button type="submit" class="btn btn-ghost btn-mini"{% if title %} title="{{ title }}" aria-label="{{ title }}"{% endif %}>{{ label }}</button>
+  <button type="submit" class="chip chip-{{ kind }} tip" data-why="{{ reason }}"
+    aria-label="{{ ('Retirer ' if kind == 'on' else 'Ajouter ') ~ label ~ ' : ' ~ reason }}">{{ "+ " if kind == "add" }}{{ label }}{% if kind == "on" %}<span class="chip-x" aria-hidden="true">✕</span>{% endif %}</button>
 </form>
 {%- endmacro %}
-{% macro why(reason) %}<details class="why"><summary>Pourquoi ?</summary><span class="muted small">{{ reason }}</span></details>{% endmacro %}
 <section id="dossier-cv" class="dossier-cv" aria-label="CV de la candidature">
   <h2 class="visually-hidden">CV</h2>
   {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
@@ -26,87 +29,86 @@
   {% endif %}
   {% if english_outdated %}<p class="alert alert-info">Ton CV anglais vient d'un ancien CV français. <a href="/profil/cv-anglais">Le refaire</a></p>{% endif %}
   {% if view.outdated %}<p class="alert alert-info">Ton CV maître a changé (ses groupes de compétences) depuis ton ajustement : Rocky repart de sa proposition.</p>{% endif %}
-  <p class="muted">Rocky part de ton CV maître : les compétences citées par l'annonce passent en tête, les projets qui en prouvent le plus sont choisis. Rien n'est réécrit.
-    {% if view.adjusted %}Tu as ajusté cette sélection.{% endif %}</p>
 
-  <div class="cv-downloads">
-    {# Plain navigations (never boosted): a draft, rendered again each time; the PDFs sent are generated and kept in
-       the step « Envoi » (decision D5, Q2). A refused CV comes back as this page with its reasons. #}
-    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?apercu=1" target="_blank" rel="noopener">{{ "Aperçu du CV" if language == "fr" else "Aperçu du CV anglais" }}</a>
-    <form method="post" action="{{ base }}/cv/verifier" hx-post="{{ base }}/cv/verifier" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
-      <button type="submit" class="btn btn-ghost">{{ "Vérifier ce CV" if language == "fr" else "Check this CV" }}</button>
-    </form>
-    {% if view.adjusted %}
-    <form method="post" action="{{ base }}/cv/proposition" hx-post="{{ base }}/cv/proposition" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
-      <button type="submit" class="btn btn-ghost">Revenir à la proposition de Rocky</button>
-    </form>
-    {% endif %}
-  </div>
-  {% if check %}{% include "profil/cv_check.html" %}{% endif %}
+  <div class="step-layout with-aside">
+  <div class="step-main cv-chips">
+    <p class="muted small">Rocky part de ton CV maître : les compétences citées par l'annonce passent en tête, les projets qui en prouvent le plus sont choisis. Clique une puce pour la retirer, une puce « + » pour l'ajouter ; reste deux secondes dessus pour savoir pourquoi.
+      {% if view.adjusted %}Tu as ajusté cette sélection.{% endif %}</p>
 
-  <div class="two-columns">
-    <div>
-      <h3 class="group-title">Compétences techniques</h3>
-      {% for name, skills in view.groups %}{% set group_index = loop.index0 %}
-      <h4>{{ name }}</h4>
-      <ol class="cv-order">
-        {% for item in skills %}
-        <li><span>{{ item.label }}</span>{{ why(item.reason) }}{{ gesture("competence-monter", "↑", item.id, "Monter") }}{{ gesture("competence-descendre", "↓", item.id, "Descendre") }}{{ gesture("competence-retirer", "✕", item.id, "Retirer de ce CV") }}</li>
-        {% else %}<li class="muted small">Aucune.</li>
-        {% endfor %}
-      </ol>
-      {% endfor %}
-      <h3 class="group-title">Compétences transversales</h3>
-      <ol class="cv-order">
-        {% for item in view.transversal %}
-        <li><span>{{ item.label }}</span>{{ why(item.reason) }}{{ gesture("competence-monter", "↑", item.id, "Monter") }}{{ gesture("competence-descendre", "↓", item.id, "Descendre") }}{{ gesture("competence-retirer", "✕", item.id, "Retirer de ce CV") }}</li>
-        {% else %}<li class="muted small">Aucune.</li>
-        {% endfor %}
-      </ol>
-      {% if view.proposed %}
-      <h3 class="group-title">Citées par l'annonce, pas dans ce CV</h3>
-      <ul class="cv-order">
-        {% for item, technical in view.proposed %}
-        <li><span>{{ item.label }}</span>{{ why(item.reason) }}
-          {% if technical %}
-          {% if view.groups %}
-          <form method="post" action="{{ base }}/cv" hx-post="{{ base }}/cv" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
-            <input type="hidden" name="geste" value="competence-ajouter"><input type="hidden" name="element" value="{{ item.id }}">
-            <select name="groupe" aria-label="Groupe de {{ item.label }}">{% for name, _ in view.groups %}<option value="{{ loop.index0 }}">{{ name }}</option>{% endfor %}</select>
-            <button type="submit" class="btn btn-ghost btn-mini">Ajouter dans le groupe</button>
+    <h3 class="group-title">Compétences techniques</h3>
+    {% for name, skills in view.groups %}
+    <div class="chip-row">
+      <span class="chip-row-label">{{ name }}</span>
+      <div class="chips">
+        {% for item in skills %}{{ chip("competence-retirer", item.label, item.id, item.reason) }}{% else %}<span class="muted small">Aucune.</span>{% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    <h3 class="group-title">Compétences transversales</h3>
+    <div class="chips">
+      {% for item in view.transversal %}{{ chip("competence-retirer", item.label, item.id, item.reason) }}{% else %}<span class="muted small">Aucune.</span>{% endfor %}
+    </div>
+    {% if view.proposed %}
+    <h3 class="group-title">Suggérées : citées par l'annonce, pas dans ce CV</h3>
+    <div class="chips">
+      {% for item, technical in view.proposed %}
+      {% if technical and view.groups | length > 1 %}
+      {# A technical skill goes in a group of the CV (decision D3, Q10 bis): the chip asks which one. #}
+      <details class="chip-menu">
+        <summary class="chip chip-add tip" data-why="{{ item.reason }}">+ {{ item.label }}</summary>
+        <div class="chip-menu-list">
+          <span class="muted small">Ajouter dans :</span>
+          {% for name, _ in view.groups %}
+          <form method="post" action="{{ base }}/cv" hx-post="{{ base }}/cv" {{ swap | safe }} class="inline-form">
+            <input type="hidden" name="geste" value="competence-ajouter"><input type="hidden" name="element" value="{{ item.id }}"><input type="hidden" name="groupe" value="{{ loop.index0 }}">
+            <button type="submit" class="btn btn-ghost btn-mini">{{ name }}</button>
           </form>
-          {% endif %}
-          {% else %}{{ gesture("competence-ajouter", "Ajouter", item.id) }}{% endif %}
-        </li>
-        {% endfor %}
-      </ul>
+          {% endfor %}
+        </div>
+      </details>
+      {% elif not technical or view.groups %}
+      {{ chip("competence-ajouter", item.label, item.id, item.reason, "add", 0 if technical else none) }}
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <h3 class="group-title">Projets</h3>
+    <div class="chips">
+      {% for item in view.projects %}{{ chip("projet-basculer", item.label, item.id, item.reason) }}{% else %}<span class="muted small">Aucun projet.</span>{% endfor %}
+      {% for item in view.other_projects %}{{ chip("projet-basculer", item.label, item.id, item.reason, "add") }}{% endfor %}
+    </div>
+
+    <h3 class="group-title">Ce que l'annonce demande</h3>
+    {% if view.coverage %}
+    <div class="chips coverage-chips">
+      {% for line in view.coverage %}
+      {% set why_text = coverage_labels[line.coverage] ~ ((" · " ~ importance_labels[line.importance] ~ " : « " ~ line.evidence ~ " »") if line.importance else "") %}
+      <span class="chip chip-static chip-{{ line.coverage }} tip" tabindex="0" data-why="{{ why_text }}">{{ "✓" if line.coverage == "in_cv" else "+" if line.coverage == "in_profile" else "✕" }} {{ line.name }}<span class="visually-hidden"> : {{ why_text }}</span></span>
+      {% endfor %}
+    </div>
+    <p class="muted small">✓ dans ce CV · + dans ton profil, pas dans ce CV · ✕ absente de ton profil</p>
+    {% else %}<p class="muted">L'annonce n'exige ni ne souhaite aucune compétence de ton profil.</p>{% endif %}
+
+    <div class="cv-downloads">
+      <form method="post" action="{{ base }}/cv/verifier" hx-post="{{ base }}/cv/verifier" {{ swap | safe }} class="inline-form">
+        <button type="submit" class="btn btn-ghost">{{ "Vérifier ce CV" if language == "fr" else "Check this CV" }}</button>
+      </form>
+      {% if view.adjusted %}
+      <form method="post" action="{{ base }}/cv/proposition" hx-post="{{ base }}/cv/proposition" {{ swap | safe }} class="inline-form">
+        <button type="submit" class="btn btn-ghost">Revenir à la proposition de Rocky</button>
+      </form>
       {% endif %}
     </div>
-    <div>
-      <h3 class="group-title">Projets</h3>
-      <ol class="cv-order">
-        {% for item in view.projects %}
-        <li><span>{{ item.label }}</span>{{ why(item.reason) }}{{ gesture("projet-monter", "↑", item.id, "Monter") }}{{ gesture("projet-descendre", "↓", item.id, "Descendre") }}{{ gesture("projet-basculer", "✕", item.id, "Retirer de ce CV") }}</li>
-        {% else %}<li class="muted small">Aucun projet.</li>
-        {% endfor %}
-      </ol>
-      {% for item in view.other_projects %}
-      <div class="small">{{ item.label }} <span class="muted">— {{ item.reason }}</span> {{ gesture("projet-basculer", "Ajouter", item.id) }}</div>
-      {% endfor %}
-      <h3 class="group-title">Ce que l'annonce demande</h3>
-      {% if view.coverage %}
-      <ul class="evidence-list">
-        {% for line in view.coverage %}
-        <li class="{{ 'line-good' if line.coverage == 'in_cv' else 'line-partial' if line.coverage == 'in_profile' else 'line-bad' }}">
-          {{ "✅" if line.coverage == "in_cv" else "➕" if line.coverage == "in_profile" else "❌" }}
-          <strong>{{ line.name }}</strong>{% if line.importance %} · {{ importance_labels[line.importance] }}{% endif %}
-          — {{ coverage_labels[line.coverage] }}
-          {% if line.importance %}<div class="muted small">« {{ line.evidence }} »</div>{% endif %}
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}<p class="muted">L'annonce n'exige ni ne souhaite aucune compétence de ton profil.</p>{% endif %}
+    {% if check %}{% include "profil/cv_check.html" %}{% endif %}
+  </div>
+  {# The page as it would be generated, as an image (recette of D6): loaded after the step, drawn again after each
+     gesture since the whole step is swapped. #}
+  <aside class="step-aside" aria-label="Aperçu du CV">
+    <div hx-get="{{ base }}/cv/apercu" hx-trigger="load" hx-swap="outerHTML">
+      <p class="muted small preview-wait">Aperçu du CV en cours…</p>
     </div>
+  </aside>
   </div>
   <div class="step-footer">
     {% if dossier.stage == Stage.PREPARING and dossier.journey.current == Step.CV %}

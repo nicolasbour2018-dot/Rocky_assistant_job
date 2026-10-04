@@ -13,6 +13,15 @@
     {% endfor %}
   </nav>
   {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if notice %}
+  {# What « Fait » did (recette of D6): said in words, with « Annuler », even when the line left the tab. #}
+  <div class="alert alert-done" role="status">
+    <p><strong>✓ <a href="/candidatures/{{ notice.id }}?etape=suivi">{{ notice.title }}</a></strong> — {{ notice.text }}</p>
+    <form method="post" action="/candidatures/{{ notice.id }}/annuler" hx-post="/candidatures/{{ notice.id }}/annuler" {{ swap | safe }} class="inline-form">
+      {{ keep_tab() }}<button type="submit" class="btn btn-ghost btn-mini">↶ Annuler</button>
+    </form>
+  </div>
+  {% endif %}
 
   {% if tab == Tab.TO_PREPARE %}
   {# The offers « Intéressé » without an application (decision D3, Q26): one click opens the application's page. #}

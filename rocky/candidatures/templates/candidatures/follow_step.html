@@ -7,6 +7,14 @@
 <section id="suivi" class="dossier-step" aria-label="Suivi de la candidature">
   <h2 class="visually-hidden">Suivi</h2>
   {% if follow_error %}<p class="alert alert-error" role="alert">{{ follow_error }}</p>{% endif %}
+  {% if done_notice %}
+  <div class="alert alert-done" role="status">
+    <p><strong>✓</strong> {{ done_notice }}</p>
+    <form method="post" action="{{ base }}/annuler" hx-boost="false" class="inline-form">
+      {{ back() }}<button type="submit" class="btn btn-ghost btn-mini">↶ Annuler</button>
+    </form>
+  </div>
+  {% endif %}
   {% if not dossier.stage %}
   <p class="alert alert-info">Candidature annulée : rouvre-la depuis <a href="/offres/{{ dossier.offer.id }}/fiche">la fiche de l'offre</a>.</p>
   {% else %}

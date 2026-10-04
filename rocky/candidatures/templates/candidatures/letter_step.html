@@ -21,7 +21,8 @@
   <p class="muted small">Envoyée avec la version du {{ letter.sent_with.created_at | paris_time }}{% if letter.version and letter.version.id != letter.sent_with.id %} ; la lettre a été modifiée depuis{% endif %}.</p>
   {% endif %}
 
-  <div class="step-layout{{ ' with-aside' if letter_preview }}">
+  {% set lazy_preview = letter.version and not letter.editing and not letter_preview %}
+  <div class="step-layout{{ ' with-aside' if letter_preview or lazy_preview }}">
   <div class="step-main">
   {% if letter.editing %}
   {% if not letter.adapted %}
@@ -104,16 +105,15 @@
   </details>
   {% endif %}
   </div>
-  {% if letter_preview %}
-  {# The page as it would be sent (decision D4, recette): what spills over is named under it. #}
-  <aside class="step-aside">
-    <figure class="letter-sheet-preview">
-      <img src="data:image/png;base64,{{ letter_preview.png_base64 }}" alt="Aperçu de la lettre, page 1">
-      <figcaption>
-        {% if letter_preview.problems %}{% for problem in letter_preview.problems %}<span class="badge badge-warn">{{ problem }}</span>{% endfor %}
-        {% else %}<span class="muted small">La lettre telle qu'elle sera téléchargée : elle tient sur une page.</span>{% endif %}
-      </figcaption>
-    </figure>
+  {% if letter_preview or lazy_preview %}
+  {# The page as it would be sent, as an image (decision D4, recette; D6, recette): what spills over is named under it.
+     Loaded by itself once the letter is validated; while writing, « Aperçu de la page » draws the form as it is. #}
+  <aside class="step-aside" aria-label="Aperçu de la lettre">
+    {% if letter_preview %}
+    {% with preview = letter_preview, document = "lettre", pdf_url = base ~ "/lettre.pdf?apercu=1", refusal = () %}{% include "candidatures/page_preview.html" %}{% endwith %}
+    {% else %}
+    <div hx-get="{{ base }}/lettre/apercu" hx-trigger="load" hx-swap="outerHTML"><p class="muted small preview-wait">Aperçu de la lettre en cours…</p></div>
+    {% endif %}
   </aside>
   {% endif %}
   </div>

@@ -634,10 +634,10 @@ def mark_action_done(
     application_id: int,
     now: datetime,
     today: date,
-) -> NextAction | None:
+) -> tuple[NextAction, NextAction | None]:
     """« Fait » (Q5): the action in force is done; the next one proposed for the stage follows it (« Relancer » at
-    J+7), or none when its date is to be entered (« Préparer l'entretien »). Returns the next action. The action done
-    is the one in force before this change: « Annuler » brings it back."""
+    J+7), or none when its date is to be entered (« Préparer l'entretien »). Returns the action done and the next
+    one. The action done is the one in force before this change: « Annuler » brings it back."""
     application, current = _open(store, account_id, application_id)
     if current.next_action is None:
         raise InvalidChangeError(NOTHING_DONE)
@@ -661,7 +661,7 @@ def mark_action_done(
             "next_action": _action_json(following),
         },
     )
-    return following
+    return current.next_action, following
 
 
 def add_note(

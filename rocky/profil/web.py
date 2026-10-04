@@ -32,6 +32,8 @@ from rocky.profil.cv.derived import (
     TEMPLATE_FILE,
     derived_facts,
     derived_html,
+    draw_derived,
+    refuse_missing_variable_texts,
     render_derived,
     slots_of,
 )
@@ -51,6 +53,7 @@ from rocky.profil.cv.rendering import (
     CvPdf,
     CvRefusedError,
     Photo,
+    draw_neutral,
     neutral_headings,
     neutral_html,
     render_neutral,
@@ -1203,6 +1206,23 @@ def cv_document(
         return document, expected_facts(content, neutral_headings(content))
     _, files = active
     return render_derived(files, content), derived_facts(files, content)
+
+
+def cv_drawing(
+    request: Request, account: Account, profile: Profile, language: str
+) -> tuple[bytes, tuple[str, ...]]:
+    """The CV of ``profile`` drawn whatever its overflows, and its problems: what a preview shows (decision D6,
+    recette). Raises ``CvRefusedError`` when it cannot be drawn at all (English missing, template unreadable)."""
+    clock: Clock = request.app.state.auth.clock
+    content = cv_content(profile, language, clock().date())
+    active = _active_template(request, account, language)
+    if active is None:
+        rendered, _, reasons = draw_neutral(content, _photo_of(request, profile))
+        return rendered.pdf, reasons
+    _, files = active
+    refuse_missing_variable_texts(content)
+    rendered, _, reasons = draw_derived(files, content)
+    return rendered.pdf, reasons
 
 
 def cv_fingerprint(

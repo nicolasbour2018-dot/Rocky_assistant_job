@@ -592,9 +592,11 @@ def sent(store: FakeStore, offers: FakeOffers) -> None:
 
 
 def done(store: FakeStore) -> NextAction | None:
-    return mark_action_done(
+    finished, following = mark_action_done(
         store, account_id=ACCOUNT, application_id=1, now=NOW, today=TODAY
     )
+    assert finished.label  # the action that was in force
+    return following
 
 
 def test_preparing_stops_the_proposed_action_at_the_deadline() -> None:

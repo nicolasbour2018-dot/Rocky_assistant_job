@@ -122,6 +122,9 @@ input[type="month"], input[type="date"], select {
 label { font-weight: 550; }
 .alert { padding: var(--space-2) var(--space-3); border-radius: var(--radius-small); }
 .alert-error { background: var(--bad-soft); color: var(--bad); }
+.alert-done { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); border: 1px solid var(--good); background: var(--good-soft); color: var(--text); }
+.alert-done p { margin: 0; }
+.alert-done strong { color: var(--good); }
 .alert-info { background: var(--accent-soft); color: var(--text); }
 textarea {
   width: 100%;
@@ -558,4 +561,58 @@ details.why[open] > span { display: block; flex-basis: 100%; }
   .application-table td { padding: 0; border: 0; }
   .row-actions { text-align: left; }
   .step-footer .btn, .follow-card .btn-primary { min-height: 44px; }
+}
+
+/* The CV of an application as chips (decision D6, recette): in the CV, suggested, covered; reason after 2 s on it. */
+.cv-chips { display: grid; align-content: start; gap: var(--space-2); }
+.cv-chips .group-title { margin: var(--space-3) 0 0; }
+button.chip { font: inherit; color: var(--text); }
+.chip-on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.chip-on .chip-x { font-size: 11px; opacity: 0.45; }
+.chip-on:hover { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+.chip-on:hover .chip-x { opacity: 1; }
+.chip-add { border-style: dashed; color: var(--muted); }
+.chip-add:hover { border-style: solid; border-color: var(--accent); color: var(--accent); }
+.chip-static { cursor: default; min-height: 30px; font-size: 13px; }
+.chip-in_cv { border-color: var(--good); background: var(--good-soft); color: var(--good); }
+.chip-in_profile { border-color: var(--mid); background: var(--mid-soft); color: var(--mid); }
+.chip-outside { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+.chip-row { display: grid; grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr); gap: var(--space-2) var(--space-3); align-items: start; }
+.chip-row-label { padding-top: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.chip-menu { position: relative; display: inline-block; }
+.chip-menu > summary { list-style: none; }
+.chip-menu > summary::-webkit-details-marker { display: none; }
+.chip-menu-list { position: absolute; z-index: 15; top: calc(100% + 4px); left: 0; display: grid; gap: var(--space-1); min-width: 12rem; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-small); background: var(--surface); box-shadow: var(--shadow); }
+.tip { position: relative; }
+.tip::after {
+  content: attr(data-why);
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: max-content;
+  max-width: 300px;
+  padding: 6px 8px;
+  border-radius: var(--radius-small);
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s, visibility 0s 0.15s;
+}
+.tip:hover::after, .tip:focus-visible::after { opacity: 1; visibility: visible; transition: opacity 0.15s 2s, visibility 0s 2s; }
+.chip-menu[open] > .tip::after { display: none; }
+.sheet-preview { display: grid; gap: var(--space-2); justify-items: start; margin: 0; }
+.sheet-preview img { width: 100%; height: auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-small); box-shadow: var(--shadow); }
+.sheet-preview figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.preview-wait { padding: var(--space-6) 0; text-align: center; }
+@media (max-width: 899px) {
+  .chip-row { grid-template-columns: minmax(0, 1fr); }
+  .chip-row-label { padding-top: 0; }
 }

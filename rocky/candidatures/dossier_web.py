@@ -79,9 +79,11 @@ from rocky.candidatures.rules import (
     STEP_LABELS,
     Journey,
     Step,
+    done_message,
     dossier,
     journey,
     language_in_force,
+    last_done,
     notes_in_force,
     revision_filename,
     sending_in_force,
@@ -492,6 +494,7 @@ def _dossier_page(
     follow_error: str | None = None,
     editing_action: bool = False,
     note_text: str = "",
+    done: bool = False,
 ) -> Response:
     """The page of the application on ``step`` (by default, the step it is at), or that step alone for HTMX."""
     found = _dossier(request, account, application_id)
@@ -561,6 +564,10 @@ def _dossier_page(
         "RevisionKind": RevisionKind,
         "NONE": NONE,
         "follow_error": follow_error,
+        # What « Fait » did (recette of D6), while it is the latest change in force.
+        "done_notice": done_message(*finished)
+        if done and (finished := last_done(found.changes)) is not None
+        else None,
         "editing_action": editing_action,
         "note_text": note_text,
         "defer_days": DEFER_DAYS,
@@ -618,6 +625,7 @@ def dossier_page(
     etape: str = "",
     modifier: bool = False,
     action: bool = False,
+    fait: bool = False,
 ) -> Response:
     """``etape``: the step shown, by default the one the application is at; ``modifier`` opens the letter in force to
     edit; ``action`` the next action (step « Suivi »)."""
@@ -628,6 +636,7 @@ def dossier_page(
         step=_shown_step(etape),
         editing=modifier,
         editing_action=action,
+        done=fait,
     )
 
 
@@ -1029,7 +1038,7 @@ def _letter_pdf(
 
 @dataclass(frozen=True)
 class LetterPreview:
-    """The page of the letter as it would be sent, as an image, and what makes it unfit."""
+    """A page as it would be sent (the letter, the CV: decision D6, recette), as an image, and what makes it unfit."""
 
     png_base64: str
     problems: tuple[str, ...]
@@ -1042,6 +1051,84 @@ def _preview(pdf: bytes, problems: tuple[str, ...]) -> LetterPreview:
     buffer = io.BytesIO()
     rasterize(pdf, PREVIEW_DPI)[0].save(buffer, format="PNG", optimize=True)
     return LetterPreview(base64.b64encode(buffer.getvalue()).decode(), problems)
+
+
+PREVIEW = "candidatures/page_preview.html"
+
+
+def _preview_fragment(
+    request: Request,
+    preview: LetterPreview | None,
+    *,
+    document: str,
+    pdf_url: str,
+    refusal: tuple[str, ...] = (),
+) -> Response:
+    return render_fragment(
+        request,
+        PREVIEW,
+        {
+            "preview": preview,
+            "refusal": refusal,
+            "document": document,
+            "pdf_url": pdf_url,
+        },
+    )
+
+
+@router.get("/{application_id}/cv/apercu", response_class=HTMLResponse)
+def cv_preview(
+    request: Request, account: CurrentAccount, application_id: int
+) -> Response:
+    """The CV of the application as an image (decision D6, recette): seen at a glance beside the step, what spills over
+    named under it. Nothing is kept."""
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+    profile = replace(found.profile, cv=found.layout)
+    pdf_url = f"/candidatures/{application_id}/cv.pdf?apercu=1"
+    try:
+        pdf, problems = profil_web.cv_drawing(request, account, profile, found.language)
+        preview = _preview(pdf, problems)
+    except CvRefusedError as error:
+        return _preview_fragment(
+            request, None, document="CV", pdf_url=pdf_url, refusal=error.reasons
+        )
+    except RenderError as error:
+        return _preview_fragment(
+            request, None, document="CV", pdf_url=pdf_url, refusal=(error.reason,)
+        )
+    return _preview_fragment(request, preview, document="CV", pdf_url=pdf_url)
+
+
+@router.get("/{application_id}/lettre/apercu", response_class=HTMLResponse)
+def letter_preview(
+    request: Request, account: CurrentAccount, application_id: int
+) -> Response:
+    """The letter in force as an image (decision D6, recette), loaded beside the step. Nothing is kept."""
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+    pdf_url = f"/candidatures/{application_id}/lettre.pdf?apercu=1"
+    version = in_force(found.letters, found.language)
+    if version is None:
+        return _preview_fragment(
+            request,
+            None,
+            document="lettre",
+            pdf_url=pdf_url,
+            refusal=("Valide d'abord cette lettre.",),
+        )
+    try:
+        pdf, problems = draw_letter(
+            letter_sheet(found.profile.identity, version, today_of(request))
+        )
+        preview = _preview(pdf, problems)
+    except RenderError as error:
+        return _preview_fragment(
+            request, None, document="lettre", pdf_url=pdf_url, refusal=(error.reason,)
+        )
+    return _preview_fragment(request, preview, document="lettre", pdf_url=pdf_url)
 
 
 @router.post("/{application_id}/lettre/apercu", response_class=HTMLResponse)

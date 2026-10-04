@@ -111,6 +111,21 @@ MISSING_ENGLISH = "Le CV anglais attend encore ces textes en anglais (profil) : 
 
 
 def render_neutral(content: CvContent, photo: Photo | None) -> CvPdf:
+    rendered, html, reasons = draw_neutral(content, photo)
+    if reasons:
+        raise CvRefusedError(reasons)
+    return CvPdf(
+        pdf=rendered.pdf,
+        html_sha256=hashlib.sha256(html.encode()).hexdigest(),
+        template="neutre",
+    )
+
+
+def draw_neutral(
+    content: CvContent, photo: Photo | None
+) -> tuple[Rendered, str, tuple[str, ...]]:
+    """The rendering whatever its overflows, with them (a preview shows what spills over); English missing is still
+    refused."""
     if content.missing:
         raise CvRefusedError((MISSING_ENGLISH + " ; ".join(content.missing) + ".",))
     html = neutral_html(
@@ -122,14 +137,7 @@ def render_neutral(content: CvContent, photo: Photo | None) -> CvPdf:
     if photo is not None:
         assets[f"photo.{photo.suffix}"] = photo.content
     rendered = render_pdf(html, assets)
-    reasons = problems(rendered)
-    if reasons:
-        raise CvRefusedError(reasons)
-    return CvPdf(
-        pdf=rendered.pdf,
-        html_sha256=hashlib.sha256(html.encode()).hexdigest(),
-        template="neutre",
-    )
+    return rendered, html, problems(rendered)
 
 
 def problems(rendered: Rendered) -> tuple[str, ...]:

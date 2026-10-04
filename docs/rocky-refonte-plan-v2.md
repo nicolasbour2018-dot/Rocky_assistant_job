@@ -593,7 +593,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D5 → B1, vérification)** La vérification globale prend 1 min 50 (tests 104 s), proche de la limite de 2 min :
   rendus Chromium des tests d'envoi et de lettre. Si elle la dépasse : partager un rendu par module (comme D3) ou
   paralléliser pytest.
-  *D6 : 1 min 49 (1 166 tests), sans nouveau rendu Chromium.*
+  *D6 : 1 min 49 (1 166 tests) ; après la recette (aperçus en image), 1 min 51 à 1 min 58 (1 169 tests) : marge trop
+  mince, à traiter avant E1 (un rendu partagé par module comme D3, ou pytest en parallèle avec une dépendance justifiée).*
 - **(D5 → Nicolas)** Le poste ne reconnaît que des champs vides nommés par leurs attributs ou libellés usuels : sur les
   formulaires des ATS (Workday, Greenhouse, Lever, Taleo…), le rapport dira ce qui reste à faire. Des sélecteurs propres à
   une plateforme s'ajoutent si l'usage le demande.

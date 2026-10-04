@@ -356,7 +356,7 @@ def test_the_preview_shows_the_letter_as_composed_without_keeping_it(
     ).text
 
     assert '<img src="data:image/png;base64,' in html
-    assert "elle tient sur une page" in html
+    assert "La lettre tient sur une page." in html
     # The form comes back as it was left: Gemini's opening chosen, its proposals still there.
     assert form_of(html)["texte_0"] == ADAPTED_OPENING
     assert form_of(html)["adapte_0"] == ADAPTED_OPENING
@@ -380,3 +380,19 @@ def test_a_letter_too_long_is_refused_with_its_preview(desk: Desk) -> None:
     assert refused.status_code == 409
     assert "La lettre dépasse sa page" in refused.text
     assert '<img src="data:image/png;base64,' in refused.text
+
+
+def test_the_letter_validated_is_previewed_beside_its_step(desk: Desk) -> None:
+    """Decision D6, recette: the letter in force as an image, loaded beside the step."""
+    assert (
+        "Valide d&#39;abord cette lettre."
+        in desk.client.get(f"{base(desk)}/lettre/apercu", headers=HTMX).text
+    )
+    desk.client.post(f"{base(desk)}/lettre/valider", data=form_of(page(desk, LETTER)))
+
+    step = page(desk, LETTER)
+    preview = desk.client.get(f"{base(desk)}/lettre/apercu", headers=HTMX).text
+
+    assert f'hx-get="{base(desk)}/lettre/apercu"' in step
+    assert '<img src="data:image/png;base64,' in preview
+    assert "La lettre tient sur une page." in preview

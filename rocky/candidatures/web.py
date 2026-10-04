@@ -33,6 +33,7 @@ from rocky.candidatures.rules import (
     TAB_LABELS,
     Step,
     Tab,
+    done_message,
     dossier,
     is_overdue,
     make_next_action,
@@ -198,8 +199,10 @@ def _list(
     error: str | None = None,
     editing: int | None = None,
     stage_form: Mapping[str, object] | None = None,
+    notice: tuple[int, str] | None = None,
 ) -> HTMLResponse:
-    """The screen: a whole page, or its section for HTMX."""
+    """The screen: a whole page, or its section for HTMX. ``notice``: what a gesture did to an application, which may
+    have left the tab (« Fait »)."""
     today = today_of(request)
     with engine_of(request).begin() as connection:
         rows = rows_of(connection, account.id, today)
@@ -214,6 +217,13 @@ def _list(
         "error": error,
         "editing": editing,
         "stage_form": stage_form,
+        "notice": None
+        if notice is None
+        else {
+            "id": notice[0],
+            "text": notice[1],
+            "title": next((row.offer.title for row in rows if row.id == notice[0]), ""),
+        },
     }
     if wants_fragment(request):
         return render_fragment(request, "candidatures/list.html", context)
@@ -407,10 +417,11 @@ def done(
     retour: Annotated[str, Form()] = "",
     vue: Annotated[str, Form()] = "",
 ) -> Response:
-    """« Fait » (decision D6, Q5): the action is done, the next one proposed for the stage follows it."""
+    """« Fait » (decision D6, Q5): the action is done, the next one proposed for the stage follows it. The screen says
+    so, with « Annuler » beside it (recette of D6: the gesture must not go unnoticed)."""
     try:
         with engine_of(request).begin() as connection:
-            mark_action_done(
+            finished, following = mark_action_done(
                 SqlApplicationStore(connection),
                 account_id=account.id,
                 application_id=application_id,
@@ -421,7 +432,19 @@ def done(
         return Response(status_code=404)
     except InvalidChangeError as error:
         return _refused(request, account, application_id, retour, vue, str(error))
-    return _after_change(request, account, application_id, retour, vue)
+    step = _step(retour)
+    if step is not None or retour == BACK_TO_DOSSIER or not wants_fragment(request):
+        # The page of the application says it from its changes (``rules.last_done``): a fixed value, never a text.
+        return RedirectResponse(
+            dossier_web.dossier_url(application_id, Step.FOLLOW) + "&fait=1",
+            status_code=303,
+        )
+    return _list(
+        request,
+        account,
+        tab=_tab(vue),
+        notice=(application_id, done_message(finished, following)),
+    )
 
 
 def _refused(
