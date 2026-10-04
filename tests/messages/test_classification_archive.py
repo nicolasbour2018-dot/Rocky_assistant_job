@@ -3,7 +3,8 @@ confident decision attaches the wrong application, and the categories agree with
 
 The sample (``data/archive_sample.csv``) keeps the sender, subject and snippet of 92 messages, anonymised; the old
 Rocky read no body, so the rules read the snippet as the body. Labels: ``category`` and ``application`` (id in
-``data/archive_applications.csv``), checked by Nicolas (``checked``). Provenance in ``data/README.md``.
+``data/archive_applications.csv``), proposed by the agent; ``checked`` marks the lines Nicolas read. Provenance in
+``data/README.md``.
 """
 
 from __future__ import annotations
