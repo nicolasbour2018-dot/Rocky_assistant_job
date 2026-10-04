@@ -12,10 +12,12 @@ from rocky.profil.model import (
     CvTemplateRecord,
     Experience,
     ExperienceDraft,
+    GenericLetter,
     GlossaryTerm,
     Identity,
     Language,
     LanguageDraft,
+    LetterOrigin,
     OnboardingState,
     Preferences,
     Profile,
@@ -24,6 +26,7 @@ from rocky.profil.model import (
     Remembered,
     Skill,
     SkillDraft,
+    StoredLetter,
     StoredPhoto,
     Track,
     TrackDraft,
@@ -58,6 +61,7 @@ class InMemoryProfileStore:
         self.templates: dict[int, list[CvTemplateRecord]] = {}
         self.glossaries: dict[int, dict[str, GlossaryTerm]] = {}
         self.memory: dict[int, dict[str, Remembered]] = {}
+        self.letters: dict[int, list[StoredLetter]] = {}
         self._ids = count(1)
 
     def event_types(self) -> list[str]:
@@ -342,6 +346,29 @@ class InMemoryProfileStore:
         self.memory.setdefault(profile_id, {})[text_sha256(source)] = Remembered(
             source, translation
         )
+
+    def generic_letter(self, profile_id: int, language: str) -> StoredLetter | None:
+        mine = [
+            stored
+            for stored in self.letters.get(profile_id, [])
+            if stored.letter.language == language
+        ]
+        return mine[-1] if mine else None
+
+    def add_generic_letter(
+        self,
+        profile_id: int,
+        letter: GenericLetter,
+        origin: LetterOrigin,
+        sha256: str,
+        source_sha256: str | None,
+        now: datetime,
+    ) -> StoredLetter:
+        stored = StoredLetter(
+            next(self._ids), letter, origin, sha256, source_sha256, now
+        )
+        self.letters.setdefault(profile_id, []).append(stored)
+        return stored
 
     def append_event(self, event: NewEvent) -> None:
         self.events.append(event)

@@ -33,6 +33,7 @@ from sqlalchemy import (
     text,
     update,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 
@@ -43,10 +44,14 @@ from rocky.profil.model import (
     Experience,
     ExperienceDraft,
     ExperienceKind,
+    GenericLetter,
     Hobby,
     Language,
     LanguageDraft,
     LanguageLevel,
+    LetterOrigin,
+    LetterParagraph,
+    LetterRole,
     OnboardingState,
     Preferences,
     Profile,
@@ -340,6 +345,23 @@ translation_memory = Table(
     Column("translation", Text, nullable=False),
     Column("validated_at", DateTime(timezone=True), nullable=False),
     PrimaryKeyConstraint("profile_id", "source_sha256"),
+)
+
+# The account's generic letter (decision D4, Q6, Q17): appended at each save, the latest of each language in force.
+generic_letters = Table(
+    "generic_letters",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("profile_id", BigInteger, ForeignKey("profiles.id"), nullable=False),
+    Column("language", Text, nullable=False),
+    Column("paragraphs", JSONB, nullable=False),  # [{"role": …, "text": …}]
+    Column("origin", Text, nullable=False),
+    Column("sha256", Text, nullable=False),
+    Column("source_sha256", Text),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint("language IN ('fr', 'en')", name="language"),
+    CheckConstraint(_in("origin", LetterOrigin), name="origin"),
+    Index("ix_generic_letters_profile_id", "profile_id", "language", "id"),
 )
 
 
@@ -865,6 +887,46 @@ class SqlProfileStore:
             )
         )
 
+    def generic_letter(
+        self, profile_id: int, language: str
+    ) -> model.StoredLetter | None:
+        row = self._conn.execute(
+            select(generic_letters)
+            .where(
+                generic_letters.c.profile_id == profile_id,
+                generic_letters.c.language == language,
+            )
+            .order_by(generic_letters.c.id.desc())
+            .limit(1)
+        ).one_or_none()
+        return None if row is None else _stored_letter(row)
+
+    def add_generic_letter(
+        self,
+        profile_id: int,
+        letter: GenericLetter,
+        origin: LetterOrigin,
+        sha256: str,
+        source_sha256: str | None,
+        now: datetime,
+    ) -> model.StoredLetter:
+        row = self._conn.execute(
+            generic_letters.insert()
+            .values(
+                profile_id=profile_id,
+                language=letter.language,
+                paragraphs=[
+                    {"role": p.role.value, "text": p.text} for p in letter.paragraphs
+                ],
+                origin=origin.value,
+                sha256=sha256,
+                source_sha256=source_sha256,
+                created_at=now,
+            )
+            .returning(generic_letters)
+        ).one()
+        return _stored_letter(row)
+
     def activate_cv_template(
         self, profile_id: int, language: str, template_id: int | None
     ) -> bool:
@@ -1128,6 +1190,23 @@ def _identity(row: Row[Any], links: tuple[model.Link, ...]) -> model.Identity:
         title=model.Text(row.title_fr or "", row.title_en),
         birth_date=row.birth_date,
         show_age=row.show_age,
+    )
+
+
+def _stored_letter(row: Row[Any]) -> model.StoredLetter:
+    return model.StoredLetter(
+        id=row.id,
+        letter=GenericLetter(
+            row.language,
+            tuple(
+                LetterParagraph(LetterRole(item["role"]), item["text"])
+                for item in row.paragraphs
+            ),
+        ),
+        origin=LetterOrigin(row.origin),
+        sha256=row.sha256,
+        source_sha256=row.source_sha256,
+        created_at=row.created_at,
     )
 
 

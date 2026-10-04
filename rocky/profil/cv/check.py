@@ -89,7 +89,8 @@ def expected_facts(content: CvContent, headings: Sequence[str]) -> tuple[Fact, .
     return tuple(kept)
 
 
-def check_cv(pdf: bytes, facts: Sequence[Fact]) -> CvCheck:
+def check_cv(pdf: bytes, facts: Sequence[Fact], document: str = "le CV") -> CvCheck:
+    """``document``: how the warnings name it (« la lettre » for an application's letter, decision D4, Q19)."""
     readings = read_pdf(pdf)
     working = [reading for reading in readings if reading.error is None]
     texts = {reading.reader: normalise(reading.text) for reading in working}
@@ -107,7 +108,7 @@ def check_cv(pdf: bytes, facts: Sequence[Fact]) -> CvCheck:
         ),
         facts=fact_readings,
         agreement=agreement,
-        warnings=_warnings(pdf, readings, fact_readings, agreement),
+        warnings=_warnings(pdf, readings, fact_readings, agreement, document),
     )
 
 
@@ -142,11 +143,12 @@ def _warnings(
     readings: Sequence[Reading],
     facts: Sequence[FactReading],
     agreement: float,
+    document: str,
 ) -> tuple[str, ...]:
     warnings = []
     pages = page_count(pdf)
     if pages != 1:
-        warnings.append(f"Le CV fait {pages} pages.")
+        warnings.append(f"{document[0].upper()}{document[1:]} fait {pages} pages.")
     for reading in readings:
         if reading.error is not None:
             warnings.append(
@@ -154,7 +156,7 @@ def _warnings(
             )
         elif not reading.text.strip():
             warnings.append(
-                f"{reading.reader} ne trouve aucun texte : le CV est-il une image ?"
+                f"{reading.reader} ne trouve aucun texte : est-ce une image ?"
             )
         elif spaced_letters_ratio(reading.text) > SPACED_LETTERS_RATIO:
             warnings.append(

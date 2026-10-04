@@ -166,7 +166,7 @@ def accept(
         with _editor(request, account) as editor:
             editor.accept_translation(cle, empreinte, anglais)
     except ProfileInputError as error:
-        return _row(
+        return review_row(
             request,
             cle,
             ou,
@@ -179,7 +179,7 @@ def accept(
         return RedirectResponse(
             f"/profil/traduction?retour={back_to(retour)}", status_code=303
         )
-    return _row(request, cle, ou, accepted=True)
+    return review_row(request, cle, ou, accepted=True)
 
 
 @router.post("/traduction/ignorer", response_class=HTMLResponse)
@@ -190,7 +190,7 @@ def ignore(request: Request, account: CurrentAccount) -> Response:
     return HTMLResponse("")
 
 
-def _row(
+def review_row(
     request: Request,
     key: str,
     where: str,
@@ -438,7 +438,7 @@ def accept_cv_text(
         with _editor(request, account) as editor:
             editor.validate_translation(text.text, anglais)
     except ProfileInputError as error:
-        return _row(
+        return review_row(
             request,
             cle,
             ou,
@@ -449,7 +449,7 @@ def accept_cv_text(
         )
     if not wants_fragment(request):
         return RedirectResponse("/profil/cv-anglais", status_code=303)
-    return _row(
+    return review_row(
         request, cle, ou, accepted=True, accept_url="/profil/cv-anglais/accepter"
     )
 
@@ -469,7 +469,7 @@ def edit_cv_text(
         segment = Segment(text.id, text.where, text.text, None)
         proposal = Proposal(segment, state.validated[cle], from_memory=True)
         return _english_screen(request, account, proposals=(proposal,))
-    return _row(
+    return review_row(
         request,
         text.id,
         text.where,

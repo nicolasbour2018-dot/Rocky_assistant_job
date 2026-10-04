@@ -23,6 +23,10 @@ def app(migrated_engine: Engine) -> FastAPI:
 
 @pytest.fixture
 def desk(app: FastAPI, migrated_engine: Engine) -> Desk:
+    return dossier_with(app, migrated_engine)
+
+
+def dossier_with(app: FastAPI, migrated_engine: Engine) -> Desk:
     """An open application on an offer asking Python and SQL (« Un plus : Tableau »), and a master CV holding one
     group « Langages » (Tableau, Python), the soft skill Curiosité and two projects."""
     desk = desk_with(app, migrated_engine)
@@ -158,21 +162,21 @@ def test_an_application_goes_from_its_cv_to_sent_on_its_page(
     base = f"/candidatures/{desk.application_id()}"
     start = page(desk)
     assert '<li aria-current="step">\n      <a href="#dossier-cv">1. CV</a>' in start
-    assert "CV prêt : passer à l'envoi" in start
-    assert "Disponible quand ton CV est prêt." in start
+    assert 'href="#lettre">CV prêt : passer à la lettre</a>' in start
+    assert "Disponible quand ta lettre est prête" in start
 
-    ready = desk.client.post(
-        f"{base}/etape", data={"etape": "ready", "retour": "dossier"}
-    )
+    # No letter for this one (decision D4, Q4, Q16): ready to send, in one gesture.
+    ready = desk.client.post(f"{base}/lettre/sans")
 
     assert (ready.status_code, ready.headers["location"]) == (303, f"{base}#envoi")
     sending = page(desk)
     assert "<strong>Prête à envoyer</strong>" in sending
     assert "1. CV ✓" in sending
+    assert "2. Lettre ✓" in sending
     # No application link from the source: the posting itself, its domain shown.
     assert 'href="https://apec.example/offres/d1" target="_blank"' in sending
     assert "apec.example" in sending
-    assert "CV prêt : passer à l'envoi" not in sending
+    assert "CV prêt : passer à la lettre" not in sending
 
     desk.client.post(f"{base}/etape", data={"etape": "sent", "retour": "dossier"})
     sent = page(desk)
@@ -194,6 +198,7 @@ def test_an_application_goes_from_its_cv_to_sent_on_its_page(
             .all()
         )
     assert types.count("candidatures.stage_changed") == 2
+    assert types.count("candidatures.letter_skipped") == 1
 
 
 def test_a_gesture_never_returns_to_an_address_it_is_given(desk: Desk) -> None:

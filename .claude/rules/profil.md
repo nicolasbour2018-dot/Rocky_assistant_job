@@ -35,6 +35,16 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   onboarding terminé. Pas les corrections de texte. Une modification sans changement n'écrit rien.
 - Exception (décision D3, Q13) : une traduction proposée par le modèle et acceptée écrit `profil.translation_accepted`
   (champ, empreinte du français) : le texte vient de l'IA, validé par l'utilisateur.
+- Exception (décision D4) : chaque version de la lettre générique écrit `profil.cover_letter_saved` (donnée D14).
+
+## Lettre générique (décision `docs/decisions/D4-lettre-message.md`)
+- Règles et import dans `letter.py`, écran dans `letter_web.py`, enregistré **avant** les routes du profil.
+- `generic_letters` en ajout seul, la dernière d'une langue en vigueur ; son empreinte (`letter_sha256`) dit à un
+  dossier que la lettre générique a changé. Une lettre anglaise garde l'empreinte de la française traduite.
+- Import : le modèle ne reçoit que le texte, découpe sans réécrire ; un paragraphe qui n'est pas mot pour mot dans le
+  texte lu est signalé à la relecture ; rien n'est enregistré avant « Enregistrer ma lettre ».
+- Traduction : le moteur de D3 (`translation.propose`) avec les consignes de la lettre ; `{poste}` et `{entreprise}`
+  sont des noms protégés.
 
 ## Traduction (décision `docs/decisions/D3-ciblage-traduction.md`)
 - Règles pures et appel au modèle dans `rocky/profil/translation.py` ; écran dans `translation_web.py`, enregistré

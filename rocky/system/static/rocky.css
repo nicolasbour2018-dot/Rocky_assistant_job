@@ -490,3 +490,16 @@ details.why[open] > span { display: block; flex-basis: 100%; }
 .cv-compare figure { margin: 0; }
 .cv-compare img { width: 100%; height: auto; border: 1px solid var(--border, #d9dde3); }
 .cv-compare figcaption { font-size: 0.85em; color: var(--muted, #5b6270); margin-top: var(--space-1); }
+
+/* Letter (decision D4): each paragraph's choice — the user's own, the adapted one, their own writing. */
+.letter-rows textarea, .letter textarea, #lettre details textarea, #message textarea { width: 100%; }
+.letter-choices { display: grid; gap: var(--space-2); margin: var(--space-2) 0; }
+.letter-choice { display: grid; align-content: start; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-1) var(--space-2); align-items: start; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-small); }
+.letter-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.letter-choice > :not(input) { grid-column: 2; }
+.letter-choice .description-text { max-height: none; margin-top: 0; }
+.letter-paragraphs { display: grid; gap: var(--space-2); padding-left: 1.5em; }
+.letter-preview { max-width: 70ch; }
+.letter-preview .description-text { max-height: none; }
+.letter-sheet-preview { margin: var(--space-3) 0; display: grid; gap: var(--space-2); justify-items: start; }
+.letter-sheet-preview img { width: min(100%, 460px); height: auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-small); box-shadow: var(--shadow); }

@@ -1,4 +1,5 @@
-"""Use cases of the applications (D1): prepare, change the stage or the next action, cancel the latest change.
+"""Use cases of the applications (D1): prepare, change the stage or the next action, cancel the latest change; and
+their letter and message (D4).
 
 Each use case runs inside one transaction opened by the caller (the stores never commit), and locks the application
 first: a change, its event and the decision on the offer it goes with are written together or not at all (exit
@@ -10,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import date, datetime
 
+from rocky.candidatures.letter import letter_state
 from rocky.candidatures.model import (
     Application,
     ApplicationStore,
@@ -17,7 +19,10 @@ from rocky.candidatures.model import (
     ChangeKind,
     Dossier,
     InvalidChangeError,
+    LetterState,
     NewChange,
+    NewLetter,
+    NewMessage,
     NextAction,
     OfferDecisions,
     Stage,
@@ -271,6 +276,126 @@ def adjust_cv_selection(
         },
     )
     return True
+
+
+# The letter and the message (decision D4). The model is called before: these only write what the user validated.
+
+NO_LETTER_YET = (
+    "Valide d'abord une lettre, ou choisis « Pas de lettre pour cette candidature »."
+)
+
+
+def validate_letter(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    letter: NewLetter,
+    now: datetime,
+) -> int:
+    """Keep the letter the user validated as the version in force of its language (Q11, Q17); the earlier versions
+    stay. Allowed at any stage, after sending too (Q20)."""
+    application, _ = _open(store, account_id, application_id)
+    if not any(p.text for p in letter.paragraphs):
+        raise InvalidChangeError("La lettre est vide.")
+    letter_id = store.insert_letter(account_id, application.id, letter, now)
+    _event(
+        store,
+        application,
+        "candidatures.letter_validated",
+        Author.USER,
+        {
+            "letter_id": letter_id,
+            "language": letter.language,
+            "origins": [p.origin.value for p in letter.paragraphs],
+            "adapted_shown": sum(p.proposed is not None for p in letter.paragraphs),
+            "signals": sum(len(p.signals) for p in letter.paragraphs),
+            "generic_sha256": letter.generic_sha256,
+            "checks_version": letter.checks_version,
+        },
+    )
+    return letter_id
+
+
+def skip_letter(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    now: datetime,
+    today: date,
+) -> None:
+    """« Pas de lettre pour cette candidature » (Q4, Q16): kept, and an application in preparation becomes « Prête à
+    envoyer » with it, in the same transaction."""
+    application, current = _open(store, account_id, application_id)
+    store.insert_letter(account_id, application.id, None, now)
+    _event(store, application, "candidatures.letter_skipped", Author.USER, {})
+    if current.stage is Stage.PREPARING:
+        _ready(store, account_id, application.id, now, today)
+
+
+def letter_ready(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    now: datetime,
+    today: date,
+) -> bool:
+    """« Lettre prête : passer à l'envoi » (Q16): refused until a letter is validated or set aside. False when the
+    application is already past its preparation (nothing written)."""
+    application, current = _open(store, account_id, application_id)
+    if letter_state(store.letters(application.id)) is LetterState.NONE:
+        raise InvalidChangeError(NO_LETTER_YET)
+    if current.stage is not Stage.PREPARING:
+        return False
+    return _ready(store, account_id, application.id, now, today)
+
+
+def _ready(
+    store: ApplicationStore,
+    account_id: int,
+    application_id: int,
+    now: datetime,
+    today: date,
+) -> bool:
+    return change_stage(
+        store,
+        account_id=account_id,
+        application_id=application_id,
+        stage=Stage.READY,
+        next_action=_proposed(Stage.READY, today),
+        now=now,
+    )
+
+
+def validate_message(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    message: NewMessage,
+    now: datetime,
+) -> int:
+    """Keep the accompanying message the user validated (Q12); the earlier ones stay."""
+    application, _ = _open(store, account_id, application_id)
+    if not message.text.strip():
+        raise InvalidChangeError("Le message est vide.")
+    message_id = store.insert_message(account_id, application.id, message, now)
+    _event(
+        store,
+        application,
+        "candidatures.message_validated",
+        Author.USER,
+        {
+            "message_id": message_id,
+            "language": message.language,
+            "origin": message.origin.value,
+            "signals": len(message.signals),
+            "checks_version": message.checks_version,
+        },
+    )
+    return message_id
 
 
 def _open(

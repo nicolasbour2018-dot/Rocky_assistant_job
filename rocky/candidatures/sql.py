@@ -34,8 +34,18 @@ from rocky.candidatures.model import (
     Application,
     Change,
     ChangeKind,
+    LetterEntry,
+    LetterHeader,
+    LetterOrigin,
+    LetterParagraph,
+    LetterVersion,
+    MessageOrigin,
+    MessageVersion,
     NewChange,
+    NewLetter,
+    NewMessage,
     NextAction,
+    NoLetter,
     Stage,
 )
 from rocky.offres.decisions import Author
@@ -110,6 +120,53 @@ application_cv_selections = Table(
     Column("layout", JSONB),
     Column("changed_at", DateTime(timezone=True), nullable=False),
     Index("ix_application_cv_selections_application_id", "application_id", "id"),
+)
+
+
+# The letters of an application (decision D4, Q4, Q11, Q17): appended at each validation, the latest of each language
+# in force; a row « none » is « Pas de lettre pour cette candidature ».
+application_letters = Table(
+    "application_letters",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("kind", Text, nullable=False),
+    Column("language", Text),
+    # [{"role", "text", "origin", "proposed", "signals"}]: the choice of each paragraph is training data (D14).
+    Column("paragraphs", JSONB),
+    Column("subject", Text),
+    Column("recipient", Text),
+    Column("generic_sha256", Text),
+    Column("checks_version", Text),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint("kind IN ('letter', 'none')", name="kind"),
+    CheckConstraint("language IS NULL OR language IN ('fr', 'en')", name="language"),
+    CheckConstraint(
+        "(kind = 'letter') = (language IS NOT NULL AND paragraphs IS NOT NULL "
+        "AND subject IS NOT NULL AND recipient IS NOT NULL)",
+        name="letter_complete",
+    ),
+    Index("ix_application_letters_application_id", "application_id", "id"),
+)
+
+# The accompanying message of an application (decision D4, Q1, Q12): appended at each validation.
+application_messages = Table(
+    "application_messages",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("language", Text, nullable=False),
+    Column("text", Text, nullable=False),
+    Column("origin", Text, nullable=False),
+    Column("proposed", Text),
+    Column("signals", JSONB, nullable=False),
+    Column("checks_version", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint("language IN ('fr', 'en')", name="language"),
+    CheckConstraint(_in("origin", MessageOrigin), name="origin"),
+    Index("ix_application_messages_application_id", "application_id", "id"),
 )
 
 
@@ -244,6 +301,94 @@ class SqlApplicationStore:
             )
         )
 
+    def letters(self, application_id: int) -> list[LetterEntry]:
+        rows = self._conn.execute(
+            select(application_letters)
+            .where(application_letters.c.application_id == application_id)
+            .order_by(application_letters.c.id)
+        )
+        return [_letter(row) for row in rows]
+
+    def insert_letter(
+        self,
+        account_id: int,
+        application_id: int,
+        letter: NewLetter | None,
+        now: datetime,
+    ) -> int:
+        values: dict[str, Any] = {"kind": "none"}
+        if letter is not None:
+            values = {
+                "kind": "letter",
+                "language": letter.language,
+                "paragraphs": [
+                    {
+                        "role": p.role,
+                        "text": p.text,
+                        "origin": p.origin.value,
+                        "proposed": p.proposed,
+                        "signals": list(p.signals),
+                    }
+                    for p in letter.paragraphs
+                ],
+                "subject": letter.header.subject,
+                "recipient": letter.header.recipient,
+                "generic_sha256": letter.generic_sha256,
+                "checks_version": letter.checks_version,
+            }
+        letter_id: int = self._conn.execute(
+            application_letters.insert()
+            .values(
+                application_id=application_id,
+                account_id=account_id,
+                created_at=now,
+                **values,
+            )
+            .returning(application_letters.c.id)
+        ).scalar_one()
+        return letter_id
+
+    def messages(self, application_id: int) -> list[MessageVersion]:
+        rows = self._conn.execute(
+            select(application_messages)
+            .where(application_messages.c.application_id == application_id)
+            .order_by(application_messages.c.id)
+        )
+        return [
+            MessageVersion(
+                id=row.id,
+                language=row.language,
+                text=row.text,
+                origin=MessageOrigin(row.origin),
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+
+    def insert_message(
+        self,
+        account_id: int,
+        application_id: int,
+        message: NewMessage,
+        now: datetime,
+    ) -> int:
+        message_id: int = self._conn.execute(
+            application_messages.insert()
+            .values(
+                application_id=application_id,
+                account_id=account_id,
+                language=message.language,
+                text=message.text,
+                origin=message.origin.value,
+                proposed=message.proposed,
+                signals=list(message.signals),
+                checks_version=message.checks_version,
+                created_at=now,
+            )
+            .returning(application_messages.c.id)
+        ).scalar_one()
+        return message_id
+
     def append_event(self, event: NewEvent) -> None:
         append_event(self._conn, event)
 
@@ -265,4 +410,26 @@ def _change(row: Row[Any]) -> Change:
         else NextAction(row.next_action_label, row.next_action_due),
         decision_id=row.decision_id,
         cancels=row.cancels_id,
+    )
+
+
+def _letter(row: Row[Any]) -> LetterEntry:
+    if row.kind == "none":
+        return NoLetter(id=row.id, created_at=row.created_at)
+    return LetterVersion(
+        id=row.id,
+        language=row.language,
+        paragraphs=tuple(
+            LetterParagraph(
+                role=item["role"],
+                text=item["text"],
+                origin=LetterOrigin(item["origin"]),
+                proposed=item.get("proposed"),
+                signals=tuple(item.get("signals", ())),
+            )
+            for item in row.paragraphs
+        ),
+        header=LetterHeader(row.subject, row.recipient),
+        generic_sha256=row.generic_sha256,
+        created_at=row.created_at,
     )

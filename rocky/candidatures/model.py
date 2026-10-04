@@ -131,6 +131,94 @@ class Application:
     offer_id: int
 
 
+# The letter and the accompanying message of an application (decision D4).
+
+
+class LetterOrigin(StrEnum):
+    """Where a paragraph of an application's letter comes from (Q11, D14)."""
+
+    GENERIC = "generic"  # the generic letter, as it is
+    ADAPTED = "adapted"  # the version adapted by the model, chosen as it is
+    EDITED = "edited"  # written or corrected by the user
+
+
+class LetterState(StrEnum):
+    NONE = "none"  # nothing decided yet
+    VALIDATED = "validated"
+    SKIPPED = "skipped"  # « Pas de lettre pour cette candidature » (Q4)
+
+
+@dataclass(frozen=True)
+class LetterParagraph:
+    role: str  # the part it plays in the generic letter (``profil.model.LetterRole`` value)
+    text: str
+    origin: LetterOrigin
+    proposed: str | None = None  # the adapted version shown beside it (kept: D14)
+    signals: tuple[str, ...] = ()  # what the checks said of the text kept (Q8)
+
+
+@dataclass(frozen=True)
+class LetterHeader:
+    subject: str
+    recipient: str  # one line per line of the address block
+
+
+@dataclass(frozen=True)
+class NewLetter:
+    language: str
+    paragraphs: tuple[LetterParagraph, ...]
+    header: LetterHeader
+    generic_sha256: str  # the generic letter it started from (Q17)
+    checks_version: str
+
+
+@dataclass(frozen=True)
+class LetterVersion:
+    """One validated letter of an application; the latest of a language is in force (Q11, Q17)."""
+
+    id: int
+    language: str
+    paragraphs: tuple[LetterParagraph, ...]
+    header: LetterHeader
+    generic_sha256: str
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class NoLetter:
+    """« Pas de lettre pour cette candidature » (Q4)."""
+
+    id: int
+    created_at: datetime
+
+
+type LetterEntry = LetterVersion | NoLetter
+
+
+class MessageOrigin(StrEnum):
+    GENERATED = "generated"
+    EDITED = "edited"
+
+
+@dataclass(frozen=True)
+class NewMessage:
+    language: str
+    text: str
+    origin: MessageOrigin
+    proposed: str | None
+    signals: tuple[str, ...]
+    checks_version: str
+
+
+@dataclass(frozen=True)
+class MessageVersion:
+    id: int
+    language: str
+    text: str
+    origin: MessageOrigin
+    created_at: datetime
+
+
 @dataclass(frozen=True)
 class Dossier:
     """What the changes of an application amount to (computed, never stored)."""
@@ -184,6 +272,30 @@ class ApplicationStore(Protocol):
     ) -> None:
         """Append an adjustment; None goes back to the rules' proposal."""
         ...
+
+    def letters(self, application_id: int) -> list[LetterEntry]:
+        """The letters validated and the « no letter » of the application, in the order they were written."""
+        ...
+
+    def insert_letter(
+        self,
+        account_id: int,
+        application_id: int,
+        letter: NewLetter | None,
+        now: datetime,
+    ) -> int:
+        """Append a validated letter, or « no letter » with None; returns its id."""
+        ...
+
+    def messages(self, application_id: int) -> list[MessageVersion]: ...
+
+    def insert_message(
+        self,
+        account_id: int,
+        application_id: int,
+        message: NewMessage,
+        now: datetime,
+    ) -> int: ...
 
     def append_event(self, event: NewEvent) -> None: ...
 

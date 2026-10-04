@@ -47,13 +47,8 @@
     {% endif %}
   </div>
   {% if check %}{% include "profil/cv_check.html" %}{% endif %}
-  {% if dossier.stage == Stage.PREPARING %}
-  {# A plain form (never boosted): the page comes back at its step « Envoi » (decision D3, Q25). #}
-  <form method="post" action="{{ base }}/etape" hx-boost="false" class="inline-form">
-    <input type="hidden" name="etape" value="{{ Stage.READY.value }}"><input type="hidden" name="retour" value="dossier">
-    <button type="submit" class="btn btn-primary">CV prêt : passer à l'envoi</button>
-    <span class="muted small">La candidature passe en « Prête à envoyer ».</span>
-  </form>
+  {% if dossier.stage == Stage.PREPARING and dossier.journey.current == Step.CV %}
+  <p><a class="btn btn-primary" href="#lettre">CV prêt : passer à la lettre</a></p>
   {% endif %}
 
   <div class="two-columns">

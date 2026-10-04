@@ -11,7 +11,14 @@ from rocky.candidatures.model import (
     ChangeKind,
     Dossier,
     InvalidChangeError,
+    LetterHeader,
+    LetterOrigin,
+    LetterParagraph,
+    MessageOrigin,
+    NewLetter,
+    NewMessage,
     NextAction,
+    NoLetter,
     Stage,
 )
 from rocky.candidatures.rules import dossier
@@ -19,8 +26,12 @@ from rocky.candidatures.usecases import (
     cancel_last_change,
     change_stage,
     defer_next_action,
+    letter_ready,
     prepare_application,
     set_next_action,
+    skip_letter,
+    validate_letter,
+    validate_message,
 )
 from rocky.offres.decisions import (
     APPLICATION_STARTED,
@@ -266,3 +277,84 @@ def test_an_application_of_another_account_is_unknown() -> None:
             application_id=application_id,
             now=NOW,
         )
+
+
+# The letter and the message (decision D4)
+
+LETTER = NewLetter(
+    language="fr",
+    paragraphs=(
+        LetterParagraph("opening", "Je postule.", LetterOrigin.GENERIC),
+        LetterParagraph(
+            "why_you", "Acme m'attire.", LetterOrigin.ADAPTED, "Acme m'attire."
+        ),
+    ),
+    header=LetterHeader("Candidature au poste de Data Analyst", "Acme"),
+    generic_sha256="abc",
+    checks_version="test",
+)
+
+
+def test_a_validated_letter_is_kept_and_journaled_without_moving_the_stage() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    validate_letter(store, account_id=ACCOUNT, application_id=1, letter=LETTER, now=NOW)
+
+    assert state(store).stage is Stage.PREPARING
+    assert store.event_types[-1] == "candidatures.letter_validated"
+    assert store.events[-1].payload["origins"] == ["generic", "adapted"]
+    with pytest.raises(InvalidChangeError, match="vide"):
+        validate_letter(
+            store,
+            account_id=ACCOUNT,
+            application_id=1,
+            letter=NewLetter("fr", (), LETTER.header, "abc", "test"),
+            now=NOW,
+        )
+
+
+def test_no_letter_makes_a_prepared_application_ready_at_once() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    skip_letter(store, account_id=ACCOUNT, application_id=1, now=NOW, today=TODAY)
+
+    assert state(store).stage is Stage.READY
+    assert state(store).next_action is not None
+    assert isinstance(store.letters(1)[-1], NoLetter)
+    assert store.event_types[-2:] == [
+        "candidatures.letter_skipped",
+        "candidatures.stage_changed",
+    ]
+
+
+def test_letter_ready_waits_for_a_letter() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    with pytest.raises(InvalidChangeError, match="Valide d'abord une lettre"):
+        letter_ready(store, account_id=ACCOUNT, application_id=1, now=NOW, today=TODAY)
+    validate_letter(store, account_id=ACCOUNT, application_id=1, letter=LETTER, now=NOW)
+
+    assert letter_ready(
+        store, account_id=ACCOUNT, application_id=1, now=NOW, today=TODAY
+    )
+    assert state(store).stage is Stage.READY
+    # Already past its preparation: nothing more is written.
+    assert not letter_ready(
+        store, account_id=ACCOUNT, application_id=1, now=NOW, today=TODAY
+    )
+
+
+def test_a_validated_message_is_kept_and_journaled() -> None:
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+    message = NewMessage("fr", "Bonjour.", MessageOrigin.EDITED, "Salut.", (), "test")
+
+    validate_message(
+        store, account_id=ACCOUNT, application_id=1, message=message, now=NOW
+    )
+
+    assert store.messages(1)[-1].text == "Bonjour."
+    assert store.event_types[-1] == "candidatures.message_validated"

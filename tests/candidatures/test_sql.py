@@ -18,20 +18,28 @@ from rocky.candidatures.model import (
     Change,
     ChangeKind,
     Dossier,
+    LetterHeader,
+    LetterOrigin,
+    LetterParagraph,
+    LetterVersion,
     NewChange,
+    NewLetter,
     NextAction,
+    NoLetter,
     Stage,
 )
 from rocky.candidatures.rules import dossier
 from rocky.candidatures.sql import (
     SqlApplicationStore,
     application_changes,
+    application_letters,
     applications,
 )
 from rocky.candidatures.usecases import (
     cancel_last_change,
     change_stage,
     prepare_application,
+    skip_letter,
 )
 from rocky.candidatures.web import OffresDecisions
 from rocky.offres import web as offres_web
@@ -448,3 +456,134 @@ def test_the_latest_cv_selection_of_an_application_is_in_force(db: Connection) -
 
     store.insert_cv_selection(seeker.account_id, application.id, None, NOW)
     assert store.cv_selection(application.id) is None
+
+
+# « Pas de lettre » and « Prête à envoyer » are written together (decision D4, Q16).
+
+
+class FailingLetterStore(SqlApplicationStore):
+    """Fails right after one write of « Pas de lettre »: its row, its event, the stage change or its event."""
+
+    def __init__(self, connection: Connection, point: str) -> None:
+        super().__init__(connection)
+        self.point = point
+
+    def insert_letter(
+        self,
+        account_id: int,
+        application_id: int,
+        letter: NewLetter | None,
+        now: datetime,
+    ) -> int:
+        letter_id = super().insert_letter(account_id, application_id, letter, now)
+        if self.point == "letter":
+            raise InjectedFailureError
+        return letter_id
+
+    def insert_change(
+        self,
+        account_id: int,
+        application_id: int,
+        change: NewChange,
+        *,
+        author: Author,
+        now: datetime,
+    ) -> Change:
+        row = super().insert_change(
+            account_id, application_id, change, author=author, now=now
+        )
+        if self.point == "stage":
+            raise InjectedFailureError
+        return row
+
+    def append_event(self, event: NewEvent) -> None:
+        super().append_event(event)
+        if (self.point, event.type) in {
+            ("letter_event", "candidatures.letter_skipped"),
+            ("stage_event", "candidatures.stage_changed"),
+        }:
+            raise InjectedFailureError
+
+
+def skipped(case: Case, point: str | None = None) -> None:
+    with case.engine.begin() as connection:
+        store = (
+            SqlApplicationStore(connection)
+            if point is None
+            else FailingLetterStore(connection, point)
+        )
+        skip_letter(
+            store,
+            account_id=case.account_id,
+            application_id=case.application_id,
+            now=NOW,
+            today=TODAY,
+        )
+
+
+def letters_of(case: Case) -> int:
+    with case.engine.connect() as connection:
+        return len(SqlApplicationStore(connection).letters(case.application_id))
+
+
+@pytest.mark.parametrize("point", ["letter", "letter_event", "stage", "stage_event"])
+def test_a_failure_while_choosing_no_letter_changes_nothing(
+    migrated_engine: Engine, point: str
+) -> None:
+    case = prepared(migrated_engine)
+    before = (case.snapshot(), letters_of(case))
+
+    with pytest.raises(InjectedFailureError):
+        skipped(case, point)
+
+    assert (case.snapshot(), letters_of(case)) == before
+
+
+def test_without_failure_no_letter_makes_the_application_ready(
+    migrated_engine: Engine,
+) -> None:
+    case = prepared(migrated_engine)
+
+    skipped(case)
+
+    assert case.snapshot().state.stage is Stage.READY
+    assert letters_of(case) == 1
+
+
+def test_a_letter_comes_back_as_it_was_validated(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "l1")
+    store = SqlApplicationStore(db)
+    application = store.application_for_offer(seeker.account_id, offer_id, NOW)
+    letter = NewLetter(
+        language="en",
+        paragraphs=(
+            LetterParagraph(
+                "why_you",
+                "Acme appeals to me.",
+                LetterOrigin.EDITED,
+                "Acme thrills me.",
+                ("Formule convenue : « thrilled ».",),
+            ),
+        ),
+        header=LetterHeader("Application", "Hiring team\nAcme"),
+        generic_sha256="abc",
+        checks_version="test",
+    )
+
+    store.insert_letter(seeker.account_id, application.id, letter, NOW)
+    store.insert_letter(seeker.account_id, application.id, None, NOW)
+
+    stored, nothing = store.letters(application.id)
+    assert isinstance(stored, LetterVersion) and isinstance(nothing, NoLetter)
+    assert (stored.paragraphs, stored.header) == (letter.paragraphs, letter.header)
+    with pytest.raises(IntegrityError):
+        db.execute(
+            insert(application_letters).values(
+                application_id=application.id,
+                account_id=seeker.account_id,
+                kind="letter",
+                language="fr",
+                created_at=NOW,
+            )
+        )

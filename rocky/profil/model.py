@@ -337,6 +337,57 @@ class Remembered:
     translation: str
 
 
+class LetterRole(StrEnum):
+    """The part a paragraph plays in the generic letter (decision D4, Q6)."""
+
+    OPENING = "opening"
+    JOURNEY = "journey"
+    STRENGTHS = "strengths"
+    WHY_YOU = "why_you"  # the place of « pourquoi vous », written for each offer
+    CLOSING = "closing"
+
+
+LETTER_ROLE_LABELS = {
+    LetterRole.OPENING: "Ouverture",
+    LetterRole.JOURNEY: "Parcours",
+    LetterRole.STRENGTHS: "Apports",
+    LetterRole.WHY_YOU: "Pourquoi vous",
+    LetterRole.CLOSING: "Conclusion",
+}
+
+
+class LetterOrigin(StrEnum):
+    IMPORT = "import"
+    EDIT = "edit"
+    TRANSLATION = "translation"
+
+
+@dataclass(frozen=True)
+class LetterParagraph:
+    role: LetterRole
+    text: str  # may hold ``{poste}`` and ``{entreprise}``; the « pourquoi vous » may be empty
+
+
+@dataclass(frozen=True)
+class GenericLetter:
+    """The account's letter in one language: its paragraphs in order, without header nor formulas (Q10)."""
+
+    language: str
+    paragraphs: tuple[LetterParagraph, ...]
+
+
+@dataclass(frozen=True)
+class StoredLetter:
+    """One saved version of the generic letter; the latest of a language is in force (Q17)."""
+
+    id: int
+    letter: GenericLetter
+    origin: LetterOrigin
+    sha256: str
+    source_sha256: str | None  # the French letter an English one was translated from
+    created_at: datetime
+
+
 @dataclass(frozen=True)
 class OnboardingState:
     completed_at: datetime | None = None
@@ -450,6 +501,22 @@ class ProfileStore(Protocol):
         self, profile_id: int, source: str, translation: str, now: datetime
     ) -> None:
         """Keep (or replace) the English validated for ``source``."""
+        ...
+
+    def generic_letter(self, profile_id: int, language: str) -> StoredLetter | None:
+        """The version in force of the generic letter in ``language`` (the latest saved)."""
+        ...
+
+    def add_generic_letter(
+        self,
+        profile_id: int,
+        letter: GenericLetter,
+        origin: LetterOrigin,
+        sha256: str,
+        source_sha256: str | None,
+        now: datetime,
+    ) -> StoredLetter:
+        """Append a version; the earlier ones stay."""
         ...
 
     def mark_onboarding_completed(self, profile_id: int, now: datetime) -> None: ...

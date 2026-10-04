@@ -7,23 +7,58 @@ Decision ``docs/decisions/D1-dossier-statuts.md``.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+import base64
+import io
+from collections.abc import AsyncIterator, Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, FastAPI, Form, Request
+from fastapi import APIRouter, Depends, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Connection, Engine
+from starlette.datastructures import FormData
 
+from rocky.candidatures.letter import (
+    Adaptation,
+    Brief,
+    LetterError,
+    adapt,
+    in_force,
+    letter_sheet,
+    letter_state,
+    propose_message,
+    sources_text,
+)
+from rocky.candidatures.letter_render import LetterRefusedError, draw_letter
+from rocky.candidatures.letter_view import (
+    ADAPTED,
+    MINE,
+    ORIGIN_LABELS,
+    ORIGINAL,
+    LetterView,
+    adaptation_from_form,
+    brief_of,
+    job_and_company,
+    letter_reference,
+    letter_view,
+    message_signals,
+    preview_version,
+    read_letter,
+    read_message,
+)
 from rocky.candidatures.model import (
     DEFER_DAYS,
     ISSUES,
     STAGE_LABELS,
     InvalidChangeError,
+    LetterEntry,
+    LetterState,
+    LetterVersion,
+    MessageVersion,
     NextAction,
     Stage,
 )
@@ -35,6 +70,7 @@ from rocky.candidatures.rules import (
     journey,
     make_next_action,
     proposal,
+    standing,
 )
 from rocky.candidatures.sql import SqlApplicationStore
 from rocky.candidatures.targeting import (
@@ -53,12 +89,17 @@ from rocky.candidatures.usecases import (
     cancel_last_change,
     change_stage,
     defer_next_action,
+    letter_ready,
     needs_reasons,
     prepare_application,
     set_next_action,
+    skip_letter,
+    validate_letter,
+    validate_message,
 )
 from rocky.offres import web as offres_web
 from rocky.offres.analysis.model import IMPORTANCE_LABELS, Importance, PostingAnalysis
+from rocky.offres.analysis.usecases import Summary
 from rocky.offres.decisions import (
     REASONS,
     Decision,
@@ -67,10 +108,11 @@ from rocky.offres.decisions import (
     application_decision,
 )
 from rocky.offres.model import OfferHeading
+from rocky.profil import letter_web as profil_letters
 from rocky.profil import translation_web
 from rocky.profil import web as profil_web
 from rocky.profil.cv import layout as cv_layout
-from rocky.profil.cv.check import CvCheck, check_cv
+from rocky.profil.cv.check import CvCheck, Fact, check_cv
 from rocky.profil.cv.layout import check_layout
 from rocky.profil.cv.rendering import MISSING_ENGLISH, CvRefusedError
 from rocky.profil.cv.template import Slots
@@ -79,7 +121,7 @@ from rocky.profil.rules import ProfileInputError
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.events import JsonValue
-from rocky.system.render import RenderError
+from rocky.system.render import RenderError, rasterize
 from rocky.system.shell import page, wants_fragment
 
 TEMPLATES = Path(__file__).parent / "templates"
@@ -538,6 +580,14 @@ class ApplicationFile:
     layout: CvLayout
     slots: Slots
     view: CvView
+    analysis: PostingAnalysis
+    letters: tuple[LetterEntry, ...] = ()
+    messages: tuple[MessageVersion, ...] = ()
+    sent_at: datetime | None = None  # when the application was last marked sent (Q20)
+    summary: Summary | None = None
+    interest: tuple[tuple[str, ...], str | None] | None = (
+        None  # reasons and note of « Intéressé »
+    )
 
 
 def _dossier(
@@ -559,21 +609,35 @@ def _dossier(
             connection, account.id, application.offer_id, profile, _today(request)
         )
         stored = store.cv_selection(application.id)
+        letters = tuple(store.letters(application.id))
+        messages = tuple(store.messages(application.id))
+        summary = offres_web.offer_summary(connection, account.id, application.offer_id)
+        interest = offres_web.interested_reason(
+            connection, account.id, application.offer_id
+        )
+        changes = standing(store.changes(application.id))
     if heading is None or analysis is None:
         return None
     proposal = target(profile.cv, profile, analysis, slots)
     kept = None if stored is None else selection_of(stored, profile.cv)
     layout = kept or proposal.layout
+    sent = [c.changed_at for c in changes if c.stage is Stage.SENT]
     return ApplicationFile(
         application_id=application.id,
         offer=heading,
         stage=state.stage if state.open else None,
         next_action=state.next_action if state.open else None,
-        journey=journey(state.stage if state.open else None),
+        journey=journey(state.stage if state.open else None, letter_state(letters)),
         profile=profile,
         layout=layout,
         slots=slots,
         view=_cv_view(profile, layout, proposal, analysis, stored, kept),
+        analysis=analysis,
+        letters=letters,
+        messages=messages,
+        sent_at=sent[-1] if sent else None,
+        summary=summary,
+        interest=interest,
     )
 
 
@@ -662,6 +726,62 @@ CV_GESTURES: dict[str, Callable[[CvLayout, Profile, int, int | None], CvLayout]]
 }
 
 
+@dataclass(frozen=True)
+class LetterContext:
+    """The step « Lettre » in one language, and what its checks compare a text with (decision D4, Q8)."""
+
+    view: LetterView
+    brief: Brief
+    reference: str  # the user's own letter
+    sources: str  # what a proposed text may draw on
+
+
+def _letter(
+    request: Request,
+    account: Account,
+    found: ApplicationFile,
+    language: str,
+    *,
+    editing: bool = False,
+    adaptation: Adaptation | None = None,
+    submitted: Mapping[str, str] | None = None,
+) -> LetterContext:
+    letters = profil_letters.generic_letters(request, account)
+    generic = letters.of(language)
+    brief = brief_of(
+        language=language,
+        offer=found.offer,
+        profile=found.profile,
+        layout=found.layout,
+        analysis=found.analysis,
+        summary=found.summary,
+        interest=found.interest,
+        generic=generic,
+    )
+    reference = letter_reference(generic)
+    sources = sources_text(brief, found.profile)
+    view = letter_view(
+        language=language,
+        offer=found.offer,
+        generic=generic,
+        english_outdated=letters.english_outdated,
+        entries=found.letters,
+        messages=found.messages,
+        sent_at=found.sent_at,
+        editing=editing,
+        adaptation=adaptation,
+        reference=reference,
+        sources=sources,
+        submitted=submitted,
+    )
+    return LetterContext(view, brief, reference, sources)
+
+
+CV_STEP = "candidatures/cv_step.html"
+LETTER_STEP = "candidatures/letter_step.html"
+SEND_STEP = "candidatures/send_step.html"
+
+
 def _dossier_page(
     request: Request,
     account: Account,
@@ -672,10 +792,30 @@ def _dossier_page(
     check: CvCheck | None = None,
     check_language: str = "fr",
     status_code: int = 200,
+    language: str = "fr",
+    editing: bool = False,
+    adaptation: Adaptation | None = None,
+    letter_error: str | None = None,
+    letter_refusal: tuple[str, ...] = (),
+    letter_check: CvCheck | None = None,
+    proposed_message: tuple[str, tuple[str, ...]] | None = None,
+    message_error: str | None = None,
+    submitted: Mapping[str, str] | None = None,
+    letter_preview: LetterPreview | None = None,
+    fragment: str = CV_STEP,
 ) -> Response:
     found = _dossier(request, account, application_id)
     if found is None:
         return Response(status_code=404)
+    letter = _letter(
+        request,
+        account,
+        found,
+        language,
+        editing=editing,
+        adaptation=adaptation,
+        submitted=submitted,
+    )
     context = {
         "dossier": found,
         "view": found.view,
@@ -692,9 +832,20 @@ def _dossier_page(
         "apply_domain": urlsplit(found.offer.apply_at).hostname or "",
         "Stage": Stage,
         "Step": Step,
+        "letter": letter.view,
+        "letter_error": letter_error,
+        "letter_refusal": letter_refusal,
+        "letter_check": letter_check,
+        "letter_preview": letter_preview,
+        "letter_body": _letter_body(found, letter.view, _today(request)),
+        "proposed_message": proposed_message,
+        "message_error": message_error,
+        "LetterState": LetterState,
+        "origin_labels": ORIGIN_LABELS,
+        "choices": {"original": ORIGINAL, "adapted": ADAPTED, "mine": MINE},
     }
     if wants_fragment(request):
-        return _fragment(request, "candidatures/cv_step.html", context)
+        return _fragment(request, fragment, context)
     return page(
         request,
         "candidatures/dossier.html",
@@ -704,11 +855,25 @@ def _dossier_page(
     )
 
 
+def _letter_body(found: ApplicationFile, view: LetterView, today: date) -> str:
+    """The letter in force, to paste in a form (Q5)."""
+    if view.version is None:
+        return ""
+    return letter_sheet(found.profile.identity, view.version, today).body
+
+
 @router.get("/{application_id}", response_class=HTMLResponse)
 def dossier_page(
-    request: Request, account: CurrentAccount, application_id: int
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    lettre: str = "fr",
+    modifier: bool = False,
 ) -> Response:
-    return _dossier_page(request, account, application_id)
+    """``lettre``: the language of the step « Lettre » shown; ``modifier`` opens the letter in force to edit."""
+    return _dossier_page(
+        request, account, application_id, language=_language(lettre), editing=modifier
+    )
 
 
 @router.post("/{application_id}/cv", response_class=HTMLResponse)
@@ -833,3 +998,413 @@ def cv_pdf(
             "Cache-Control": "no-store",
         },
     )
+
+
+# The step « Lettre » (decision D4) and the accompanying message of the step « Envoi » (Q1, Q12).
+
+
+def _language(value: object) -> str:
+    return "en" if value == "en" else "fr"
+
+
+async def _form_data(request: Request) -> AsyncIterator[FormData]:
+    form = await request.form()
+    try:
+        yield form
+    finally:
+        await form.close()
+
+
+FormFields = Annotated[FormData, Depends(_form_data)]
+
+
+def _to_dossier(application_id: int, anchor: str, language: str = "fr") -> Response:
+    query = "?lettre=en" if language == "en" else ""
+    return RedirectResponse(
+        f"/candidatures/{application_id}{query}#{anchor}", status_code=303
+    )
+
+
+@router.post("/{application_id}/lettre/adapter", response_class=HTMLResponse)
+def adapt_letter(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    langue: Annotated[str, Form()] = "fr",
+    consentement: Annotated[str, Form()] = "",
+) -> Response:
+    """« Adapter à l'annonce » (Q7, Q14, Q15): one call to the model after the user's consent; nothing is stored."""
+    language = _language(langue)
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+
+    def again(
+        letter_error: str | None = None, adaptation: Adaptation | None = None
+    ) -> Response:
+        return _dossier_page(
+            request,
+            account,
+            application_id,
+            language=language,
+            letter_error=letter_error,
+            adaptation=adaptation,
+            fragment=LETTER_STEP,
+        )
+
+    if not consentement:
+        return again(
+            letter_error="Coche l'accord d'envoi pour que Rocky propose une adaptation."
+        )
+    letter = _letter(request, account, found, language)
+    if letter.view.refusal is not None:
+        return again(letter_error=letter.view.refusal)
+    try:
+        adaptation = adapt(letter.brief, request.app.state.llm_model)
+    except LetterError as error:
+        return again(letter_error=error.reason)
+    return again(adaptation=adaptation)
+
+
+@router.post("/{application_id}/lettre/valider", response_class=HTMLResponse)
+def validate(
+    request: Request, account: CurrentAccount, application_id: int, form: FormFields
+) -> Response:
+    """« Valider cette lettre » (Q11, Q17): a new version in force; the earlier ones stay."""
+    language = _language(form.get("langue"))
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+    letter = _letter(request, account, found, language)
+    generic = letter.view.generic
+    try:
+        if generic is None:
+            raise InvalidChangeError(letter.view.refusal or "Aucune lettre générique.")
+        fields = {
+            key: value for key, value in form.multi_items() if isinstance(value, str)
+        }
+        new = read_letter(
+            fields,
+            language=language,
+            generic=generic,
+            entries=found.letters,
+            offer=found.offer,
+            reference=letter.reference,
+            sources=letter.sources,
+        )
+        with _engine(request).begin() as connection:
+            validate_letter(
+                SqlApplicationStore(connection),
+                account_id=account.id,
+                application_id=application_id,
+                letter=new,
+                now=_now(request),
+            )
+    except InvalidChangeError as error:
+        return _dossier_page(
+            request,
+            account,
+            application_id,
+            language=language,
+            editing=True,
+            letter_error=str(error),
+            fragment=LETTER_STEP,
+        )
+    return _to_dossier(application_id, "lettre", language)
+
+
+@router.post("/{application_id}/lettre/sans", response_class=HTMLResponse)
+def without_letter(
+    request: Request, account: CurrentAccount, application_id: int
+) -> Response:
+    """« Pas de lettre pour cette candidature » (Q4, Q16)."""
+    return _letter_gesture(request, account, application_id, skip_letter)
+
+
+@router.post("/{application_id}/lettre/prete", response_class=HTMLResponse)
+def letter_is_ready(
+    request: Request, account: CurrentAccount, application_id: int
+) -> Response:
+    """« Lettre prête : passer à l'envoi » (Q16)."""
+    return _letter_gesture(request, account, application_id, letter_ready)
+
+
+def _letter_gesture(
+    request: Request,
+    account: Account,
+    application_id: int,
+    use_case: Callable[..., object],
+) -> Response:
+    if not _owned(request, account, application_id):
+        return Response(status_code=404)
+    try:
+        with _engine(request).begin() as connection:
+            use_case(
+                SqlApplicationStore(connection),
+                account_id=account.id,
+                application_id=application_id,
+                now=_now(request),
+                today=_today(request),
+            )
+    except InvalidChangeError as error:
+        return _dossier_page(
+            request,
+            account,
+            application_id,
+            letter_error=str(error),
+            fragment=LETTER_STEP,
+        )
+    return _to_dossier(application_id, "envoi")
+
+
+def _letter_pdf(
+    request: Request, account: Account, application_id: int, language: str
+) -> tuple[bytes, LetterVersion, ApplicationFile] | Response:
+    """The PDF of the letter in force; or the page telling why there is none (409)."""
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+    version = in_force(found.letters, language)
+    preview = None
+    try:
+        if version is None:
+            raise LetterRefusedError(("Valide d'abord cette lettre.",))
+        sheet = letter_sheet(found.profile.identity, version, _today(request))
+        pdf, problems = draw_letter(sheet)
+        if not problems:
+            return pdf, version, found
+        # Refused, and shown: the page says what spills over (decision D4, recette).
+        reasons, preview = problems, _preview(pdf, problems)
+    except LetterRefusedError as error:
+        reasons = error.reasons
+    except RenderError as error:
+        reasons = (error.reason,)
+    return _dossier_page(
+        request,
+        account,
+        application_id,
+        language=language,
+        letter_refusal=reasons,
+        letter_preview=preview,
+        status_code=409,
+        fragment=LETTER_STEP,
+    )
+
+
+@dataclass(frozen=True)
+class LetterPreview:
+    """The page of the letter as it would be sent, as an image, and what makes it unfit."""
+
+    png_base64: str
+    problems: tuple[str, ...]
+
+
+PREVIEW_DPI = 110
+
+
+def _preview(pdf: bytes, problems: tuple[str, ...]) -> LetterPreview:
+    buffer = io.BytesIO()
+    rasterize(pdf, PREVIEW_DPI)[0].save(buffer, format="PNG", optimize=True)
+    return LetterPreview(base64.b64encode(buffer.getvalue()).decode(), problems)
+
+
+@router.post("/{application_id}/lettre/apercu", response_class=HTMLResponse)
+def preview_letter(
+    request: Request, account: CurrentAccount, application_id: int, form: FormFields
+) -> Response:
+    """« Aperçu de la lettre »: the letter as the form composes it (nothing stored), or the one in force."""
+    language = _language(form.get("langue"))
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+    letter = _letter(request, account, found, language)
+    generic = letter.view.generic
+    fields = {key: value for key, value in form.multi_items() if isinstance(value, str)}
+    editing = "empreinte" in fields and generic is not None
+    error_text: str | None = None
+    preview: LetterPreview | None = None
+    try:
+        if editing and generic is not None:
+            version: LetterVersion | None = preview_version(
+                read_letter(
+                    fields,
+                    language=language,
+                    generic=generic,
+                    entries=found.letters,
+                    offer=found.offer,
+                    reference=letter.reference,
+                    sources=letter.sources,
+                ),
+                _now(request),
+            )
+        else:
+            version = letter.view.version
+        if version is None:
+            raise InvalidChangeError("Rien à montrer : compose d'abord ta lettre.")
+        pdf, problems = draw_letter(
+            letter_sheet(found.profile.identity, version, _today(request))
+        )
+        preview = _preview(pdf, problems)
+    except InvalidChangeError as error:
+        error_text = str(error)
+    except RenderError as error:
+        error_text = error.reason
+    return _dossier_page(
+        request,
+        account,
+        application_id,
+        language=language,
+        editing=editing,
+        adaptation=adaptation_from_form(fields, generic)
+        if editing and generic is not None
+        else None,
+        submitted=fields if editing else None,
+        letter_error=error_text,
+        letter_preview=preview,
+        fragment=LETTER_STEP,
+    )
+
+
+@router.get("/{application_id}/lettre.pdf")
+def letter_pdf(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    langue: str = "fr",
+    apercu: bool = False,
+) -> Response:
+    language = _language(langue)
+    rendered = _letter_pdf(request, account, application_id, language)
+    if isinstance(rendered, Response):
+        return rendered
+    pdf, _, found = rendered
+    name = "_".join(found.profile.identity.full_name.split()) or "Lettre"
+    disposition = "inline" if apercu else "attachment"
+    return Response(
+        pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disposition}; filename="Lettre_{name}_{language.upper()}.pdf"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.post("/{application_id}/lettre/verifier", response_class=HTMLResponse)
+def check_letter(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    langue: Annotated[str, Form()] = "fr",
+) -> Response:
+    """« Vérifier cette lettre » (Q19): the three PDF readers on the letter in force."""
+    language = _language(langue)
+    rendered = _letter_pdf(request, account, application_id, language)
+    if isinstance(rendered, Response):
+        return rendered
+    pdf, version, found = rendered
+    _, company = job_and_company(found.offer)
+    facts = [
+        Fact("Nom", found.profile.identity.full_name),
+        Fact("Objet", version.header.subject),
+        Fact("Entreprise", company),
+        *(
+            Fact("Paragraphe", " ".join(p.text.split()[:8]))
+            for p in version.paragraphs
+            if p.text
+        ),
+    ]
+    return _dossier_page(
+        request,
+        account,
+        application_id,
+        language=language,
+        letter_check=check_cv(pdf, [f for f in facts if f.text], document="la lettre"),
+        fragment=LETTER_STEP,
+    )
+
+
+@router.post("/{application_id}/message/proposer", response_class=HTMLResponse)
+def propose_accompanying_message(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    langue: Annotated[str, Form()] = "fr",
+    consentement: Annotated[str, Form()] = "",
+) -> Response:
+    """« Proposer un message » (Q12): one call on the user's gesture, never automatic; nothing stored."""
+    language = _language(langue)
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+
+    def again(
+        message_error: str | None = None,
+        proposed: tuple[str, tuple[str, ...]] | None = None,
+    ) -> Response:
+        return _dossier_page(
+            request,
+            account,
+            application_id,
+            language=language,
+            message_error=message_error,
+            proposed_message=proposed,
+            fragment=SEND_STEP,
+        )
+
+    if not consentement:
+        return again(
+            message_error="Coche l'accord d'envoi pour que Rocky propose un message."
+        )
+    letter = _letter(request, account, found, language)
+    try:
+        text = propose_message(
+            letter.brief, letter.view.why_you, request.app.state.llm_model
+        )
+    except LetterError as error:
+        return again(message_error=error.reason)
+    found_signals = message_signals(text, language, letter.reference, letter.sources)
+    return again(proposed=(text, found_signals))
+
+
+@router.post("/{application_id}/message/valider", response_class=HTMLResponse)
+def validate_accompanying_message(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    langue: Annotated[str, Form()] = "fr",
+    texte: Annotated[str, Form()] = "",
+    propose: Annotated[str, Form()] = "",
+) -> Response:
+    language = _language(langue)
+    found = _dossier(request, account, application_id)
+    if found is None:
+        return Response(status_code=404)
+    letter = _letter(request, account, found, language)
+    message = read_message(
+        texte,
+        propose,
+        language=language,
+        reference=letter.reference,
+        sources=letter.sources,
+    )
+    try:
+        with _engine(request).begin() as connection:
+            validate_message(
+                SqlApplicationStore(connection),
+                account_id=account.id,
+                application_id=application_id,
+                message=message,
+                now=_now(request),
+            )
+    except InvalidChangeError as error:
+        return _dossier_page(
+            request,
+            account,
+            application_id,
+            language=language,
+            message_error=str(error),
+            proposed_message=(message.text, message.signals),
+            fragment=SEND_STEP,
+        )
+    return _to_dossier(application_id, "envoi", language)

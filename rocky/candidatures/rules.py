@@ -16,6 +16,7 @@ from rocky.candidatures.model import (
     ChangeKind,
     Dossier,
     InvalidChangeError,
+    LetterState,
     NextAction,
     Stage,
 )
@@ -108,7 +109,7 @@ def automatic_transition_allowed(current: Stage, proposed: Stage) -> bool:
     return FORWARD.index(proposed) > FORWARD.index(current)
 
 
-# The journey of the application's page (decision D3, Q25): 1. CV, 2. Letter (to come, D4), 3. Sending.
+# The journey of the application's page (decision D3, Q25; D4, Q16): 1. CV, 2. Letter, 3. Sending.
 
 
 class Step(StrEnum):
@@ -132,13 +133,25 @@ _SENT_OR_BEYOND = frozenset(
 )
 
 
-def journey(stage: Stage | None) -> Journey:
-    """``stage``: the stage in force, None for an application whose creation is cancelled. « Prête à envoyer » means
-    the CV is ready while there is no letter (Q25); the letter is never done before D4."""
+def journey(stage: Stage | None, letter: LetterState = LetterState.NONE) -> Journey:
+    """``stage``: the stage in force, None for an application whose creation is cancelled. The letter is done once
+    one is validated or « Pas de lettre » chosen (D4, Q16); « Lettre prête » or « Pas de lettre » then leads to
+    « Prête à envoyer ». An application made ready before D4 shows its letter not done."""
     if stage is None or stage in ISSUES:
         return Journey(None, frozenset(), sent=False, closed=True)
+    letter_done = (
+        frozenset({Step.LETTER}) if letter is not LetterState.NONE else frozenset()
+    )
     if stage is Stage.PREPARING:
-        return Journey(Step.CV, frozenset(), sent=False, closed=False)
+        if letter is LetterState.NONE:
+            return Journey(Step.CV, frozenset(), sent=False, closed=False)
+        return Journey(
+            Step.LETTER, frozenset({Step.CV}) | letter_done, sent=False, closed=False
+        )
     if stage in _SENT_OR_BEYOND:
-        return Journey(None, frozenset({Step.CV, Step.SEND}), sent=True, closed=False)
-    return Journey(Step.SEND, frozenset({Step.CV}), sent=False, closed=False)
+        return Journey(
+            None, frozenset({Step.CV, Step.SEND}) | letter_done, sent=True, closed=False
+        )
+    return Journey(
+        Step.SEND, frozenset({Step.CV}) | letter_done, sent=False, closed=False
+    )

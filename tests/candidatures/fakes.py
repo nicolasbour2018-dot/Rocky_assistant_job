@@ -7,7 +7,17 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
 
-from rocky.candidatures.model import Application, Change, NewChange
+from rocky.candidatures.model import (
+    Application,
+    Change,
+    LetterEntry,
+    LetterVersion,
+    MessageVersion,
+    NewChange,
+    NewLetter,
+    NewMessage,
+    NoLetter,
+)
 from rocky.offres.decisions import Author, Decision, DecisionValue
 from rocky.system.events import NewEvent
 
@@ -21,6 +31,8 @@ class FakeStore:
     rows: list[Change] = field(default_factory=list)
     events: list[NewEvent] = field(default_factory=list)
     selections: list[tuple[int, Mapping[str, Any] | None]] = field(default_factory=list)
+    letter_rows: list[tuple[int, LetterEntry]] = field(default_factory=list)
+    message_rows: list[tuple[int, MessageVersion]] = field(default_factory=list)
 
     def application_for_offer(
         self, account_id: int, offer_id: int, now: datetime
@@ -83,6 +95,53 @@ class FakeStore:
         now: datetime,
     ) -> None:
         self.selections.append((application_id, layout))
+
+    def letters(self, application_id: int) -> list[LetterEntry]:
+        return [entry for owner, entry in self.letter_rows if owner == application_id]
+
+    def insert_letter(
+        self,
+        account_id: int,
+        application_id: int,
+        letter: NewLetter | None,
+        now: datetime,
+    ) -> int:
+        letter_id = len(self.letter_rows) + 1
+        entry: LetterEntry = (
+            NoLetter(letter_id, now)
+            if letter is None
+            else LetterVersion(
+                letter_id,
+                letter.language,
+                letter.paragraphs,
+                letter.header,
+                letter.generic_sha256,
+                now,
+            )
+        )
+        self.letter_rows.append((application_id, entry))
+        return letter_id
+
+    def messages(self, application_id: int) -> list[MessageVersion]:
+        return [entry for owner, entry in self.message_rows if owner == application_id]
+
+    def insert_message(
+        self,
+        account_id: int,
+        application_id: int,
+        message: NewMessage,
+        now: datetime,
+    ) -> int:
+        message_id = len(self.message_rows) + 1
+        self.message_rows.append(
+            (
+                application_id,
+                MessageVersion(
+                    message_id, message.language, message.text, message.origin, now
+                ),
+            )
+        )
+        return message_id
 
     def append_event(self, event: NewEvent) -> None:
         self.events.append(event)

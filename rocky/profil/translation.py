@@ -220,9 +220,12 @@ def propose(
     pairs: Sequence[tuple[str, str]],
     protected: Sequence[str],
     model: JsonModel,
+    instructions: str = INSTRUCTIONS,
 ) -> tuple[Proposal, ...]:
     """The proposals for ``segments``: from the memory when the same French was validated (Q19, no call), from one
-    call to the model for the others (Q13). Raises ``TranslationError`` when the model fails or answers badly."""
+    call to the model for the others (Q13). Raises ``TranslationError`` when the model fails or answers badly.
+
+    ``instructions``: those of the CV texts by default; the cover letter has its own (decision D4, Q9)."""
     remembered = {
         segment.key: memory[segment.source_sha256].translation
         for segment in segments
@@ -232,7 +235,7 @@ def propose(
     answered: dict[str, str] = {}
     if asked:
         try:
-            answer = model.complete_json(INSTRUCTIONS, prompt(asked, pairs), SCHEMA)
+            answer = model.complete_json(instructions, prompt(asked, pairs), SCHEMA)
         except LlmUnavailableError as error:
             raise TranslationError(error.reason) from error
         answered = _answered(answer, {segment.key for segment in asked})

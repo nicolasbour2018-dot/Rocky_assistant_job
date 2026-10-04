@@ -20,8 +20,9 @@ from sqlalchemy import Connection, Engine
 from rocky.offres.analysis.model import PostingAnalysis
 from rocky.offres.analysis.rules import analyze
 from rocky.offres.analysis.text import formatted_description
-from rocky.offres.analysis.usecases import SummaryResult, summarize
+from rocky.offres.analysis.usecases import Summary, SummaryResult, summarize
 from rocky.offres.decisions import (
+    APPLICATION_STARTED,
     DECISION_KEYS,
     DECISION_LABELS,
     REASON_QUESTIONS,
@@ -654,6 +655,35 @@ def decision_in_force(
     rows = SqlStore(connection).decision_rows(account_id, offer_id)
     row = effective_decisions(rows).get(offer_id)
     return None if row is None or row.decision is None else row.decision.value
+
+
+def interested_reason(
+    connection: Connection, account_id: int, offer_id: int
+) -> tuple[tuple[str, ...], str | None] | None:
+    """The reasons (French labels) and the note of the offer's « Intéressé » in force (decision D4, Q15: the letter
+    starts from why the user wants this offer); None when the decision in force is another one, or none."""
+    rows = SqlStore(connection).decision_rows(account_id, offer_id)
+    row = effective_decisions(rows).get(offer_id)
+    if row is None or row.decision is None:
+        return None
+    decision = row.decision
+    if decision.value is not DecisionValue.INTERESTED:
+        return None
+    labels = tuple(
+        reason_label(decision.value, code)
+        for code in decision.reasons
+        if code != APPLICATION_STARTED
+    )
+    return labels, decision.note
+
+
+def offer_summary(
+    connection: Connection, account_id: int, offer_id: int
+) -> Summary | None:
+    """The summary kept for the offer (C7), unless its description changed since; never asks the model."""
+    store = SqlStore(connection)
+    stored = store.offer_of(account_id, offer_id)
+    return None if stored is None else stored_summary(store, stored)
 
 
 def interested_offers(connection: Connection, account_id: int) -> list[int]:

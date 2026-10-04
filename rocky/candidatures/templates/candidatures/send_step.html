@@ -1,4 +1,5 @@
-{# Steps 2 and 3 of an application (decision D3, Q25): the letter comes with D4; the user applies on the site. #}
+{# Step 3 of an application (decision D3, Q25; D4, Q5, Q12): the user applies on the site, with the CV, the letter
+   and the accompanying message to paste; Rocky never applies. #}
 {% set base = "/candidatures/" ~ dossier.application_id %}
 {# Plain forms (never boosted): the page comes back at its step « Envoi ». #}
 {% macro back_form(path, label, stage="", primary=false) -%}
@@ -8,10 +9,33 @@
   <button type="submit" class="btn {{ 'btn-primary' if primary else 'btn-ghost' }}">{{ label }}</button>
 </form>
 {%- endmacro %}
-<section id="lettre" class="dossier-step" aria-label="Lettre de la candidature">
-  <h2>2. Lettre</h2>
-  <p class="muted">Rocky ne prépare pas encore la lettre : elle arrive bientôt. Si l'annonce en demande une, joins la tienne.</p>
-</section>
+{% macro message_block() -%}
+<div id="message" class="note">
+  <h3 class="group-title">Message d'accompagnement {{ "(anglais)" if letter.language == "en" }}</h3>
+  <p class="muted small">Pour le champ libre d'un formulaire de candidature : 2 ou 3 phrases, à copier.</p>
+  {% if message_error %}<p class="alert alert-error" role="alert">{{ message_error }}</p>{% endif %}
+  {% if proposed_message %}
+  {% set text, signals = proposed_message %}
+  <form method="post" action="{{ base }}/message/valider" hx-boost="false" class="stack">
+    <input type="hidden" name="langue" value="{{ letter.language }}">
+    <input type="hidden" name="propose" value="{{ text }}">
+    {% for signal in signals %}<span class="badge badge-warn">{{ signal }}</span>{% endfor %}
+    <textarea name="texte" rows="5" aria-label="Message d'accompagnement">{{ text }}</textarea>
+    <button type="submit" class="btn btn-primary">Valider ce message</button>
+  </form>
+  {% else %}
+  {% if letter.message %}
+  <textarea readonly rows="5" aria-label="Message d'accompagnement validé">{{ letter.message.text }}</textarea>
+  <p class="muted small">Validé le {{ letter.message.created_at | paris_time }}.</p>
+  {% endif %}
+  <form method="post" action="{{ base }}/message/proposer" hx-post="{{ base }}/message/proposer" hx-target="#envoi" hx-swap="outerHTML" class="stack">
+    <input type="hidden" name="langue" value="{{ letter.language }}">
+    <label><input type="checkbox" name="consentement" value="1"> J'accepte l'envoi de l'annonce et de mon paragraphe « Pourquoi vous » à Gemini.</label>
+    <button type="submit" class="btn btn-ghost">{{ "Proposer un autre message" if letter.message else "Proposer un message" }}</button>
+  </form>
+  {% endif %}
+</div>
+{%- endmacro %}
 <section id="envoi" class="dossier-step" aria-label="Envoi de la candidature">
   <h2>3. Envoi</h2>
   {% if dossier.journey.current == Step.SEND %}
@@ -20,16 +44,24 @@
     <li>Télécharge ton CV :
       <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=fr" hx-boost="false">CV français</a>
       <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=en" hx-boost="false">CV anglais</a></li>
-    <li>Dépose-le sur le site :
+    {% if letter.version %}
+    <li>Et ta lettre :
+      <a class="btn btn-ghost" href="{{ base }}/lettre.pdf?langue={{ letter.language }}" hx-boost="false">{{ "Lettre française" if letter.language == "fr" else "Lettre anglaise" }}</a>
+      <span class="muted small">(ou son texte, dans l'étape Lettre)</span></li>
+    {% endif %}
+    <li>Dépose-les sur le site :
       <a class="btn btn-primary" href="{{ dossier.offer.apply_at }}" target="_blank" rel="noopener noreferrer" hx-boost="false">Ouvrir le site de candidature ↗</a>
       <span class="muted small">{{ apply_domain }}</span></li>
     <li>Reviens ici : {{ back_form("etape", "J'ai envoyé ma candidature", stage=Stage.SENT.value, primary=true) }}</li>
   </ol>
+  {{ message_block() }}
   <p>{{ back_form("annuler", "Annuler le dernier changement") }}</p>
   {% elif dossier.journey.sent %}
   <p class="line-good">✅ {{ stage_labels[dossier.stage] }}{% if dossier.next_action %} — {{ dossier.next_action.label }} le {{ dossier.next_action.due.strftime("%d/%m/%Y") }}{% endif %}. Le suivi viendra ici.</p>
+  {{ message_block() }}
   <p>{{ back_form("annuler", "Annuler le dernier changement") }}</p>
   {% else %}
-  <p class="muted">Disponible quand ton CV est prêt.</p>
+  <p class="muted">Disponible quand ta lettre est prête, ou que tu as choisi de ne pas en joindre.</p>
+  {{ message_block() }}
   {% endif %}
 </section>

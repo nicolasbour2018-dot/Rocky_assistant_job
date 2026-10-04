@@ -44,6 +44,9 @@ HEAD_TABLES = {
     "application_cv_selections",
     "glossary_terms",
     "translation_memory",
+    "generic_letters",
+    "application_letters",
+    "application_messages",
 }
 
 

@@ -1,0 +1,105 @@
+{# The generic letter (decision D4, Q6, Q9, Q13, Q17): its paragraphs, their import and review, its English. #}
+{% set swap = 'hx-target="#lettre-generique" hx-swap="outerHTML"' %}
+{% macro paragraphs(stored) -%}
+<ol class="letter-paragraphs">
+  {% for paragraph in stored.letter.paragraphs %}
+  <li><span class="badge badge-muted">{{ role_labels[paragraph.role] }}</span>
+    {% if paragraph.text %}<p class="description-text">{{ paragraph.text }}</p>{% else %}<p class="muted small">Écrit pour chaque offre, dans la candidature.</p>{% endif %}</li>
+  {% endfor %}
+</ol>
+<p class="muted small">Version du {{ stored.created_at | paris_time }}.</p>
+{%- endmacro %}
+<section id="lettre-generique" class="letter" aria-label="Ma lettre de motivation">
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if message %}<p class="alert alert-info" role="status">{{ message }}</p>{% endif %}
+
+  {% if review %}
+  <h2>{{ "Relis le découpage de ta lettre" if review.origin == "import" else "Modifier ta lettre" }}{{ " anglaise" if review.language == "en" }}</h2>
+  <p class="muted">Chaque paragraphe garde ton texte. Rocky écrit lui-même l'en-tête, la date, l'objet, « Madame, Monsieur, », la formule de politesse et la signature de chaque lettre. Le paragraphe « Pourquoi vous » est la place du texte écrit pour chaque offre.
+    Écris {{ variables[0] }} et {{ variables[1] }} là où le poste et l'entreprise doivent apparaître.</p>
+  {% for variable, original in review.replaced %}<p class="small">Rocky a remplacé « {{ original }} » par <strong>{{ variable }}</strong>.</p>{% endfor %}
+  <form method="post" action="/profil/lettre/enregistrer" hx-post="/profil/lettre/enregistrer" {{ swap | safe }} class="stack">
+    <input type="hidden" name="langue" value="{{ review.language }}">
+    <input type="hidden" name="origine" value="{{ review.origin }}">
+    <ol class="item-list">
+      {% for row in review.rows %}
+      <li class="item">
+        <label>Rôle
+          <select name="role">
+            {% for role in roles %}<option value="{{ role.value }}"{% if row.role == role.value %} selected{% endif %}>{{ role_labels[role] }}</option>{% endfor %}
+            <option value="{{ set_aside_code }}"{% if row.role == set_aside_code %} selected{% endif %}>Écarter de la lettre</option>
+          </select></label>
+        {% if row.note %}<p class="badge badge-warn">{{ row.note }}</p>{% endif %}
+        <textarea name="texte" rows="{{ [row.text | length // 90 + 2, 3] | max }}" aria-label="Paragraphe {{ loop.index }}">{{ row.text }}</textarea>
+      </li>
+      {% endfor %}
+      <li class="item">
+        <label>Rôle
+          <select name="role">{% for role in roles if role.value != "why_you" %}<option value="{{ role.value }}"{% if role.value == "strengths" %} selected{% endif %}>{{ role_labels[role] }}</option>{% endfor %}</select></label>
+        <textarea name="texte" rows="3" aria-label="Paragraphe à ajouter" placeholder="Un paragraphe à ajouter (facultatif)"></textarea>
+      </li>
+    </ol>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Enregistrer ma lettre</button>
+      <a class="btn btn-ghost" href="/profil/lettre" hx-get="/profil/lettre" {{ swap | safe }}>Annuler</a>
+    </div>
+  </form>
+  {% else %}
+
+  <h2>Lettre en français</h2>
+  {% if letters.fr %}
+  {{ paragraphs(letters.fr) }}
+  <p><a class="btn btn-ghost" href="/profil/lettre?modifier=fr" hx-get="/profil/lettre?modifier=fr" {{ swap | safe }}>Modifier</a></p>
+  {% else %}
+  <p>Ta lettre générique sert de base à chaque candidature : Rocky la reprend telle quelle et n'écrit que le paragraphe « Pourquoi vous » de chaque offre, que tu valides.</p>
+  {% endif %}
+  <details class="note"{% if not letters.fr %} open{% endif %}>
+    <summary>{{ "Importer une autre lettre" if letters.fr else "Importer ta lettre" }}</summary>
+    <p class="small">Importe la lettre que tu utilises déjà (DOCX ou PDF, {{ max_mb }} Mo au plus), ou colle son texte. Pour la découper en paragraphes, <strong>son texte (jamais le fichier) est envoyé au modèle Gemini de Google</strong>, qui ne réécrit rien. Le fichier n'est pas conservé.</p>
+    <form method="post" action="/profil/lettre/importer" enctype="multipart/form-data" hx-post="/profil/lettre/importer" hx-encoding="multipart/form-data" {{ swap | safe }} class="edit-form">
+      <input type="file" name="fichier" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-label="Fichier de ta lettre">
+      <label>Ou colle son texte <textarea name="texte" rows="6"></textarea></label>
+      <fieldset class="field"><legend>Cette lettre est rédigée en</legend>
+        <div class="chips"><label class="chip"><input type="radio" name="langue" value="fr" checked>français</label><label class="chip"><input type="radio" name="langue" value="en">anglais</label></div>
+      </fieldset>
+      <label class="check"><input type="checkbox" name="consentement" value="1" required> J'accepte l'envoi du texte de ma lettre à Gemini.</label>
+      <button type="submit" class="btn btn-primary">Importer</button>
+    </form>
+  </details>
+
+  <h2>Lettre en anglais</h2>
+  {% if not letters.fr and not letters.en %}
+  <p class="muted">Elle se prépare à partir de ta lettre française.</p>
+  {% else %}
+  {% if letters.en %}
+  {% if letters.english_outdated %}<p class="alert alert-info">Ta lettre française a changé depuis cette traduction : prépare à nouveau ta lettre anglaise (les paragraphes inchangés sont repris sans appel).</p>{% endif %}
+  {{ paragraphs(letters.en) }}
+  <p><a class="btn btn-ghost" href="/profil/lettre?modifier=en" hx-get="/profil/lettre?modifier=en" {{ swap | safe }}>Modifier</a></p>
+  {% endif %}
+  {% if letters.fr and (not letters.en or letters.english_outdated) %}
+  {% if proposals %}
+  <p class="muted">Rien n'est enregistré tant que tu n'acceptes pas. Garde {{ variables[0] }} et {{ variables[1] }} tels quels.</p>
+  <ul class="item-list">
+    {% for proposal in proposals %}
+    {% set key = proposal.segment.key %}{% set where = proposal.segment.where %}{% set english = proposal.english %}
+    {% set empreinte = proposal.segment.source_sha256 %}{% set source = proposal.segment.source %}
+    {% set warnings = proposal.warnings %}{% set from_memory = proposal.from_memory %}{% set retour = "/profil/lettre" %}
+    {% include "profil/translation_row.html" %}
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if english.to_translate and not proposals %}
+  <p>Rocky envoie à Gemini le <strong>texte</strong> de {{ english.to_translate | length }} paragraphe{{ "s" if english.to_translate | length > 1 }} de ta lettre, avec ton glossaire. Ni ton nom ni tes coordonnées ne sont envoyés ; un paragraphe déjà validé ne repart pas.</p>
+  <form method="post" action="/profil/lettre/anglais" hx-post="/profil/lettre/anglais" {{ swap | safe }} class="stack">
+    <label><input type="checkbox" name="consentement" value="1"> J'accepte l'envoi du texte de ces paragraphes à Gemini.</label>
+    <button type="submit" class="btn btn-primary">Préparer ma lettre anglaise</button>
+  </form>
+  {% endif %}
+  <form method="post" action="/profil/lettre/anglais/creer" hx-post="/profil/lettre/anglais/creer" {{ swap | safe }} class="inline-form">
+    <button type="submit" class="btn{{ ' btn-primary' if not english.to_translate }}">Créer ma lettre anglaise</button>
+    <span class="muted small">{% if english.to_translate %}{{ english.to_translate | length }} paragraphe(s) encore à valider.{% else %}Tous les paragraphes sont validés.{% endif %}</span>
+  </form>
+  {% endif %}
+  {% endif %}
+  {% endif %}
+</section>

@@ -18,15 +18,18 @@ from rocky.profil.cv.layout import (
     update_hobby,
 )
 from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
+from rocky.profil.letter import letter_sha256
 from rocky.profil.model import (
     CvLayout,
     CvTemplateRecord,
     ExperienceDraft,
+    GenericLetter,
     GlossaryTerm,
     Identity,
     ImportedCv,
     ImportedProfile,
     LanguageDraft,
+    LetterOrigin,
     Preferences,
     Profile,
     ProfileStore,
@@ -35,6 +38,7 @@ from rocky.profil.model import (
     SkillCategory,
     SkillDraft,
     SkillGroup,
+    StoredLetter,
     StoredPhoto,
     Text,
     TrackDraft,
@@ -412,6 +416,45 @@ class ProfileEditor:
 
     def translation_memory(self) -> dict[str, Remembered]:
         return self._store.translation_memory(self._id())
+
+    # Generic letter (decision D4, Q6, Q9, Q17): appended at each save, journaled (training data, D14).
+
+    def generic_letter(self, language: str) -> StoredLetter | None:
+        return self._store.generic_letter(self._id(), language)
+
+    def save_generic_letter(
+        self,
+        letter: GenericLetter,
+        origin: LetterOrigin,
+        source_sha256: str | None = None,
+    ) -> bool:
+        """Keep a new version of the letter in its language; False when it is the one in force already."""
+        profile_id = self._id()
+        sha256 = letter_sha256(letter)
+        current = self._store.generic_letter(profile_id, letter.language)
+        if (
+            current is not None
+            and current.sha256 == sha256
+            and current.source_sha256 == source_sha256
+        ):
+            return False
+        stored = self._store.add_generic_letter(
+            profile_id, letter, origin, sha256, source_sha256, self._clock()
+        )
+        self._event(
+            "profil.cover_letter_saved",
+            "profile",
+            profile_id,
+            {
+                "letter_id": stored.id,
+                "language": letter.language,
+                "origin": origin.value,
+                "sha256": sha256,
+                "source_sha256": source_sha256,
+                "paragraphs": [p.role.value for p in letter.paragraphs],
+            },
+        )
+        return True
 
     def validate_translation(self, source: str, english: str) -> str:
         """Keep the English the user validated for a text of the imported CV (its English version, Q16, Q19)."""

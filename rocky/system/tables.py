@@ -9,6 +9,8 @@ from __future__ import annotations
 from rocky.candidatures.sql import (
     application_changes,
     application_cv_selections,
+    application_letters,
+    application_messages,
     applications,
 )
 from rocky.offres.sql import (
@@ -24,6 +26,7 @@ from rocky.profil.sql import (
     cv_templates,
     experience_skills,
     experiences,
+    generic_letters,
     glossary_terms,
     hobbies,
     languages,
@@ -45,11 +48,14 @@ __all__ = [
     "accounts",
     "application_changes",
     "application_cv_selections",
+    "application_letters",
+    "application_messages",
     "applications",
     "cv_templates",
     "events",
     "experience_skills",
     "experiences",
+    "generic_letters",
     "glossary_terms",
     "hobbies",
     "job_decisions",

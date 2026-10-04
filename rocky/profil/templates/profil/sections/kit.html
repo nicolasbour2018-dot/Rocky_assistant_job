@@ -77,6 +77,7 @@
     {% endif %}
   </p>
   <p><a class="btn" href="/profil/cv-anglais">Préparer mon CV anglais</a> <span class="muted small">— la version anglaise de ton CV importé, dans le même design.</span></p>
+  <p><a class="btn" href="/profil/lettre">Ma lettre de motivation</a> <span class="muted small">— ta lettre générique, base de chaque candidature, en français et en anglais.</span></p>
   <div class="cv-downloads">
     {% for code, label in (("fr", "Vérifier mon CV"), ("en", "Check my CV")) if code == "fr" or not cv_missing_en %}
     {{ m.form_open(key, "/profil/cv/verifier", "inline-form") }}<input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost">{{ label }}</button></form>

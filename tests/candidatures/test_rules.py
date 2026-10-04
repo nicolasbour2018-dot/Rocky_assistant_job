@@ -10,6 +10,7 @@ from rocky.candidatures.model import (
     Change,
     ChangeKind,
     InvalidChangeError,
+    LetterState,
     NextAction,
     Stage,
 )
@@ -209,7 +210,22 @@ def test_the_journey_of_an_open_application_follows_its_stage(
         sent,
         False,
     )
-    assert Step.LETTER not in found.done  # the letter comes with D4
+    assert Step.LETTER not in found.done  # no letter decided yet
+
+
+@pytest.mark.parametrize("letter", [LetterState.VALIDATED, LetterState.SKIPPED])
+def test_a_letter_validated_or_set_aside_is_done(letter: LetterState) -> None:
+    preparing = journey(Stage.PREPARING, letter)
+    ready = journey(Stage.READY, letter)
+    sent = journey(Stage.SENT, letter)
+
+    # Still in preparation: « Lettre prête » (or « Pas de lettre ») is the next gesture (decision D4, Q16).
+    assert (preparing.current, set(preparing.done)) == (
+        Step.LETTER,
+        {Step.CV, Step.LETTER},
+    )
+    assert (ready.current, set(ready.done)) == (Step.SEND, {Step.CV, Step.LETTER})
+    assert set(sent.done) == {Step.CV, Step.LETTER, Step.SEND}
 
 
 @pytest.mark.parametrize(

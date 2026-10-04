@@ -22,7 +22,7 @@ from sqlalchemy import Connection, Engine
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData, UploadFile
 
-from rocky.profil import translation_web
+from rocky.profil import letter_web, translation_web
 from rocky.profil.cv import layout
 from rocky.profil.cv.check import CvCheck, Fact, check_cv, expected_facts
 from rocky.profil.cv.content import cv_content
@@ -169,8 +169,9 @@ def install(app: FastAPI) -> None:
     )
     templates.env.filters["month"] = month
     templates.env.filters["html_id"] = translation_web.html_id
-    # Before the profile's routes: ``/profil/{key}`` would take ``/profil/traduction``.
+    # Before the profile's routes: ``/profil/{key}`` would take ``/profil/traduction`` or ``/profil/lettre``.
     app.include_router(translation_web.router)
+    app.include_router(letter_web.router)
     app.include_router(router)
 
 

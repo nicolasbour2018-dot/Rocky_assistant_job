@@ -1,7 +1,8 @@
-{# The result of « Vérifier mon CV » (decision D2, Q12): what three PDF readers find in a CV; ``check``, ``language``. #}
+{# The result of « Vérifier mon CV » (decision D2, Q12): what three PDF readers find in a CV; ``check``, ``language``;
+   ``document_name`` for another document (« cette lettre », decision D4, Q19). #}
 <div class="cv-check" role="status">
   {% if check.readable %}
-  <p class="alert alert-info">Les {{ check.readers | length }} lecteurs de PDF retrouvent les {{ check.facts | length }} éléments attendus de ce CV{{ " anglais" if language == "en" }}.</p>
+  <p class="alert alert-info">Les {{ check.readers | length }} lecteurs de PDF retrouvent les {{ check.facts | length }} éléments attendus de {{ document_name if document_name is defined else ("ce CV anglais" if language == "en" else "ce CV") }}.</p>
   {% else %}
   <p class="alert alert-error">{{ check.found_by_all }} éléments sur {{ check.facts | length }} lus par les {{ check.readers | length }} lecteurs. À regarder :</p>
   <ul class="small">{% for warning in check.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>

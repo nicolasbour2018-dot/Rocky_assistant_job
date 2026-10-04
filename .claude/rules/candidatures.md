@@ -32,9 +32,22 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   au moins un motif choisi (`application_decision`) ; refusé sur une offre écartée.
 - `offres` ne connaît `candidatures` que par l'URL de l'encart (`/candidatures/offre/{id}`, chargé par la fiche).
 
+## Lettre et message (décision `docs/decisions/D4-lettre-message.md`)
+- Règles pures dans `letter.py` (titre nettoyé, en-tête, contrôles `signals`, invite et réponse du modèle), lecture du
+  formulaire et vue dans `letter_view.py` (sans FastAPI), PDF dans `letter_render.py`. Le modèle est appelé **avant**
+  la transaction ; rien de non validé n'est stocké.
+- `application_letters` et `application_messages` en ajout seul : la dernière lettre d'une langue est en vigueur, une
+  ligne `none` est « Pas de lettre ». Chaque paragraphe garde son origine, la version proposée et ses signaux (D14).
+- Les contrôles signalent, ne bloquent jamais ; une formule écrite par l'utilisateur dans sa lettre n'est jamais
+  signalée. Toute modification des listes change `CHECKS_VERSION`.
+- « Pas de lettre » et le passage à « Prête à envoyer » s'écrivent dans la même transaction (test de panne de
+  `test_sql.py`).
+
 ## Écran
 - Liste brute de D1, avec « À préparer » (offres « Intéressé » sans dossier, D3 Q26) ; l'écran 📝 Candidatures est D6.
-- Page du dossier (D3, Q25) : fil 1. CV / 2. Lettre / 3. Envoi calculé par `rules.journey` ; « Préparer » y atterrit.
+- Page du dossier (D3, Q25) : fil 1. CV / 2. Lettre / 3. Envoi calculé par `rules.journey` (étape et état de la
+  lettre) ; « Préparer » y atterrit. Les gestes qui changent le fil (valider, « Lettre prête », « Pas de lettre »)
+  sont des formulaires non boostés qui reviennent sur `#lettre` ou `#envoi`.
   Un geste fait depuis le dossier envoie `retour=dossier`, valeur fixe et jamais une URL (pas de redirection ouverte).
 - Mêmes règles d'écran que `offres` (fragments HTMX, `wants_fragment`, `hx-swap` explicite, chaque route répond aussi
   sans HTMX, 404 pour le dossier d'un autre compte).
