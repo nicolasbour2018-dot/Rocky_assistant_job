@@ -257,6 +257,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en B3 : migration `0002`.*
 - **(B2 → D6, F1)** Aucune lecture du journal n'existe encore : la chronologie par sujet (`ix_events_subject`)
   s'écrit avec le premier écran qui l'affiche.
+  *Résolu en D6 pour les candidatures : `system.events.events_about` et `candidatures/timeline.py` (chronologie du
+  dossier) ; reste F1.*
 - **(B2 → §5 VPS)** Le déclencheur d'ajout seul protège des erreurs, pas d'un propriétaire qui le désactiverait :
   sur le VPS, envisager que les migrations tournent sous un rôle propriétaire distinct de `rocky_app`.
 - **(B2)** Un schéma `test_…` peut rester dans `test-db` si une exécution de pytest est tuée ; sans conséquence
@@ -512,6 +514,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   dossier », « Envoyer la candidature ») ; non utilisée en D1. Dans la fiche d'offre, après « Préparer », seule la
   liste des offres est rafraîchie (`offers-changed`) : la ligne « Décision : … » de la fiche et les compteurs
   attendent le prochain affichage. Le changement d'étape de la liste brute passe par un menu et un bouton.
+  *Résolu en D6 (Q8) : l'échéance proposée avant l'envoi s'arrête à la date limite (`offres.web.offer_deadlines`),
+  affichée dans la liste et le dossier ; « Préparer » quitte la fiche pour le dossier (D3, Q25), la fiche se relit en
+  entier ; le menu d'étape de la liste part en un geste.*
 - **(D1 → E4, F1)** L'accusé de réception est un fait du dossier, pas une étape (D1, Q1) : à enregistrer par E. Un
   passage automatique à « Sans réponse » après un délai sans message, et toute transition automatique, passent par
   `automatic_transition_allowed` (jamais en arrière, jamais hors d'une issue).
@@ -533,12 +538,15 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D2 → Nicolas)** Ordre des projets du CV maître (Water Potability avant Pilotage, inverse du Canva) : à vérifier.
 - **(D3 → D6 ou F1)** Les gabarits ne se suppriment pas : le compte de Nicolas en a 19 (dont 13 essais de mise au point
   de D2). Ils sont repliés sous « Autres gabarits » dans Profil & kit (D3) ; prévoir de retirer un gabarit inactif.
+  *Résolu en D6 (Q8) : un gabarit inactif se supprime après confirmation (`profil.cv_template_deleted`).*
 - **(D3 → plus tard, remarque de Nicolas)** CV français d'une candidature : le texte du bloc projet « Pilotage
   d'association sportive » sort visuellement de sa carte sans être signalé. Même famille que les limites des blocs
   projets notées à la clôture de D2 (zone mesurée plus large que la carte dessinée).
 - **(D3 → D4, D5, D6)** Parcours du dossier (décision D3, Q25, Q26) : « Prête à envoyer » veut dire « CV prêt » tant
   que la lettre n'existe pas (D4 tranchera) ; les envois confirmés en D3 n'ont ni canal ni révision (D5 les accepte tels
   quels) ; raccourci « Intéressé et préparer » depuis le mode tri, 4e étape « Suivi » : D6.
+  *Résolu en D6 : 4e étape « Suivi » ; « Valider et préparer la candidature » (touche `d`) dans le panneau « Pourquoi
+  intéressé ? » du tri.*
 - **(D3 → Nicolas)** Le CV Canva français finit la formation Jedha par « restitution des résultats. ` » (accent grave en
   trop) : il passe tel quel dans le CV anglais. À corriger dans Canva puis réimporter.
 - **(D3 → plus tard, idée de Nicolas)** Quand une traduction déborde de sa place dans le gabarit, Rocky pourrait
@@ -558,6 +566,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   version »), gestes dispersés (accord, adaptation, aperçu, validation, « Lettre prête »), langue de la lettre et du
   message par des liens en haut de l'étape. Le fonctionnement (données, transactions, contrôles) est validé ; seule la
   présentation est à refaire.
+  *Repris en D6 (Q2–Q4) : une étape à la fois, un seul texte par paragraphe avec le sélecteur « Ta lettre · Gemini »
+  rendu par le serveur, une langue par dossier. Jugement de Nicolas à la recette de D6.*
 - **(D4 → plus tard, prompt engineering)** Les consignes de Gemini pour la lettre (`ADAPT_INSTRUCTIONS`,
   `rocky/candidatures/letter.py`) sont une première version : les régler **bloc par bloc** (ouverture, parcours,
   apports, pourquoi vous, conclusion), sur les choix réels de Nicolas (paragraphes gardés ou remplacés, gardés comme
@@ -579,9 +589,11 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   effet) : aucune purge en D5 ; à prévoir avec les sauvegardes du VPS si le volume compte.
 - **(D5 → D6)** L'étape Envoi s'allonge (PDF générés, préremplissage, confirmation, message) : à reprendre avec le
   parcours du dossier en D6 (constat D4 → D6).
+  *Repris en D6 : trois temps numérotés (PDF, dépôt et message, confirmation sur place).*
 - **(D5 → B1, vérification)** La vérification globale prend 1 min 50 (tests 104 s), proche de la limite de 2 min :
   rendus Chromium des tests d'envoi et de lettre. Si elle la dépasse : partager un rendu par module (comme D3) ou
   paralléliser pytest.
+  *D6 : 1 min 49 (1 166 tests), sans nouveau rendu Chromium.*
 - **(D5 → Nicolas)** Le poste ne reconnaît que des champs vides nommés par leurs attributs ou libellés usuels : sur les
   formulaires des ATS (Workday, Greenhouse, Lever, Taleo…), le rapport dira ce qui reste à faire. Des sélecteurs propres à
   une plateforme s'ajoutent si l'usage le demande.
@@ -590,3 +602,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   Code gardé et testé, marqué « DORMANT », fermé par `candidatures.web.PREFILL_ENABLED`. Le parcours de l'envoi devient :
   générer les PDF, ouvrir l'annonce chez le recruteur, remplir soi-même, confirmer « J'ai envoyé ma candidature ». À
   reprendre plus tard, peut-être avec la lecture assistée (E5), qui a le même besoin d'un navigateur sur le poste.
+- **(D6 → F1)** 🏠 Aujourd'hui « relances dues » : reprendre `candidatures.web.rows_of` et `rules.tabs_of` (onglet
+  « À faire ») plutôt qu'une seconde lecture des dossiers.
+- **(D6)** La page du dossier recalcule le CV ciblé, la lettre et l'envoi pour n'afficher qu'une étape (`_dossier`,
+  `_dossier_page`) : rapide en local ; à mesurer sur le VPS, et ne calculer que l'étape montrée si c'est lent.
+- **(D6 → E4)** Une transition écrite par une règle ou l'IA apparaît dans la chronologie avec « par une règle » / « par
+  l'IA » (`timeline._BY`) ; E4 ajoute ses types d'événements à `timeline.LINES` (test `test_timeline.py`).

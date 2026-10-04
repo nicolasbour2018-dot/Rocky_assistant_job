@@ -64,7 +64,7 @@
 {%- endmacro %}
 {% macro confirm_block() -%}
 <details id="confirmer" class="confirm-box"{% if confirm_open %} open{% endif %}>
-  <summary class="btn btn-primary">J'ai envoyé ma candidature</summary>
+  <summary class="btn{{ ' btn-primary' if send.current }}">J'ai envoyé ma candidature</summary>
   {% if confirm.error %}<p class="alert alert-error" role="alert">{{ confirm.error }}</p>{% endif %}
   <form method="post" action="{{ base }}/envoi" hx-boost="false" class="stack">
     <div class="form-grid">
@@ -76,15 +76,15 @@
       </label>
     </div>
     <label>Précision <span class="muted small">(obligatoire pour « Autre »)</span> <input name="precision" value="{{ confirm.detail }}"></label>
-    <fieldset>
+    <fieldset class="field">
       <legend>CV envoyé</legend>
       {% for line in send.lines(RevisionKind.CV) %}
       <label><input type="radio" name="cv" value="{{ line.revision.id }}" required {{ "checked" if confirm.cv == line.revision.id | string }}> {{ line.label }} du {{ line.revision.created_at | paris_time }} <span class="muted small">({{ line.short_hash }})</span>{% if line.stale %} <span class="badge badge-warn">a changé depuis</span>{% endif %}</label>
       {% endfor %}
       <label><input type="radio" name="cv" value="{{ NONE }}" required {{ "checked" if confirm.cv == NONE }}> Sans document de Rocky</label>
-      {% if not send.current %}<p class="muted small">Aucun PDF généré : génère-les d'abord (①), ou choisis « Sans document de Rocky ».</p>{% endif %}
+      {% if not send.current %}<p class="muted small">Aucun PDF généré : génère-les d'abord (étape 1), ou choisis « Sans document de Rocky ».</p>{% endif %}
     </fieldset>
-    <fieldset>
+    <fieldset class="field">
       <legend>Lettre envoyée</legend>
       {% for line in send.lines(RevisionKind.LETTER) %}
       <label><input type="radio" name="lettre" value="{{ line.revision.id }}" {{ "checked" if confirm.letter == line.revision.id | string }}> {{ line.label }} du {{ line.revision.created_at | paris_time }} <span class="muted small">({{ line.short_hash }})</span>{% if line.stale %} <span class="badge badge-warn">a changé depuis</span>{% endif %}</label>
@@ -156,18 +156,18 @@
   {% if prefilling %}{# DORMANT: never true while the prefilling is off #}{{ prefill_block() }}{% endif %}
   <ol class="send-parts">
     <li class="send-part{{ ' done' if send.current }}">
-      <h3>Les PDF à envoyer {{ "(anglais)" if language == "en" }}</h3>
+      <h3>1. Les PDF à envoyer {{ "(anglais)" if language == "en" }}</h3>
       {{ documents() }}
     </li>
     <li class="send-part">
-      <h3>Dépose ta candidature sur le site du recruteur</h3>
+      <h3>2. Dépose ta candidature sur le site du recruteur</h3>
       {# DORMANT: the link « Préremplir avec le poste Rocky » (/preremplir) was removed here (acceptance of 04/10). #}
       <p><a class="btn" href="{{ dossier.offer.apply_at }}" target="_blank" rel="noopener noreferrer" hx-boost="false">Ouvrir le site de candidature ↗</a>
         <span class="muted small">{{ apply_domain }}</span></p>
       {{ message_block() }}
     </li>
     <li class="send-part">
-      <h3>Reviens confirmer l'envoi</h3>
+      <h3>3. Reviens confirmer l'envoi</h3>
       {{ confirm_block() }}
     </li>
   </ol>

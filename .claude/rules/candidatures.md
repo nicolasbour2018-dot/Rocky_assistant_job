@@ -15,6 +15,12 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 - Une création ou un changement d'étape fixe **aussi** la prochaine action (proposition de `PROPOSALS`, ou aucune).
 - Un dossier par offre et par compte (`applications`, unique) : une réouverture ajoute une création sur la même ligne.
 - Codes anglais seulement (`Stage`, `ChangeKind`) ; libellés français à l'affichage. Un code publié ne se renomme plus.
+- « Fait » (D6, Q5) est un changement `action_done` qui fixe la prochaine action suivante ; l'action faite se déduit de
+  l'action en vigueur avant lui (pas de colonne). Proposé seulement après l'envoi (`FOLLOW_UP_STAGES`).
+- Notes (`application_notes`) et langue (`application_languages`) sont en ajout seul **hors** des changements : « Annuler »
+  ne les touche jamais. Une note se retire par une ligne `removes_id` (unique) ; la langue en vigueur est la dernière,
+  français sans ligne (`language_in_force`). Toutes les routes du dossier lisent la langue du dossier, jamais un paramètre.
+- Avant l'envoi (`BEFORE_SENDING`), l'échéance proposée s'arrête à la date limite de l'offre (`offres.web.offer_deadlines`).
 
 ## Transactions
 - Un cas d'usage = une transaction ouverte par la route ; il verrouille d'abord le dossier
@@ -30,7 +36,8 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   passent par les fonctions publiques d'`offres/web.py`, dans la transaction de l'appelant.
 - « Préparer » sur une offre sans décision ou « Plus tard » enregistre « Intéressé » avec `application_started` en tête et
   au moins un motif choisi (`application_decision`) ; refusé sur une offre écartée.
-- `offres` ne connaît `candidatures` que par l'URL de l'encart (`/candidatures/offre/{id}`, chargé par la fiche).
+- `offres` ne connaît `candidatures` que par des URL : l'encart (`/candidatures/offre/{id}`, chargé par la fiche) et
+  « Valider et préparer » du tri (`/candidatures/offre/{id}/preparer`, `contexte=tri`, D6 Q8).
 
 ## Lettre et message (décision `docs/decisions/D4-lettre-message.md`)
 - Règles pures dans `letter.py` (titre nettoyé, en-tête, contrôles `signals`, invite et réponse du modèle), lecture du
@@ -58,11 +65,19 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   passage à « Préremplie » depuis « Prête à envoyer ». Les révisions remises sont celles **montrées** à la
   confirmation (identifiants cachés, refus si elles ont changé). Seul le domaine du formulaire va au journal.
 
-## Écran
-- Liste brute de D1, avec « À préparer » (offres « Intéressé » sans dossier, D3 Q26) ; l'écran 📝 Candidatures est D6.
-- Page du dossier (D3, Q25) : fil 1. CV / 2. Lettre / 3. Envoi calculé par `rules.journey` (étape et état de la
-  lettre) ; « Préparer » y atterrit. Les gestes qui changent le fil (valider, « Lettre prête », « Pas de lettre »)
-  sont des formulaires non boostés qui reviennent sur `#lettre` ou `#envoi`.
-  Un geste fait depuis le dossier envoie `retour=dossier`, valeur fixe et jamais une URL (pas de redirection ouverte).
+## Écran (décision `docs/decisions/D6-ecran-candidatures.md`)
+- Liste à onglets (`rules.Tab`, `tabs_of`) : « À faire » (action due ou en retard) par défaut, en plus de l'onglet de
+  l'étape ; « À préparer » liste les offres « Intéressé » sans dossier. Chaque geste de la liste renvoie son onglet
+  (`vue`, champ caché) et se fait en un clic (le menu d'étape part au `change`).
+- Routes : `web.py` (liste, gestes, encart de la fiche, « Préparer »), `dossier_web.py` (page du dossier par étape),
+  `web_common.py` (moteur, horloge, fragment, port vers `offres`). `dossier_web` ne doit pas importer `web`.
+- Page du dossier : une étape à la fois, `/candidatures/{id}?etape=cv|lettre|envoi|suivi` (`dossier_url`), par défaut
+  `rules.journey(...).current` (Suivi une fois envoyée ou close). Un geste fait depuis le dossier envoie `retour` = une
+  étape (`Step`) ou `dossier`, valeur fixe et jamais une URL (pas de redirection ouverte).
+- Lettre : un seul texte par paragraphe (`texte_i`) ; l'origine se **calcule** en comparant au paragraphe générique et
+  à la version de Gemini (`letter_view._version_of`). Le sélecteur « Ta lettre · Gemini · Ta version » est rendu par le
+  serveur (`/lettre/basculer`, rien n'est stocké) : pas de JavaScript maison au-delà des raccourcis (décision B4, e).
+- Chronologie : `system.events.events_about` + `timeline.py` ; tout type `candidatures.*` écrit doit avoir sa ligne dans
+  `timeline.LINES` (`test_timeline.py` le vérifie).
 - Mêmes règles d'écran que `offres` (fragments HTMX, `wants_fragment`, `hx-swap` explicite, chaque route répond aussi
   sans HTMX, 404 pour le dossier d'un autre compte).

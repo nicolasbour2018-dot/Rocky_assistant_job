@@ -109,7 +109,7 @@ q { display: block; margin-top: 2px; color: var(--muted); font-style: italic; qu
 .btn-link { border: 0; background: none; padding: 0; min-height: 0; color: var(--muted); cursor: pointer; font: inherit; }
 .btn-link:hover { color: var(--text); text-decoration: underline; }
 input[type="text"], input[type="email"], input[type="password"], input[type="url"], input[type="tel"],
-input[type="month"], select {
+input[type="month"], input[type="date"], select {
   width: 100%;
   min-height: 38px;
   padding: 0 var(--space-3);
@@ -531,9 +531,8 @@ details.why[open] > span { display: block; flex-basis: 100%; }
 .step-layout { display: grid; gap: var(--space-5); }
 .step-layout.with-aside { grid-template-columns: minmax(0, 1fr) minmax(0, 460px); align-items: start; }
 .step-aside { position: sticky; top: var(--space-4); }
-.send-parts { display: grid; gap: var(--space-4); margin: 0; padding-left: 1.5em; }
+.send-parts { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
 .send-part { display: grid; gap: var(--space-2); }
-.send-part::marker { color: var(--accent); font-weight: 700; }
 .send-part h3 { margin: 0; font-size: 15px; }
 .send-part.done h3::after { content: " ✓"; color: var(--good); }
 .confirm-box > summary { display: inline-flex; list-style: none; }
@@ -548,7 +547,7 @@ details.why[open] > span { display: block; flex-basis: 100%; }
 .note-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .note-list li { padding: var(--space-2) 0; border-top: 1px solid var(--border); }
 .note-list p { margin: var(--space-1) 0; }
-.timeline { display: grid; gap: var(--space-1); margin: var(--space-2) 0; padding-left: 1.2em; }
+.timeline { display: grid; gap: var(--space-1); margin: var(--space-2) 0; padding: 0; list-style: none; }
 .timeline time { margin-right: var(--space-2); }
 @media (max-width: 899px) {
   .follow-grid, .step-layout.with-aside { grid-template-columns: minmax(0, 1fr); }

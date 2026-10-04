@@ -29,6 +29,8 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   rubriques (`semantics.py`) ; une ligne sans rubrique refuse le gabarit, les propositions restent.
 - Propositions (`proposals.py`) : une section à la fois, dans une transaction ; rien de rempli n'est remplacé.
 - Rendu : le gabarit actif du compte (`derived.py`), sinon le gabarit neutre ; les plafonds viennent du gabarit actif.
+- Un gabarit **inactif** se supprime (décision D6, Q8) : la ligne `cv_templates` disparaît, son dossier immuable reste
+  dans le stockage, événement `profil.cv_template_deleted` ; le gabarit en service est refusé (`TEMPLATE_IN_SERVICE`).
 
 ## Journal
 - Seulement ce qui explique un changement de score ou de veille : pistes, compétences, préférences, import,

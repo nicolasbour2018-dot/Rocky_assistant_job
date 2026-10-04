@@ -46,3 +46,23 @@ Critère de sortie (plan) : « Une relance due est retrouvée en moins de 3 clic
 | Raccourci du tri | Bouton « Valider et préparer » (touche `d`) dans le panneau « Pourquoi intéressé ? » du tri : mêmes champs postés vers `/candidatures/offre/{id}/preparer` | `offres` ne connaît de `candidatures` que des URL ; la décision et le dossier restent écrits ensemble (D1, Q8, Q9). |
 | Gabarit de CV | Suppression d'un gabarit **inactif** après confirmation : la ligne `cv_templates` disparaît, son dossier immuable reste dans le stockage ; événement `profil.cv_template_deleted` ; refus pour le gabarit actif | Configuration, pas une décision (précédent : `profil.track_deleted`) ; aucun fichier réécrit ni purgé. |
 | `web.py` | Découpé : liste et gestes (`web.py`), pages du dossier (`dossier_web.py`) ; déplacement sans changement de comportement d'abord | Lisibilité d'un fichier qui allait dépasser 2 000 lignes. |
+
+## Mesures (04/10/2026)
+
+| Contrôle | Résultat |
+|---|---|
+| **Critère de sortie** (`tests/candidatures/test_screen_web.py`) | Compte avec un dossier « Envoyée » dont « Relancer » est en retard, parmi d'autres : la navigation mène à `/candidatures` (clic 1), qui s'ouvre sur « À faire » et montre « Relancer — 25/09/2026 (en retard) » ; le lien de la ligne (clic 2) ouvre le dossier sur « Suivi », avec « Fait ». **Deux clics** depuis n'importe quel écran |
+| Tests automatiques | Règles (onglets, proposition bornée par la date limite, « Fait » puis « Annuler », notes en vigueur, langue), cas d'usage avec faux adaptateurs, SQL (contraintes des notes et de la langue, lecture du journal par sujet, **pannes injectées** pendant « Fait » et pendant l'annulation d'un « Fait » : aucun état changé), chronologie (chaque type `candidatures.*` du code a sa ligne), écrans par HTTP (onglets et compteurs, gestes qui gardent leur onglet, notes, langue, date limite, sélecteur de la lettre, raccourci du tri, autre compte : 404), `offres` (`deadline_of`, `offer_deadlines`), `profil` (suppression d'un gabarit inactif, refus du gabarit en service) |
+| Vérification globale | `docker compose run --rm --build check` : 1 166 tests, **1 min 49** au total (sous la limite de 2 min ; aucun nouveau rendu Chromium dans les tests) |
+| Essai dans Chromium (Playwright, instance à part : schéma jetable de `test-db`, compte fictif, faux modèle de langage) | « À faire » (2) : relance en retard en rouge, entretien du jour ; clic sur la ligne → Suivi. « Fait » → « Relancer le 11/10/2026 », chronologie à jour ; note ajoutée, datée, dans la chronologie. Lettre : « Adapter » → un texte par paragraphe ; « Gemini » remplace l'ouverture sans recharger la page, texte réécrit puis « Ta lettre », puis « Ta version » rend le texte écrit ; validée avec les origines « ta version », « ta lettre générique », « version de Gemini ». « Lettre prête » → Envoi en trois temps, confirmation ouverte sur place. Tri : `i`, `1`, `d` → dossier ouvert sur son CV, « En préparation ». Date limite du lendemain : « Finir le dossier » ramené à cette date, badge « ⏰ limite ». Menu d'étape de la liste : la ligne passe dans « Prêtes », compteurs à jour, en un geste. Profil & kit : un gabarit d'essai supprimé après confirmation. Console sans erreur |
+
+Corrigé après l'essai : chronologie et parties de l'Envoi sans numérotation automatique (numéros dans les titres),
+« J'ai envoyé ma candidature » en bouton principal seulement une fois les PDF générés, champ de date et cadres du
+formulaire de confirmation mis au style des autres formulaires.
+
+Constat de l'essai : une touche frappée juste après `i` dans le tri se perd pendant l'arrivée du panneau des motifs
+(constat B4 → C7, toujours ouvert, section 8) ; frappée à nouveau, elle passe.
+
+Fiche d'offre à jour (constat D1 → D6) : « Préparer » quitte la fiche pour le dossier (`HX-Redirect`, D3 Q25), vérifié
+par `test_preparing_opens_the_application_and_lands_on_it` ; la fiche se relit en entier au prochain affichage. Le
+retour arrière du navigateur sur la fiche n'a pas été essayé.
