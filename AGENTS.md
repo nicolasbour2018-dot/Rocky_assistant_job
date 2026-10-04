@@ -139,6 +139,9 @@ docs/
   Nicolas) ; boîtes connectées depuis 📬 Messages, collecte chaque heure tant que l'application tourne. Collecte réelle
   d'un compte, messages **enregistrés** (réseau réel : avec l'accord de Nicolas) :
   `docker compose run --rm app rocky-admin messages <email>`.
+- Classement des messages d'un compte (décision E2) : les règles, puis Gemini dans les plafonds du compte (réseau réel :
+  avec l'accord de Nicolas) : `docker compose run --rm app rocky-admin messages-classer <email> [--sans-llm] [--limite N]
+  [--reclasser]`. L'application classe aussi après chaque collecte.
 - Poste Rocky (préremplissage dans un navigateur visible, sur l'ordinateur, hors Docker) : **en sommeil** depuis la
   recette de D5 (`candidatures.web.PREFILL_ENABLED = False`), inutile à lancer ; procédure gardée dans
   `docs/procedures/d5-poste/`.

@@ -151,7 +151,7 @@ aucun identifiant interne affiché.
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
 | E1. Collecte | Gmail lecture seule, plusieurs boîtes ; requête filtrée (`-category:promotions -category:social`…) ; message **enregistré avant toute décision**, de façon idempotente | Une resynchronisation ne retraite rien ; aucun statut ne change sans message enregistré | ✅ |
-| E2. Classification | 3 étages : expéditeur → domaine exact de l'employeur (plus de sous-chaîne) → LLM pour l'ambigu ; confiance réelle (plus de valeurs constantes) ; preuve : règle, extrait, auteur | 100 % des décisions ont une preuve lisible ; le digest Quora n'est plus rattaché à « French bee » ; jeu de test issu de l'archive | ⬜ |
+| E2. Classification | 3 étages : expéditeur → domaine exact de l'employeur (plus de sous-chaîne) → LLM pour l'ambigu ; confiance réelle (plus de valeurs constantes) ; preuve : règle, extrait, auteur | 100 % des décisions ont une preuve lisible ; le digest Quora n'est plus rattaché à « French bee » ; jeu de test issu de l'archive | 🔄 |
 | E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | ⬜ |
 | E4. Décisions et écran | Transition de candidature appliquée dans la même transaction que la décision ; « ce qui a bougé depuis ta dernière visite » ; correction humaine → nouvelle règle ; corrections conservées comme jeu étiqueté | Aucun changement de statut ne passe inaperçu | ⬜ |
 | E5. Lecture assistée | Sur le geste de l'utilisateur, Rocky ouvre la fiche d'une offre incomplète dans un navigateur visible sur le poste, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte affiché (`parse_page`, `enriched`) ; geste « Enrichir » dans la fiche de l'offre ; jamais dans la veille automatique (décision C1, Q6 ; étape ajoutée par la décision D2, Q3) | Une offre Apec incomplète enrichie depuis sa fiche | ⬜ |
@@ -635,4 +635,20 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(E1 → §5 VPS)** Client Google en mode « Test » (utilisateurs tests, accès retiré au bout de 7 jours, « Reconnecter »
   en un clic) : le passage en production demande page d'accueil, page de confidentialité et e-mail d'assistance
   (page « Branding »), à faire avec le VPS et la validation de l'application.
+- **(E2 → E4)** Les décisions d'E2 ne changent aucune étape. Orientation notée (Q10, à re-décider) : transition sans
+  confirmation au seul niveau « haute » et pour refus, entretien, test, offre ; `candidatures.rules.automatic_transition_allowed`
+  existe déjà (D1). Une correction de l'utilisateur s'écrit dans `message_decisions` (auteur `user`, jamais écrasée par un
+  reclassement) ; les règles par compte nées des corrections complètent les listes du code (`classification/rules.py`).
+  Cas connus à corriger par l'utilisateur : InMail de recruteur arrivée par `messages-noreply@linkedin.com`
+  (« hors recherche »), newsletter prise pour une alerte par le modèle.
+- **(E2 → E3)** Les alertes sont les décisions `job_alert` (adresses `ALERT_SENDERS`, formes d'objet des relais) : E3
+  part de ces messages plutôt que de la requête *alertes* d'E1.
+- **(E2 → F1)** 🏠 Aujourd'hui « réponses à vérifier » : la vue `View.TO_CHECK` de `MessagesService.state`, et les
+  messages en attente (`waiting`, `waiting_reason`).
+- **(E2)** Des expéditeurs mettent des entités HTML dans la partie texte (« re&ccedil;u ») : E1 les garde telles quelles,
+  la classification les lit décodées (`classification.rules.readable`). À reprendre à la collecte si un autre usage du
+  corps en souffre (E3).
+- **(E2 → Nicolas)** L'application de développement tourne encore avec l'image d'E1. Relancée
+  (`docker compose up -d --build --wait app`), elle classe après chaque collecte et appelle Gemini dans les plafonds du
+  compte (20 par heure, 60 par jour).
 

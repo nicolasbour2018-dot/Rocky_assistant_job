@@ -4,7 +4,8 @@ paths: rocky/messages/**
 
 # Module `messages` — règles propres
 
-Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/decisions/E1-collecte.md`.
+Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/decisions/E1-collecte.md`,
+`docs/decisions/E2-classification.md`.
 
 ## Collecte (E1)
 - **Enregistrer avant de décider** : un message entre en base par `SqlStore.add_message` (seul, dans sa transaction,
@@ -14,6 +15,18 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 - Un identifiant Gmail déjà en base n'est **jamais retéléchargé** (`known_ids` avant tout `get`).
 - Une collecte est toujours close (`_close` dans `finally`) ; la fenêtre ne part que d'une collecte **terminée**.
 - Changer une requête (`rules.QUERIES`, `ALERT_DOMAINS`) change `QUERIES_VERSION`.
+
+## Classification (E2)
+- Deux axes : la **catégorie** (phrases, formes d'objet des plateformes, modèle) et la **candidature** (fil, domaine
+  enregistrable, nom entier, intitulé). Toute comparaison se fait en forme pliée (`offres.analysis.text.fold`) et en
+  **mots entiers** ; jamais de sous-chaîne d'un nom dans une adresse.
+- Une décision s'ajoute (`message_decisions`), la dernière est en vigueur ; le schéma refuse une décision sans règle,
+  extrait et preuve. Une décision s'écrit seule dans sa transaction, avec son événement `messages.message_classified`.
+- Le modèle ne voit qu'un message `Pending` (signal de recherche, règles muettes ou contradictoires), sous les plafonds
+  du compte, jamais dans une transaction ; sa citation est vérifiée dans le message ; un échec n'écrit aucune décision.
+- Changer une liste, une phrase, une forme d'objet ou les consignes du modèle change `CLASSIFY_VERSION`, et s'éprouve
+  sur `tests/messages/test_classification_archive.py` (aucun rattachement faux de confiance moyenne ou haute).
+- Les tests n'appellent jamais Gemini : `ScriptedModel` (`tests/messages/fakes.py`).
 
 ## Google
 - Scope unique `gmail.readonly` (`oauth.SCOPE`) : aucun autre, jamais d'écriture dans Gmail (AGENTS §6).
