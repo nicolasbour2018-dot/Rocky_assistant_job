@@ -493,15 +493,70 @@ details.why[open] > span { display: block; flex-basis: 100%; }
 .cv-compare img { width: 100%; height: auto; border: 1px solid var(--border, #d9dde3); }
 .cv-compare figcaption { font-size: 0.85em; color: var(--muted, #5b6270); margin-top: var(--space-1); }
 
-/* Letter (decision D4): each paragraph's choice — the user's own, the adapted one, their own writing. */
+/* Letter (decisions D4, D6 Q3): one text per paragraph, a switch « Ta lettre · Gemini » above it. */
 .letter-rows textarea, .letter textarea, #lettre details textarea, #message textarea { width: 100%; }
-.letter-choices { display: grid; gap: var(--space-2); margin: var(--space-2) 0; }
-.letter-choice { display: grid; align-content: start; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-1) var(--space-2); align-items: start; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-small); }
-.letter-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-.letter-choice > :not(input) { grid-column: 2; }
-.letter-choice .description-text { max-height: none; margin-top: 0; }
+.letter-rows { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+.letter-row { display: grid; gap: var(--space-2); }
+.letter-row-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.letter-row-head .group-title { margin: 0 auto 0 0; }
+.letter-row textarea { line-height: 1.5; }
+.letter-header-fields summary { font-weight: 500; }
+.letter-header-fields[open] summary { margin-bottom: var(--space-2); }
+.adapt-box summary { font-weight: 600; }
 .letter-paragraphs { display: grid; gap: var(--space-2); padding-left: 1.5em; }
 .letter-preview { max-width: 70ch; }
 .letter-preview .description-text { max-height: none; }
 .letter-sheet-preview { margin: var(--space-3) 0; display: grid; gap: var(--space-2); justify-items: start; }
 .letter-sheet-preview img { width: min(100%, 460px); height: auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-small); box-shadow: var(--shadow); }
+
+/* The screen 📝 Candidatures and the page of an application (decision D6) */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.applications { display: grid; gap: var(--space-4); }
+.app-tabs { flex-wrap: wrap; justify-self: start; }
+.tab-count { display: inline-block; min-width: 1.5em; margin-left: var(--space-1); padding: 0 6px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 12px; text-align: center; }
+.tab-count-due { background: var(--bad-soft); color: var(--bad); font-weight: 650; }
+.application-table td { vertical-align: top; }
+.row-title { font-weight: 600; }
+.row-actions { text-align: right; white-space: nowrap; }
+.segmented button { padding: 4px 12px; border: 0; border-radius: 4px; background: none; color: var(--muted); font: inherit; cursor: pointer; }
+.segmented button:hover { color: var(--text); }
+.segmented button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.dossier-header { display: grid; gap: var(--space-2); max-width: 980px; margin-bottom: var(--space-4); }
+.dossier-header h1 { margin: 0; }
+.dossier-header p { margin: 0; }
+.dossier-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.language-switch { margin-left: auto; }
+.dossier-steps { margin-top: var(--space-2); }
+.step-footer { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.step-layout { display: grid; gap: var(--space-5); }
+.step-layout.with-aside { grid-template-columns: minmax(0, 1fr) minmax(0, 460px); align-items: start; }
+.step-aside { position: sticky; top: var(--space-4); }
+.send-parts { display: grid; gap: var(--space-4); margin: 0; padding-left: 1.5em; }
+.send-part { display: grid; gap: var(--space-2); }
+.send-part::marker { color: var(--accent); font-weight: 700; }
+.send-part h3 { margin: 0; font-size: 15px; }
+.send-part.done h3::after { content: " ✓"; color: var(--good); }
+.confirm-box > summary { display: inline-flex; list-style: none; }
+.confirm-box > summary::-webkit-details-marker { display: none; }
+.confirm-box[open] > summary { margin-bottom: var(--space-3); }
+.follow-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.follow-card { display: grid; align-content: start; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.follow-card .group-title { margin: var(--space-2) 0 0; }
+.follow-card .group-title:first-child { margin-top: 0; }
+.next-action { margin: 0; font-size: 15px; }
+.stage-moves { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.note-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.note-list li { padding: var(--space-2) 0; border-top: 1px solid var(--border); }
+.note-list p { margin: var(--space-1) 0; }
+.timeline { display: grid; gap: var(--space-1); margin: var(--space-2) 0; padding-left: 1.2em; }
+.timeline time { margin-right: var(--space-2); }
+@media (max-width: 899px) {
+  .follow-grid, .step-layout.with-aside { grid-template-columns: minmax(0, 1fr); }
+  .step-aside { position: static; }
+  .language-switch { margin-left: 0; }
+  .application-table thead { display: none; }
+  .application-table tr { display: grid; gap: var(--space-2); padding: var(--space-3) 0; }
+  .application-table td { padding: 0; border: 0; }
+  .row-actions { text-align: left; }
+  .step-footer .btn, .follow-card .btn-primary { min-height: 44px; }
+}

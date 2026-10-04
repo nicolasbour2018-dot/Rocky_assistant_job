@@ -24,6 +24,7 @@ from rocky.system.workstation import (
     WorkstationUnavailableError,
 )
 from tests.candidatures.test_letter_web import (
+    LETTER,
     LetterModel,
     base,
     form_of,
@@ -67,7 +68,7 @@ def app(migrated_engine: Engine, tmp_path: Path) -> FastAPI:
 def desk(app: FastAPI, migrated_engine: Engine) -> Desk:
     """The application of ``test_letter_web``, its letter validated, « Prête à envoyer »."""
     desk = letter_desk(app, migrated_engine)
-    desk.client.post(f"{base(desk)}/lettre/valider", data=form_of(page(desk)))
+    desk.client.post(f"{base(desk)}/lettre/valider", data=form_of(page(desk, LETTER)))
     assert desk.client.post(f"{base(desk)}/lettre/prete").status_code == 303
     return desk
 
@@ -84,14 +85,14 @@ def stored(desk: Desk) -> tuple[list[Revision], list[Sending], list[Prefill]]:
 
 
 def generate(desk: Desk) -> None:
-    response = desk.client.post(f"{base(desk)}/documents", data={"langue": "fr"})
-    assert response.headers["location"] == f"{base(desk)}#envoi"
+    response = desk.client.post(f"{base(desk)}/documents")
+    assert response.headers["location"] == f"{base(desk)}?etape=envoi"
 
 
 def change_the_letter(desk: Desk, app: FastAPI) -> None:
     app.state.auth.clock.advance(timedelta(hours=1))
-    fields = form_of(page(desk, "?modifier=1"))
-    fields["mien_1"] = "J'ai conduit des projets pendant huit ans."
+    fields = form_of(page(desk, f"{LETTER}&modifier=1"))
+    fields["texte_1"] = "J'ai conduit des projets pendant huit ans."
     desk.client.post(f"{base(desk)}/lettre/valider", data=fields)
 
 
@@ -159,18 +160,21 @@ def test_the_sending_is_linked_to_the_exact_revision_even_an_older_one(
 
     response = desk.client.post(f"{base(desk)}/envoi", data=fields)
 
-    assert response.headers["location"] == f"{base(desk)}#envoi"
+    assert response.headers["location"] == f"{base(desk)}?etape=suivi"
     _, (sending,), _ = stored(desk)
     assert sending.letter_revision_id == older.id
     assert (sending.sent_on, sending.channel.value) == (TODAY, "linkedin")
-    html = page(desk)
-    assert f"Envoyée le {TODAY.strftime('%d/%m/%Y')} via LinkedIn." in html
-    sent_part = html[html.index("Envoyée le") :]
+    day = TODAY.strftime("%d/%m/%Y")
+    assert f"Envoyée le {day} via LinkedIn" in page(desk)  # the step « Suivi »
+    html = page(desk, "?etape=envoi")
+    assert f"envoyée le {day} via LinkedIn." in html
+    sent_part = html[html.index("envoyée le") :]
     assert f'href="{base(desk)}/documents/{older.id}.pdf"' in sent_part
     assert download(desk, older) != download(desk, newer)
     # The letter step names the version of the revision sent, not the latest one.
-    assert "Envoyée avec la version du" in html
-    assert "la lettre a été modifiée depuis" in html
+    letter = page(desk, LETTER)
+    assert "Envoyée avec la version du" in letter
+    assert "la lettre a été modifiée depuis" in letter
 
 
 def test_an_altered_file_is_refused_with_its_reason(desk: Desk, tmp_path: Path) -> None:
@@ -203,7 +207,7 @@ def test_a_sending_is_refused_with_its_reason_and_nothing_written(desk: Desk) ->
     assert "Choisis le CV envoyé" in refused.text
     assert "ne peut pas être dans le futur" in future.text
     assert stored(desk)[1] == []
-    assert "<strong>Prête à envoyer</strong>" in page(desk)
+    assert '<span class="badge badge-accent">Prête à envoyer</span>' in page(desk)
 
 
 # The form prefilled by the workstation (Q1, Q4, Q6). DORMANT since the acceptance of 04/10: off by default
@@ -221,11 +225,9 @@ def test_the_prefilling_is_dormant_no_button_no_route(desk: Desk, app: FastAPI) 
 
     assert "Préremplir" not in html
     assert "Ouvrir le site de candidature" in html
-    assert "J'ai envoyé ma candidature</a>" in html
+    assert "J'ai envoyé ma candidature</summary>" in html
     assert desk.client.get(f"{base(desk)}/preremplir").status_code == 404
-    response = desk.client.post(
-        f"{base(desk)}/preremplir", data={"langue": "fr", "consentement": "1"}
-    )
+    response = desk.client.post(f"{base(desk)}/preremplir", data={"consentement": "1"})
     assert response.status_code == 404
     assert app.state.workstation.jobs == []
 
@@ -244,18 +246,16 @@ def test_the_workstation_gets_the_exact_revisions_after_confirmation(
     assert "CV_Camille_Martin_FR.pdf" in panel
     shown = panel_ids(panel)
 
-    without = desk.client.post(
-        f"{base(desk)}/preremplir", data={"langue": "fr", **shown}
-    )
+    without = desk.client.post(f"{base(desk)}/preremplir", data=shown)
     assert "Coche la confirmation" in without.text
     assert app.state.workstation.jobs == []
 
     response = desk.client.post(
         f"{base(desk)}/preremplir",
-        data={"langue": "fr", "consentement": "1", **shown},
+        data={"consentement": "1", **shown},
     )
 
-    assert response.headers["location"] == f"{base(desk)}#envoi"
+    assert response.headers["location"] == f"{base(desk)}?etape=envoi"
     (job,) = app.state.workstation.jobs
     revisions, _, (prefill,) = stored(desk)
     assert job.target_url == "https://apec.example/offres/d1"
@@ -271,7 +271,7 @@ def test_the_workstation_gets_the_exact_revisions_after_confirmation(
         r.id for r in revisions
     )
     html = page(desk)
-    assert "<strong>Préremplie</strong>" in html
+    assert '<span class="badge badge-accent">Préremplie</span>' in html
     assert "À faire toi-même : Téléphone : champ introuvable." in html
 
 
@@ -284,12 +284,12 @@ def test_a_workstation_that_does_not_take_the_form_writes_nothing(
 
     response = desk.client.post(
         f"{base(desk)}/preremplir",
-        data={"langue": "fr", "consentement": "1", **shown},
+        data={"consentement": "1", **shown},
     )
 
     assert "uv run rocky-poste" in response.text
     assert stored(desk)[2] == []
-    assert "<strong>Prête à envoyer</strong>" in page(desk)
+    assert '<span class="badge badge-accent">Prête à envoyer</span>' in page(desk)
 
 
 def test_revisions_generated_after_the_confirmation_are_not_handed_over(
@@ -301,7 +301,7 @@ def test_revisions_generated_after_the_confirmation_are_not_handed_over(
 
     response = desk.client.post(
         f"{base(desk)}/preremplir",
-        data={"langue": "fr", "consentement": "1", **shown},
+        data={"consentement": "1", **shown},
     )
 
     assert "ont changé depuis l&#39;affichage" in response.text

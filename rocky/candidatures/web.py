@@ -21,19 +21,30 @@ from sqlalchemy import Connection
 
 from rocky.candidatures import dossier_web
 from rocky.candidatures.model import (
+    BEFORE_SENDING,
     DEFER_DAYS,
-    ISSUES,
+    FOLLOW_UP_STAGES,
     STAGE_LABELS,
     InvalidChangeError,
     NextAction,
     Stage,
 )
-from rocky.candidatures.rules import dossier, is_overdue, make_next_action, proposal
+from rocky.candidatures.rules import (
+    TAB_LABELS,
+    Step,
+    Tab,
+    dossier,
+    is_overdue,
+    make_next_action,
+    proposal,
+    tabs_of,
+)
 from rocky.candidatures.sql import SqlApplicationStore
 from rocky.candidatures.usecases import (
     cancel_last_change,
     change_stage,
     defer_next_action,
+    mark_action_done,
     needs_reasons,
     prepare_application,
     set_next_action,
@@ -85,40 +96,47 @@ def install(app: FastAPI) -> None:
 
 @dataclass(frozen=True)
 class Row:
-    """One open application of the list."""
+    """One open application of the screen."""
 
     id: int
     offer: OfferHeading
     stage: Stage
     next_action: NextAction | None
     overdue: bool
+    deadline: (
+        date | None
+    )  # the offer's, shown while the application is not sent (D6, Q8)
+    tabs: frozenset[Tab]
+
+    @property
+    def done_offered(self) -> bool:
+        """« Fait » is offered (D6, Q5): an action in force, after the sending."""
+        return self.next_action is not None and self.stage in FOLLOW_UP_STAGES
+
+    @property
+    def shows_deadline(self) -> bool:
+        return self.deadline is not None and self.stage in BEFORE_SENDING
 
 
 def rows_of(connection: Connection, account_id: int, today: date) -> list[Row]:
-    """The open applications of the account: the ones to act on first, the outcomes last."""
+    """The open applications of the account (a cancelled creation is not one)."""
     found = SqlApplicationStore(connection).applications_of(account_id)
-    headings = offres_web.offer_headings(
-        connection, account_id, [application.offer_id for application, _ in found]
-    )
-    rows = [
+    offer_ids = [application.offer_id for application, _ in found]
+    headings = offres_web.offer_headings(connection, account_id, offer_ids)
+    deadlines = offres_web.offer_deadlines(connection, account_id, offer_ids, today)
+    return [
         Row(
             application.id,
             headings[application.offer_id],
             state.stage,
             state.next_action,
             is_overdue(state.next_action, today),
+            deadlines.get(application.offer_id),
+            tabs_of(state.stage, state.next_action, today),
         )
         for application, changes in found
         if (state := dossier(changes)).stage is not None
     ]
-    return sorted(
-        rows,
-        key=lambda row: (
-            row.stage in ISSUES,
-            row.next_action.due if row.next_action else date.max,
-            row.id,
-        ),
-    )
 
 
 def to_prepare_of(
@@ -135,22 +153,61 @@ def to_prepare_of(
     return [headings[offer_id] for offer_id in ids if offer_id in headings]
 
 
+@dataclass(frozen=True)
+class Screen:
+    """The screen 📝 Candidatures on one tab (decision D6, Q1)."""
+
+    tab: Tab
+    counts: Mapping[Tab, int]
+    rows: list[Row]
+    to_prepare: list[OfferHeading]
+    upcoming: Row | None  # the next action to come, when nothing is to do today
+
+
+def _due(row: Row) -> date:
+    return row.next_action.due if row.next_action else date.max
+
+
+def screen(rows: list[Row], to_prepare: list[OfferHeading], tab: Tab) -> Screen:
+    """The rows of ``tab``: the most urgent first; the closed ones, the latest first."""
+    counts: dict[Tab, int] = {
+        found: sum(1 for row in rows if found in row.tabs) for found in Tab
+    }
+    counts[Tab.TO_PREPARE] = len(to_prepare)
+    shown = [row for row in rows if tab in row.tabs]
+    if tab is Tab.CLOSED:
+        shown.sort(key=lambda row: -row.id)
+    else:
+        shown.sort(key=lambda row: (_due(row), row.id))
+    later = sorted(
+        (row for row in rows if row.next_action and Tab.TO_DO not in row.tabs),
+        key=lambda row: (_due(row), row.id),
+    )
+    return Screen(tab, counts, shown, to_prepare, later[0] if later else None)
+
+
+def _tab(vue: str | None) -> Tab:
+    return Tab(vue) if vue in set(Tab) else Tab.TO_DO
+
+
 def _list(
     request: Request,
     account: Account,
     *,
+    tab: Tab = Tab.TO_DO,
     error: str | None = None,
     editing: int | None = None,
     stage_form: Mapping[str, object] | None = None,
 ) -> HTMLResponse:
-    """The list: a whole page, or its section for HTMX."""
+    """The screen: a whole page, or its section for HTMX."""
     today = today_of(request)
     with engine_of(request).begin() as connection:
         rows = rows_of(connection, account.id, today)
         to_prepare = to_prepare_of(connection, account.id, rows)
     context = {
-        "rows": rows,
-        "to_prepare": to_prepare,
+        "screen": screen(rows, to_prepare, tab),
+        "Tab": Tab,
+        "tab_labels": TAB_LABELS,
         "today": today,
         "stages": list(Stage),
         "defer_days": DEFER_DAYS,
@@ -165,25 +222,54 @@ def _list(
     )
 
 
-# ``retour`` of a gesture made on the application's page: a fixed value, never a URL (no open redirection).
+def _list_url(tab: Tab) -> str:
+    return "/candidatures" if tab is Tab.TO_DO else f"/candidatures?vue={tab.value}"
+
+
+# ``retour`` of a gesture made on the application's page: a step of its page, a fixed value and never a URL (no open
+# redirection). « dossier »: the step it opens on.
 BACK_TO_DOSSIER = "dossier"
 
 
+def _step(retour: str) -> Step | None:
+    return Step(retour) if retour in set(Step) else None
+
+
 def _after_change(
-    request: Request, account: Account, application_id: int, retour: str = ""
+    request: Request,
+    account: Account,
+    application_id: int,
+    retour: str = "",
+    vue: str = "",
 ) -> Response:
-    if retour == BACK_TO_DOSSIER:
+    step = _step(retour)
+    if step is not None or retour == BACK_TO_DOSSIER:
         return RedirectResponse(
-            f"/candidatures/{application_id}#envoi", status_code=303
+            dossier_web.dossier_url(application_id, step), status_code=303
         )
     if not wants_fragment(request):
-        return RedirectResponse("/candidatures", status_code=303)
-    return _list(request, account)
+        return RedirectResponse(_list_url(_tab(vue)), status_code=303)
+    return _list(request, account, tab=_tab(vue))
 
 
 @router.get("", response_class=HTMLResponse)
-def applications_page(request: Request, account: CurrentAccount) -> HTMLResponse:
-    return _list(request, account)
+def applications_page(
+    request: Request, account: CurrentAccount, vue: str = ""
+) -> HTMLResponse:
+    return _list(request, account, tab=_tab(vue))
+
+
+def _deadline(request: Request, account: Account, application_id: int) -> date | None:
+    """The deadline of the application's offer, or None."""
+    with engine_of(request).begin() as connection:
+        application = SqlApplicationStore(connection).locked_application(
+            account.id, application_id
+        )
+        if application is None:
+            return None
+        return offres_web.offer_deadlines(
+            connection, account.id, [application.offer_id], today_of(request)
+        ).get(application.offer_id)
 
 
 @router.post("/{application_id}/etape", response_class=HTMLResponse)
@@ -196,23 +282,27 @@ def move(
     action: Annotated[str, Form()] = "",
     echeance: Annotated[date | None, Form()] = None,
     retour: Annotated[str, Form()] = "",
+    vue: Annotated[str, Form()] = "",
 ) -> Response:
     """A stage change in one gesture, with the proposed next action; the user enters it (``saisie``) when the
-    proposal has no date (Q3, « Entretien »). From the application's page (« CV prêt », « J'ai envoyé », D3 Q25), back
+    proposal has no date (Q3, « Entretien »). From the application's page (« CV prêt », the step « Suivi »), back
     to it."""
     if etape not in Stage or not owns(request, account, application_id):
         return Response(status_code=404)
     stage = Stage(etape)
     if stage is Stage.SENT:
         # No sending without its date, channel and documents (decision D5, Q5): the confirmation form.
-        target = f"/candidatures/{application_id}/envoi#envoi"
+        target = dossier_web.CONFIRM_URL.format(application_id)
         if wants_fragment(request):
             return Response(status_code=200, headers={"HX-Redirect": target})
         return RedirectResponse(target, status_code=303)
-    proposed = proposal(stage, today_of(request))
+    tab = _tab(vue)
+    proposed = proposal(
+        stage, today_of(request), _deadline(request, account, application_id)
+    )
     if not saisie and proposed is not None and proposed[1] is None:
         form = {"id": application_id, "stage": stage, "label": proposed[0]}
-        return _list(request, account, stage_form=form)
+        return _list(request, account, tab=tab, stage_form=form)
     try:
         chosen = (
             make_next_action(action, echeance)
@@ -222,8 +312,12 @@ def move(
             else make_next_action(*proposed)
         )
     except InvalidChangeError as error:
+        if _step(retour) is not None:
+            return dossier_web.follow_up_refused(
+                request, account, application_id, str(error)
+            )
         form = {"id": application_id, "stage": stage, "label": action}
-        return _list(request, account, error=str(error), stage_form=form)
+        return _list(request, account, tab=tab, error=str(error), stage_form=form)
     with engine_of(request).begin() as connection:
         change_stage(
             SqlApplicationStore(connection),
@@ -233,7 +327,7 @@ def move(
             next_action=chosen,
             now=now_of(request),
         )
-    return _after_change(request, account, application_id, retour)
+    return _after_change(request, account, application_id, retour, vue)
 
 
 @router.post("/{application_id}/action", response_class=HTMLResponse)
@@ -243,6 +337,8 @@ def next_action(
     application_id: int,
     action: Annotated[str, Form()] = "",
     echeance: Annotated[date | None, Form()] = None,
+    retour: Annotated[str, Form()] = "",
+    vue: Annotated[str, Form()] = "",
 ) -> Response:
     """Set the next action; both fields empty clear it."""
     if not owns(request, account, application_id):
@@ -250,7 +346,13 @@ def next_action(
     try:
         chosen = make_next_action(action, echeance)
     except InvalidChangeError as error:
-        return _list(request, account, error=str(error), editing=application_id)
+        if _step(retour) is not None:
+            return dossier_web.follow_up_refused(
+                request, account, application_id, str(error), editing=True
+            )
+        return _list(
+            request, account, tab=_tab(vue), error=str(error), editing=application_id
+        )
     with engine_of(request).begin() as connection:
         set_next_action(
             SqlApplicationStore(connection),
@@ -259,16 +361,16 @@ def next_action(
             next_action=chosen,
             now=now_of(request),
         )
-    return _after_change(request, account, application_id)
+    return _after_change(request, account, application_id, retour, vue)
 
 
 @router.get("/{application_id}/action", response_class=HTMLResponse)
 def edit_next_action(
-    request: Request, account: CurrentAccount, application_id: int
+    request: Request, account: CurrentAccount, application_id: int, vue: str = ""
 ) -> Response:
     if not owns(request, account, application_id):
         return Response(status_code=404)
-    return _list(request, account, editing=application_id)
+    return _list(request, account, tab=_tab(vue), editing=application_id)
 
 
 @router.post("/{application_id}/differer", response_class=HTMLResponse)
@@ -277,6 +379,8 @@ def defer(
     account: CurrentAccount,
     application_id: int,
     jours: Annotated[int, Form()],
+    retour: Annotated[str, Form()] = "",
+    vue: Annotated[str, Form()] = "",
 ) -> Response:
     if not owns(request, account, application_id):
         return Response(status_code=404)
@@ -291,8 +395,47 @@ def defer(
                 today=today_of(request),
             )
     except InvalidChangeError as error:
-        return _list(request, account, error=str(error))
-    return _after_change(request, account, application_id)
+        return _refused(request, account, application_id, retour, vue, str(error))
+    return _after_change(request, account, application_id, retour, vue)
+
+
+@router.post("/{application_id}/fait", response_class=HTMLResponse)
+def done(
+    request: Request,
+    account: CurrentAccount,
+    application_id: int,
+    retour: Annotated[str, Form()] = "",
+    vue: Annotated[str, Form()] = "",
+) -> Response:
+    """« Fait » (decision D6, Q5): the action is done, the next one proposed for the stage follows it."""
+    try:
+        with engine_of(request).begin() as connection:
+            mark_action_done(
+                SqlApplicationStore(connection),
+                account_id=account.id,
+                application_id=application_id,
+                now=now_of(request),
+                today=today_of(request),
+            )
+    except LookupError:
+        return Response(status_code=404)
+    except InvalidChangeError as error:
+        return _refused(request, account, application_id, retour, vue, str(error))
+    return _after_change(request, account, application_id, retour, vue)
+
+
+def _refused(
+    request: Request,
+    account: Account,
+    application_id: int,
+    retour: str,
+    vue: str,
+    error: str,
+) -> Response:
+    """A gesture refused: its reason, where it was made."""
+    if _step(retour) is not None:
+        return dossier_web.follow_up_refused(request, account, application_id, error)
+    return _list(request, account, tab=_tab(vue), error=error)
 
 
 @router.post("/{application_id}/annuler", response_class=HTMLResponse)
@@ -301,6 +444,7 @@ def undo(
     account: CurrentAccount,
     application_id: int,
     retour: Annotated[str, Form()] = "",
+    vue: Annotated[str, Form()] = "",
 ) -> Response:
     """« Annuler » the latest change of the application (Q6); its creation takes the decision written with it (Q9)."""
     try:
@@ -314,7 +458,7 @@ def undo(
             )
     except LookupError:
         return Response(status_code=404)
-    response = _after_change(request, account, application_id, retour)
+    response = _after_change(request, account, application_id, retour, vue)
     response.headers["HX-Trigger"] = OFFERS_CHANGED
     return response
 
@@ -406,6 +550,9 @@ def prepare(
         if not offres_web.offer_headings(connection, account.id, [offer_id]):
             return Response(status_code=404)
         in_force = offres_web.decision_in_force(connection, account.id, offer_id)
+        deadline = offres_web.offer_deadlines(
+            connection, account.id, [offer_id], today_of(request)
+        ).get(offer_id)
     interest = None
     if needs_reasons(in_force) and in_force is not DecisionValue.REJECTED:
         try:
@@ -429,6 +576,7 @@ def prepare(
                 interest=interest,
                 now=now_of(request),
                 today=today_of(request),
+                deadline=deadline,
             )
     except InvalidChangeError as error:
         if not wants_fragment(request):

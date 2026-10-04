@@ -100,6 +100,9 @@ def letter_desk(app: FastAPI, migrated_engine: Engine) -> Desk:
     return desk
 
 
+LETTER = "?etape=lettre"
+
+
 def base(desk: Desk) -> str:
     return f"/candidatures/{desk.application_id()}"
 
@@ -113,7 +116,7 @@ def page(desk: Desk, query: str = "") -> str:
 def adapted(desk: Desk) -> str:
     response = desk.client.post(
         f"{base(desk)}/lettre/adapter",
-        data={"langue": "fr", "consentement": "1"},
+        data={"consentement": "1"},
         headers=HTMX,
     )
     assert response.status_code == 200
@@ -121,18 +124,14 @@ def adapted(desk: Desk) -> str:
 
 
 def form_of(html: str) -> dict[str, str]:
-    """The fields of the letter form as the page fills them (radios: the checked one)."""
-    form = html[
-        html.index('action="/candidatures/') : html.index("Valider cette lettre")
-    ]
+    """The fields of the letter form as the page fills them: one text per paragraph (decision D6, Q3)."""
+    start = html.index('class="stack letter-editor"')
+    form = html[start : html.index("</form>", start)]
     fields = dict(
         re.findall(r'<input type="hidden" name="(\w+)" value="([^"]*)"', form)
     )
     fields.update(re.findall(r'name="(objet)" value="([^"]*)"', form))
     fields.update(re.findall(r'<textarea name="(\w+)"[^>]*>([^<]*)</textarea>', form))
-    fields.update(
-        re.findall(r'<input type="radio" name="(\w+)" value="(\w+)" checked>', form)
-    )
     return {key: value.replace("&#39;", "'") for key, value in fields.items()}
 
 
@@ -140,7 +139,6 @@ def sent_form(html: str) -> dict[str, str]:
     """The fields of the form « J'ai envoyé ma candidature » as the page fills them (decision D5)."""
     form = html[html.index('id="confirmer"') : html.index("Confirmer l'envoi</button>")]
     fields = {
-        "langue": re.findall(r'name="langue" value="(\w+)"', form)[0],
         "date": re.findall(r'name="date" value="([^"]+)"', form)[0],
         "canal": re.findall(r'<option value="(\w+)" selected>', form)[0],
     }
@@ -156,7 +154,7 @@ def sent_form(html: str) -> dict[str, str]:
 
 
 def test_the_letter_starts_from_the_generic_one_for_this_offer(desk: Desk) -> None:
-    html = page(desk)
+    html = page(desk, LETTER)
 
     assert "2. Lettre" in html
     assert (
@@ -164,16 +162,15 @@ def test_the_letter_starts_from_the_generic_one_for_this_offer(desk: Desk) -> No
     )  # « (H/F) » gone (Q18)
     assert 'value="Candidature au poste de Data analyst"' in html
     assert "Adapter à l'annonce" in html
-    english = page(desk, "?lettre=en")
+    desk.client.post(f"{base(desk)}/langue", data={"langue": "en"})
+    english = page(desk, LETTER)
     assert "Prépare d&#39;abord ta lettre anglaise dans Profil &amp; kit." in english
 
 
 def test_adapting_asks_consent_and_sends_neither_name_nor_contact(
     desk: Desk, app: FastAPI
 ) -> None:
-    refused = desk.client.post(
-        f"{base(desk)}/lettre/adapter", data={"langue": "fr"}, headers=HTMX
-    ).text
+    refused = desk.client.post(f"{base(desk)}/lettre/adapter", headers=HTMX).text
     assert "Coche l&#39;accord d&#39;envoi" in refused
     assert app.state.llm_model.prompts == []
 
@@ -192,18 +189,18 @@ def test_the_letter_validated_paragraph_by_paragraph_is_kept_with_its_origins(
     desk: Desk, migrated_engine: Engine
 ) -> None:
     fields = form_of(adapted(desk))
-    # Ta lettre by default (Q14), the « pourquoi vous » written for the offer, the opening adapted.
-    assert (fields["choix_0"], fields["choix_1"], fields["choix_2"]) == (
-        "original",
-        "original",
-        "adapte",
-    )
-    fields["choix_0"] = "adapte"
+    # One text per paragraph (D6, Q3): the user's own by default (D4, Q14), the « pourquoi vous » written for the
+    # offer, Gemini's opening beside it.
+    assert fields["texte_0"] == "Je souhaite rejoindre Exemple comme Data analyst."
+    assert fields["texte_1"] == "J'ai piloté des projets pendant huit ans."
+    assert fields["texte_2"] == WHY_YOU
+    assert fields["adapte_0"] == ADAPTED_OPENING
+    fields["texte_0"] = fields["adapte_0"]
 
     response = desk.client.post(f"{base(desk)}/lettre/valider", data=fields)
 
-    assert response.headers["location"] == f"{base(desk)}#lettre"
-    html = page(desk)
+    assert response.headers["location"] == f"{base(desk)}{LETTER}"
+    html = page(desk, LETTER)
     assert "2. Lettre ✓" in html
     assert "Lettre validée le" in html
     assert (
@@ -221,34 +218,66 @@ def test_the_letter_validated_paragraph_by_paragraph_is_kept_with_its_origins(
     assert payload["origins"] == ["adapted", "generic", "adapted", "generic"]
 
 
-def test_writing_in_my_version_chooses_it(desk: Desk) -> None:
-    fields = form_of(page(desk))
-    fields["mien_1"] = "J'ai mené des projets de bout en bout pendant huit ans."
+def switch(desk: Desk, fields: dict[str, str], value: str) -> dict[str, str]:
+    html = desk.client.post(
+        f"{base(desk)}/lettre/basculer",
+        data={**fields, "basculer": value},
+        headers=HTMX,
+    ).text
+    assert 'id="lettre"' in html
+    return form_of(html)
+
+
+def test_the_switch_puts_a_version_in_the_text_and_keeps_what_was_written(
+    desk: Desk, migrated_engine: Engine
+) -> None:
+    fields = form_of(adapted(desk))
+
+    gemini = switch(desk, fields, "0:adapte")
+    assert gemini["texte_0"] == ADAPTED_OPENING
+    assert gemini["texte_1"] == fields["texte_1"]  # the other paragraphs as they were
+
+    gemini["texte_0"] = "Je veux rejoindre Exemple pour ses données de vente."
+    mine = switch(desk, gemini, "0:original")
+    assert mine["texte_0"] == "Je souhaite rejoindre Exemple comme Data analyst."
+    assert mine["mien_0"] == "Je veux rejoindre Exemple pour ses données de vente."
+    assert switch(desk, mine, "0:mien")["texte_0"] == mine["mien_0"]
+    with migrated_engine.connect() as connection:
+        validated = connection.execute(
+            select(events.c.id).where(
+                events.c.type == "candidatures.letter_validated",
+                events.c.subject_id == str(desk.application_id()),
+            )
+        ).all()
+    assert validated == []  # nothing is kept before « Valider »
+
+
+def test_writing_over_a_paragraph_makes_it_mine(desk: Desk) -> None:
+    fields = form_of(page(desk, LETTER))
+    fields["texte_1"] = "J'ai mené des projets de bout en bout pendant huit ans."
 
     desk.client.post(f"{base(desk)}/lettre/valider", data=fields)
 
-    assert "ta version" in page(desk)
+    assert "ta version" in page(desk, LETTER)
 
 
 def test_a_ready_letter_leads_to_sending_with_its_pdf(desk: Desk) -> None:
-    desk.client.post(f"{base(desk)}/lettre/valider", data=form_of(page(desk)))
+    desk.client.post(f"{base(desk)}/lettre/valider", data=form_of(page(desk, LETTER)))
 
     ready = desk.client.post(f"{base(desk)}/lettre/prete")
 
-    assert ready.headers["location"] == f"{base(desk)}#envoi"
+    assert ready.headers["location"] == f"{base(desk)}?etape=envoi"
     html = page(desk)
-    assert "<strong>Prête à envoyer</strong>" in html
-    # A draft in the step « Lettre »; the PDFs sent are generated in the step « Envoi » (decision D5, Q2).
-    assert f'href="{base(desk)}/lettre.pdf?langue=fr&amp;apercu=1"' in html
+    assert '<span class="badge badge-accent">Prête à envoyer</span>' in html
     assert "Générer les PDF à envoyer" in html
-    pdf = desk.client.get(f"{base(desk)}/lettre.pdf?langue=fr")
+    # A draft in the step « Lettre »; the PDFs sent are generated in the step « Envoi » (decision D5, Q2).
+    assert f'href="{base(desk)}/lettre.pdf?apercu=1"' in page(desk, LETTER)
+    pdf = desk.client.get(f"{base(desk)}/lettre.pdf")
     assert pdf.headers["content-type"] == "application/pdf"
     assert (
         'filename="Lettre_Camille_Martin_FR.pdf"' in pdf.headers["content-disposition"]
     )
-    checked = desk.client.post(
-        f"{base(desk)}/lettre/verifier", data={"langue": "fr"}, headers=HTMX
-    ).text
+    checked = desk.client.post(f"{base(desk)}/lettre/verifier", headers=HTMX).text
     assert "attendus de cette lettre" in checked
 
 
@@ -262,16 +291,14 @@ def test_a_letter_ready_needs_a_letter(desk: Desk) -> None:
 def test_the_message_is_proposed_on_gesture_then_validated(
     desk: Desk, app: FastAPI
 ) -> None:
-    refused = desk.client.post(
-        f"{base(desk)}/message/proposer", data={"langue": "fr"}, headers=HTMX
-    ).text
+    refused = desk.client.post(f"{base(desk)}/message/proposer", headers=HTMX).text
     assert (
         "Coche l&#39;accord d&#39;envoi pour que Rocky propose un message." in refused
     )
 
     proposed = desk.client.post(
         f"{base(desk)}/message/proposer",
-        data={"langue": "fr", "consentement": "1"},
+        data={"consentement": "1"},
         headers=HTMX,
     ).text
     assert 'id="envoi"' in proposed
@@ -280,30 +307,30 @@ def test_the_message_is_proposed_on_gesture_then_validated(
 
     response = desk.client.post(
         f"{base(desk)}/message/valider",
-        data={"langue": "fr", "texte": MESSAGE, "propose": MESSAGE},
+        data={"texte": MESSAGE, "propose": MESSAGE},
     )
 
-    assert response.headers["location"] == f"{base(desk)}#envoi"
-    assert "Validé le" in page(desk)
+    assert response.headers["location"] == f"{base(desk)}?etape=envoi"
+    assert "· validé le" in page(desk, "?etape=envoi")
 
 
 def test_a_letter_changed_after_sending_says_which_one_was_sent(
     desk: Desk, app: FastAPI
 ) -> None:
-    desk.client.post(f"{base(desk)}/lettre/valider", data=form_of(page(desk)))
+    desk.client.post(f"{base(desk)}/lettre/valider", data=form_of(page(desk, LETTER)))
     desk.client.post(f"{base(desk)}/lettre/prete")
     # Sent with the revisions generated (decision D5): the letter sent is the one of its revision.
-    desk.client.post(f"{base(desk)}/documents", data={"langue": "fr"})
+    desk.client.post(f"{base(desk)}/documents")
     sent_with = sent_form(page(desk, "/envoi"))
     assert sent_with["lettre"] != "aucun"
     desk.client.post(f"{base(desk)}/envoi", data=sent_with)
     app.state.auth.clock.advance(timedelta(hours=1))
 
-    fields = form_of(page(desk, "?modifier=1"))
-    fields["mien_1"] = "J'ai conduit des projets pendant huit ans."
+    fields = form_of(page(desk, f"{LETTER}&modifier=1"))
+    fields["texte_1"] = "J'ai conduit des projets pendant huit ans."
     desk.client.post(f"{base(desk)}/lettre/valider", data=fields)
 
-    html = page(desk)
+    html = page(desk, LETTER)
     assert "Envoyée avec la version du" in html
     assert "la lettre a été modifiée depuis" in html
 
@@ -322,7 +349,7 @@ def test_the_preview_shows_the_letter_as_composed_without_keeping_it(
     desk: Desk, migrated_engine: Engine
 ) -> None:
     fields = form_of(adapted(desk))
-    fields["choix_0"] = "adapte"
+    fields["texte_0"] = ADAPTED_OPENING
 
     html = desk.client.post(
         f"{base(desk)}/lettre/apercu", data=fields, headers=HTMX
@@ -331,7 +358,7 @@ def test_the_preview_shows_the_letter_as_composed_without_keeping_it(
     assert '<img src="data:image/png;base64,' in html
     assert "elle tient sur une page" in html
     # The form comes back as it was left: Gemini's opening chosen, its proposals still there.
-    assert form_of(html)["choix_0"] == "adapte"
+    assert form_of(html)["texte_0"] == ADAPTED_OPENING
     assert form_of(html)["adapte_0"] == ADAPTED_OPENING
     with migrated_engine.connect() as connection:
         validated = connection.execute(
@@ -344,8 +371,8 @@ def test_the_preview_shows_the_letter_as_composed_without_keeping_it(
 
 
 def test_a_letter_too_long_is_refused_with_its_preview(desk: Desk) -> None:
-    fields = form_of(page(desk))
-    fields["mien_1"] = " ".join(["J'ai piloté des projets pendant huit ans."] * 140)
+    fields = form_of(page(desk, LETTER))
+    fields["texte_1"] = " ".join(["J'ai piloté des projets pendant huit ans."] * 140)
     desk.client.post(f"{base(desk)}/lettre/valider", data=fields)
 
     refused = desk.client.get(f"{base(desk)}/lettre.pdf")

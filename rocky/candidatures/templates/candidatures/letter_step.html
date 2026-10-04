@@ -1,28 +1,14 @@
-{# Step « Lettre » of an application (decision D4): the generic letter, the « pourquoi vous » and the adapted versions
-   proposed on the user's gesture, the choice paragraph by paragraph, the letter in force. #}
+{# Step « Lettre » of an application (decision D4; D6, Q3): one text per paragraph, kept from the generic letter or
+   from Gemini's version by a switch, and written over freely; the page as it would be sent beside it. #}
 {% set base = "/candidatures/" ~ dossier.application_id %}
 {% set swap = 'hx-target="#lettre" hx-swap="outerHTML show:#lettre:top"' %}
+{% set swap_row = 'hx-target="#lettre" hx-swap="outerHTML"' %}
 <section id="lettre" class="dossier-step" aria-label="Lettre de la candidature">
-  <h2>2. Lettre</h2>
-  <p class="cv-downloads" aria-label="Langue de la lettre">
-    {% for code, label in (("fr", "Lettre française"), ("en", "Lettre anglaise")) %}
-    <a class="btn {{ 'btn-primary' if letter.language == code else 'btn-ghost' }}" href="{{ base }}{{ '?lettre=en' if code == 'en' else '' }}#lettre"{% if letter.language == code %} aria-current="true"{% endif %}>{{ label }}</a>
-    {% endfor %}
-  </p>
+  <h2 class="visually-hidden">Lettre</h2>
   {% if letter_error %}<p class="alert alert-error" role="alert">{{ letter_error }}</p>{% endif %}
   {% if letter_refusal %}
   <div class="alert alert-error" role="alert"><p>Cette lettre ne peut pas être produite :</p>
     <ul>{% for reason in letter_refusal %}<li>{{ reason }}</li>{% endfor %}</ul></div>
-  {% endif %}
-  {% if letter_preview %}
-  {# The page as it would be sent (decision D4, recette): what spills over is named under it. #}
-  <figure class="letter-sheet-preview">
-    <img src="data:image/png;base64,{{ letter_preview.png_base64 }}" alt="Aperçu de la lettre, page 1">
-    <figcaption>
-      {% if letter_preview.problems %}{% for problem in letter_preview.problems %}<span class="badge badge-warn">{{ problem }}</span>{% endfor %}
-      {% else %}<span class="muted small">Aperçu de la lettre telle qu'elle sera téléchargée : elle tient sur une page.</span>{% endif %}
-    </figcaption>
-  </figure>
   {% endif %}
   {% if letter.state == LetterState.SKIPPED %}<p class="alert alert-info">Tu as choisi de ne pas joindre de lettre à cette candidature. Valider une lettre revient sur ce choix.</p>{% endif %}
 
@@ -30,63 +16,67 @@
   <p>{{ letter.refusal }} <a class="btn" href="/profil/lettre">Ma lettre de motivation</a></p>
   {% else %}
   {% if letter.english_outdated %}<p class="alert alert-info">Ta lettre générique anglaise vient d'une ancienne version française. <a href="/profil/lettre">La refaire</a></p>{% endif %}
-  {% if letter.generic_changed %}<p class="alert alert-info">Ta lettre générique a changé depuis cette lettre : « Modifier » repart de ta nouvelle version (colonne « Ta lettre »).</p>{% endif %}
+  {% if letter.generic_changed %}<p class="alert alert-info">Ta lettre générique a changé depuis cette lettre : le bouton « Ta lettre » de chaque paragraphe reprend ta nouvelle version.</p>{% endif %}
   {% if letter.sent_with %}
   <p class="muted small">Envoyée avec la version du {{ letter.sent_with.created_at | paris_time }}{% if letter.version and letter.version.id != letter.sent_with.id %} ; la lettre a été modifiée depuis{% endif %}.</p>
   {% endif %}
 
+  <div class="step-layout{{ ' with-aside' if letter_preview }}">
+  <div class="step-main">
   {% if letter.editing %}
   {% if not letter.adapted %}
-  <form method="post" action="{{ base }}/lettre/adapter" hx-post="{{ base }}/lettre/adapter" {{ swap | safe }} class="stack note">
-    <input type="hidden" name="langue" value="{{ letter.language }}">
-    <p class="small">Gemini peut écrire le paragraphe « Pourquoi vous » de cette offre et proposer, à côté de chaque paragraphe de ta lettre, sa propre version écrite pour l'annonce, sans rien inventer : tu gardes, paragraphe par paragraphe, celle que tu préfères. Il envoie à Gemini l'annonce, tes motifs d'intérêt, tes projets retenus pour ce CV et le texte de ta lettre : jamais ton nom ni tes coordonnées.</p>
-    <label><input type="checkbox" name="consentement" value="1"> J'accepte cet envoi à Gemini.</label>
-    <button type="submit" class="btn btn-primary">Adapter à l'annonce</button>
-  </form>
+  <details class="note adapt-box"{% if letter_error and not letter_preview %} open{% endif %}>
+    <summary>✨ Adapter à l'annonce avec Gemini</summary>
+    <form method="post" action="{{ base }}/lettre/adapter" hx-post="{{ base }}/lettre/adapter" {{ swap | safe }} class="stack">
+      <p class="small">Gemini écrit le paragraphe « Pourquoi vous » et sa propre version de chaque paragraphe, pour cette annonce, sans rien inventer ; tu gardes, paragraphe par paragraphe, celle que tu préfères. Il reçoit l'annonce, tes motifs d'intérêt, les projets retenus pour ce CV et le texte de ta lettre : jamais ton nom ni tes coordonnées.</p>
+      <label class="check"><input type="checkbox" name="consentement" value="1"> J'accepte cet envoi à Gemini.</label>
+      <p><button type="submit" class="btn btn-primary">Adapter à l'annonce</button></p>
+    </form>
+  </details>
+  {% else %}
+  <p class="muted small">Gemini a proposé sa version de chaque paragraphe : « Gemini » la met dans le texte, « Ta lettre » remet la tienne ; tu peux ensuite écrire par-dessus, « Ta version » garde ce que tu as écrit.</p>
   {% endif %}
-  {# A plain form (never boosted): the page comes back at its letter, its journey up to date. #}
-  <form method="post" action="{{ base }}/lettre/valider" hx-boost="false" class="stack">
-    <input type="hidden" name="langue" value="{{ letter.language }}">
+  {# A plain form (never boosted): the page comes back on the letter, its journey up to date. #}
+  <form method="post" action="{{ base }}/lettre/valider" hx-boost="false" class="stack letter-editor">
     <input type="hidden" name="empreinte" value="{{ letter.generic.sha256 }}">
-    <div class="form-grid">
-      <label>Objet <input type="text" name="objet" value="{{ letter.header.subject }}"></label>
-      <label>Destinataire <textarea name="destinataire" rows="2">{{ letter.header.recipient }}</textarea></label>
-    </div>
-    <ol class="item-list letter-rows">
+    {# The default button (Entrée in a field) validates: it comes before the switches. #}
+    <button type="submit" class="visually-hidden" tabindex="-1" aria-hidden="true">Valider cette lettre</button>
+    <details class="letter-header-fields">
+      <summary>Objet : <strong>{{ letter.header.subject }}</strong></summary>
+      <div class="form-grid">
+        <label>Objet <input type="text" name="objet" value="{{ letter.header.subject }}"></label>
+        <label>Destinataire <textarea name="destinataire" rows="2">{{ letter.header.recipient }}</textarea></label>
+      </div>
+    </details>
+    <ol class="letter-rows">
       {% for row in letter.rows %}
-      {% set name = "choix_" ~ row.index %}
-      <li class="item">
-        <h3 class="group-title">{{ row.label }}</h3>
-        {% if row.adapted is not none %}<input type="hidden" name="adapte_{{ row.index }}" value="{{ row.adapted }}">{% endif %}
-        <div class="letter-choices{{ ' two-columns' if row.adapted is not none }}">
-          <label class="letter-choice">
-            <input type="radio" name="{{ name }}" value="{{ choices.original }}"{% if row.choice == choices.original %} checked{% endif %}>
-            <strong>Ta lettre</strong>
-            {% if row.original %}<span class="description-text">{{ row.original }}</span>{% else %}<span class="muted small">{{ "Rien : demande une adaptation, ou écris ta version." if row.why_you else "Vide." }}</span>{% endif %}
-          </label>
+      <li class="letter-row" data-letter-row>
+        <div class="letter-row-head">
+          <h3 class="group-title">{{ row.label }}</h3>
+          {% if row.mine %}<input type="hidden" name="mien_{{ row.index }}" value="{{ row.mine }}">{% endif %}
           {% if row.adapted is not none %}
-          <label class="letter-choice">
-            <input type="radio" name="{{ name }}" value="{{ choices.adapted }}"{% if row.choice == choices.adapted %} checked{% endif %}>
-            <strong>{{ "Écrit par Gemini pour cette offre" if row.why_you else "Version de Gemini" }}</strong>
-            <span class="description-text">{{ row.adapted }}</span>
-            {% for signal in row.adapted_signals %}<span class="badge badge-warn">{{ signal }}</span>{% endfor %}
-          </label>
+          <input type="hidden" name="adapte_{{ row.index }}" value="{{ row.adapted }}">
+          {# The switch is rendered by the server (decision B4, criterion e): the form goes back with the version asked. #}
+          <div class="segmented letter-switch" role="group" aria-label="Version du paragraphe « {{ row.label }} »">
+            {% for version, label in ((choices.original, "Ta lettre"), (choices.adapted, "Gemini"), (choices.mine, "Ta version")) if version != choices.mine or row.mine %}
+            <button type="submit" name="basculer" value="{{ row.index }}:{{ version }}" formaction="{{ base }}/lettre/basculer"
+              hx-post="{{ base }}/lettre/basculer" {{ swap_row | safe }} aria-pressed="{{ 'true' if row.choice == version else 'false' }}">{{ label }}</button>
+            {% endfor %}
+          </div>
+          {% for signal in row.adapted_signals %}<span class="badge badge-warn" title="Sur la version de Gemini">{{ signal }}</span>{% endfor %}
           {% endif %}
         </div>
-        <label class="letter-choice">
-          <input type="radio" name="{{ name }}" value="{{ choices.mine }}"{% if row.choice == choices.mine %} checked{% endif %}>
-          <strong>Ma version</strong>
-          <textarea name="mien_{{ row.index }}" rows="{{ [row.mine | length // 90 + 2, 3] | max }}" aria-label="Ma version : {{ row.label }}">{{ row.mine }}</textarea>
-        </label>
+        <textarea name="texte_{{ row.index }}" rows="{{ [row.text | length // 95 + 2, 3] | max }}" aria-label="{{ row.label }}"
+          placeholder="{{ 'Vide : demande une adaptation, ou écris ce paragraphe.' if row.why_you else 'Vide.' }}">{{ row.text }}</textarea>
       </li>
       {% endfor %}
     </ol>
     <div class="form-actions">
-      <button type="submit" class="btn btn-ghost" formaction="{{ base }}/lettre/apercu" hx-post="{{ base }}/lettre/apercu" {{ swap | safe }}>Aperçu de la lettre</button>
       <button type="submit" class="btn btn-primary">Valider cette lettre</button>
-      {% if letter.version %}<a class="btn btn-ghost" href="{{ base }}{{ '?lettre=en' if letter.language == 'en' else '' }}#lettre">Annuler</a>{% endif %}
+      <button type="submit" class="btn btn-ghost" formaction="{{ base }}/lettre/apercu" hx-post="{{ base }}/lettre/apercu" {{ swap | safe }}>Aperçu de la page</button>
+      {% if letter.version %}<a class="btn btn-ghost" href="{{ base }}?etape={{ Step.LETTER.value }}">Abandonner les modifications</a>{% endif %}
     </div>
-    <p class="muted small">Écrire dans « Ma version » la retient. Seule la lettre validée est gardée ; une nouvelle validation ajoute une version, sans effacer les précédentes.</p>
+    <p class="muted small">Seule la lettre validée est gardée ; une nouvelle validation ajoute une version, sans effacer les précédentes.</p>
   </form>
   {% else %}
   {% set version = letter.version %}
@@ -98,30 +88,43 @@
     {% endfor %}
   </div>
   <div class="cv-downloads">
-    {# Plain navigations (never boosted): a draft dated today; the letter sent is generated and kept in the step
-       « Envoi » (decision D5, Q2). A refused letter comes back as this page with its reasons. #}
-    <a class="btn btn-ghost" href="{{ base }}/lettre.pdf?langue={{ letter.language }}&amp;apercu=1" target="_blank" rel="noopener" hx-boost="false">{{ "Brouillon PDF" if letter.language == "fr" else "Draft PDF" }}</a>
+    <a class="btn" href="{{ base }}?etape={{ Step.LETTER.value }}&amp;modifier=1">Modifier</a>
     <form method="post" action="{{ base }}/lettre/apercu" hx-post="{{ base }}/lettre/apercu" {{ swap | safe }} class="inline-form">
-      <input type="hidden" name="langue" value="{{ letter.language }}"><button type="submit" class="btn btn-ghost">{{ "Aperçu" if letter.language == "fr" else "Preview" }}</button>
+      <button type="submit" class="btn btn-ghost">{{ "Aperçu de la page" if language == "fr" else "Preview" }}</button>
     </form>
     <form method="post" action="{{ base }}/lettre/verifier" hx-post="{{ base }}/lettre/verifier" {{ swap | safe }} class="inline-form">
-      <input type="hidden" name="langue" value="{{ letter.language }}"><button type="submit" class="btn btn-ghost">Vérifier cette lettre</button>
+      <button type="submit" class="btn btn-ghost">Vérifier cette lettre</button>
     </form>
-    <a class="btn btn-ghost" href="{{ base }}?lettre={{ letter.language }}&amp;modifier=1#lettre">Modifier</a>
+    {# A plain navigation (never boosted): a draft dated today; the letter sent is generated in the step « Envoi » (D5). #}
+    <a class="btn btn-ghost" href="{{ base }}/lettre.pdf?apercu=1" target="_blank" rel="noopener" hx-boost="false">{{ "Brouillon PDF" if language == "fr" else "Draft PDF" }}</a>
   </div>
   {% if letter_check %}{% with check = letter_check, document_name = "cette lettre" %}{% include "profil/cv_check.html" %}{% endwith %}{% endif %}
   <details class="note"><summary>Texte à copier dans un formulaire</summary>
     <textarea readonly rows="12" aria-label="Texte de la lettre">{{ letter_body }}</textarea>
   </details>
   {% endif %}
+  </div>
+  {% if letter_preview %}
+  {# The page as it would be sent (decision D4, recette): what spills over is named under it. #}
+  <aside class="step-aside">
+    <figure class="letter-sheet-preview">
+      <img src="data:image/png;base64,{{ letter_preview.png_base64 }}" alt="Aperçu de la lettre, page 1">
+      <figcaption>
+        {% if letter_preview.problems %}{% for problem in letter_preview.problems %}<span class="badge badge-warn">{{ problem }}</span>{% endfor %}
+        {% else %}<span class="muted small">La lettre telle qu'elle sera téléchargée : elle tient sur une page.</span>{% endif %}
+      </figcaption>
+    </figure>
+  </aside>
+  {% endif %}
+  </div>
   {% endif %}
 
-  {% if dossier.stage == Stage.PREPARING %}
-  {# Plain forms (never boosted): the page comes back at its step « Envoi » (Q16). #}
-  <div class="cv-downloads">
+  <div class="step-footer">
+    {% if dossier.stage == Stage.PREPARING %}
+    {# Plain forms (never boosted): the page comes to the step « Envoi » (D4, Q16). #}
     {% if letter.state == LetterState.VALIDATED %}
     <form method="post" action="{{ base }}/lettre/prete" hx-boost="false" class="inline-form">
-      <button type="submit" class="btn btn-primary">Lettre prête : passer à l'envoi</button>
+      <button type="submit" class="btn btn-primary">Lettre prête : passer à l'envoi →</button>
     </form>
     {% endif %}
     {% if letter.state != LetterState.SKIPPED %}
@@ -129,11 +132,13 @@
       <button type="submit" class="btn btn-ghost">Pas de lettre pour cette candidature</button>
     </form>
     {% endif %}
-    <span class="muted small">La candidature passe en « Prête à envoyer ».</span>
+    {% elif letter.state == LetterState.NONE and dossier.stage %}
+    <form method="post" action="{{ base }}/lettre/sans" hx-boost="false" class="inline-form">
+      <button type="submit" class="btn btn-ghost">Pas de lettre pour cette candidature</button>
+    </form>
+    {% endif %}
+    {% if dossier.stage != Stage.PREPARING and not dossier.journey.closed %}
+    <a class="btn" href="{{ base }}?etape={{ Step.SEND.value }}">Envoi →</a>
+    {% endif %}
   </div>
-  {% elif letter.state == LetterState.NONE and dossier.stage %}
-  <form method="post" action="{{ base }}/lettre/sans" hx-boost="false" class="inline-form">
-    <button type="submit" class="btn btn-ghost">Pas de lettre pour cette candidature</button>
-  </form>
-  {% endif %}
 </section>

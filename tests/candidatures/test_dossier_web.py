@@ -53,10 +53,18 @@ def dossier_with(app: FastAPI, migrated_engine: Engine) -> Desk:
     return desk
 
 
-def page(desk: Desk) -> str:
-    response = desk.client.get(f"/candidatures/{desk.application_id()}")
+def page(desk: Desk, query: str = "") -> str:
+    response = desk.client.get(f"/candidatures/{desk.application_id()}{query}")
     assert response.status_code == 200
     return response.text
+
+
+def in_english(desk: Desk) -> None:
+    """The language of the application (decision D6, Q4)."""
+    response = desk.client.post(
+        f"/candidatures/{desk.application_id()}/langue", data={"langue": "en"}
+    )
+    assert response.status_code == 303
 
 
 def test_the_page_of_an_application_shows_its_targeted_cv(desk: Desk) -> None:
@@ -122,9 +130,7 @@ def test_a_gesture_is_kept_for_the_application_and_journaled(
 
 
 def test_the_french_cv_of_the_application_is_a_pdf(desk: Desk) -> None:
-    response = desk.client.get(
-        f"/candidatures/{desk.application_id()}/cv.pdf?langue=fr"
-    )
+    response = desk.client.get(f"/candidatures/{desk.application_id()}/cv.pdf")
 
     assert response.status_code == 200
     assert response.content.startswith(b"%PDF")
@@ -133,9 +139,8 @@ def test_the_french_cv_of_the_application_is_a_pdf(desk: Desk) -> None:
 def test_an_english_cv_still_in_french_is_refused_with_what_is_missing(
     desk: Desk,
 ) -> None:
-    response = desk.client.get(
-        f"/candidatures/{desk.application_id()}/cv.pdf?langue=en"
-    )
+    in_english(desk)
+    response = desk.client.get(f"/candidatures/{desk.application_id()}/cv.pdf")
 
     assert response.status_code == 409
     assert "Traduire les champs manquants" in response.text
@@ -147,8 +152,9 @@ def test_checking_the_cv_of_the_application_reads_its_targeted_pdf(
 ) -> None:
     base = f"/candidatures/{desk.application_id()}/cv/verifier"
 
-    checked = desk.client.post(base, data={"langue": "fr"}, headers=HTMX).text
-    refused = desk.client.post(base, data={"langue": "en"}, headers=HTMX).text
+    checked = desk.client.post(base, headers=HTMX).text
+    in_english(desk)
+    refused = desk.client.post(base, headers=HTMX).text
 
     assert 'class="cv-check"' in checked
     assert "pypdf :" in checked  # each reader says what it read
@@ -161,47 +167,53 @@ def test_an_application_goes_from_its_cv_to_sent_on_its_page(
 ) -> None:
     base = f"/candidatures/{desk.application_id()}"
     start = page(desk)
-    assert '<li aria-current="step">\n      <a href="#dossier-cv">1. CV</a>' in start
-    assert 'href="#lettre">CV prêt : passer à la lettre</a>' in start
-    assert "Disponible quand ta lettre est prête" in start
+    # One step at a time (decision D6, Q2): the page opens on the CV, the others are a click away.
+    assert (
+        f'<li aria-current="step">\n      <a href="{base}?etape=cv">1. CV</a>' in start
+    )
+    assert f'href="{base}?etape=lettre">CV prêt : passer à la lettre →</a>' in start
+    assert 'id="lettre"' not in start
+    assert "Disponible quand ta lettre est prête" in page(desk, "?etape=envoi")
 
     # No letter for this one (decision D4, Q4, Q16): ready to send, in one gesture.
     ready = desk.client.post(f"{base}/lettre/sans")
 
-    assert (ready.status_code, ready.headers["location"]) == (303, f"{base}#envoi")
+    assert (ready.status_code, ready.headers["location"]) == (
+        303,
+        f"{base}?etape=envoi",
+    )
     sending = page(desk)
-    assert "<strong>Prête à envoyer</strong>" in sending
+    assert '<span class="badge badge-accent">Prête à envoyer</span>' in sending
     assert "1. CV ✓" in sending
     assert "2. Lettre ✓" in sending
+    assert 'id="envoi"' in sending  # the page opens on the step it is at
     # No application link from the source: the posting itself, its domain shown.
     assert 'href="https://apec.example/offres/d1" target="_blank"' in sending
     assert "apec.example" in sending
     assert "CV prêt : passer à la lettre" not in sending
 
     # « Envoyée » goes through its confirmation (decision D5, Q5): here, explicitly without document of Rocky.
-    moved = desk.client.post(
-        f"{base}/etape", data={"etape": "sent", "retour": "dossier"}
-    )
-    assert moved.headers["location"] == f"{base}/envoi#envoi"
+    moved = desk.client.post(f"{base}/etape", data={"etape": "sent", "retour": "suivi"})
+    assert moved.headers["location"] == f"{base}/envoi"
     confirmed = desk.client.post(
         f"{base}/envoi",
         data={
-            "langue": "fr",
             "date": TODAY.isoformat(),
             "canal": "apec",
             "cv": "aucun",
             "lettre": "aucun",
         },
     )
-    assert confirmed.headers["location"] == f"{base}#envoi"
+    assert confirmed.headers["location"] == f"{base}?etape=suivi"
     sent = page(desk)
-    assert "✅ Envoyée — Relancer le" in sent
-    assert "via Apec, sans document de Rocky" in sent
-    assert "J'ai envoyé ma candidature</a>" not in sent
+    assert 'id="suivi"' in sent  # a sent application opens on its follow-up
+    assert "Relancer</strong>" in sent
+    assert "Envoi confirmé : le 29/09/2026 via Apec" in sent
+    assert "Envoyée sans document de Rocky" in page(desk, "?etape=envoi")
 
-    undone = desk.client.post(f"{base}/annuler", data={"retour": "dossier"})
-    assert undone.headers["location"] == f"{base}#envoi"
-    assert "J'ai envoyé ma candidature</a>" in page(desk)
+    undone = desk.client.post(f"{base}/annuler", data={"retour": "suivi"})
+    assert undone.headers["location"] == f"{base}?etape=suivi"
+    assert "J'ai envoyé ma candidature</summary>" in page(desk)
     with migrated_engine.connect() as connection:
         types = (
             connection.execute(
@@ -233,7 +245,7 @@ def test_a_cancelled_application_says_so_without_steps(desk: Desk) -> None:
 
     html = page(desk)
     assert "Candidature annulée" in html
-    assert 'class="steps"' not in html
+    assert 'class="steps' not in html
 
 
 def test_the_application_of_another_account_is_not_found(

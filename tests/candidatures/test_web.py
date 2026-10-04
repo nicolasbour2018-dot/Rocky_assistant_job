@@ -140,7 +140,7 @@ def test_preparing_opens_the_application_and_lands_on_it(desk: Desk) -> None:
     application = f"/candidatures/{desk.application_id()}"
     assert response.headers["HX-Redirect"] == application
     page = desk.client.get(application).text
-    assert "<strong>En préparation</strong>" in page
+    assert '<span class="badge badge-accent">En préparation</span>' in page
     assert "Finir le dossier le 01/10/2026" in page
     box = desk.client.get(f"/candidatures/offre/{desk.offer_id}", headers=HTMX).text
     assert "Candidature : <strong>En préparation</strong>" in box
@@ -171,16 +171,17 @@ def test_an_interested_offer_without_application_is_to_prepare_in_one_click(
     desk = desk_with(
         app, migrated_engine, Decision(DecisionValue.INTERESTED, ("salary",))
     )
-    listed = desk.client.get("/candidatures").text
-    assert "À préparer" in listed
+    to_prepare = "/candidatures?vue=a-preparer"
+    listed = desk.client.get(to_prepare).text
+    assert f'id="a-preparer-{desk.offer_id}"' in listed
     assert f'action="/candidatures/offre/{desk.offer_id}/preparer"' in listed
 
     opened = desk.client.post(f"/candidatures/offre/{desk.offer_id}/preparer")
 
     assert opened.headers["location"] == f"/candidatures/{desk.application_id()}"
-    after = desk.client.get("/candidatures").text
-    assert "À préparer" not in after
-    assert f'href="/candidatures/{desk.application_id()}"' in after
+    assert f'id="a-preparer-{desk.offer_id}"' not in desk.client.get(to_prepare).text
+    preparing = desk.client.get("/candidatures?vue=preparation").text
+    assert f'href="/candidatures/{desk.application_id()}"' in preparing
 
 
 def test_an_offer_put_aside_is_not_to_prepare(
@@ -188,7 +189,8 @@ def test_an_offer_put_aside_is_not_to_prepare(
 ) -> None:
     desk = desk_with(app, migrated_engine, Decision(DecisionValue.LATER, ("reread",)))
 
-    assert "À préparer" not in desk.client.get("/candidatures").text
+    listed = desk.client.get("/candidatures?vue=a-preparer").text
+    assert f'id="a-preparer-{desk.offer_id}"' not in listed
 
 
 def test_a_rejected_offer_cannot_be_prepared(
@@ -206,12 +208,16 @@ def test_a_rejected_offer_cannot_be_prepared(
 
 def test_the_list_follows_the_stages_and_the_next_action(desk: Desk) -> None:
     empty = desk.client.get("/candidatures").text
-    assert "Aucune candidature en cours" in empty
+    assert (
+        "Rien à faire aujourd&#39;hui." in empty or "Rien à faire aujourd'hui." in empty
+    )
     desk.prepare("target_job")
 
-    listed = desk.client.get("/candidatures").text
+    listed = desk.client.get("/candidatures?vue=preparation").text
     assert "Data analyst (H/F)" in listed
     assert "Finir le dossier — 01/10/2026" in listed
+    # Nothing due today: « À faire » names the next deadline (decision D6, Q1).
+    assert "Prochaine échéance" in desk.client.get("/candidatures").text
 
     # « Envoyée » is confirmed with its date, channel and documents (decision D5, Q5): the list leads to the form.
     to_confirm = desk.client.post(
@@ -220,31 +226,38 @@ def test_the_list_follows_the_stages_and_the_next_action(desk: Desk) -> None:
         headers=HTMX,
     )
     assert to_confirm.headers["HX-Redirect"] == (
-        f"/candidatures/{desk.application_id()}/envoi#envoi"
+        f"/candidatures/{desk.application_id()}/envoi"
     )
 
-    sent = desk.post("etape", etape="in_discussion")
+    sent = desk.post("etape", etape="in_discussion", vue="suivi")
     assert "Relancer — 06/10/2026" in sent
+    assert 'aria-current="page">Suivi' in sent  # the gesture keeps its tab
 
-    deferred = desk.post("differer", jours="3")
+    deferred = desk.post("differer", jours="3", vue="suivi")
     assert "Relancer — 09/10/2026" in deferred
 
-    edited = desk.post("action", action="Appeler la recruteuse", echeance="2026-10-02")
+    edited = desk.post(
+        "action", action="Appeler la recruteuse", echeance="2026-10-02", vue="suivi"
+    )
     assert "Appeler la recruteuse — 02/10/2026" in edited
 
-    cleared = desk.post("action", action="", echeance="")
+    cleared = desk.post("action", action="", echeance="", vue="suivi")
     assert "Aucune" in cleared
 
 
 def test_an_interview_asks_its_date(desk: Desk) -> None:
     desk.prepare("target_job")
 
-    asked = desk.post("etape", etape="interview")
+    asked = desk.post("etape", etape="interview", vue="preparation")
     assert 'name="saisie"' in asked
     assert 'value="Préparer l&#39;entretien"' in asked
 
     missing = desk.post(
-        "etape", etape="interview", saisie="1", action="Préparer l'entretien"
+        "etape",
+        etape="interview",
+        saisie="1",
+        action="Préparer l'entretien",
+        vue="preparation",
     )
     assert "Indique la date" in missing
 
@@ -254,6 +267,7 @@ def test_an_interview_asks_its_date(desk: Desk) -> None:
         saisie="1",
         action="Préparer l'entretien",
         echeance="2026-10-03",
+        vue="suivi",
     )
     assert "Préparer l&#39;entretien — 03/10/2026" in done
 
@@ -265,12 +279,12 @@ def test_annuler_undoes_the_changes_then_the_application_and_its_decision(
     desk.prepare("target_job")
     desk.post("etape", etape="ready")
 
-    back = desk.post("annuler")
+    back = desk.post("annuler", vue="preparation")
     assert "Finir le dossier" in back
     assert desk.decision() is DecisionValue.INTERESTED
 
     gone = desk.post("annuler")
-    assert "Aucune candidature en cours" in gone
+    assert "Un dossier s'ouvre depuis une offre" in gone
     assert desk.decision() is DecisionValue.LATER
     with migrated_engine.connect() as connection:
         changes = SqlApplicationStore(connection).changes(desk.application_id())
@@ -296,7 +310,7 @@ def test_without_htmx_preparing_goes_to_the_application_and_changes_to_the_list(
         303,
         "/candidatures",
     )
-    page = desk.client.get("/candidatures")
+    page = desk.client.get("/candidatures?vue=pretes")
     assert "Envoyer la candidature" in page.text
     assert "<title>Candidatures · Rocky</title>" in page.text
 
@@ -324,7 +338,7 @@ def test_another_account_sees_nothing(
     ):
         response = stranger.post(f"/candidatures/{application_id}/{path}", data=data)
         assert response.status_code == 404, path
-    assert "Aucune candidature en cours" in stranger.get("/candidatures").text
+    assert "Data analyst" not in stranger.get("/candidatures?vue=preparation").text
 
 
 def test_an_unknown_stage_is_refused(desk: Desk) -> None:

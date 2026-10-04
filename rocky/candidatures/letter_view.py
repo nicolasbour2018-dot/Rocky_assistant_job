@@ -1,5 +1,5 @@
 """What the step « Lettre » of an application shows, and how its form is read back (decision D4, Q7, Q11, Q14, Q17,
-Q20). No FastAPI here: the routes are in ``web.py``.
+Q20; D6, Q3: one text per paragraph). No FastAPI here: the routes are in ``dossier_web.py``.
 """
 
 from __future__ import annotations
@@ -58,15 +58,21 @@ ORIGIN_LABELS = {
 
 @dataclass(frozen=True)
 class LetterRow:
-    """One paragraph of the form: the user's own, the adapted one when asked, their own writing (Q7, Q14)."""
+    """One paragraph of the form (D6, Q3): one text to edit, which the switch « Ta lettre · Gemini » replaces by the
+    user's own paragraph or the adapted one when asked (D4, Q7, Q14)."""
 
     index: int
     role: str
     original: str  # the generic paragraph, for this offer
     adapted: str | None
     adapted_signals: tuple[str, ...]
-    choice: str  # ORIGINAL, ADAPTED or MINE, chosen by default
-    mine: str  # the text « Ma version » starts from
+    text: str  # the text kept, shown in the form
+    mine: str = ""  # what the user wrote, kept while another version is shown (the switch brings it back)
+
+    @property
+    def choice(self) -> str:
+        """Which version the text is: ORIGINAL, ADAPTED, or MINE (written by the user)."""
+        return _version_of(self.text, self.original, self.adapted)
 
     @property
     def label(self) -> str:
@@ -120,8 +126,10 @@ def letter_view(
     reference: str = "",
     sources: str = "",
     submitted: Mapping[str, str] | None = None,
+    switch: tuple[int, str] | None = None,
 ) -> LetterView:
-    """``submitted``: the form as the user left it (« Aperçu »): its choices, its texts and its header are kept."""
+    """``submitted``: the form as the user left it (« Aperçu », the switch): its texts and its header are kept;
+    ``switch``: the version put in one paragraph (D6, Q3)."""
     job, company = job_and_company(offer)
     version = in_force(entries, language)
     refusal = None
@@ -148,6 +156,8 @@ def letter_view(
         header = make_header(
             submitted.get("objet", ""), submitted.get("destinataire", ""), header
         )
+    if switch is not None:
+        rows = switched(rows, *switch)
     # The version of the revision sent (decision D5); before D5, the one in force when it was sent (D4, Q20).
     sent_with = next(
         (
@@ -183,17 +193,56 @@ def letter_view(
     )
 
 
+def _clean(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _version_of(text: str, original: str, adapted: str | None) -> str:
+    if text == original:
+        return ORIGINAL
+    if adapted is not None and text == adapted:
+        return ADAPTED
+    return MINE
+
+
 def with_form(
     rows: Sequence[LetterRow], form: Mapping[str, str]
 ) -> tuple[LetterRow, ...]:
-    """The rows as the user left them: the choice made (writing in « Ma version » chooses it) and the text written."""
+    """The rows as the user left them: the text of each paragraph, and what they wrote of their own."""
     kept = []
     for row in rows:
-        mine = " ".join(form.get(f"mien_{row.index}", row.mine).split())
-        choice = (
-            MINE if mine != row.mine else form.get(f"choix_{row.index}", row.choice)
-        )
-        kept.append(replace(row, choice=choice, mine=mine))
+        text = _clean(form.get(f"texte_{row.index}", row.text))
+        mine = _clean(form.get(f"mien_{row.index}", row.mine))
+        if _version_of(text, row.original, row.adapted) == MINE:
+            mine = text
+        kept.append(replace(row, text=text, mine=mine))
+    return tuple(kept)
+
+
+SWITCHES = (ORIGINAL, ADAPTED, MINE)
+
+
+def read_switch(value: str) -> tuple[int, str] | None:
+    """``"3:adapte"`` → (3, ADAPTED); None for anything else."""
+    index, _, version = value.partition(":")
+    if not index.isdigit() or version not in SWITCHES:
+        return None
+    return int(index), version
+
+
+def switched(
+    rows: Sequence[LetterRow], index: int, version: str
+) -> tuple[LetterRow, ...]:
+    """The switch « Ta lettre · Gemini » (D6, Q3): that version becomes the paragraph's text; what the user wrote stays
+    one click away (« Ta version »). A version the paragraph does not have changes nothing."""
+    kept = []
+    for row in rows:
+        texts = {ORIGINAL: row.original, ADAPTED: row.adapted, MINE: row.mine}
+        chosen = texts.get(version) if row.index == index else None
+        if chosen is not None and (chosen or version == ORIGINAL):
+            kept.append(replace(row, text=chosen))
+        else:
+            kept.append(row)
     return tuple(kept)
 
 
@@ -270,12 +319,12 @@ def _rows(
                 else adaptation.paragraphs.get(index)
             )
         in_force_text = current[index].text if current is not None else None
-        if adapted is not None:
-            choice = ADAPTED if why_you and not original else ORIGINAL
-        elif in_force_text is not None and in_force_text != original:
-            choice = MINE
+        if in_force_text is not None:
+            text = in_force_text
+        elif adapted is not None and why_you and not original:
+            text = adapted  # an empty « pourquoi vous »: Gemini's is the only one
         else:
-            choice = ORIGINAL
+            text = original
         rows.append(
             LetterRow(
                 index=index,
@@ -287,8 +336,8 @@ def _rows(
                 else _proposal_signals(
                     adapted, language, reference, sources, original, why_you
                 ),
-                choice=choice,
-                mine=in_force_text if in_force_text is not None else original,
+                text=text,
+                mine=text if _version_of(text, original, adapted) == MINE else "",
             )
         )
     return tuple(rows)
@@ -337,8 +386,9 @@ def read_letter(
     reference: str,
     sources: str,
 ) -> NewLetter:
-    """The letter the user validated, from the form: each paragraph's text, where it comes from, what the model had
-    proposed beside it, what the checks say of it (Q8, Q11)."""
+    """The letter the user validated, from the form: each paragraph's text, where it comes from (the user's own
+    paragraph, the adapted one, or their own writing: D6, Q3), what the model had proposed beside it, what the checks
+    say of it (Q8, Q11)."""
     if form.get("empreinte") != generic.sha256:
         raise InvalidChangeError(
             "Ta lettre générique a changé pendant ce temps : recharge la page."
@@ -348,29 +398,23 @@ def read_letter(
     paragraphs = []
     for index, paragraph in enumerate(generic.letter.paragraphs):
         original = filled(paragraph.text, job, company)
-        adapted = " ".join(form.get(f"adapte_{index}", "").split()) or None
-        choice = form.get(f"choix_{index}", ORIGINAL)
+        adapted = _clean(form.get(f"adapte_{index}", "")) or None
         why_you = paragraph.role is LetterRole.WHY_YOU
         previous = current[index] if current is not None else None
-        prefill = previous.text if previous is not None else original
-        mine = " ".join(form.get(f"mien_{index}", prefill).split())
-        if mine != prefill:
-            # Writing in « Ma version » chooses it: an edit is never lost to a radio left elsewhere.
-            choice = MINE
-        if choice == ADAPTED and adapted is not None:
-            text, origin = adapted, LetterOrigin.ADAPTED
-        elif choice == MINE:
-            text = mine
-            if text == original:
-                origin = LetterOrigin.GENERIC
-            elif text == adapted:
-                origin = LetterOrigin.ADAPTED
-            elif previous is not None and text == previous.text:
-                origin = previous.origin
-            else:
-                origin = LetterOrigin.EDITED
+        text = _clean(
+            form.get(
+                f"texte_{index}", previous.text if previous is not None else original
+            )
+        )
+        version = _version_of(text, original, adapted)
+        if version == ORIGINAL:
+            origin = LetterOrigin.GENERIC
+        elif version == ADAPTED:
+            origin = LetterOrigin.ADAPTED
+        elif previous is not None and text == previous.text:
+            origin = previous.origin
         else:
-            text, origin = original, LetterOrigin.GENERIC
+            origin = LetterOrigin.EDITED
         found = (
             ()
             if origin is LetterOrigin.GENERIC or not text

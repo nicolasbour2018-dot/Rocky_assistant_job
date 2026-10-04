@@ -9,7 +9,7 @@
 {%- endmacro %}
 {% macro why(reason) %}<details class="why"><summary>Pourquoi ?</summary><span class="muted small">{{ reason }}</span></details>{% endmacro %}
 <section id="dossier-cv" class="dossier-cv" aria-label="CV de la candidature">
-  <h2>1. CV</h2>
+  <h2 class="visually-hidden">CV</h2>
   {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
   {% if cv_refusal %}
   <div class="alert alert-error" role="alert">
@@ -32,13 +32,10 @@
   <div class="cv-downloads">
     {# Plain navigations (never boosted): a draft, rendered again each time; the PDFs sent are generated and kept in
        the step « Envoi » (decision D5, Q2). A refused CV comes back as this page with its reasons. #}
-    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=fr&amp;apercu=1" target="_blank" rel="noopener">Aperçu du CV français</a>
-    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Aperçu du CV anglais</a>
-    {% for code, label in (("fr", "Vérifier ce CV"), ("en", "Check this CV")) %}
+    <a class="btn btn-ghost" href="{{ base }}/cv.pdf?apercu=1" target="_blank" rel="noopener">{{ "Aperçu du CV" if language == "fr" else "Aperçu du CV anglais" }}</a>
     <form method="post" action="{{ base }}/cv/verifier" hx-post="{{ base }}/cv/verifier" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
-      <input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost">{{ label }}</button>
+      <button type="submit" class="btn btn-ghost">{{ "Vérifier ce CV" if language == "fr" else "Check this CV" }}</button>
     </form>
-    {% endfor %}
     {% if view.adjusted %}
     <form method="post" action="{{ base }}/cv/proposition" hx-post="{{ base }}/cv/proposition" hx-target="#dossier-cv" hx-swap="outerHTML" class="inline-form">
       <button type="submit" class="btn btn-ghost">Revenir à la proposition de Rocky</button>
@@ -46,9 +43,6 @@
     {% endif %}
   </div>
   {% if check %}{% include "profil/cv_check.html" %}{% endif %}
-  {% if dossier.stage == Stage.PREPARING and dossier.journey.current == Step.CV %}
-  <p><a class="btn btn-primary" href="#lettre">CV prêt : passer à la lettre</a></p>
-  {% endif %}
 
   <div class="two-columns">
     <div>
@@ -113,5 +107,12 @@
       </ul>
       {% else %}<p class="muted">L'annonce n'exige ni ne souhaite aucune compétence de ton profil.</p>{% endif %}
     </div>
+  </div>
+  <div class="step-footer">
+    {% if dossier.stage == Stage.PREPARING and dossier.journey.current == Step.CV %}
+    <a class="btn btn-primary" href="{{ base }}?etape={{ Step.LETTER.value }}">CV prêt : passer à la lettre →</a>
+    {% elif not dossier.journey.closed %}
+    <a class="btn" href="{{ base }}?etape={{ Step.LETTER.value }}">Lettre →</a>
+    {% endif %}
   </div>
 </section>

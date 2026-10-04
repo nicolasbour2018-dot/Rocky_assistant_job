@@ -1,30 +1,45 @@
 {% extends "layout.html" %}
 {% block title %}{{ dossier.offer.title }} · Candidature · Rocky{% endblock %}
 {% block content %}
-{# The page of an application (decision D3, Q23, Q25): 1. CV, 2. Letter, 3. Sending, the step in force pointed. #}
+{# The page of an application, one step at a time (decision D6, Q2): the header says where it stands, the journey
+   1. CV · 2. Lettre · 3. Envoi · 4. Suivi is always clickable, and only the step chosen is shown. #}
 {% set journey = dossier.journey %}
-<header class="page-header">
+{% set base = "/candidatures/" ~ dossier.application_id %}
+<header class="dossier-header">
+  <p class="small"><a href="/candidatures">← Mes candidatures</a></p>
   <h1><span aria-hidden="true">📝</span> {{ dossier.offer.title }}</h1>
   <p class="muted">{{ dossier.offer.company or "Employeur inconnu" }}{% if dossier.offer.location %} · {{ dossier.offer.location }}{% endif %}
-    {% if dossier.stage %} · <strong>{{ stage_labels[dossier.stage] }}</strong>{% endif %}
-    {% if dossier.next_action %} — {{ dossier.next_action.label }} le {{ dossier.next_action.due.strftime("%d/%m/%Y") }}{% endif %}</p>
-  <p class="cv-downloads">
-    <a class="btn btn-ghost" href="/offres/{{ dossier.offer.id }}/fiche">Voir l'offre</a>
-    {% if dossier.offer.apply_at %}<a class="btn btn-ghost" href="{{ dossier.offer.apply_at }}" target="_blank" rel="noopener noreferrer" hx-boost="false">Ouvrir le site de candidature ↗</a>
-    <span class="muted small">{{ apply_domain }}</span>{% endif %}
-    <a class="btn btn-ghost" href="/candidatures">Toutes mes candidatures</a>
-  </p>
-  {% if journey.closed %}
-  <p class="alert alert-info">{% if dossier.stage %}Candidature close ({{ stage_labels[dossier.stage] }}).{% else %}Candidature annulée : rouvre-la depuis la fiche de l'offre.{% endif %}</p>
-  {% else %}
-  <ol class="steps" aria-label="Étapes de la candidature">
-    {% for step, label in ((Step.CV, "1. CV"), (Step.LETTER, "2. Lettre"), (Step.SEND, "3. Envoi")) %}
-    <li{% if step in journey.done %} class="done"{% endif %}{% if journey.current == step %} aria-current="step"{% endif %}>
-      <a href="#{{ 'dossier-cv' if step == Step.CV else step.value }}">{{ label }}{% if step in journey.done %} ✓{% endif %}</a></li>
+    · <a href="/offres/{{ dossier.offer.id }}/fiche">Voir l'offre</a>
+    {% if dossier.offer.apply_at %}· <a href="{{ dossier.offer.apply_at }}" target="_blank" rel="noopener noreferrer" hx-boost="false">Site de candidature ↗</a>{% endif %}</p>
+  <div class="dossier-status">
+    {% if dossier.stage %}<span class="badge badge-accent">{{ stage_labels[dossier.stage] }}</span>
+    {% else %}<span class="badge badge-muted">Annulée</span>{% endif %}
+    {% if dossier.next_action %}
+    <span{% if dossier.next_action.due < today %} class="overdue"{% endif %}>{{ dossier.next_action.label }} le {{ dossier.next_action.due.strftime("%d/%m/%Y") }}{% if dossier.next_action.due < today %} (en retard){% endif %}</span>
+    {% endif %}
+    {% if dossier.deadline %}<span class="badge {{ 'badge-warn' if dossier.deadline >= today else 'badge-muted' }}">⏰ {{ "limite le " ~ dossier.deadline.strftime("%d/%m/%Y") if dossier.deadline >= today else "date limite dépassée (" ~ dossier.deadline.strftime("%d/%m/%Y") ~ ")" }}</span>{% endif %}
+    {# The language of the application (D6, Q4): its CV, letter, message and PDFs. #}
+    <form method="post" action="{{ base }}/langue" hx-boost="false" class="segmented language-switch" aria-label="Langue de la candidature">
+      <input type="hidden" name="etape" value="{{ step.value }}">
+      {% for code, label in language_labels.items() %}
+      <button type="submit" name="langue" value="{{ code }}"{% if code == language %} aria-pressed="true"{% else %} aria-pressed="false"{% endif %} title="Candidature en {{ label | lower }}">{{ code | upper }}</button>
+      {% endfor %}
+    </form>
+  </div>
+  {% if dossier.stage %}
+  <ol class="steps dossier-steps" aria-label="Étapes de la candidature">
+    {% for found in Step %}
+    <li{% if found in journey.done %} class="done"{% endif %}{% if found == step %} aria-current="step"{% endif %}>
+      <a href="{{ base }}?etape={{ found.value }}">{{ loop.index }}. {{ step_labels[found] }}{% if found in journey.done %} ✓{% elif found == journey.current and found != step and not journey.closed %} •{% endif %}</a></li>
     {% endfor %}
   </ol>
   {% endif %}
 </header>
-{% include "candidatures/cv_step.html" %}
-{% if not journey.closed %}{% include "candidatures/letter_step.html" %}{% include "candidatures/send_step.html" %}{% endif %}
+{% if journey.closed and step != Step.FOLLOW %}
+<p class="alert alert-info">{% if dossier.stage %}Candidature close ({{ stage_labels[dossier.stage] }}) : le suivi la rouvre en changeant son étape.{% else %}Candidature annulée : rouvre-la depuis la fiche de l'offre.{% endif %}</p>
+{% endif %}
+{% if step == Step.CV %}{% include "candidatures/cv_step.html" %}
+{% elif step == Step.LETTER %}{% include "candidatures/letter_step.html" %}
+{% elif step == Step.SEND %}{% include "candidatures/send_step.html" %}
+{% else %}{% include "candidatures/follow_step.html" %}{% endif %}
 {% endblock %}
