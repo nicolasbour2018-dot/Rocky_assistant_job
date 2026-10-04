@@ -43,6 +43,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from rocky.messages.classification.model import (
+    ACTION_RULES,
     CLASSIFY_VERSION,
     EMPLOYER_CATEGORIES,
     CallOutcome,
@@ -568,6 +569,17 @@ class SqlStore:
             ).scalar_one()
         )
 
+    def acknowledgements(self, account_id: int) -> int:
+        """Messages of the account whose decision in force is an acknowledgement (Q19: counted, not listed)."""
+        current = _current_decisions(account_id).subquery()
+        return int(
+            self._conn.execute(
+                select(func.count())
+                .select_from(current)
+                .where(current.c.category == Category.ACKNOWLEDGEMENT.value)
+            ).scalar_one()
+        )
+
     def last_failure(self, account_id: int, since: datetime) -> str | None:
         """The reason of the last call that gave no answer since ``since``, if the last call failed."""
         row = self._conn.execute(
@@ -617,8 +629,27 @@ class SqlStore:
         low = current.c.level == Level.LOW.value
         match view:
             case View.TO_LOOK_AT:
-                waiting = current.c.id.is_(None)
-                query = query.where(current.c.category.in_(employers) | low | waiting)
+                answers = [
+                    category
+                    for category in employers
+                    if category != Category.ACKNOWLEDGEMENT.value
+                ]
+                query = query.where(
+                    current.c.category.in_(
+                        [*answers, Category.RECRUITER_APPROACH.value]
+                    )
+                    | current.c.rule.in_(ACTION_RULES)
+                    | low
+                    | current.c.id.is_(None)
+                )
+            case View.ACKNOWLEDGEMENTS:
+                query = query.where(
+                    current.c.category == Category.ACKNOWLEDGEMENT.value
+                )
+            case View.PLATFORM:
+                query = query.where(
+                    current.c.category == Category.PLATFORM_NOTICE.value
+                )
             case View.TO_CHECK:
                 query = query.where(low)
             case View.EMPLOYERS:

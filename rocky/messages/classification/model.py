@@ -20,7 +20,7 @@ from rocky.offres.decisions import Author
 from rocky.system.events import NewEvent
 
 # Changes whenever a rule, a list or the model's instructions change: kept with every decision (Q6, D14).
-CLASSIFY_VERSION = "mail-classify-2026-10-05.5"
+CLASSIFY_VERSION = "mail-classify-2026-10-05.6"
 
 
 class Category(StrEnum):
@@ -32,6 +32,8 @@ class Category(StrEnum):
     ASSESSMENT = "assessment"
     OFFER = "offer"
     EMPLOYER_UPDATE = "employer_update"
+    # Q20 (acceptance of E2): what a platform says about one of the user's applications, never the employer.
+    PLATFORM_NOTICE = "platform_notice"
     RECRUITER_APPROACH = "recruiter_approach"
     JOB_ALERT = "job_alert"
     UNRELATED = "unrelated"
@@ -44,6 +46,7 @@ CATEGORY_LABELS = {
     Category.ASSESSMENT: "Test ou cas pratique",
     Category.OFFER: "Offre",
     Category.EMPLOYER_UPDATE: "Message de l'employeur",
+    Category.PLATFORM_NOTICE: "Avis de plateforme",
     Category.RECRUITER_APPROACH: "Approche d'un recruteur",
     Category.JOB_ALERT: "Alerte emploi",
     Category.UNRELATED: "Hors recherche",
@@ -60,6 +63,11 @@ EMPLOYER_CATEGORIES = frozenset(
         Category.EMPLOYER_UPDATE,
     }
 )
+
+
+# Q20: the platform's notices that ask something of the user (« Finalisez votre candidature sur le site de… »): shown
+# in the default view, as the employers' answers are.
+ACTION_RULES = frozenset({"relay.to_finish"})
 
 
 class Level(StrEnum):
@@ -197,10 +205,13 @@ class SortedMessage:
 class View(StrEnum):
     """The filters of the screen (Q14)."""
 
-    # Employers' replies, decisions to check and messages waiting: the default view.
+    # Q19: what asks to be read or done (employers' answers but acknowledgements, approaches, platform notices asking
+    # an action, decisions to check, messages waiting): the default view.
     TO_LOOK_AT = "a-regarder"
     TO_CHECK = "a-verifier"
     EMPLOYERS = "retours"
+    ACKNOWLEDGEMENTS = "accuses"
+    PLATFORM = "plateformes"
     ALERTS = "alertes"
     APPROACHES = "approches"
     UNRELATED = "hors-recherche"
@@ -212,6 +223,8 @@ VIEW_LABELS = {
     View.TO_LOOK_AT: "À regarder",
     View.TO_CHECK: "À vérifier",
     View.EMPLOYERS: "Retours d'employeurs",
+    View.ACKNOWLEDGEMENTS: "Accusés",
+    View.PLATFORM: "Avis de plateforme",
     View.ALERTS: "Alertes",
     View.APPROACHES: "Approches",
     View.UNRELATED: "Hors recherche",

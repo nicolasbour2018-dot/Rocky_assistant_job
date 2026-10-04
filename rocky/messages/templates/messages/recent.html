@@ -14,6 +14,10 @@
   <p class="alert alert-info" role="status"><strong>{{ state.waiting }} message{{ 's' if state.waiting > 1 }} en attente
     de classement.</strong> {{ state.waiting_reason }}</p>
   {% endif %}
+  {% if state.view == View.TO_LOOK_AT and state.acknowledgements %}
+  <p class="muted small">{{ state.acknowledgements }} accusé{{ 's' if state.acknowledgements > 1 }} de réception, hors de
+    cette vue : <a href="/messages?vue={{ View.ACKNOWLEDGEMENTS.value }}">les voir</a>.</p>
+  {% endif %}
   {% if state.messages %}
   <table class="offer-table messages-table">
     <thead><tr><th>Reçu le</th><th>De</th><th>Objet</th><th>Classement</th></tr></thead>

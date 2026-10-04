@@ -442,3 +442,38 @@ def test_a_pass_reads_every_batch(box: Box, monkeypatch: pytest.MonkeyPatch) -> 
     again = box.run(again=True)
 
     assert (report.by_rules, again.by_rules) == (3, 3)
+
+
+def test_the_default_view_holds_what_asks_to_be_read(box: Box) -> None:
+    """Q19, Q20: the acknowledgements and the platform's notices leave « À regarder », but « Finalisez… »."""
+    refusal = box.mail(
+        "Recrutement <rh@exemple.fr>",
+        "Votre candidature",
+        "Nous ne donnerons pas suite à votre candidature.",
+    )
+    acknowledged = box.mail(
+        "Hellowork Candidature <contact@emails.hellowork.com>",
+        "Votre candidature est arrivée chez GEODIS",
+    )
+    to_finish = box.mail(
+        "Hellowork Candidature <contact@emails.hellowork.com>",
+        "Finalisez votre candidature sur le site de Valeo",
+    )
+    closed = box.mail(
+        "Hellowork <emploi@emails.hellowork.com>",
+        "L'offre de Data Analyst Financier H/F n'est plus disponible",
+    )
+    box.run()
+
+    def shown(view: View) -> set[int]:
+        with box.storage.transaction() as store:
+            return {
+                message.id
+                for message in store.sorted_messages(box.account_id, view, 50)
+            }
+
+    assert shown(View.TO_LOOK_AT) == {refusal, to_finish}
+    assert shown(View.ACKNOWLEDGEMENTS) == {acknowledged}
+    assert shown(View.PLATFORM) == {to_finish, closed}
+    with box.storage.transaction() as store:
+        assert store.acknowledgements(box.account_id) == 1

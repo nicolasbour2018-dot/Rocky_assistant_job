@@ -540,7 +540,7 @@ def test_a_platforms_survey_is_not_the_employers_decision() -> None:
     )
 
     # A title of two words names no application by itself.
-    assert (found.category, found.application_id) == (Category.EMPLOYER_UPDATE, None)
+    assert (found.category, found.application_id) == (Category.PLATFORM_NOTICE, None)
 
 
 def test_a_platforms_thread_lends_no_application() -> None:
@@ -575,3 +575,21 @@ def test_a_text_part_written_with_html_entities_is_read_decoded() -> None:
 
     assert found.category is Category.ACKNOWLEDGEMENT
     assert "bien reçu votre candidature" in found.proofs[0].excerpt
+
+
+def test_a_platforms_notice_cites_the_employer_as_written() -> None:
+    """Q20, Q22 (acceptance of E2): an application Rocky does not know keeps the employer the platform names."""
+    found = decided(
+        classify(
+            mail(
+                "Hellowork Candidature <contact@emails.hellowork.com>",
+                "Finalisez votre candidature sur le site de Les Experts de l'emploi",
+            ),
+            Context((target(1, "Exemple"),)),
+        )
+    )
+
+    assert (found.category, found.application_id) == (Category.PLATFORM_NOTICE, None)
+    assert found.proofs[0].rule == "relay.to_finish"
+    cited = next(proof for proof in found.proofs if proof.rule == "employer.cited")
+    assert cited.excerpt == "Les Experts de l'emploi"

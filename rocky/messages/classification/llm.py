@@ -36,7 +36,10 @@ DEFINITIONS = {
     Category.ASSESSMENT: "on demande un test, un exercice ou un cas pratique",
     Category.OFFER: "on propose un poste (offre ou promesse d'embauche)",
     Category.EMPLOYER_UPDATE: (
-        "autre message sur une candidature : dossier en cours, pièce demandée, question, offre retirée"
+        "autre message de l'employeur sur une candidature : dossier en cours, pièce demandée, question"
+    ),
+    Category.PLATFORM_NOTICE: (
+        "un site d'emploi parle d'une candidature : candidature à finaliser, offre retirée, candidature vue"
     ),
     Category.RECRUITER_APPROACH: "un recruteur propose un poste sans candidature préalable",
     Category.JOB_ALERT: "liste d'offres ou suggestion d'offres envoyée par un site d'emploi",

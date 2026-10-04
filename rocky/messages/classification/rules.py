@@ -12,7 +12,7 @@ from __future__ import annotations
 import html
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from email.utils import parseaddr
 from urllib.parse import urlsplit
 
@@ -551,6 +551,8 @@ class _Relay:
     category: Category | None
     employer: str = ""
     title: str = ""
+    # The employer's name as the message writes it (« GEODIS », « Les Experts de l'emploi »), for the proof (Q22).
+    employer_written: str = ""
 
 
 # Q16 (2): the subjects of the relaying platforms, folded, the most precise first. ``None``: the employer speaks.
@@ -569,7 +571,7 @@ _RELAY_FORMS: tuple[tuple[str, Category | None, re.Pattern[str]], ...] = tuple(
         ),
         (
             "relay.seen",
-            Category.EMPLOYER_UPDATE,
+            Category.PLATFORM_NOTICE,
             r"candidature a ete vue par (?P<employer>.+)",
         ),
         (
@@ -584,17 +586,17 @@ _RELAY_FORMS: tuple[tuple[str, Category | None, re.Pattern[str]], ...] = tuple(
         ),
         (
             "relay.withdrawn",
-            Category.EMPLOYER_UPDATE,
+            Category.PLATFORM_NOTICE,
             r"offre supprimee candidature chez (?P<employer>.+)",
         ),
         (
             "relay.closed",
-            Category.EMPLOYER_UPDATE,
+            Category.PLATFORM_NOTICE,
             r"l offre de (?P<title>.+) n est plus disponible",
         ),
         (
-            "relay.problem",
-            Category.EMPLOYER_UPDATE,
+            "relay.to_finish",
+            Category.PLATFORM_NOTICE,
             r"probleme avec votre candidature au poste de (?P<title>.+)",
         ),
         (
@@ -603,18 +605,18 @@ _RELAY_FORMS: tuple[tuple[str, Category | None, re.Pattern[str]], ...] = tuple(
             r"suite a la reponse de (?P<employer>.+?) pour l offre (?P<title>.+)",
         ),
         (
-            "relay.unfinished",
-            Category.EMPLOYER_UPDATE,
+            "relay.to_finish",
+            Category.PLATFORM_NOTICE,
             r"finalisez votre candidature sur le site de (?P<employer>.+)",
         ),
         (
-            "relay.unfinished",
-            Category.EMPLOYER_UPDATE,
+            "relay.reminder",
+            Category.PLATFORM_NOTICE,
             r"avez vous finalise votre candidature au poste de (?P<title>.+)",
         ),
         (
             "relay.closed",
-            Category.EMPLOYER_UPDATE,
+            Category.PLATFORM_NOTICE,
             r"offres auxquelles vous avez postule ne sont plus disponibles",
         ),
         (
@@ -670,11 +672,22 @@ def _relay(mail: _Mail) -> _Relay | None:
         if match is None:
             continue
         groups = match.groupdict()
-        employer = (groups.get("employer") or "").strip()
+        place: Folded = mail.subject
+        found: re.Match[str] | None = match
         if rule == "relay.confirmed":
-            in_body = _SENT_TO_IN_BODY.search(mail.folded.text)
-            employer = in_body["employer"].strip() if in_body else ""
-        return _Relay(rule, category, employer, (groups.get("title") or "").strip())
+            place, found = mail.folded, _SENT_TO_IN_BODY.search(mail.folded.text)
+        employer = written = ""
+        if found is not None and found.groupdict().get("employer"):
+            employer = found["employer"].strip()
+            start, end = place.source_span(*found.span("employer"))
+            written = place.source[start:end].strip()
+        return _Relay(
+            rule,
+            category,
+            employer,
+            (groups.get("title") or "").strip(),
+            employer_written=written,
+        )
     return None
 
 
@@ -996,6 +1009,15 @@ def classify(message: MailToClassify, context: Context) -> Verdict | Pending:
                 else "un avis sur une candidature."
             ),
         )
+        if relay.employer and attachment.application_id is None:
+            # Q22: the employer the platform names, kept for the applications Rocky does not know (E4).
+            cited = Proof(
+                Tier.PLATFORM,
+                "employer.cited",
+                relay.employer_written or relay.employer,
+                "Employeur cité par la plateforme.",
+            )
+            attachment = replace(attachment, proofs=(*attachment.proofs, cited))
         if relay.category is not None:
             # The platform's own notice says what it is; its body may hold a survey's answers (« Non, ma
             # candidature n'a pas été retenue »), never the employer's decision.

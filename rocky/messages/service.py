@@ -80,6 +80,8 @@ class MessagesState:
     # Messages without a decision yet, and why (Q14).
     waiting: int
     waiting_reason: str | None
+    # Acknowledgements, out of the default view (Q19).
+    acknowledgements: int = 0
 
     @property
     def running(self) -> bool:
@@ -262,6 +264,7 @@ class MessagesService:
             mailboxes = store.mailboxes(account_id)
             messages = store.sorted_messages(account_id, view, SHOWN_MESSAGES)
             waiting = store.waiting(account_id)
+            acknowledgements = store.acknowledgements(account_id)
             reason = self._waiting_reason(store, account_id) if waiting else None
             views = [
                 MailboxView(mailbox, store.last_sync(mailbox.id))
@@ -284,6 +287,7 @@ class MessagesService:
             applications=labels,
             waiting=waiting,
             waiting_reason=reason,
+            acknowledgements=acknowledgements,
         )
 
     def _waiting_reason(self, store: SqlStore, account_id: int) -> str:

@@ -139,7 +139,7 @@ def test_a_mailbox_is_connected_through_google_then_collected(
     assert len(scheduler.pending()) == 1
 
     scheduler.tick()
-    page = client.get("/messages?boite=connectee")
+    page = client.get("/messages?boite=connectee&vue=tous")
 
     assert "camille.dupont@example.com" in page.text
     assert "Connectée" in page.text
@@ -254,7 +254,7 @@ def test_collect_now_runs_once_and_the_screen_follows_it(
     assert "Collecte en cours…" in first.text
     gets = len(gmail.reader_.gets)
     scheduler.tick()
-    fragment = client.get("/messages/contenu", headers=HTMX)
+    fragment = client.get("/messages/contenu?vue=tous", headers=HTMX)
 
     assert 'hx-trigger="every 3s"' not in fragment.text
     assert "0 nouveau message (3 déjà relevés)" in re.sub(r"\s+", " ", fragment.text)
@@ -311,7 +311,7 @@ def test_disconnecting_revokes_at_google_and_keeps_the_messages(
     assert (
         len(service.state(account_of(migrated_engine, email), View.ALL).messages) == 3
     )
-    page = client.get("/messages?boite=deconnectee")
+    page = client.get("/messages?boite=deconnectee&vue=tous")
     assert "Déconnectée" in page.text
     assert "Votre candidature : Data Analyst" in page.text
 

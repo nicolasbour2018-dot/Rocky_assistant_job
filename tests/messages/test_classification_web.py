@@ -45,13 +45,17 @@ def test_the_collection_is_followed_by_the_classification(
     client, _ = collected_client(app, migrated_engine)
 
     default = text_of(client.get("/messages").text)
+    acknowledgements = text_of(client.get("/messages?vue=accuses").text)
     alerts = text_of(client.get("/messages?vue=alertes").text)
     everything = text_of(client.get("/messages?vue=tous").text)
 
-    # The recruiter's reply: an acknowledgement (« Merci pour votre candidature »), shown by default.
-    assert "Votre candidature : Data Analyst" in default
-    assert "Accusé de réception" in default
-    assert "Pourquoi ?" in default and "Phrase explicite" in default
+    # The recruiter's reply is an acknowledgement (« Merci pour votre candidature »): counted by default (Q19), listed
+    # in « Accusés ».
+    assert "Votre candidature : Data Analyst" not in default
+    assert "1 accusé de réception, hors de cette vue" in default
+    assert "Votre candidature : Data Analyst" in acknowledgements
+    assert "Accusé de réception" in acknowledgements
+    assert "Pourquoi ?" in acknowledgements and "Phrase explicite" in acknowledgements
     assert "3 nouvelles offres pour Data analyst" not in default
     # Indeed's alert address: in « Alertes » only.
     assert "3 nouvelles offres pour Data analyst" in alerts
