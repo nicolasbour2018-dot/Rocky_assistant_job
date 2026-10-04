@@ -1,6 +1,8 @@
 {# Step 3 of an application (decision D3, Q25; D4, Q5, Q12; D5): the PDFs to send, generated and kept as they are;
-   the form prefilled by the Rocky workstation after confirmation; the sending confirmed with its date, its channel
-   and the exact revisions sent. Rocky never applies: the user sends the form themselves. #}
+   the user opens the posting on the recruiter's site and fills its form by hand; « J'ai envoyé ma candidature »
+   confirms the sending with its date, its channel and the exact revisions sent. Rocky never applies.
+   DORMANT (decision D5, acceptance of 04/10): the prefilling by the Rocky workstation (macro ``prefill_block``, the
+   report « Formulaire prérempli ») is kept but no button leads to it (``web.PREFILL_ENABLED``). #}
 {% set base = "/candidatures/" ~ dossier.application_id %}
 {% set lang_q = "?lettre=en" if letter.language == "en" else "" %}
 {# Plain forms (never boosted): the page comes back at its step « Envoi ». #}
@@ -41,6 +43,8 @@
   {% endif %}
 </div>
 {%- endmacro %}
+{# DORMANT (decision D5, acceptance of 04/10): the panel « Préremplir », shown only by the route /preremplir, closed
+   while ``web.PREFILL_ENABLED`` is False. To be re-enabled later. #}
 {% macro prefill_block() -%}
 {% set cv = send.latest(RevisionKind.CV) %}
 {% set letter_line = send.latest(RevisionKind.LETTER) %}
@@ -158,6 +162,7 @@
   {% if dossier.journey.current == Step.SEND %}
   <p>Rocky ne postule jamais à ta place : tu déposes ta candidature toi-même.</p>
   {{ documents() }}
+  {# DORMANT: the report of the workstation; nothing is prefilled while the prefilling is off. #}
   {% if send.prefill %}
   <p class="alert alert-info">Formulaire prérempli le {{ send.prefill.created_at | paris_time }}.
     {% if send.prefill.filled %}Rempli : {{ send.prefill.filled | join(", ") }}.{% endif %}
@@ -166,16 +171,15 @@
   {% endif %}
   {% if confirm %}
   {{ confirm_block() }}
-  {% elif prefilling %}
+  {% elif prefilling %}{# DORMANT: never true while the prefilling is off #}
   {{ prefill_block() }}
   {% else %}
+  {# DORMANT: the link « Préremplir avec le poste Rocky » (/preremplir) was removed here (acceptance of 04/10). #}
   <ol class="send-list">
-    <li>Dépose-les sur le site :
+    <li>Ouvre l'annonce sur le site du recruteur et remplis son formulaire toi-même, avec ces PDF :
       <a class="btn btn-ghost" href="{{ dossier.offer.apply_at }}" target="_blank" rel="noopener noreferrer" hx-boost="false">Ouvrir le site de candidature ↗</a>
-      {% if send.current %}<span class="muted">ou</span>
-      <a class="btn btn-ghost" href="{{ base }}/preremplir{{ lang_q }}#envoi" hx-boost="false">Préremplir avec le poste Rocky</a>{% endif %}
       <span class="muted small">{{ apply_domain }}</span></li>
-    <li>Reviens ici : <a class="btn btn-primary" href="{{ base }}/envoi{{ lang_q }}#envoi" hx-boost="false">J'ai envoyé ma candidature</a></li>
+    <li>Reviens ici une fois envoyée : <a class="btn btn-primary" href="{{ base }}/envoi{{ lang_q }}#envoi" hx-boost="false">J'ai envoyé ma candidature</a></li>
   </ol>
   {% endif %}
   {{ message_block() }}

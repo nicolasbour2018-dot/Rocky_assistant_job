@@ -310,6 +310,8 @@ class Sending:
     created_at: datetime
 
 
+# DORMANT (decision D5, acceptance of 04/10): NewPrefill and Prefill serve the prefilling by the Rocky workstation,
+# kept but not run (``web.PREFILL_ENABLED``). The stage « Préremplie » stays: the user may still choose it.
 @dataclass(frozen=True)
 class NewPrefill:
     """A form prefilled by the workstation (Q1, Q4, Q6): what it was given and what it reported."""

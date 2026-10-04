@@ -585,4 +585,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D5 → Nicolas)** Le poste ne reconnaît que des champs vides nommés par leurs attributs ou libellés usuels : sur les
   formulaires des ATS (Workday, Greenhouse, Lever, Taleo…), le rapport dira ce qui reste à faire. Des sélecteurs propres à
   une plateforme s'ajoutent si l'usage le demande.
-
+- **(D5 → plus tard, recette de Nicolas du 04/10)** Le **préremplissage est en sommeil** : échec sur 2 annonces réelles
+  sur 2 (les sites des recruteurs n'affichent pas de formulaire tout de suite et passent par leurs propres connexions).
+  Code gardé et testé, marqué « DORMANT », fermé par `candidatures.web.PREFILL_ENABLED`. Le parcours de l'envoi devient :
+  générer les PDF, ouvrir l'annonce chez le recruteur, remplir soi-même, confirmer « J'ai envoyé ma candidature ». À
+  reprendre plus tard, peut-être avec la lecture assistée (E5), qui a le même besoin d'un navigateur sur le poste.

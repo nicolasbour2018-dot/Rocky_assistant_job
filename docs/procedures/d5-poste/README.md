@@ -1,5 +1,10 @@
 # D5 — Le poste Rocky (préremplissage dans un navigateur visible)
 
+> **En sommeil depuis la recette du 04/10/2026** (décision D5, « Recette de Nicolas ») : échec sur 2 annonces réelles
+> sur 2, les sites des recruteurs passant par leurs propres connexions avant tout formulaire. Rocky ne propose plus
+> le préremplissage (`candidatures.web.PREFILL_ENABLED = False`) ; inutile de lancer le poste. Cette procédure est
+> gardée pour le jour où la fonction sera réactivée.
+
 Décision : `docs/decisions/D5-revisions-envoi.md` (Q1, Q4, Q6). Rocky tourne dans Docker et ne peut pas ouvrir de
 fenêtre sur l'ordinateur : le **poste Rocky** est un petit programme lancé sur l'ordinateur lui-même. Quand tu
 confirmes « Préremplir » dans l'étape Envoi d'un dossier, Rocky lui transmet l'adresse du formulaire, tes coordonnées,

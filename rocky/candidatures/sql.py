@@ -231,6 +231,7 @@ application_sendings = Table(
 )
 
 # The forms prefilled by the workstation (decision D5, Q1, Q4, Q6): what it was given, what it reported.
+# DORMANT (acceptance of 04/10): the table stays, nothing writes in it while ``web.PREFILL_ENABLED`` is False.
 application_prefills = Table(
     "application_prefills",
     metadata,

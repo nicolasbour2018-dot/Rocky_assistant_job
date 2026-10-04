@@ -83,7 +83,7 @@ class SendView:
     sent: Sent | None
     prefill: (
         Prefill | None
-    )  # the latest form prefilled, while the application is « Préremplie »
+    )  # DORMANT: the latest form prefilled, while the application is « Préremplie »
     channel: Channel  # proposed from the link (Q3)
     message: MessageVersion | None  # in force in the language
     fields: tuple[
@@ -285,7 +285,8 @@ def _revision_id(value: str) -> int | None:
     return int(value)
 
 
-# What the workstation fills (Q4).
+# What the workstation fills (Q4). DORMANT (decision D5, acceptance of 04/10): used by the prefilling only, kept
+# but not run (``web.PREFILL_ENABLED``).
 
 _LINK_HOSTS = {"linkedin.com": "linkedin", "github.com": "github"}
 

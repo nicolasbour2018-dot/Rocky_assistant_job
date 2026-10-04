@@ -206,7 +206,28 @@ def test_a_sending_is_refused_with_its_reason_and_nothing_written(desk: Desk) ->
     assert "<strong>Prête à envoyer</strong>" in page(desk)
 
 
-# The form prefilled by the workstation (Q1, Q4, Q6).
+# The form prefilled by the workstation (Q1, Q4, Q6). DORMANT since the acceptance of 04/10: off by default
+# (``web.PREFILL_ENABLED``); the tests below switch it on to keep the dormant code working.
+
+
+@pytest.fixture
+def prefill_on(app: FastAPI) -> None:
+    app.state.prefill_enabled = True
+
+
+def test_the_prefilling_is_dormant_no_button_no_route(desk: Desk, app: FastAPI) -> None:
+    generate(desk)
+    html = page(desk)
+
+    assert "Préremplir" not in html
+    assert "Ouvrir le site de candidature" in html
+    assert "J'ai envoyé ma candidature</a>" in html
+    assert desk.client.get(f"{base(desk)}/preremplir").status_code == 404
+    response = desk.client.post(
+        f"{base(desk)}/preremplir", data={"langue": "fr", "consentement": "1"}
+    )
+    assert response.status_code == 404
+    assert app.state.workstation.jobs == []
 
 
 def panel_ids(html: str) -> dict[str, str]:
@@ -215,7 +236,7 @@ def panel_ids(html: str) -> dict[str, str]:
 
 
 def test_the_workstation_gets_the_exact_revisions_after_confirmation(
-    desk: Desk, app: FastAPI, tmp_path: Path
+    desk: Desk, app: FastAPI, tmp_path: Path, prefill_on: None
 ) -> None:
     generate(desk)
     panel = page(desk, "/preremplir")
@@ -255,7 +276,7 @@ def test_the_workstation_gets_the_exact_revisions_after_confirmation(
 
 
 def test_a_workstation_that_does_not_take_the_form_writes_nothing(
-    desk: Desk, app: FastAPI
+    desk: Desk, app: FastAPI, prefill_on: None
 ) -> None:
     generate(desk)
     shown = panel_ids(page(desk, "/preremplir"))
@@ -272,7 +293,7 @@ def test_a_workstation_that_does_not_take_the_form_writes_nothing(
 
 
 def test_revisions_generated_after_the_confirmation_are_not_handed_over(
-    desk: Desk, app: FastAPI
+    desk: Desk, app: FastAPI, prefill_on: None
 ) -> None:
     generate(desk)
     shown = panel_ids(page(desk, "/preremplir"))

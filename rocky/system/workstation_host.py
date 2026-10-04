@@ -1,5 +1,8 @@
 """The Rocky workstation, run on the user's computer: ``uv run rocky-poste`` (decision D5, Q1, Q4).
 
+DORMANT (decision D5, acceptance of 04/10): kept and tested, but Rocky no longer hands it any form
+(``candidatures.web.PREFILL_ENABLED``); there is no need to launch it. To be re-enabled later.
+
 It listens on the loopback only. For each form Rocky hands it, it opens a tab of a visible Chromium (a persistent
 profile: the job sites remember the user's logins), fills what it recognises and leaves the rest to the user. It
 never clicks anything: the user reads the form and sends it themselves. Procedure: ``docs/procedures/d5-poste/``.

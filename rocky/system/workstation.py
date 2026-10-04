@@ -1,5 +1,9 @@
 """The Rocky workstation: the program run on the user's computer that opens a visible browser (decision D5, Q1).
 
+DORMANT (decision D5, acceptance of 04/10): the prefilling failed on 2 real postings out of 2 (the recruiters' sites
+show no form at once, they go through their own logins). This module is kept, tested, but not run: the application
+calls it only when ``candidatures.web.PREFILL_ENABLED`` is True. The lecture assistée (E5) may revive it.
+
 The application runs in Docker and cannot open a window on the computer: it hands the workstation a form to prefill,
 over HTTP on the loopback, with every value and file it needs (no ticket, no route of Rocky open to the
 workstation). Here: what they exchange, and the application's client. The workstation itself is

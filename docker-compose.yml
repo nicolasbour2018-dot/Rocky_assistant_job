@@ -77,6 +77,7 @@ x-app-image: &app-image
     # Account files (docs/decisions/D2-cv-rendu.md): photos and CV templates, in the named volume rocky-files.
     ROCKY_STORAGE_ROOT: /srv/rocky-files
     # The Rocky workstation on the user's computer (docs/decisions/D5-revisions-envoi.md): `uv run rocky-poste`.
+    # DORMANT since the acceptance of 04/10: the prefilling is off, nothing calls it.
     ROCKY_WORKSTATION_URL: ${ROCKY_WORKSTATION_URL:-http://host.docker.internal:8765}
 
 # Creates the application role: never a superuser, owner of its database.
@@ -136,6 +137,7 @@ services:
     volumes:
       - files:/srv/rocky-files
     # Docker Desktop knows this name; on Linux it must be declared (the workstation listens on the host).
+    # DORMANT with the prefilling (decision D5, acceptance of 04/10).
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

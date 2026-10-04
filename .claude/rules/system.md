@@ -39,6 +39,7 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Tests : faux modèle ou `MockTransport`, jamais d'appel réel (AGENTS §7).
 
 ## Poste Rocky (`rocky/system/workstation.py`, `workstation_host.py`, décision `docs/decisions/D5-revisions-envoi.md`)
+- **En sommeil** depuis la recette de D5 : gardé et testé, appelé seulement si `candidatures.web.PREFILL_ENABLED`.
 - L'application ne lance jamais de navigateur visible : elle remet un `PrefillJob` au poste (`app.state.workstation`,
   faux poste dans les tests). Le poste tourne sur l'ordinateur (`uv run rocky-poste`), écoute sur `127.0.0.1`, refuse
   `Origin`, exige JSON et un `Host` connu.

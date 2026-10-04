@@ -426,6 +426,8 @@ def validate_message(
 
 ALREADY_SENT = "Cette candidature est déjà marquée envoyée : annule ce changement pour corriger l'envoi."
 NOT_YOURS = "Ce document n'appartient pas à cette candidature."
+# DORMANT (decision D5, acceptance of 04/10): PREFILL_STAGES, NOT_READY and ``record_prefill`` serve the prefilling
+# by the Rocky workstation, kept but not run (``web.PREFILL_ENABLED``).
 # The stages a form can be prefilled at (Q6): ready to send, or prefilled already (again, on another tab).
 PREFILL_STAGES = frozenset({Stage.READY, Stage.PREFILLED})
 NOT_READY = "Le préremplissage se fait quand la candidature est prête à envoyer."
@@ -542,9 +544,9 @@ def record_prefill(
     now: datetime,
     today: date,
 ) -> int:
-    """The workstation took the form (Q6): its report is kept, and an application ready to send becomes
-    « Préremplie », in the same transaction. Only the domain of the form goes to the journal (a link may carry a
-    tracking token)."""
+    """DORMANT (``web.PREFILL_ENABLED``). The workstation took the form (Q6): its report is kept, and an
+    application ready to send becomes « Préremplie », in the same transaction. Only the domain of the form goes to
+    the journal (a link may carry a tracking token)."""
     application, current = _open(store, account_id, application_id)
     if current.stage not in PREFILL_STAGES:
         raise InvalidChangeError(NOT_READY)

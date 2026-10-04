@@ -26,6 +26,7 @@ dependencies = [
 # Administration commands, run in the application container (accounts are created by invitation).
 rocky-admin = "rocky.system.admin:main"
 # The Rocky workstation, run on the user's computer: prefills forms in a visible browser (decision D5).
+# DORMANT since the acceptance of 04/10: kept, not used (candidatures.web.PREFILL_ENABLED).
 rocky-poste = "rocky.system.workstation_host:main"
 
 [dependency-groups]

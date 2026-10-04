@@ -134,8 +134,9 @@ docs/
 - Veille réelle d'un compte, offres **enregistrées** (réseau réel : avec l'accord de Nicolas) :
   `docker compose run --rm app rocky-admin veille <email> [--piste <nom>]`. L'application lance aussi la veille chaque
   jour à 12 h (heure de Paris) tant qu'elle tourne ; `ROCKY_SCHEDULER_ENABLED=false` éteint le planificateur.
-- Poste Rocky (préremplissage dans un navigateur visible, sur l'ordinateur, hors Docker) : `uv run rocky-poste`
-  (une fois : `uv run playwright install chromium`) ; procédure `docs/procedures/d5-poste/`.
+- Poste Rocky (préremplissage dans un navigateur visible, sur l'ordinateur, hors Docker) : **en sommeil** depuis la
+  recette de D5 (`candidatures.web.PREFILL_ENABLED = False`), inutile à lancer ; procédure gardée dans
+  `docs/procedures/d5-poste/`.
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
 - Sur GitHub : `.github/workflows/verification.yml` exécute la vérification globale à chaque push sur `refonte` et
   sur chaque PR. Une étape n'est terminée que si ce passage est vert aussi.

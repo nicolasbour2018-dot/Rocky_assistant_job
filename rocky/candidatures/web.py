@@ -169,12 +169,20 @@ OFFERS_CHANGED = offres_web.OFFERS_CHANGED
 
 router = APIRouter(prefix="/candidatures")
 
+# DORMANT (decision D5, acceptance of 04/10): the prefilling by the Rocky workstation failed on 2 real postings out of
+# 2 (the recruiters' sites show no form at once, they go through their own logins). Its code is kept but not run:
+# no button leads to it and its routes answer 404 while this is False. To re-enable it: set True and put back the
+# link « Préremplir avec le poste Rocky » in ``send_step.html``.
+PREFILL_ENABLED = False
+
 
 def install(app: FastAPI) -> None:
     templates: Jinja2Templates = app.state.templates
     templates.env.globals.update(stage_labels=STAGE_LABELS)
-    # The Rocky workstation that prefills forms (decision D5, Q1); replaced by the tests.
+    # DORMANT: the Rocky workstation that prefills forms (decision D5, Q1), and its switch (``PREFILL_ENABLED``);
+    # both replaced by the tests of the dormant code. Building the client contacts nothing.
     app.state.workstation = WorkstationClient(app.state.settings.workstation_url)
+    app.state.prefill_enabled = PREFILL_ENABLED
     app.include_router(router)
 
 
@@ -638,7 +646,7 @@ class ApplicationFile:
     changes: tuple[Change, ...] = ()
     revisions: tuple[Revision, ...] = ()
     sendings: tuple[Sending, ...] = ()
-    prefills: tuple[Prefill, ...] = ()
+    prefills: tuple[Prefill, ...] = ()  # DORMANT: forms prefilled by the workstation
     summary: Summary | None = None
     interest: tuple[tuple[str, ...], str | None] | None = (
         None  # reasons and note of « Intéressé »
@@ -873,7 +881,7 @@ def _dossier_page(
     confirming: bool = False,
     confirm_submitted: Mapping[str, str] | None = None,
     confirm_error: str | None = None,
-    prefilling: bool = False,
+    prefilling: bool = False,  # DORMANT: the panel « Préremplir »
     prefill_error: str | None = None,
     fragment: str = CV_STEP,
 ) -> Response:
@@ -1743,11 +1751,21 @@ def confirm(
     return _to_dossier(application_id, "envoi", language)
 
 
+# DORMANT (decision D5, acceptance of 04/10): the two routes of the prefilling, closed by ``PREFILL_ENABLED``.
+
+
+def _prefill_enabled(request: Request) -> bool:
+    enabled: bool = request.app.state.prefill_enabled
+    return enabled
+
+
 @router.get("/{application_id}/preremplir", response_class=HTMLResponse)
 def prefill_panel(
     request: Request, account: CurrentAccount, application_id: int, lettre: str = "fr"
 ) -> Response:
-    """What the workstation will put in the form, to confirm before it does (Q1, Q4)."""
+    """DORMANT. What the workstation will put in the form, to confirm before it does (Q1, Q4)."""
+    if not _prefill_enabled(request):
+        return Response(status_code=404)
     return _dossier_page(
         request,
         account,
@@ -1767,9 +1785,11 @@ CHANGED_SINCE_SHOWN = (
 def prefill(
     request: Request, account: CurrentAccount, application_id: int, form: FormFields
 ) -> Response:
-    """« Préremplir le formulaire » (Q1, Q4, Q6): the exact revisions shown, read back and checked, handed to the
-    workstation; once it took the form, its report and the stage « Préremplie » are written. Nothing is written when
-    it did not."""
+    """DORMANT. « Préremplir le formulaire » (Q1, Q4, Q6): the exact revisions shown, read back and checked, handed
+    to the workstation; once it took the form, its report and the stage « Préremplie » are written. Nothing is
+    written when it did not."""
+    if not _prefill_enabled(request):
+        return Response(status_code=404)
     language = _language(form.get("langue"))
     found = _dossier(request, account, application_id)
     if found is None:

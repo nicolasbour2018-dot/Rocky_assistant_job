@@ -52,7 +52,9 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 - Un envoi documente **un** changement « Envoyée » (`change_id`) : `confirm_sending` écrit le changement, l'envoi et
   leurs événements dans la même transaction (test de panne de `test_sql.py`). Aucun envoi sans confirmation : la liste
   renvoie au formulaire. Un envoi n'est en vigueur que si son changement l'est (`sending_in_force`).
-- Préremplissage : `record_prefill` seulement **après** que le poste a pris le formulaire (rien n'est écrit sinon) ;
+- Préremplissage **en sommeil** (recette du 04/10) : code gardé et testé, marqué « DORMANT », fermé par
+  `web.PREFILL_ENABLED` (routes 404, aucun bouton). Ne pas le supprimer ni le rebrancher sans Nicolas ; ses tests
+  l'allument par `app.state.prefill_enabled`. Quand il est actif : `record_prefill` seulement **après** que le poste a pris le formulaire (rien n'est écrit sinon) ;
   passage à « Préremplie » depuis « Prête à envoyer ». Les révisions remises sont celles **montrées** à la
   confirmation (identifiants cachés, refus si elles ont changé). Seul le domaine du formulaire va au journal.
 

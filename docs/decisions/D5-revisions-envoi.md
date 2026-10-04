@@ -66,3 +66,10 @@ lien de candidature est un formulaire de démonstration local (`127.0.0.1:8899`)
 Corrigé après l'essai : accord « générée » / « envoyée » pour la lettre.
 
 Vérification globale : verte, 1 114 tests, 1 min 50 (proche de la limite de 2 min, section 8).
+
+## Recette de Nicolas (04/10)
+
+| Constat de Nicolas | Décision |
+|---|---|
+| Préremplissage : « un échec sur 2 annonces sur 2 » ; les sites des recruteurs n'affichent pas de formulaire tout de suite et passent par leurs propres connexions | **Révise Q1, Q4, Q6** : le préremplissage est **mis en sommeil**. Son code est gardé et testé (poste, routes, table `application_prefills`, panneau), marqué « DORMANT » en commentaire ; aucun bouton n'y mène et ses routes répondent 404 tant que `candidatures.web.PREFILL_ENABLED` vaut `False`. À réactiver plus tard (éventuellement avec la lecture assistée, E5). |
+| Parcours de l'envoi | **Simplifié** : générer les PDF ; « Ouvrir le site de candidature ↗ » (l'annonce chez le recruteur) ; remplir le formulaire soi-même ; revenir dans Rocky et confirmer par « J'ai envoyé ma candidature » (date, canal, révisions exactes : Q3, Q5 inchangées). |
