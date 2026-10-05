@@ -79,4 +79,5 @@ universelle ; lecture des offres Apec (Q8).
 dessinées, refus d'une page d'un autre site, faits seuls quand la description n'est pas lisible, écran à deux temps).
 Critère « une offre Apec incomplète enrichie depuis sa fiche » **non atteint par la lecture assistée** : Apec refuse
 le navigateur piloté (recette n° 1) ; une offre Apec se complète à la main (Q8). Reprise d'Apec : étape d'amélioration
-(plan §8).
+(plan §8). Vérification globale verte : locale 1 510 tests en 1 min 43 (charge 9,5) ; GitHub 1 510 tests en 1 min 39
+(passage `37311810222`).
