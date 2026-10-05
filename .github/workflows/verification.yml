@@ -18,7 +18,9 @@ concurrency:
 jobs:
   check:
     name: ruff, mypy, pytest
-    runs-on: ubuntu-latest
+    # Pinned (decision G1): ubuntu-latest moves to Ubuntu 26 from 19 October 2026; a change of runner is a step of
+    # its own, not a surprise (plan v2, section 8, B2).
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7

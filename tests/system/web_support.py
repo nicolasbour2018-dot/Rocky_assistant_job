@@ -2,21 +2,43 @@
 
 from __future__ import annotations
 
-import io
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from jinja2 import BytecodeCache
+from jinja2.bccache import Bucket
 from sqlalchemy import Engine
 
-from rocky.system.auth.admin import invite
+from rocky.system.auth.sql import SqlAuthStore
+from rocky.system.auth.usecases import Auth, Invited
 from rocky.system.config import Settings
 from rocky.system.web import create_app
 from tests.system.auth.fakes import FakeClock, FakeHasher, RecordingMailer
 
 PASSWORD = "un mot de passe solide"
+
+
+class SharedBytecode(BytecodeCache):
+    """Compiled templates kept for the whole run, in memory: each test builds a new application, whose Jinja
+    environment would compile every template again (decision G1). Filters and globals are read when rendering,
+    so the compiled code is the same for every application."""
+
+    def __init__(self) -> None:
+        self._code: dict[str, bytes] = {}
+
+    def load_bytecode(self, bucket: Bucket) -> None:
+        code = self._code.get(bucket.key)
+        if code is not None:
+            bucket.bytecode_from_string(code)
+
+    def dump_bytecode(self, bucket: Bucket) -> None:
+        self._code[bucket.key] = bucket.bytecode_to_string()
+
+
+SHARED_BYTECODE = SharedBytecode()
 
 
 def make_app(
@@ -30,27 +52,29 @@ def make_app(
         public_url="http://testserver",
         storage_root=storage_root,
     )
-    return create_app(
+    app = create_app(
         settings,
         engine=engine,
         mailer=mailer or RecordingMailer(),
         hasher=FakeHasher(),
         clock=FakeClock(),
     )
+    app.state.templates.env.bytecode_cache = SHARED_BYTECODE
+    return app
 
 
 def invitation_token(engine: Engine, email: str) -> str:
-    mailer = RecordingMailer()
-    invite(
-        engine,
-        email=email,
-        public_url="http://testserver",
-        mailer=mailer,
-        print_link=False,
-        out=io.StringIO(),
-        clock=FakeClock(),
-    )
-    return parse_qs(urlsplit(mailer.sent[-1].link).query)["jeton"][0]
+    """The invitation use case of ``rocky-admin invite`` (tested in ``test_admin``), without its argon2 hasher:
+    building one costs a real hash (40 ms), and an invitation hashes nothing (decision G1)."""
+    with engine.begin() as connection:
+        invited = Auth(
+            SqlAuthStore(connection),
+            hasher=FakeHasher(),
+            clock=FakeClock(),
+            public_url="http://testserver",
+        ).invite(email)
+    assert isinstance(invited, Invited)
+    return parse_qs(urlsplit(invited.mail.link).query)["jeton"][0]
 
 
 def logged_in(

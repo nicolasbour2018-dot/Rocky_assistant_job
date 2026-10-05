@@ -171,7 +171,7 @@ la vérification allégée plutôt que sa limite relevée ; une passe UX des aut
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| G1. Vérification | *Direct.* Partager les fixtures SQL lourdes (compte, boîte, rendus) par module ; fixer `runs-on: ubuntu-24.04` avant le passage de GitHub à Ubuntu 26 (19/10) | Vérification GitHub verte en 1 min 40 au plus | ⬜ |
+| G1. Vérification | *Direct.* Partager les fixtures SQL lourdes (compte, boîte, rendus) par module ; fixer `runs-on: ubuntu-24.04` avant le passage de GitHub à Ubuntu 26 (19/10) | Vérification GitHub verte en 1 min 40 au plus | 🔄 |
 | G2. Lieux et date limite | *Grill me, puis mode plan.* Référentiel versionné (communes, départements → région), sans réseau à l'exécution, pour qu'une région couvre ses villes dans le score ; nouvelle `RULES_VERSION` ; mesures C4/C5 relancées ; offre à date limite passée signalée ; contrat Hellowork lu dans le titre de la page | « Paris 01 - 75 », « Courbevoie - 92 » et « Chartres - 28 » répondent aux lieux des pistes de Nicolas ; écart de classement chiffré et documenté | ⬜ |
 | G3. Cockpit | *Grill me avec la skill de design, puis mode plan.* 🏠 Aujourd'hui devient le **Cockpit** (libellé de D12 mis à jour, validé par Nicolas le 05/10) : cartes de métriques, fil défilant de ce que Rocky signale, suggestions d'offres (meilleurs scores pour commencer), veille manuelle ; mécanismes et parcours, sans identité graphique | Fixé au grill | ⬜ |
 | G4. Assistant Rocky | *Grill me, puis mode plan.* Le tiroir 🐾 devient un assistant Gemini (révise la décision F1, Q2) : contexte construit par les cas d'usage des modules (offre, candidature, message, profil), par compte et en lecture seule, jamais de SQL écrit par le modèle ; réponses qui citent les faits ; aucun geste à la place de l'utilisateur ; plafonds d'appels communs dans `system` ; place de « À faire ici » face au cockpit | Fixé au grill | ⬜ |
@@ -289,6 +289,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `.github/workflows/verification.yml`. Le VPS de Nicolas tourne aussi sous Ubuntu : même vigilance lors de son
   installation.
   *Placé en G1 (Nicolas, 05/10) : `runs-on` fixé avant le 19/10.*
+  *Résolu en G1 : `runs-on: ubuntu-24.04` (décision G1).*
 - **(B3 → C6)** Sessions et jetons expirés restent en base : purge par une tâche du planificateur.
   *Résolu en C6 : tâche quotidienne du planificateur (4 h), `SqlAuthStore.purge_expired`.*
 - **(B3 → B4)** Pas de `favicon.ico` (erreur 404 dans la console) ; les formulaires de mot de passe n'ont pas de champ
@@ -722,6 +723,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   sur une machine calme, mais 1 min 52 puis **2 min 12** le même jour sous une charge de 12 (autres applications du
   poste, pas Rocky) ; 1 min 10 à E2. La limite des 2 min n'a plus de marge. Leviers : partager le compte et la boîte des
   tests SQL de `messages` (une fixture par module), ou mesurer la limite sur le passage GitHub plutôt que sur le poste.
+  *Résolu en G1 (voir E3 → B1 ci-dessous).*
 - **(E3 → Nicolas, plus tard)** **Cadremploi refuse la lecture de ses fiches** (HTTP 403, premier passage réel du 05/10) :
   ses offres restent des cartes (intitulé, employeur, lieu, contrat), à compléter par « Coller la description ». Son
   alerte « Analyste Programmeur, Paris, CDI » amène surtout des postes de développeur sans rapport avec les pistes : la
@@ -741,6 +743,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *F1 : **2 min 01** sur GitHub (passage `37361566948`, 1 556 tests), limite dépassée ; 49 s en local. À trancher avec
   Nicolas : partager les fixtures SQL lourdes, ou mesurer la limite sur le poste plutôt que sur GitHub.*
   *Tranché par Nicolas (05/10) : partager les fixtures lourdes, limite toujours mesurée sur GitHub ; étape G1.*
+  *Résolu en G1 (décision G1) : les mesures placent le coût ailleurs que dans le SQL des comptes ; invitation des
+  comptes de test sans argon2, gabarits Jinja compilés une fois par exécution, rendus de `profil` partagés ; 68 → 45 s
+  sous 4 processeurs.*
 - **(E3 → plus tard, Nicolas 05/10)** E3 close **sans le critère Indeed** (aucune alerte Indeed reçue). Dès la première
   alerte Indeed : la capturer (`docs/procedures/e3-captures/`), écrire son lecteur (`alerts.rules.READERS`, Indeed jamais
   lu par son lien : refus constaté en C2), puis constater une offre Indeed par jour sur 3 jours.
