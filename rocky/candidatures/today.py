@@ -1,4 +1,5 @@
-"""What 🏠 Aujourd'hui shows of the applications (decision F1, Q5): the follow-ups due, then the applications to finish.
+"""What 🏠 Aujourd'hui shows of the applications (decision F1, Q5): the follow-ups due, then the applications to finish;
+and the drawer 🐾 of 📝 Candidatures (Q12): the applications whose action is due, each to its page.
 
 Both blocks read the rows of the screen 📝 Candidatures (``web.rows_of``), once per request: no second reading of the
 applications (plan §8, D6 → F1).
@@ -11,6 +12,7 @@ from datetime import date
 
 from fastapi import FastAPI, Request
 
+from rocky.candidatures.dossier_web import dossier_url
 from rocky.candidatures.model import (
     BEFORE_SENDING,
     FOLLOW_UP_STAGES,
@@ -21,7 +23,7 @@ from rocky.candidatures.rules import Tab
 from rocky.candidatures.web import Row, rows_of
 from rocky.candidatures.web_common import engine_of, today_of
 from rocky.system.auth.model import Account
-from rocky.system.shell import Action, Card, add_today_cards
+from rocky.system.shell import Action, Card, Drawer, add_drawer, add_today_cards
 
 # The applications named in a block; the others are counted.
 SHOWN_ROWS = 3
@@ -30,6 +32,7 @@ SHOWN_ROWS = 3
 def install(app: FastAPI) -> None:
     add_today_cards(app, "relances", _follow_up_cards)
     add_today_cards(app, "dossiers", _unfinished_cards)
+    add_drawer(app, "applications", _drawer)
 
 
 def _rows(request: Request, account: Account) -> list[Row]:
@@ -123,3 +126,17 @@ def _more(count: int) -> list[str]:
         return []
     s = "s" if others > 1 else ""
     return [f"… et {others} autre{s}."]
+
+
+def _drawer(request: Request, account: Account) -> Drawer:
+    return Drawer(actions=due_actions(_rows(request, account)))
+
+
+def due_actions(rows: Sequence[Row]) -> tuple[Action, ...]:
+    """The applications whose next action is due, the most overdue first, each to its page."""
+    due = sorted((row for row in rows if Tab.TO_DO in row.tabs), key=_by_due)
+    return tuple(
+        Action(f"{_label(row)} : {row.next_action.label}", dossier_url(row.id, None))
+        for row in due
+        if row.next_action is not None
+    )

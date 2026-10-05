@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 from sqlalchemy import Connection, Engine
 
 from rocky.offres.analysis.model import PostingAnalysis
@@ -78,7 +79,15 @@ from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.llm import JsonModel
-from rocky.system.shell import Action, Card, add_today_cards, page, wants_fragment
+from rocky.system.shell import (
+    Action,
+    Card,
+    Drawer,
+    add_drawer,
+    add_today_cards,
+    page,
+    wants_fragment,
+)
 from rocky.system.workstation import Workstation, WorkstationUnavailableError
 
 TRIAGE = "tri"
@@ -100,12 +109,70 @@ def install(app: FastAPI) -> None:
         reason_key=reason_key,
         band=band,
         list_query=list_query,
+        offer_shortcuts=SHORTCUTS,
     )
     templates.env.filters["age"] = age
     imports_web.install(app)
     watch_web.install(app)
     add_today_cards(app, "offres", _today_cards)
+    add_drawer(app, "offers", _drawer)
     app.include_router(router)
+
+
+def _kbd(*keys: str) -> Markup:
+    return Markup(" ").join(Markup("<kbd>{}</kbd>").format(key) for key in keys)
+
+
+# The keyboard of the screen (decisions B4, C7): its help « ? » and the drawer 🐾 (decision F1, Q12).
+SHORTCUTS: tuple[tuple[Markup, Markup | str], ...] = (
+    (_kbd("i", "e", "p"), "Intéressé, écarté, plus tard"),
+    (
+        Markup("<kbd>1</kbd>…<kbd>9</kbd> <kbd>0</kbd>"),
+        Markup("Cocher un motif (<kbd>0</kbd> : autre)"),
+    ),
+    (_kbd("t"), "Écrire une précision"),
+    (_kbd("Entrée"), "Valider la décision"),
+    (_kbd("d"), "Intéressé : valider et préparer la candidature"),
+    (_kbd("Échap"), "Revenir sans décider"),
+    (_kbd("u"), "Annuler la dernière décision (plusieurs fois possible)"),
+    (_kbd("j", "k"), "Offre suivante, précédente"),
+    (_kbd("w"), "Pourquoi ce score ?"),
+    (_kbd("r"), "Résumer l'annonce"),
+    (_kbd("c"), "Coller la description d'une annonce incomplète"),
+    (
+        _kbd("e"),
+        "Ouvrir une annonce incomplète dans le navigateur, puis lire la page affichée",
+    ),
+    (_kbd("o"), "Ouvrir l'annonce d'origine"),
+    (_kbd("?"), "Cette aide"),
+)
+IMPORT = Action("Importer une annonce", "/offres/importer")
+
+
+def _drawer(request: Request, account: Account) -> Drawer:
+    """What to do on 🔎 Offres: the triage, the incomplete offers to complete, an import."""
+    screen = Screen(request, account)
+    actions: list[Action] = []
+    to_review = len(screen.queue)
+    if to_review:
+        actions.append(
+            Action(
+                f"Trier les {to_review} offres à examiner"
+                if to_review > 1
+                else "Trier l'offre à examiner",
+                f"/offres?vue={TRIAGE}",
+            )
+        )
+    incomplete = listed(screen.offers, screen.decisions, ListFilters(incomplete=True))
+    if incomplete:
+        actions.append(
+            Action(
+                f"Compléter les offres incomplètes ({len(incomplete)})",
+                f"/offres?vue={LIST}&{list_query(ListFilters(incomplete=True))}",
+            )
+        )
+    actions.append(IMPORT)
+    return Drawer(actions=tuple(actions), shortcuts=SHORTCUTS)
 
 
 def _today_cards(request: Request, account: Account) -> list[Card]:

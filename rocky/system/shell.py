@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
@@ -182,10 +183,11 @@ class Card:
 
 @dataclass(frozen=True)
 class Drawer:
-    """What the drawer 🐾 shows on a screen (decision F1, Q12): what to do here, and the screen's shortcuts."""
+    """What the drawer 🐾 shows on a screen (decision F1, Q12): what to do here (at most ``DRAWER_ACTIONS``), and the
+    screen's shortcuts, each its keys (HTML, ``<kbd>``) and what they do."""
 
     actions: tuple[Action, ...] = ()
-    shortcuts: tuple[tuple[str, str], ...] = ()
+    shortcuts: tuple[tuple[Markup, Markup | str], ...] = ()
 
 
 # The cards a module gives for an account; none when it has nothing to say.
@@ -197,6 +199,7 @@ TODAY_ORDER = ("veille", "messages", "relances", "dossiers", "offres")
 # Decision F1, Q11: the order of the panels of ⚙️ Système.
 SYSTEM_ORDER = ("veille", "boites", "alertes", "planification")
 POLL_EVERY = "15s"
+DRAWER_ACTIONS = 3
 
 
 def add_today_cards(app: FastAPI, key: str, provider: CardsProvider) -> None:
@@ -240,6 +243,24 @@ def cards_of(
         if key in providers
         for card in providers[key](request, account)
     ]
+
+
+# The screens made of cards: their drawer gives the cards' gestures, the main one first.
+CARD_SCREENS = {
+    "today": ("today_cards", TODAY_ORDER),
+    "system": ("system_cards", SYSTEM_ORDER),
+}
+
+
+def card_actions(cards: Sequence[Card]) -> tuple[Action, ...]:
+    """The gestures of ``cards``, the main one first, each once."""
+    main = main_action(cards)
+    ordered = ([cards[main]] if main is not None else []) + list(cards)
+    actions: list[Action] = []
+    for card in ordered:
+        if card.action is not None and card.action not in actions:
+            actions.append(card.action)
+    return tuple(actions)
 
 
 def main_action(cards: Sequence[Card]) -> int | None:
@@ -314,9 +335,17 @@ def drawer(request: Request, account: CurrentAccount, ecran: str = "") -> HTMLRe
     providers: dict[str, DrawerProvider] = getattr(request.app.state, "drawers", {})
     entry = ENTRIES.get(ecran)
     provider = providers.get(ecran) if entry is not None else None
+    if provider is not None:
+        found = provider(request, account)
+    elif ecran in CARD_SCREENS:
+        found = Drawer(
+            actions=card_actions(cards_of(request, account, *CARD_SCREENS[ecran]))
+        )
+    else:
+        found = Drawer()
     context = {
         "entry": entry,
-        "drawer": provider(request, account) if provider is not None else Drawer(),
+        "drawer": Drawer(found.actions[:DRAWER_ACTIONS], found.shortcuts),
     }
     if wants_fragment(request):
         templates: Jinja2Templates = request.app.state.templates

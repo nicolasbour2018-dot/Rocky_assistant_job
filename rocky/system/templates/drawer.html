@@ -8,7 +8,7 @@
 {% if drawer.shortcuts %}
 <h3>Raccourcis</h3>
 <dl class="drawer-shortcuts">
-  {% for keys, label in drawer.shortcuts %}<dt><kbd>{{ keys }}</kbd></dt><dd>{{ label }}</dd>{% endfor %}
+  {% for keys, label in drawer.shortcuts %}<dt>{{ keys }}</dt><dd>{{ label }}</dd>{% endfor %}
 </dl>
 {% endif %}
 {% if not drawer.actions and not drawer.shortcuts %}

@@ -207,6 +207,27 @@ def test_today_counts_the_offers_to_review_after_the_late_watch(
     assert 'class="btn btn-primary">Lancer maintenant</button>' in page
 
 
+def test_the_drawer_of_offers_gives_the_triage_the_incomplete_and_the_shortcuts(
+    board: Board,
+) -> None:
+    """Decision F1, Q12: the same shortcuts as the help « ? » of the screen."""
+    drawer = board.client.get("/tiroir?ecran=offers", headers=HTMX).text
+    help_sheet = board.client.get("/offres").text.split('id="shortcuts"')[1]
+
+    assert f"Trier les {len(QUEUE)} offres à examiner" in drawer
+    assert "Compléter les offres incomplètes (2)" in drawer
+    assert re.search(r'href="/offres\?vue=liste&amp;[^"]*incompletes=1"', drawer)
+    assert "Importer une annonce" in drawer
+    assert (
+        "<dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>Offre suivante, précédente</dd>"
+        in drawer
+    )
+    assert (
+        "<dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>Offre suivante, précédente</dd>"
+        in help_sheet
+    )
+
+
 def test_a_decision_needs_a_reason(board: Board) -> None:
     response = board.client.post(
         f"/offres/{board.id('analyst')}/decision",

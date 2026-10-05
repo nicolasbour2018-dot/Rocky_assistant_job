@@ -5,7 +5,7 @@ import re
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from markupsafe import escape
+from markupsafe import Markup, escape
 from sqlalchemy import Engine
 
 from rocky.system.auth.model import Account
@@ -246,7 +246,10 @@ def test_the_drawer_shows_the_screen_s_actions_and_shortcuts(
     client, _ = logged_in(app, migrated_engine)
 
     def drawer(request: object, account: Account) -> Drawer:
-        return Drawer(actions=(LINK,), shortcuts=(("j", "Offre suivante"),))
+        return Drawer(
+            actions=(LINK, FIX, LINK, Action("De trop", "/trop")),
+            shortcuts=((Markup("<kbd>j</kbd>"), "Offre suivante"),),
+        )
 
     add_drawer(app, "offers", drawer)
 
@@ -256,7 +259,8 @@ def test_the_drawer_shows_the_screen_s_actions_and_shortcuts(
 
     assert "À faire ici" in fragment
     assert '<a class="btn card-action" href="/offres">Voir</a>' in fragment
-    assert "<kbd>j</kbd>" in fragment
+    assert "<dt><kbd>j</kbd></dt><dd>Offre suivante</dd>" in fragment
+    assert "De trop" not in fragment  # three actions at most
     assert "<html" not in fragment
     assert "Rien de particulier à faire sur cet écran" in other
     assert 'class="sidebar"' in whole
@@ -271,3 +275,19 @@ def test_the_drawer_is_loaded_when_it_opens_for_the_active_screen(
 
     assert 'hx-get="/tiroir?ecran=applications"' in page
     assert "hx-trigger=\"toggle[newState=='open']\"" in page
+
+
+def test_the_drawer_of_today_gives_the_cards_gestures_the_main_one_first(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    client, _ = logged_in(app, migrated_engine)
+    _today(
+        app,
+        offres=_cards(Card("🔎 Offres", action=LINK)),
+        veille=_cards(Card("⚠️ Veille", action=FIX, problem=True)),
+    )
+
+    fragment = client.get("/tiroir?ecran=today", headers=HTMX).text
+
+    assert fragment.index("Réparer") < fragment.index("Voir")
+    assert "btn-primary" not in fragment

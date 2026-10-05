@@ -19,20 +19,8 @@
 <div id="shortcuts" class="sheet shortcuts" popover>
   <h2>Raccourcis</h2>
   <dl>
-    <dt><kbd>i</kbd> <kbd>e</kbd> <kbd>p</kbd></dt><dd>Intéressé, écarté, plus tard</dd>
-    <dt><kbd>1</kbd>…<kbd>9</kbd> <kbd>0</kbd></dt><dd>Cocher un motif (<kbd>0</kbd> : autre)</dd>
-    <dt><kbd>t</kbd></dt><dd>Écrire une précision</dd>
-    <dt><kbd>Entrée</kbd></dt><dd>Valider la décision</dd>
-    <dt><kbd>d</kbd></dt><dd>Intéressé : valider et préparer la candidature</dd>
-    <dt><kbd>Échap</kbd></dt><dd>Revenir sans décider</dd>
-    <dt><kbd>u</kbd></dt><dd>Annuler la dernière décision (plusieurs fois possible)</dd>
-    <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>Offre suivante, précédente</dd>
-    <dt><kbd>w</kbd></dt><dd>Pourquoi ce score ?</dd>
-    <dt><kbd>r</kbd></dt><dd>Résumer l'annonce</dd>
-    <dt><kbd>c</kbd></dt><dd>Coller la description d'une annonce incomplète</dd>
-    <dt><kbd>e</kbd></dt><dd>Ouvrir une annonce incomplète dans le navigateur, puis lire la page affichée</dd>
-    <dt><kbd>o</kbd></dt><dd>Ouvrir l'annonce d'origine</dd>
-    <dt><kbd>?</kbd></dt><dd>Cette aide</dd>
+    {% for keys, label in offer_shortcuts %}<dt>{{ keys }}</dt><dd>{{ label }}</dd>
+    {% endfor %}
   </dl>
   <button type="button" class="btn" popovertarget="shortcuts" popovertargetaction="hide">Fermer</button>
 </div>

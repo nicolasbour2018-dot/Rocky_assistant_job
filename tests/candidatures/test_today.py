@@ -6,7 +6,7 @@ from datetime import date, timedelta
 
 from rocky.candidatures.model import NextAction, Stage
 from rocky.candidatures.rules import tabs_of
-from rocky.candidatures.today import follow_up_card, unfinished_card
+from rocky.candidatures.today import due_actions, follow_up_card, unfinished_card
 from rocky.candidatures.web import Row
 from rocky.offres.model import OfferHeading
 
@@ -85,3 +85,18 @@ def test_ready_applications_alone_lead_to_the_ready_tab() -> None:
     assert card is not None
     assert card.lines == ("Acme — Data analyst 1 : Prête à envoyer",)
     assert card.action is not None and card.action.url == "/candidatures?vue=pretes"
+
+
+def test_the_drawer_leads_to_each_application_whose_action_is_due() -> None:
+    actions = due_actions(
+        [
+            row(1, Stage.SENT, due_in=0),
+            row(2, Stage.SENT, due_in=3),
+            row(3, Stage.PREPARING, due_in=-1, company="Covéa"),
+        ]
+    )
+
+    assert [(action.label, action.url) for action in actions] == [
+        ("Covéa — Data analyst 3 : Relancer", "/candidatures/3"),
+        ("Acme — Data analyst 1 : Relancer", "/candidatures/1"),
+    ]
