@@ -63,4 +63,8 @@ Critère de sortie (plan) : « Chaque écran a une action principale claire ».
 
 Corrigé pendant l'essai : la carte du Bilan prenait toute la largeur (alignée sur les autres écrans, 880 px).
 
-*(Recette de Nicolas : à consigner ici, écran par écran.)*
+## Recette et clôture (Nicolas, 05/10)
+
+Étape close par Nicolas sur le critère vérifié par les tests et l'essai : chaque écran a une action principale claire.
+L'UX et l'UI de l'ensemble de Rocky seront **retravaillées dans une étape à part**, hors F1 (plan §8) ; aucune
+retouche visuelle des écrans transverses n'est faite ici.

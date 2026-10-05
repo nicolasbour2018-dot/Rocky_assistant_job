@@ -160,7 +160,7 @@ aucun identifiant interne affiché.
 
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
-| F1. Écrans transverses | 🏠 Aujourd'hui (offres à examiner, dossiers à finir, relances dues, réponses à vérifier, retard de veille) ; ⚙️ Système (état lisible par source, OAuth, planification) ; 📈 Bilan minimal (accusé technique ≠ réponse humaine ≠ entretien ≠ offre, dénominateurs affichés) ; tiroir Rocky | Chaque écran a une action principale claire | 🔄 |
+| F1. Écrans transverses | 🏠 Aujourd'hui (offres à examiner, dossiers à finir, relances dues, réponses à vérifier, retard de veille) ; ⚙️ Système (état lisible par source, OAuth, planification) ; 📈 Bilan minimal (accusé technique ≠ réponse humaine ≠ entretien ≠ offre, dénominateurs affichés) ; tiroir Rocky | Chaque écran a une action principale claire | ✅ |
 | F2. Recette et bascule | Tests de bout en bout : choisir 3 offres, préparer et confirmer un envoi, retrouver une relance, lire un changement Gmail ; export final de l'ancien Rocky ; retrait de Streamlit, de l'ancien code et des scripts Hugging Face | Nicolas mène sa recherche une semaine entière uniquement dans le nouveau Rocky | ⬜ |
 
 ## 5. Hors refonte (plus tard)
@@ -736,3 +736,6 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   délai sous une charge de 13, `uv run pytest` hors Docker) ; vert seul et dans le service `check`. À surveiller si
   cela se répète.
 - **(F1 → F2)** Le tiroir 🐾 est déterministe (Q2) : un assistant conversationnel (Gemini) reste hors refonte.
+- **(F1 → étape à placer, Nicolas 05/10)** **Refonte de l'UX et de l'UI de tout Rocky**, dans une étape dédiée (hors F1) :
+  les écrans transverses de F1 en font partie, avec les constats d'interface déjà notés (parcours du dossier D4 → D6,
+  frappes perdues B4 → C7). À placer dans le plan avec Nicolas.
