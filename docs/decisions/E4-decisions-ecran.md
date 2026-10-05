@@ -79,6 +79,11 @@ des avis Hellowork ; tous leurs liens passent par une redirection de suivi (`ema
 suivie (appel réseau, jeton de suivi). L'intitulé est lu dans **42 messages sur 42** (35 « Votre candidature est
 arrivée chez… », 7 « Finalisez votre candidature… »).
 
+**Étape close** (Nicolas, 05/10) : critère vérifié par les tests (chaque changement d'étape par une règle reste dans
+« Ce qui a bougé » jusqu'à un geste ; panne injectée sans état contradictoire) et dans l'essai navigateur ; recette
+« a priori c'est bon », avec la création en un clic (Q13) ; vérification globale verte. Suite : E3 (alertes comme
+source).
+
 ## Hors E4
 
 « Sans réponse » après un délai (Q11, F1 ou après) ; offres tirées des alertes (E3) ; reprise des étiquettes de
