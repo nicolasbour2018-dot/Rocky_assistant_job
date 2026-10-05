@@ -85,7 +85,7 @@ périmées (« trop d'appels inutiles »).
 
 **Étape close par décision de Nicolas** (05/10) : lecture des alertes Hellowork, Cadremploi, eFinancialCareers et
 LinkedIn en réel, erreurs d'import visibles sur l'alerte et sur l'offre, limite Q8 ; critère Indeed reporté faute
-d'alerte Indeed reçue ; vérification globale verte (locale et GitHub).
+d'alerte Indeed reçue ; vérification globale verte (locale ; GitHub : 1 471 tests en 1 min 49, passage `37295850878`).
 
 ## Hors E3
 

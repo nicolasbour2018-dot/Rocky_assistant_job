@@ -694,7 +694,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(E3 → F1)** ⚙️ Système : ce que les alertes ont donné par plateforme (`alert_readings`, `alert_offers`, rapport
   `AlertsReport`), refus de plateforme compris.
 - **(E3 → B1, vérification)** 1 471 tests : 3 min 21 sous une charge de 6 à 20 (5 min 50 sous 15) ; les tests d'E3 pèsent
-  10 s en séquentiel. La limite des 2 min se mesure sur le passage GitHub (constat E4 → B1, toujours ouvert).
+  10 s en séquentiel. Sur GitHub : **1 min 49** (passage `37295850878`), sous la limite des 2 min mais sans marge (constat E4 → B1, toujours ouvert).
 - **(E3 → plus tard, Nicolas 05/10)** E3 close **sans le critère Indeed** (aucune alerte Indeed reçue). Dès la première
   alerte Indeed : la capturer (`docs/procedures/e3-captures/`), écrire son lecteur (`alerts.rules.READERS`, Indeed jamais
   lu par son lien : refus constaté en C2), puis constater une offre Indeed par jour sur 3 jours.
