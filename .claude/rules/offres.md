@@ -52,12 +52,18 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Écran : `docs/decisi
   Jamais d'exception avalée ni de lien ignoré en silence (fin de `_import_links`, E3 réutilise `import_link`).
 - Un lien fourni par l'utilisateur ne se lit que par `PublicHttp.get_page` : hôte public vérifié à chaque
   redirection (anti-SSRF), page HTML, 3 Mo au plus. Un lien n'est jamais journalisé (il peut porter un jeton).
-- Ordre de lecture : JSON-LD `JobPosting` → conteneur connu → texte visible marqué incomplet. `estimatedSalary`
+- Ordre de lecture : page à sections connue (`SECTIONED_PAGES` : Apec dessinée par le poste, E5) → JSON-LD
+  `JobPosting` → conteneur connu → texte visible marqué incomplet. `estimatedSalary`
   n'est pas un fait de l'annonce ; aucun LLM avant C3.
 - Une plateforme dont la fiche est vide pour un simple lecteur implémente `LinkSource` (Apec) ; sinon, page lue.
 - Enrichir une offre : `enriched` (description remplacée seulement par une complète, faits connus jamais écrasés)
-  ou `with_pasted_description` ; à l'écran, `enrich_offer` (C7) recalcule le score aussitôt, garde les pistes, ne
-  touche pas `last_seen_at` et écrit `offres.offer_enriched`.
+  ou `with_pasted_description` ; à l'écran, `enrich_offer` (collage, C7) et `enrich_offer_from_page` (lecture
+  assistée, E5) recalculent le score aussitôt, gardent les pistes, ne touchent pas `last_seen_at` et écrivent
+  `offres.offer_enriched` (`how`), jamais une adresse.
+- Lecture assistée (décision `docs/decisions/E5-lecture-assistee.md`) : jamais dans la veille ni sans le geste de
+  l'utilisateur ; la page affichée doit être sur le site de l'offre (`shows_the_offer`) ; un simple texte visible ne
+  remplace pas la description (Q3). Une page dessinée par JavaScript se lit sur une capture faite par le poste
+  (`docs/procedures/e5-captures/`), jamais sur une page inventée.
 - Résumé : demandé par l'utilisateur, appelé hors de toute transaction, gardé dans `offer_summaries` avec l'empreinte
   de la description (`description_hash`) ; un résumé en échec n'est jamais gardé.
 - Les jeux enregistrés viennent de `docs/procedures/c2-captures/` ; aucun nom de personne (recruteur, salarié).

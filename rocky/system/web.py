@@ -29,6 +29,7 @@ from rocky.system.auth.web import AuthServices, install
 from rocky.system.config import Settings, load_settings
 from rocky.system.db import create_db_engine
 from rocky.system.scheduler import DailyTask, PeriodicTask, Scheduler
+from rocky.system.workstation import WorkstationClient
 
 # Expired sessions and tokens are purged at night (plan §8, B3 → C6).
 PURGE_HOUR = time(4, 0)
@@ -83,6 +84,9 @@ def create_app(
         ),
     )
 
+    # The Rocky workstation (decisions D5, E5): the lecture assistée of the offers, the dormant prefilling of the
+    # applications. Building the client contacts nothing; the tests replace it with a fake.
+    app.state.workstation = WorkstationClient(settings.workstation_url)
     app.include_router(shell.router)
     offres_web.install(app)
     profil_web.install(app)

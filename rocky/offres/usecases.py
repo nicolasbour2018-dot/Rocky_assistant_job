@@ -1,5 +1,6 @@
 """Use cases of the stored offers: the unit "offer + tracks + scores", shared by the watch and the import by URL;
-the decisions of the offers screen (C7), the description pasted by the user and the stored summary.
+the decisions of the offers screen (C7), the description pasted by the user or read on the page shown by a visible
+browser (E5), and the stored summary.
 
 Each use case runs inside one transaction opened by the caller (the stores never commit): an offer is never
 written without its tracks and its scores (exit criterion of C6), a decision never without its event (C7).
@@ -8,8 +9,10 @@ written without its tracks and its scores (exit criterion of C6), a decision nev
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Protocol
+from enum import StrEnum
+from typing import Any, Protocol
 
 from rocky.offres.analysis.rules import analyze
 from rocky.offres.analysis.usecases import Summary
@@ -21,7 +24,14 @@ from rocky.offres.decisions import (
     effective_decisions,
     to_cancel,
 )
-from rocky.offres.imports.rules import enriched, with_pasted_description
+from rocky.offres.imports.rules import (
+    NOT_READABLE_REASON,
+    OTHER_PAGE_REASON,
+    enriched,
+    parse_page,
+    shows_the_offer,
+    with_pasted_description,
+)
 from rocky.offres.model import (
     DecisionStore,
     OfferStore,
@@ -35,7 +45,7 @@ from rocky.offres.rules import best_track, description_hash, match_key
 from rocky.offres.scoring.model import Score
 from rocky.offres.scoring.rules import score
 from rocky.offres.screen import shown_track
-from rocky.offres.sources.model import CollectedOffer
+from rocky.offres.sources.model import CollectedOffer, SourceFailedError
 from rocky.system.events import Actor, NewEvent
 
 
@@ -189,6 +199,84 @@ def enrich_offer(
     """« Coller la description » (C7, Q5, Q13): the pasted text becomes the complete description of the offer, which is
     scored again at once, with the user's event. Tracks are kept. Raises ``InvalidPasteError`` (message shown)."""
     offer = with_pasted_description(stored.offer, text)
+    return _write_enrichment(
+        store, stored, offer, {"how": "pasted"}, inputs=inputs, now=now, today=today
+    )
+
+
+class ReadingOutcome(StrEnum):
+    """What a page shown in a visible browser gave to an offer (decision E5)."""
+
+    COMPLETED = "completed"  # a complete description, and maybe facts
+    FACTS_ONLY = "facts_only"  # facts the offer did not know, the description stays incomplete (Q3)
+    NOTHING_NEW = "nothing_new"
+    OTHER_PAGE = "other_page"  # not the site of the offer (Q6)
+    UNREADABLE = "unreadable"
+
+
+@dataclass(frozen=True)
+class PageReading:
+    outcome: ReadingOutcome
+    # Why the description is still incomplete (French, shown); None once complete.
+    reason: str | None = None
+    score: Score | None = None  # the new score, when something was written
+
+
+def enrich_offer_from_page(
+    store: OfferStore,
+    stored: StoredOffer,
+    shown_url: str,
+    shown_html: str,
+    *,
+    inputs: ScoringInputs,
+    now: datetime,
+    today: date,
+) -> PageReading:
+    """« Lire la page affichée » (decision E5): the page shown by the visible browser, read by ``parse_page``,
+    completes the offer through ``enriched``: the description only by a complete one (Q3), facts the offer does not
+    know, never its identity. Scored again with the user's event; nothing is written when the page brings nothing, or
+    is not on the site of the offer (Q6)."""
+    if not shows_the_offer(stored.offer, shown_url):
+        return PageReading(ReadingOutcome.OTHER_PAGE, OTHER_PAGE_REASON)
+    try:
+        preview = parse_page(shown_html, shown_url, today=today)
+    except SourceFailedError as error:
+        return PageReading(ReadingOutcome.UNREADABLE, error.reason)
+    offer = enriched(stored.offer, preview.offer)
+    completed = offer.description_complete and not stored.offer.description_complete
+    reason = None if offer.description_complete else NOT_READABLE_REASON
+    if offer == stored.offer:
+        return PageReading(ReadingOutcome.NOTHING_NEW, reason)
+    result = _write_enrichment(
+        store,
+        stored,
+        offer,
+        {
+            "how": "browser",
+            "method": preview.method.value,
+            "description_read": completed,
+        },
+        inputs=inputs,
+        now=now,
+        today=today,
+    )
+    outcome = ReadingOutcome.COMPLETED if completed else ReadingOutcome.FACTS_ONLY
+    return PageReading(outcome, reason, result)
+
+
+def _write_enrichment(
+    store: OfferStore,
+    stored: StoredOffer,
+    offer: CollectedOffer,
+    how: dict[str, Any],
+    *,
+    inputs: ScoringInputs,
+    now: datetime,
+    today: date,
+) -> Score:
+    """The enriched offer, its new current scores and the user's event (C7), in the caller's transaction; the date
+    of last sighting stays the source's, the tracks are kept. The event never holds an address (it may carry a
+    token)."""
     before = store.current_score(stored.id)
     store.update(stored.id, offer, match_key=match_key(offer), now=now, seen=False)
     result = _score(offer, inputs, today)
@@ -200,7 +288,7 @@ def enrich_offer(
             subject_type="job_offer",
             subject_id=str(stored.id),
             payload={
-                "how": "pasted",
+                **how,
                 "was_complete": stored.offer.description_complete,
                 "score_before": None if before is None else before.best.display,
                 "score_after": result.best.display,

@@ -1,11 +1,14 @@
-"""The Rocky workstation, run on the user's computer: ``uv run rocky-poste`` (decision D5, Q1, Q4).
+"""The Rocky workstation, run on the user's computer: ``uv run rocky-poste`` (decisions D5, E5).
 
-DORMANT (decision D5, acceptance of 04/10): kept and tested, but Rocky no longer hands it any form
-(``candidatures.web.PREFILL_ENABLED``); there is no need to launch it. To be re-enabled later.
+It listens on the loopback only and drives a visible Chromium (a persistent profile: the job sites remember the
+user's logins). It never clicks anything and never solves a challenge: the user does, in the window.
 
-It listens on the loopback only. For each form Rocky hands it, it opens a tab of a visible Chromium (a persistent
-profile: the job sites remember the user's logins), fills what it recognises and leaves the rest to the user. It
-never clicks anything: the user reads the form and sends it themselves. Procedure: ``docs/procedures/d5-poste/``.
+- Lecture assistée (decision E5): it opens a posting in a tab (``/ouvrir``), then hands back the page as it is shown
+  (``/lire``); the tab stays open (Q5).
+- Prefilling (decision D5, Q1, Q4), DORMANT since the acceptance of 04/10 (``candidatures.web.PREFILL_ENABLED``): it
+  fills what it recognises in a form and leaves the rest to the user, who sends it themselves.
+
+Procedure: ``docs/procedures/d5-poste/``.
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ import contextlib
 import json
 import queue
 import re
+import secrets
 import sys
 import threading
 import traceback
@@ -38,11 +42,17 @@ from playwright.sync_api import Error as PlaywrightError
 from rocky.system.workstation import (
     FIELDS,
     FILE_KINDS,
+    MAX_PAGE_BYTES,
+    OPEN_PATH,
     PREFILL_PATH,
+    READ_PATH,
     TIMEOUT_SECONDS,
     JobFile,
     PrefillJob,
     PrefillReport,
+    ShownPage,
+    tab_to_read,
+    url_to_open,
 )
 
 DEFAULT_PORT = 8765
@@ -228,28 +238,72 @@ def _first_line(error: PlaywrightError) -> str:
     )
 
 
-# The browser: one thread owns Playwright (its objects belong to the thread that made them).
+# The tabs of the lecture assistée (decision E5).
 
 
-class PrefillFailedError(Exception):
-    """The form could not be opened; ``reason`` is shown as is (French)."""
+class BrowserFailedError(Exception):
+    """The browser could not do what was asked; ``reason`` is shown as is (French)."""
 
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
 
 
-type Runner = Callable[[PrefillJob], PrefillReport]
+TAB_CLOSED = "l'onglet de l'annonce a été fermé, rouvre-la dans le navigateur"
+TAB_UNKNOWN = "cet onglet n'est plus connu du poste (relancé depuis ?), rouvre l'annonce dans le navigateur"
+
+
+class Tabs:
+    """The tabs opened for a reading, named by a random token. Used by the browser's thread only."""
+
+    def __init__(self) -> None:
+        self._pages: dict[str, Page] = {}
+
+    def open(self, window: BrowserContext, url: str) -> str:
+        """``url`` in a new tab, brought to the front; the tab stays open for the user and their challenge."""
+        self._pages = {
+            tab: page for tab, page in self._pages.items() if not page.is_closed()
+        }
+        page = window.new_page()
+        page.goto(url, wait_until="domcontentloaded", timeout=OPEN_TIMEOUT_MS)
+        page.bring_to_front()
+        tab = secrets.token_urlsafe(16)
+        self._pages[tab] = page
+        return tab
+
+    def read(self, tab: str) -> ShownPage:
+        """The page shown in ``tab`` now: its address and its HTML as drawn (``page.content``, not the source)."""
+        page = self._pages.get(tab)
+        if page is None:
+            raise BrowserFailedError(TAB_UNKNOWN)
+        if page.is_closed():
+            del self._pages[tab]
+            raise BrowserFailedError(TAB_CLOSED)
+        shown = ShownPage(page.url, page.content())
+        if len(shown.html.encode()) > MAX_PAGE_BYTES:
+            raise BrowserFailedError(
+                f"la page affichée est trop lourde (plus de {MAX_PAGE_BYTES // 1_000_000} Mo)"
+            )
+        return shown
+
+    def forget(self) -> None:
+        """The window was closed: so were its tabs."""
+        self._pages.clear()
+
+
+# The browser: one thread owns Playwright (its objects belong to the thread that made them).
 
 
 class BrowserWorker:
-    """A visible Chromium with a persistent profile, opened at the first form and again if its window was closed;
-    one tab per form, left open for the user."""
+    """A visible Chromium with a persistent profile, opened at the first request and again if its window was
+    closed; one tab per posting or form, left open for the user. Every request runs on the browser's thread."""
 
-    def __init__(self, profile_dir: Path) -> None:
+    def __init__(self, profile_dir: Path, *, headless: bool = False) -> None:
         self._profile_dir = profile_dir
+        self._headless = headless
         self._context: BrowserContext | None = None
-        self._jobs: queue.Queue[tuple[PrefillJob, Future[PrefillReport]]] = (
+        self._tabs = Tabs()
+        self._tasks: queue.Queue[tuple[Callable[[Playwright], Any], Future[Any]]] = (
             queue.Queue()
         )
         self._thread = threading.Thread(
@@ -257,28 +311,41 @@ class BrowserWorker:
         )
         self._thread.start()
 
-    def run(self, job: PrefillJob) -> PrefillReport:
-        done: Future[PrefillReport] = Future()
-        self._jobs.put((job, done))
+    def open_page(self, url: str) -> str:
+        return cast(
+            str, self._submit(lambda pw: self._tabs.open(self._window(pw), url))
+        )
+
+    def read_page(self, tab: str) -> ShownPage:
+        return cast(ShownPage, self._submit(lambda pw: self._tabs.read(tab)))
+
+    def prefill(self, job: PrefillJob) -> PrefillReport:
+        return cast(PrefillReport, self._submit(lambda pw: self._prefill(pw, job)))
+
+    def _submit(self, task: Callable[[Playwright], Any]) -> Any:
+        done: Future[Any] = Future()
+        self._tasks.put((task, done))
         # Answered before Rocky stops waiting: the user then reads the reason.
         return done.result(timeout=TIMEOUT_SECONDS - 10)
 
     def _run(self) -> None:
         with sync_playwright() as playwright:
             while True:
-                job, done = self._jobs.get()
+                task, done = self._tasks.get()
                 try:
-                    done.set_result(self._prefill(playwright, job))
+                    done.set_result(task(playwright))
+                except BrowserFailedError as error:
+                    done.set_exception(error)
                 except PlaywrightError as error:
                     done.set_exception(
-                        PrefillFailedError(
-                            f"la page ne s'est pas ouverte ({_first_line(error)})"
+                        BrowserFailedError(
+                            f"le navigateur a échoué ({_first_line(error)})"
                         )
                     )
                 except Exception as error:  # the thread must live on: shown in the terminal and to Rocky
                     traceback.print_exc()
                     done.set_exception(
-                        PrefillFailedError(f"erreur du poste ({type(error).__name__})")
+                        BrowserFailedError(f"erreur du poste ({type(error).__name__})")
                     )
 
     def _prefill(self, playwright: Playwright, job: PrefillJob) -> PrefillReport:
@@ -296,13 +363,14 @@ class BrowserWorker:
         if self._context is None:
             self._profile_dir.mkdir(parents=True, exist_ok=True)
             self._context = playwright.chromium.launch_persistent_context(
-                str(self._profile_dir), headless=False, no_viewport=True
+                str(self._profile_dir), headless=self._headless, no_viewport=True
             )
             self._context.on("close", self._forget)
         return self._context
 
     def _forget(self, _: BrowserContext) -> None:
         self._context = None
+        self._tabs.forget()
 
 
 # The HTTP side: only Rocky, from the loopback or from Docker, never a web page.
@@ -314,12 +382,15 @@ def allowed_hosts(port: int) -> frozenset[str]:
     )
 
 
+PATHS = frozenset({OPEN_PATH, READ_PATH, PREFILL_PATH})
+
+
 def refusal(
     method: str, path: str, headers: Mapping[str, str], port: int
 ) -> tuple[int, str] | None:
     """Why a request is refused (status, French reason); None when it may go on. A page open in a browser cannot
     send JSON here without a CORS preflight, which is never answered; a DNS rebinding is stopped by ``Host``."""
-    if path != PREFILL_PATH:
+    if path not in PATHS:
         return 404, "adresse inconnue"
     if method != "POST":
         return 405, "méthode refusée"
@@ -341,31 +412,52 @@ class Answer:
     body: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class Handlers:
+    """What the workstation does for each request: the browser's, or fakes in the tests."""
+
+    open_page: Callable[[str], str]
+    read_page: Callable[[str], ShownPage]
+    prefill: Callable[[PrefillJob], PrefillReport]
+
+
 def answer(
     method: str,
     path: str,
     headers: Mapping[str, str],
     body: bytes,
     port: int,
-    run: Runner,
+    handlers: Handlers,
 ) -> Answer:
-    """The whole request, without sockets: guards, reading of the job, the form filled by ``run``."""
+    """The whole request, without sockets: guards, reading of the request, the work done by ``handlers``."""
     refused = refusal(method, path, headers, port)
     if refused is not None:
         return Answer(refused[0], {"error": refused[1]})
     try:
-        job = PrefillJob.from_json(json.loads(body))
+        work = _work(path, json.loads(body), handlers)
     except ValueError as error:  # json.JSONDecodeError is a ValueError
-        return Answer(400, {"error": f"formulaire illisible ({error})"})
+        return Answer(400, {"error": f"demande illisible ({error})"})
     try:
-        return Answer(200, run(job).to_json())
-    except PrefillFailedError as error:
+        return Answer(200, work())
+    except BrowserFailedError as error:
         return Answer(502, {"error": error.reason})
     except TimeoutError:
         return Answer(504, {"error": "le navigateur n'a pas fini à temps"})
 
 
-def make_server(port: int, run: Runner) -> ThreadingHTTPServer:
+def _work(path: str, data: Any, handlers: Handlers) -> Callable[[], dict[str, Any]]:
+    """The work a request asks for, once read; raises ``ValueError`` for a malformed request."""
+    if path == OPEN_PATH:
+        url = url_to_open(data)
+        return lambda: {"tab": handlers.open_page(url)}
+    if path == READ_PATH:
+        tab = tab_to_read(data)
+        return lambda: handlers.read_page(tab).to_json()
+    job = PrefillJob.from_json(data)
+    return lambda: handlers.prefill(job).to_json()
+
+
+def make_server(port: int, handlers: Handlers) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
         def _handle(self) -> None:
             length = int(self.headers.get("Content-Length") or 0)
@@ -380,7 +472,7 @@ def make_server(port: int, run: Runner) -> ThreadingHTTPServer:
                     headers,
                     body,
                     cast(ThreadingHTTPServer, self.server).server_port,
-                    run,
+                    handlers,
                 )
             content = json.dumps(found.body).encode()
             self.send_response(found.status)
@@ -401,7 +493,7 @@ def make_server(port: int, run: Runner) -> ThreadingHTTPServer:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="rocky-poste",
-        description="Poste Rocky : préremplit dans un navigateur visible les formulaires que Rocky lui confie.",
+        description="Poste Rocky : ouvre dans un navigateur visible les annonces que Rocky doit lire.",
     )
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument(
@@ -412,7 +504,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     arguments = parser.parse_args(argv)
     worker = BrowserWorker(arguments.profil)
-    server = make_server(arguments.port, worker.run)
+    server = make_server(
+        arguments.port, Handlers(worker.open_page, worker.read_page, worker.prefill)
+    )
     sys.stderr.write(
         f"Poste Rocky prêt sur http://127.0.0.1:{arguments.port} (profil : {arguments.profil}). "
         "Ctrl+C pour l'arrêter.\n"

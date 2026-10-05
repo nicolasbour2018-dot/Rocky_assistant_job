@@ -154,7 +154,7 @@ aucun identifiant interne affiché.
 | E2. Classification | 3 étages : expéditeur → domaine exact de l'employeur (plus de sous-chaîne) → LLM pour l'ambigu ; confiance réelle (plus de valeurs constantes) ; preuve : règle, extrait, auteur | 100 % des décisions ont une preuve lisible ; le digest Quora n'est plus rattaché à « French bee » ; jeu de test issu de l'archive | ✅ |
 | E4. Décisions et écran | Transition de candidature appliquée dans la même transaction que la décision ; « ce qui a bougé depuis ta dernière visite » ; correction humaine → nouvelle règle ; corrections conservées comme jeu étiqueté | Aucun changement de statut ne passe inaperçu | ✅ |
 | E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | ✅ |
-| E5. Lecture assistée | Sur le geste de l'utilisateur, Rocky ouvre la fiche d'une offre incomplète dans un navigateur visible sur le poste, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte affiché (`parse_page`, `enriched`) ; geste « Enrichir » dans la fiche de l'offre ; jamais dans la veille automatique (décision C1, Q6 ; étape ajoutée par la décision D2, Q3) | Une offre Apec incomplète enrichie depuis sa fiche | ⬜ |
+| E5. Lecture assistée | Sur le geste de l'utilisateur, Rocky ouvre la fiche d'une offre incomplète dans un navigateur visible sur le poste, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte affiché (`parse_page`, `enriched`) ; geste « Enrichir » dans la fiche de l'offre ; jamais dans la veille automatique (décision C1, Q6 ; étape ajoutée par la décision D2, Q3) | Une offre Apec incomplète enrichie depuis sa fiche | 🔄 |
 
 ### F. Bascule
 
@@ -337,6 +337,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   Moteur en C2 (même mécanique que l'import d'URL), geste « Enrichir » dans la fiche de l'offre en C7. Aucun
   navigateur automatisé pour passer DataDome (Q5). La lecture assistée ne marche que sur le poste (pas de VPS sans
   écran) : la description collée reste la voie universelle.
+  *Résolu en E5 : « Ouvrir dans le navigateur » puis « Lire la page affichée » dans la fiche d'une offre incomplète
+  (poste Rocky, décision E5).*
 - **(C1 → C3)** Adzuna : un TJM freelance arrive dans `salary_min` (450 pour « Data Analyst - Freelance »), un salaire
   annuel ailleurs ; aucune période n'est stockée en C1, C3 les distingue.
   *Résolu en C3 (Q5) : période écrite d'abord, sinon déduite du montant et marquée.*
@@ -382,6 +384,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `parse_page`, puis `enriched` ; le collage dans la fiche utilise `with_pasted_description`. Le formulaire de
   collage de l'import crée l'offre depuis le texte seul (lien, intitulé, employeur) : les faits déjà lus d'un
   aperçu incomplet ne sont pas repris tant que rien n'est enregistré.
+  *Résolu en E5 pour la lecture assistée : `enrich_offer_from_page` (`parse_page` puis `enriched`, page du site de
+  l'offre seulement).*
 - **(C2 → C6)** Une page importée a pour identifiant son adresse canonique ; la veille garde l'identifiant de la
   plateforme (numéro LinkedIn, référence WTTJ). La déduplication entre import et veille doit comparer les adresses.
   *Résolu en C6 : `SqlStore.find` cherche par source et identifiant, puis par adresse.*
@@ -490,6 +494,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   Playwright arrive en D2. En C7, seule la description collée enrichit une offre (Q5).
   *Tranché en D2 (Nicolas, Q3) : hors D2 (autre logique métier), nouvelle étape E5 avant F1 ; Playwright est disponible
   depuis D2 pour le rendu PDF.*
+  *Résolu en E5.*
 - **(C7 → recalibrage)** Les décisions réelles (étiquettes D14 avec la copie du score) sont la matière des leviers
   notés en C5 (séniorité, compétences hors profil, plafonds).
 - **(C7)** « Vue aussi sur … » : chaque offre d'un doublon se décide séparément (Q4) ; copier la décision sur l'autre
@@ -589,6 +594,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   déploiement (poste sur l'ordinateur de l'utilisateur joint par le VPS, ou rien).
 - **(D5 → E5)** Le poste est l'adaptateur « navigateur visible » de la lecture assistée : E5 lui ajoute une demande
   (ouvrir une fiche, laisser passer un défi, rendre le texte affiché) à côté de `/preremplir`.
+  *Résolu en E5 : `/ouvrir` et `/lire` (onglets nommés par un jeton, laissés ouverts) ; le poste est installé par la
+  composition (`system/web.py`) pour les deux modules.*
 - **(D5)** Un PDF écrit avant une transaction qui échoue reste dans le stockage sans ligne (adressé par son hash, sans
   effet) : aucune purge en D5 ; à prévoir avec les sauvegardes du VPS si le volume compte.
 - **(D5 → D6)** L'étape Envoi s'allonge (PDF générés, préremplissage, confirmation, message) : à reprendre avec le
@@ -698,3 +705,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(E3 → plus tard, Nicolas 05/10)** E3 close **sans le critère Indeed** (aucune alerte Indeed reçue). Dès la première
   alerte Indeed : la capturer (`docs/procedures/e3-captures/`), écrire son lecteur (`alerts.rules.READERS`, Indeed jamais
   lu par son lien : refus constaté en C2), puis constater une offre Indeed par jour sur 3 jours.
+- **(E5)** La page Apec dessinée porte un `JobPosting` dont la description ne contient que le « Descriptif du poste »
+  (sans retours à la ligne) ; le profil recherché n'y est pas. Les sections de la page sont donc lues en premier
+  (`SECTIONED_PAGES`, même forme que le détail public de C1). Si Apec change sa page, refaire une capture
+  (`docs/procedures/e5-captures/`).
+- **(E5 → §5 VPS)** « Ouvrir dans le navigateur » tient la requête web jusqu'au chargement de la page (60 s au plus),
+  comme le préremplissage de D5 ; sur un VPS sans écran, pas de poste : la description collée reste la voie.

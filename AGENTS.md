@@ -148,9 +148,10 @@ docs/
   alertes après chaque collecte.
 - Jeu étiqueté des messages (décision E4) : `docker compose run --rm app rocky-admin messages-etiquettes <email>` (CSV
   des corrections et confirmations sur la sortie standard ; données personnelles, jamais versionnées).
-- Poste Rocky (préremplissage dans un navigateur visible, sur l'ordinateur, hors Docker) : **en sommeil** depuis la
-  recette de D5 (`candidatures.web.PREFILL_ENABLED = False`), inutile à lancer ; procédure gardée dans
-  `docs/procedures/d5-poste/`.
+- Poste Rocky (navigateur visible sur l'ordinateur, hors Docker) : `uv run rocky-poste`, pour la lecture assistée d'une
+  offre incomplète (décision E5 : « Ouvrir dans le navigateur » puis « Lire la page affichée » dans la fiche) ;
+  procédure `docs/procedures/d5-poste/`. Son préremplissage reste **en sommeil** depuis la recette de D5
+  (`candidatures.web.PREFILL_ENABLED = False`).
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
 - Sur GitHub : `.github/workflows/verification.yml` exécute la vérification globale à chaque push sur `refonte` et
   sur chaque PR. Une étape n'est terminée que si ce passage est vert aussi.

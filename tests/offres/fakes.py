@@ -17,6 +17,12 @@ from rocky.profil.sql import SqlProfileStore
 from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.llm import LlmUnavailableError
+from rocky.system.workstation import (
+    PrefillJob,
+    PrefillReport,
+    ShownPage,
+    WorkstationUnavailableError,
+)
 
 NOW = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
 TODAY = date(2026, 9, 29)
@@ -124,3 +130,30 @@ SUMMARY = {
     "contexte": "Équipe data d'un distributeur.",
     "profil": "Python et SQL.",
 }
+
+
+class FakeBrowser:
+    """The Rocky workstation of the lecture assistée (decision E5): it opens tabs and shows ``shown``, or fails with
+    ``error``; it remembers the addresses opened and the tabs read."""
+
+    def __init__(self, shown: ShownPage | None = None) -> None:
+        self.shown = shown
+        self.error: str | None = None
+        self.opened: list[str] = []
+        self.read: list[str] = []
+
+    def open_page(self, url: str) -> str:
+        if self.error is not None:
+            raise WorkstationUnavailableError(self.error)
+        self.opened.append(url)
+        return f"onglet-{len(self.opened)}"
+
+    def read_page(self, tab: str) -> ShownPage:
+        if self.error is not None:
+            raise WorkstationUnavailableError(self.error)
+        self.read.append(tab)
+        assert self.shown is not None
+        return self.shown
+
+    def prefill(self, job: PrefillJob) -> PrefillReport:
+        raise AssertionError("the prefilling is dormant")

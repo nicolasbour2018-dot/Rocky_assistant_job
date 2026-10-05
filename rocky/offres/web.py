@@ -58,10 +58,13 @@ from rocky.offres.screen import (
 from rocky.offres.sources.model import MESSAGE_SOURCE, CollectedOffer
 from rocky.offres.sql import SqlStore
 from rocky.offres.usecases import (
+    PageReading,
+    ReadingOutcome,
     add_offer_from_message,
     cancel_decision,
     cancel_last_decision,
     enrich_offer,
+    enrich_offer_from_page,
     keep_summary,
     record_decision,
     record_offer,
@@ -74,6 +77,7 @@ from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.llm import JsonModel
 from rocky.system.shell import page, wants_fragment
+from rocky.system.workstation import Workstation, WorkstationUnavailableError
 
 TRIAGE = "tri"
 LIST = "liste"
@@ -272,6 +276,7 @@ def _whole_page(
     *,
     current: int | None = None,
     sheet: OfferCard | None = None,
+    sheet_extra: Mapping[str, object] | None = None,
 ) -> HTMLResponse:
     extra = screen.triage_context(current) if view == TRIAGE else {}
     rows, more = screen.page_of(filters)
@@ -285,6 +290,7 @@ def _whole_page(
             "more": more,
             "sheet": sheet,
             **extra,
+            **(sheet_extra or {}),
         },
     )
 
@@ -564,6 +570,101 @@ def paste_description(
         stay=True,
         extra={"paste_error": error},
     )
+
+
+# The lecture assistée (decision E5): the Rocky workstation opens the posting in a visible browser on the user's
+# computer; the user passes any challenge, then asks Rocky to read the page shown (Q1). The workstation is called
+# outside any transaction.
+READING = "offres/browser_reading.html"
+READ_NOTE = "Description lue sur la page affichée : le score est recalculé."
+FACTS_NOTE = "Les faits qui manquaient ont été repris de la page."
+NOTHING_NOTE = "La page affichée n'apporte rien de nouveau à cette offre."
+
+
+@router.post("/{offer_id}/navigateur", response_class=HTMLResponse)
+def open_in_browser(
+    request: Request,
+    account: CurrentAccount,
+    offer_id: int,
+    contexte: Annotated[str, Form()] = TRIAGE,
+    piste: Annotated[str, Form()] = "",
+) -> Response:
+    """« Ouvrir dans le navigateur »: the posting in a tab of the workstation; then « Lire la page affichée »."""
+    screen = Screen(request, account)
+    with screen.engine.begin() as connection:
+        stored = SqlStore(connection).offer_of(account.id, offer_id)
+    if stored is None:
+        return Response(status_code=404)
+    workstation: Workstation = request.app.state.workstation
+    values: dict[str, object] = {}
+    try:
+        values["reading_tab"] = workstation.open_page(stored.offer.url)
+    except WorkstationUnavailableError as error:
+        values["reading_error"] = error.reason
+    if not wants_fragment(request):
+        card = screen.card(offer_id, _track(piste))
+        filters = ListFilters(track_id=_track(piste))
+        return _whole_page(screen, LIST, filters, sheet=card, sheet_extra=values)
+    return screen.render(
+        READING, {"offer_id": offer_id, "context": contexte, "piste": piste, **values}
+    )
+
+
+@router.post("/{offer_id}/navigateur/lire", response_class=HTMLResponse)
+def read_shown_page(
+    request: Request,
+    account: CurrentAccount,
+    offer_id: int,
+    onglet: Annotated[str, Form()] = "",
+    contexte: Annotated[str, Form()] = TRIAGE,
+    piste: Annotated[str, Form()] = "",
+) -> Response:
+    """« Lire la page affichée »: the page shown in the tab completes the offer (``enrich_offer_from_page``), whose
+    score is computed again at once; the offer stays on screen with what the reading gave."""
+    screen = Screen(request, account)
+    with screen.engine.begin() as connection:
+        stored = SqlStore(connection).offer_of(account.id, offer_id)
+    if stored is None:
+        return Response(status_code=404)
+    workstation: Workstation = request.app.state.workstation
+    try:
+        shown = workstation.read_page(onglet)
+    except WorkstationUnavailableError as error:
+        message = ("error", error.reason)
+    else:
+        with screen.engine.begin() as connection:
+            reading = enrich_offer_from_page(
+                SqlStore(connection),
+                stored,
+                shown.url,
+                shown.html,
+                inputs=scoring_inputs(screen.profile),
+                now=_now(request),
+                today=_today(request),
+            )
+        message = _reading_message(reading)
+    return _after_change(
+        request,
+        account,
+        offer_id,
+        contexte,
+        _track(piste),
+        stay=True,
+        extra={"reading_message": message},
+    )
+
+
+def _reading_message(reading: PageReading) -> tuple[str, str]:
+    """The kind (``done``, ``info``, ``error``: the class of the alert) and the French text of a reading."""
+    match reading.outcome:
+        case ReadingOutcome.COMPLETED:
+            return "done", READ_NOTE
+        case ReadingOutcome.FACTS_ONLY:
+            return "info", f"{reading.reason} {FACTS_NOTE}"
+        case ReadingOutcome.NOTHING_NEW:
+            return "info", reading.reason or NOTHING_NOTE
+        case ReadingOutcome.OTHER_PAGE | ReadingOutcome.UNREADABLE:
+            return "error", reading.reason or NOTHING_NOTE
 
 
 @router.post("/{offer_id}/resume", response_class=HTMLResponse)

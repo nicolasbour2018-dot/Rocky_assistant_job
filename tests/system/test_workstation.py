@@ -1,6 +1,6 @@
-"""The Rocky workstation (decision D5): what Rocky and the workstation exchange, the guards of the workstation, and
-the filling of a form in a headless Chromium — which never submits it. No network: a mocked transport, or the
-loopback of the test itself."""
+"""The Rocky workstation (decisions D5, E5): what Rocky and the workstation exchange, the guards of the workstation,
+the tabs of the lecture assistée and the filling of a form in a headless Chromium — which never submits it. No
+network: a mocked transport, the loopback of the test itself, or pages given to the browser."""
 
 from __future__ import annotations
 
@@ -11,18 +11,24 @@ from collections.abc import Callable, Iterator
 
 import httpx2
 import pytest
-from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 from rocky.system.workstation import (
+    MAX_PAGE_BYTES,
     NOT_RUNNING,
     JobFile,
     PrefillJob,
     PrefillReport,
+    ShownPage,
     WorkstationClient,
     WorkstationUnavailableError,
 )
 from rocky.system.workstation_host import (
-    PrefillFailedError,
+    TAB_CLOSED,
+    TAB_UNKNOWN,
+    BrowserFailedError,
+    Handlers,
+    Tabs,
     allowed_hosts,
     answer,
     fill_form,
@@ -46,6 +52,11 @@ JOB = PrefillJob(
 PORT = 8765
 HEADERS = {"Host": f"127.0.0.1:{PORT}", "Content-Type": "application/json"}
 REPORT = PrefillReport(("Nom complet",), ("GitHub : champ introuvable",))
+POSTING = (
+    "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179271987W"
+)
+SHOWN = ShownPage(POSTING, "<html><body><h1>Data analyst</h1></body></html>")
+TAB = "onglet-1"
 
 
 # What they exchange.
@@ -101,6 +112,54 @@ def test_the_client_hands_the_job_and_reads_the_report() -> None:
     assert PrefillJob.from_json(json.loads(request.content)) == JOB
 
 
+def test_the_client_opens_a_posting_then_reads_the_page_shown() -> None:
+    sent: list[httpx2.Request] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        sent.append(request)
+        if request.url.path == "/ouvrir":
+            return httpx2.Response(200, json={"tab": TAB})
+        return httpx2.Response(200, json=SHOWN.to_json())
+
+    workstation = client(handler)
+
+    assert workstation.open_page(POSTING) == TAB
+    assert workstation.read_page(TAB) == SHOWN
+    assert [(r.url.path, json.loads(r.content)) for r in sent] == [
+        ("/ouvrir", {"url": POSTING}),
+        ("/lire", {"tab": TAB}),
+    ]
+
+
+def test_an_unreadable_tab_is_refused() -> None:
+    with pytest.raises(WorkstationUnavailableError) as raised:
+        client(lambda request: httpx2.Response(200, json={"tab": ""})).open_page(
+            POSTING
+        )
+
+    assert "illisible" in raised.value.reason
+
+
+@pytest.mark.parametrize(
+    ("handler", "reason"),
+    [
+        (lambda request: httpx2.Response(200, json={"url": 1}), "illisible"),
+        (
+            lambda request: httpx2.Response(502, json={"error": TAB_CLOSED}),
+            f"Le poste Rocky n'a pas pu lire la page : {TAB_CLOSED}.",
+        ),
+    ],
+    ids=["unreadable", "closed"],
+)
+def test_a_reading_that_fails_says_why(
+    handler: Callable[[httpx2.Request], httpx2.Response], reason: str
+) -> None:
+    with pytest.raises(WorkstationUnavailableError) as raised:
+        client(handler).read_page(TAB)
+
+    assert reason in raised.value.reason
+
+
 def raising(error: Exception) -> Callable[[httpx2.Request], httpx2.Response]:
     def handler(request: httpx2.Request) -> httpx2.Response:
         raise error
@@ -139,12 +198,19 @@ def ok(job: PrefillJob) -> PrefillReport:
     return REPORT
 
 
+def handlers(prefill: Callable[[PrefillJob], PrefillReport] = ok) -> Handlers:
+    return Handlers(
+        open_page=lambda url: TAB, read_page=lambda tab: SHOWN, prefill=prefill
+    )
+
+
 def ask(
     headers: dict[str, str] = HEADERS,
     method: str = "POST",
     path: str = "/preremplir",
     body: bytes | None = None,
     run: Callable[[PrefillJob], PrefillReport] = ok,
+    work: Handlers | None = None,
 ) -> tuple[int, dict[str, object]]:
     found = answer(
         method,
@@ -152,7 +218,7 @@ def ask(
         headers,
         json.dumps(JOB.to_json()).encode() if body is None else body,
         PORT,
-        run,
+        work or handlers(run),
     )
     return found.status, found.body
 
@@ -209,7 +275,7 @@ def test_anything_but_rocky_is_refused(
 
 def test_a_malformed_job_or_a_page_that_fails_is_answered_with_its_reason() -> None:
     def failing(job: PrefillJob) -> PrefillReport:
-        raise PrefillFailedError("la page ne s'est pas ouverte (timeout)")
+        raise BrowserFailedError("la page ne s'est pas ouverte (timeout)")
 
     assert ask(body=b"{")[0] == 400
     assert ask(run=failing) == (
@@ -218,13 +284,71 @@ def test_a_malformed_job_or_a_page_that_fails_is_answered_with_its_reason() -> N
     )
 
 
+def test_a_posting_is_opened_then_read_through_the_guards() -> None:
+    opened: list[str] = []
+
+    def open_page(url: str) -> str:
+        opened.append(url)
+        return TAB
+
+    work = Handlers(open_page, lambda tab: SHOWN, ok)
+
+    assert ask(
+        path="/ouvrir", body=json.dumps({"url": POSTING}).encode(), work=work
+    ) == (
+        200,
+        {"tab": TAB},
+    )
+    assert ask(path="/lire", body=json.dumps({"tab": TAB}).encode(), work=work) == (
+        200,
+        SHOWN.to_json(),
+    )
+    assert opened == [POSTING]
+    # The same guards as the prefilling.
+    assert ask({**HEADERS, "Origin": "https://evil.example"}, path="/lire")[0] == 403
+
+
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        ("/ouvrir", {"url": "file:///etc/passwd"}),
+        ("/ouvrir", {"url": 1}),
+        ("/ouvrir", []),
+        ("/lire", {"tab": ""}),
+        ("/lire", {"tab": "x" * 65}),
+        ("/lire", {}),
+    ],
+)
+def test_a_malformed_reading_is_refused(path: str, body: object) -> None:
+    def never(value: str) -> str:
+        raise AssertionError("not called")
+
+    work = Handlers(never, lambda tab: SHOWN, ok)
+
+    assert ask(path=path, body=json.dumps(body).encode(), work=work)[0] == 400
+
+
+def test_a_closed_tab_is_answered_with_its_reason() -> None:
+    def closed(tab: str) -> ShownPage:
+        raise BrowserFailedError(TAB_CLOSED)
+
+    work = Handlers(lambda url: TAB, closed, ok)
+
+    assert ask(path="/lire", body=json.dumps({"tab": TAB}).encode(), work=work) == (
+        502,
+        {"error": TAB_CLOSED},
+    )
+
+
 def test_the_server_answers_rocky_s_client_on_the_loopback() -> None:
-    server = make_server(0, ok)
+    server = make_server(0, handlers())
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
         port = server.server_port
-        assert WorkstationClient(f"http://127.0.0.1:{port}").prefill(JOB) == REPORT
+        workstation = WorkstationClient(f"http://127.0.0.1:{port}")
+        assert workstation.prefill(JOB) == REPORT
+        assert workstation.read_page(workstation.open_page(POSTING)) == SHOWN
     finally:
         server.shutdown()
         server.server_close()
@@ -248,13 +372,87 @@ FORM = """<!doctype html><html><body>
 
 
 @pytest.fixture(scope="module")
-def page() -> Iterator[Page]:
+def browser() -> Iterator[Browser]:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
         try:
-            yield browser.new_page()
+            yield browser
         finally:
             browser.close()
+
+
+@pytest.fixture(scope="module")
+def page(browser: Browser) -> Page:
+    return browser.new_page()
+
+
+@pytest.fixture
+def window(browser: Browser) -> Iterator[BrowserContext]:
+    context = browser.new_context()
+    try:
+        yield context
+    finally:
+        context.close()
+
+
+# A posting drawn by its script, as an Angular page is: its source holds no posting.
+DRAWN = (
+    "data:text/html,<html><body><div id=app></div><script>"
+    "document.getElementById('app').innerHTML = '<h1>Data analyst</h1><p>Missions</p>';"
+    "</script></body></html>"
+)
+
+
+def test_a_tab_is_read_as_it_is_drawn_and_stays_open(window: BrowserContext) -> None:
+    tabs = Tabs()
+
+    tab = tabs.open(window, DRAWN)
+    shown = tabs.read(tab)
+
+    assert "<h1>Data analyst</h1><p>Missions</p>" in shown.html
+    assert shown.url.startswith("data:text/html")
+    (page,) = window.pages
+    assert not page.is_closed()  # left open for the user (Q5)
+    assert tabs.read(tab) == shown  # read again, as long as it is open
+
+
+def test_the_address_read_is_the_one_shown_now(window: BrowserContext) -> None:
+    tabs = Tabs()
+    tab = tabs.open(window, DRAWN)
+
+    (page,) = window.pages
+    page.goto("data:text/html,<p>Ailleurs</p>")  # the user went elsewhere
+
+    shown = tabs.read(tab)
+    assert shown.url == "data:text/html,<p>Ailleurs</p>"
+    assert "Ailleurs" in shown.html
+
+
+def test_a_closed_or_unknown_tab_is_refused_with_its_reason(
+    window: BrowserContext,
+) -> None:
+    tabs = Tabs()
+    tab = tabs.open(window, DRAWN)
+    window.pages[0].close()
+
+    with pytest.raises(BrowserFailedError) as closed:
+        tabs.read(tab)
+    with pytest.raises(BrowserFailedError) as unknown:
+        tabs.read("inconnu")
+
+    assert closed.value.reason == TAB_CLOSED
+    assert unknown.value.reason == TAB_UNKNOWN
+
+
+def test_a_page_too_heavy_is_refused(window: BrowserContext) -> None:
+    tabs = Tabs()
+    tab = tabs.open(window, DRAWN)
+    window.pages[0].set_content("<p>" + "x" * MAX_PAGE_BYTES + "</p>")
+
+    with pytest.raises(BrowserFailedError) as heavy:
+        tabs.read(tab)
+
+    assert "trop lourde" in heavy.value.reason
 
 
 def test_the_form_is_filled_and_never_submitted(page: Page) -> None:

@@ -62,8 +62,12 @@
   {% endif %}
 </div>
 
+{% if reading_message %}<p class="alert alert-{{ reading_message[0] }}" role="status">{{ reading_message[1] }}</p>{% endif %}
 {% if not offer.description_complete %}
-<details class="paste"{% if paste_error %} open{% endif %}>
+<div id="lecture-{{ card.id }}" class="browser-reading" aria-live="polite">
+  {% with offer_id = card.id %}{% include "offres/browser_reading.html" %}{% endwith %}
+</div>
+<details class="paste"{% if paste_error or (reading_message and reading_message[0] != "done") %} open{% endif %}>
   <summary data-key="c">Coller la description <kbd>c</kbd></summary>
   <form method="post" action="/offres/{{ card.id }}/description" hx-post="/offres/{{ card.id }}/description"
     {% if context == "fiche" %}hx-target="#fiche" hx-swap="innerHTML"{% else %}hx-target="#triage" hx-swap="outerHTML"{% endif %}>

@@ -76,7 +76,6 @@ from rocky.offres.model import OfferHeading
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.shell import page, wants_fragment
-from rocky.system.workstation import WorkstationClient
 
 TEMPLATES = Path(__file__).parent / "templates"
 # Refreshes the offers list when « Préparer » records a decision (``offres.web.OFFERS_CHANGED``).
@@ -94,9 +93,8 @@ PREFILL_ENABLED = False
 def install(app: FastAPI) -> None:
     templates: Jinja2Templates = app.state.templates
     templates.env.globals.update(stage_labels=STAGE_LABELS)
-    # DORMANT: the Rocky workstation that prefills forms (decision D5, Q1), and its switch (``PREFILL_ENABLED``);
-    # both replaced by the tests of the dormant code. Building the client contacts nothing.
-    app.state.workstation = WorkstationClient(app.state.settings.workstation_url)
+    # DORMANT: the switch of the prefilling by the Rocky workstation (decision D5, Q1), replaced by the tests of the
+    # dormant code. The workstation itself (``app.state.workstation``) is installed by the composition.
     app.state.prefill_enabled = PREFILL_ENABLED
     app.include_router(router)
     app.include_router(dossier_web.router)

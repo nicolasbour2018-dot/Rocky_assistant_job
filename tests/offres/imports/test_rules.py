@@ -13,6 +13,7 @@ from rocky.offres.imports.model import ImportMethod, InvalidPasteError
 from rocky.offres.imports.rules import (
     EXCERPT_REASON,
     NO_CONTENT_REASON,
+    OTHER_PAGE_REASON,
     VISIBLE_TEXT_REASON,
     check_link,
     enriched,
@@ -21,6 +22,7 @@ from rocky.offres.imports.rules import (
     offer_json,
     parse_page,
     pasted_text,
+    shows_the_offer,
     with_pasted_description,
 )
 from rocky.offres.sources.model import (
@@ -482,3 +484,124 @@ def test_an_altered_offer_is_refused(altered: str) -> None:
 
     with pytest.raises(InvalidPasteError, match="illisible"):
         offer_from_json(value)
+
+
+# A page as a visible browser draws it (decision E5).
+
+APEC = (
+    "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179509139W"
+)
+APEC_EXCERPT = CollectedOffer(
+    source=SourceCode.APEC,
+    external_id="179509139W",
+    url=APEC,
+    application_url=APEC,
+    title="Business Analyst RSE F/H",
+    company="Sibylone",
+    location="Paris 09 - 75",
+    country="France",
+    contract="CDI",
+    remote="Ponctuel autorisé",
+    salary_text="40 - 45 k€ brut annuel",
+    published_on=date(2026, 9, 30),
+    description="Contexte : Nous recherchons un·e Business Analyst pour le remplacement d'un collaborateur…",
+    description_complete=False,
+    incomplete_reason="Apec ne donne qu'un extrait de l'annonce dans ses résultats de recherche.",
+)
+
+
+def test_an_apec_page_drawn_by_a_browser_gives_its_three_sections() -> None:
+    preview = parse_page(
+        (DATA / "apec" / "rendered.html").read_text(), APEC, today=date(2026, 10, 5)
+    )
+
+    offer = preview.offer
+    # Its JSON-LD holds the first section only: the sections of the page are read first.
+    assert preview.method == ImportMethod.TARGETED_HTML
+    assert preview.warnings == ()
+    assert offer.description_complete
+    assert offer.description.startswith(
+        "Contexte :\n\nNous recherchons un·e Business Analyst"
+    )
+    assert (
+        "\n\nProfil recherché\nProfil recherché :\n\n- Maîtrise d’Excel."
+        in offer.description
+    )
+    assert "\n\nEntreprise\nSIBYLONE, cabinet de conseil" in offer.description
+    # Neither the skills panel, nor the other postings of the page.
+    assert "Savoir-être" not in offer.description
+    assert "Area Sales Manager" not in offer.description
+    # The facts come from the JSON-LD.
+    assert (offer.source, offer.title, offer.company) == (
+        "apec",
+        "Business Analyst RSE F/H",
+        "Sibylone",
+    )
+    assert (offer.salary_min, offer.salary_max, offer.salary_period) == (
+        40000.0,
+        45000.0,
+        "YEAR",
+    )
+    assert offer.deadline == date(2026, 10, 30)
+
+
+def test_an_apec_excerpt_is_completed_by_its_drawn_page() -> None:
+    page_offer = parse_page(
+        (DATA / "apec" / "rendered.html").read_text(), APEC, today=date(2026, 10, 5)
+    ).offer
+
+    offer = enriched(APEC_EXCERPT, page_offer)
+
+    assert offer.description == page_offer.description
+    assert offer.description_complete and offer.incomplete_reason is None
+    # Identity and known facts stay; unknown ones are filled.
+    assert (offer.external_id, offer.contract, offer.location) == (
+        "179509139W",
+        "CDI",
+        "Paris 09 - 75",
+    )
+    assert (offer.salary_min, offer.deadline) == (40000.0, date(2026, 10, 30))
+
+
+def test_a_page_with_a_section_container_but_no_section_falls_back() -> None:
+    body = "<div class='container-details-offer'><h4>Autre chose</h4><p>Rien</p></div>"
+    preview = parse_page(
+        page(posting(description="<p>La mission complète.</p>"), body=body),
+        SITE,
+        today=TODAY,
+    )
+
+    assert preview.method == ImportMethod.JSON_LD
+    assert preview.offer.description == "La mission complète."
+
+
+@pytest.mark.parametrize(
+    ("offer", "shown", "same"),
+    [
+        (APEC_EXCERPT, APEC, True),
+        (APEC_EXCERPT, "https://apec.fr/candidat/autre-page", True),
+        (APEC_EXCERPT, "https://login.microsoftonline.com/oauth", False),
+        (APEC_EXCERPT, "about:blank", False),
+        # An alert card keeps its tracking link; the page shown is on the platform, its source.
+        (
+            replace(
+                APEC_EXCERPT,
+                source="hellowork.com",
+                url="https://emails.hellowork.com/clic/abc",
+            ),
+            "https://www.hellowork.com/fr-fr/emplois/77695894.html",
+            True,
+        ),
+        (
+            replace(APEC_EXCERPT, source="jobs.site.example", url=SITE),
+            "https://jobs.site.example/offre/7?from=alert",
+            True,
+        ),
+    ],
+    ids=["same", "apex", "login", "blank", "alert", "career-site"],
+)
+def test_the_page_shown_must_be_on_the_site_of_the_offer(
+    offer: CollectedOffer, shown: str, same: bool
+) -> None:
+    assert shows_the_offer(offer, shown) is same
+    assert "autre site" in OTHER_PAGE_REASON

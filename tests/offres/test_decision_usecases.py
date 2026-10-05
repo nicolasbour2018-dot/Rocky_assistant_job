@@ -1,9 +1,11 @@
-"""Decisions, pasted descriptions and stored summaries on PostgreSQL (C7): appended, traced, in one transaction."""
+"""Decisions, pasted descriptions, pages read in a visible browser (E5) and stored summaries on PostgreSQL (C7):
+appended, traced, in one transaction."""
 
 from __future__ import annotations
 
 from dataclasses import replace
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from sqlalchemy import Connection, null, select, update
@@ -17,14 +19,22 @@ from rocky.offres.decisions import (
     effective_decisions,
 )
 from rocky.offres.imports.model import InvalidPasteError
-from rocky.offres.model import Origin
+from rocky.offres.imports.rules import (
+    NO_CONTENT_REASON,
+    NOT_READABLE_REASON,
+    OTHER_PAGE_REASON,
+)
+from rocky.offres.model import Origin, StoredOffer
 from rocky.offres.rules import scoring_inputs
 from rocky.offres.scoring.model import Score
 from rocky.offres.sql import SqlStore, job_decisions, job_offers
 from rocky.offres.usecases import (
+    PageReading,
+    ReadingOutcome,
     cancel_decision,
     cancel_last_decision,
     enrich_offer,
+    enrich_offer_from_page,
     keep_summary,
     record_decision,
     record_offer,
@@ -244,6 +254,156 @@ def test_an_empty_paste_changes_nothing(db: Connection) -> None:
         )
 
     assert store.get(offer_id) == stored
+
+
+# A page shown in a visible browser (decision E5).
+
+APEC_PAGE = (
+    Path(__file__).parent / "imports" / "data" / "apec" / "rendered.html"
+).read_text()
+APEC_URL = (
+    "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179509139W"
+)
+# Facts, but no description to read: its visible text only (Q3).
+FACTS_PAGE = (
+    '<html><head><script type="application/ld+json">'
+    '{"@type": "JobPosting", "title": "Data analyst", "hiringOrganization": {"name": "Acme"}}'
+    "</script></head><body><nav>Menu</nav><p>Connectez-vous pour voir l'annonce.</p></body></html>"
+)
+
+
+def read_page(
+    db: Connection, seeker: Seeker, offer_id: int, url: str, page_html: str
+) -> tuple[PageReading, StoredOffer]:
+    store = SqlStore(db)
+    stored = store.get(offer_id)
+    assert stored is not None
+    reading = enrich_offer_from_page(
+        store,
+        stored,
+        url,
+        page_html,
+        inputs=scoring_inputs(seeker.profile(db)),
+        now=NOW + timedelta(days=1),
+        today=TODAY,
+    )
+    after = store.get(offer_id)
+    assert after is not None
+    return reading, after
+
+
+def enrichments(db: Connection, offer_id: int) -> list[dict[str, object]]:
+    return [
+        dict(payload)
+        for payload in db.execute(
+            select(events.c.payload)
+            .where(
+                events.c.type == "offres.offer_enriched",
+                events.c.subject_id == str(offer_id),
+            )
+            .order_by(events.c.id)
+        ).scalars()
+    ]
+
+
+def test_an_apec_offer_is_completed_by_its_page_shown(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "179509139W", complete=False)
+    before = SqlStore(db).current_score(offer_id)
+
+    reading, after = read_page(db, seeker, offer_id, APEC_URL, APEC_PAGE)
+
+    assert reading.outcome == ReadingOutcome.COMPLETED
+    assert reading.reason is None
+    assert reading.score is not None
+    row = db.execute(select(job_offers).where(job_offers.c.id == offer_id)).one()
+    assert row.description_complete and "Profil recherché" in row.description
+    assert row.external_id == "179509139W"  # identity kept
+    assert row.last_seen_at == NOW  # a reading is not a sighting by a source
+    assert SqlStore(db).current_score(offer_id) == reading.score
+    assert before is not None
+    assert after.offer.description_complete
+    (payload,) = enrichments(db, offer_id)
+    assert payload == {
+        "how": "browser",
+        "method": "targeted_html",
+        "description_read": True,
+        "was_complete": False,
+        "score_before": before.best.display,
+        "score_after": reading.score.best.display,
+    }
+    assert "apec.fr" not in str(payload)  # never an address
+    assert SqlStore(db).unscored_or_orphan_offers(seeker.account_id) == []
+
+
+def test_a_page_of_another_site_writes_nothing(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "179509139W", complete=False)
+    stored = SqlStore(db).get(offer_id)
+
+    reading, after = read_page(
+        db, seeker, offer_id, "https://login.example.com/sso", APEC_PAGE
+    )
+
+    assert (reading.outcome, reading.reason) == (
+        ReadingOutcome.OTHER_PAGE,
+        OTHER_PAGE_REASON,
+    )
+    assert after == stored
+    assert enrichments(db, offer_id) == []
+
+
+def test_a_page_without_a_readable_posting_fills_facts_only(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "a1", company=None, complete=False)
+
+    reading, after = read_page(db, seeker, offer_id, APEC_URL, FACTS_PAGE)
+
+    assert (reading.outcome, reading.reason) == (
+        ReadingOutcome.FACTS_ONLY,
+        NOT_READABLE_REASON,
+    )
+    assert after.offer.company == "Acme"
+    assert not after.offer.description_complete
+    (payload,) = enrichments(db, offer_id)
+    assert (payload["method"], payload["description_read"]) == ("visible_text", False)
+
+
+def test_a_page_read_again_brings_nothing_and_writes_nothing(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "179509139W", complete=False)
+    read_page(db, seeker, offer_id, APEC_URL, APEC_PAGE)
+
+    reading, _ = read_page(db, seeker, offer_id, APEC_URL, APEC_PAGE)
+
+    assert (reading.outcome, reading.score) == (ReadingOutcome.NOTHING_NEW, None)
+    assert len(enrichments(db, offer_id)) == 1
+
+
+def test_an_empty_page_says_why(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "a1", complete=False)
+
+    reading, _ = read_page(db, seeker, offer_id, APEC_URL, "<html><body></body></html>")
+
+    assert (reading.outcome, reading.reason) == (
+        ReadingOutcome.UNREADABLE,
+        NO_CONTENT_REASON,
+    )
+    assert enrichments(db, offer_id) == []
+
+
+def test_a_reading_and_its_event_are_written_together(db: Connection) -> None:
+    seeker = new_seeker(db)
+    offer_id = recorded(db, seeker, "179509139W", complete=False)
+    stored = SqlStore(db).get(offer_id)
+
+    with pytest.raises(RuntimeError), db.begin_nested():
+        read_page(db, seeker, offer_id, APEC_URL, APEC_PAGE)
+        raise RuntimeError("failure after the reading")
+
+    assert SqlStore(db).get(offer_id) == stored
+    assert enrichments(db, offer_id) == []
 
 
 def test_a_summary_is_kept_until_the_description_changes(db: Connection) -> None:

@@ -1,0 +1,29 @@
+{# The lecture assistée (decision E5): « Ouvrir dans le navigateur », then « Lire la page affichée » once the user has
+   passed any challenge in the workstation's window. Needs offer_id, context, piste; reading_tab once the tab is open.
+   The tab travels in the form: nothing is kept between the two gestures. #}
+{% if reading_tab %}
+<form method="post" action="/offres/{{ offer_id }}/navigateur/lire" hx-post="/offres/{{ offer_id }}/navigateur/lire"
+  {% if context == "fiche" %}hx-target="#fiche" hx-swap="innerHTML"{% else %}hx-target="#triage" hx-swap="outerHTML"{% endif %}
+  class="stack">
+  <input type="hidden" name="onglet" value="{{ reading_tab }}">
+  <input type="hidden" name="contexte" value="{{ context }}">
+  <input type="hidden" name="piste" value="{{ piste }}">
+  <p class="hint">Annonce ouverte dans le navigateur du poste Rocky. Passe l'éventuel défi, attends qu'elle soit
+    affichée en entier, puis :</p>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary" data-key="e">Lire la page affichée <kbd>e</kbd></button>
+    <span class="import-busy hint">Lecture en cours…</span>
+  </div>
+</form>
+{% else %}
+<form method="post" action="/offres/{{ offer_id }}/navigateur" hx-post="/offres/{{ offer_id }}/navigateur"
+  hx-target="#lecture-{{ offer_id }}" hx-swap="innerHTML">
+  <input type="hidden" name="contexte" value="{{ context }}">
+  <input type="hidden" name="piste" value="{{ piste }}">
+  {% if reading_error %}<p class="alert alert-error" role="alert">{{ reading_error }}</p>{% endif %}
+  <button type="submit" class="btn btn-ghost" data-key="e">Ouvrir dans le navigateur <kbd>e</kbd></button>
+  <span class="import-busy hint">Ouverture en cours…</span>
+  <p class="hint">Le poste Rocky ouvre l'annonce sur ton ordinateur ; tu passes toi-même un éventuel défi, puis Rocky
+    lit la page affichée.</p>
+</form>
+{% endif %}

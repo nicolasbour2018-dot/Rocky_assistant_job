@@ -116,8 +116,8 @@ class Settings:
     scheduler_enabled: bool = False
     # Root of the account files (photos, CV templates; D2). Without it, the features that store files say so.
     storage_root: Path | None = None
-    # The Rocky workstation that prefills forms in a visible browser (decision D5, Q1). DORMANT: unused while the
-    # prefilling is off (``candidatures.web.PREFILL_ENABLED``).
+    # The Rocky workstation that opens postings in a visible browser on the user's computer (decisions D5, E5): the
+    # lecture assistée of the offers; its prefilling of forms is DORMANT (``candidatures.web.PREFILL_ENABLED``).
     workstation_url: str = DEFAULT_WORKSTATION_URL
 
     @property

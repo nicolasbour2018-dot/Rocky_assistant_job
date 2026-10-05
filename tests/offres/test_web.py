@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -12,14 +13,26 @@ from fastapi.testclient import TestClient
 from markupsafe import escape
 from sqlalchemy import Engine, select
 
+from rocky.offres.imports.rules import OTHER_PAGE_REASON
 from rocky.offres.model import Origin
 from rocky.offres.rules import scoring_inputs
 from rocky.offres.sql import SqlStore, job_decisions, job_offers
 from rocky.offres.usecases import record_offer
+from rocky.offres.web import READ_NOTE
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.events import events
 from rocky.system.llm import LlmUnavailableError
-from tests.offres.fakes import NOW, SUMMARY, TODAY, FakeModel, Seeker, equip, posting
+from rocky.system.workstation import NOT_RUNNING, ShownPage
+from tests.offres.fakes import (
+    NOW,
+    SUMMARY,
+    TODAY,
+    FakeBrowser,
+    FakeModel,
+    Seeker,
+    equip,
+    posting,
+)
 from tests.system.web_support import HTMX, logged_in, make_app
 
 # Current scores (best track): four offers at 75, an incomplete one at 53, two under the threshold.
@@ -49,6 +62,11 @@ POSTINGS = {
         ("Data",),
     ),
 }
+# The page an Apec posting shows in the workstation's browser (decision E5).
+APEC_SHOWN = ShownPage(
+    "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179509139W",
+    (Path(__file__).parent / "imports" / "data" / "apec" / "rendered.html").read_text(),
+)
 QUEUE = ["analyst", "python", "scientist", "junior", "junior_apec", "excerpt"]
 BELOW = ["accounting", "manager"]
 
@@ -90,6 +108,7 @@ def app(migrated_engine: Engine) -> FastAPI:
     app = make_app(migrated_engine)
     app.state.import_today = lambda: date(2026, 9, 29)
     app.state.llm_model = FakeModel(SUMMARY)
+    app.state.workstation = FakeBrowser(APEC_SHOWN)
     return app
 
 
@@ -509,6 +528,142 @@ def test_an_empty_paste_says_why(board: Board) -> None:
 
     assert "Colle le texte de l&#39;annonce." in html
     assert title("excerpt") in card_of(html)  # the offer stays on screen
+
+
+# The lecture assistée (decision E5).
+
+
+def browser(app: FastAPI) -> FakeBrowser:
+    fake: FakeBrowser = app.state.workstation
+    return fake
+
+
+def enrichment(board: Board, offer: int) -> dict[str, object] | None:
+    with board.engine.connect() as connection:
+        payload = connection.execute(
+            select(events.c.payload).where(
+                events.c.type == "offres.offer_enriched",
+                events.c.subject_id == str(offer),
+            )
+        ).scalar_one_or_none()
+    return None if payload is None else dict(payload)
+
+
+def test_only_an_incomplete_offer_offers_to_open_its_posting(board: Board) -> None:
+    incomplete = board.client.get(f"/offres/{board.id('manager')}/fiche", headers=HTMX)
+    complete = board.client.get(f"/offres/{board.id('analyst')}/fiche", headers=HTMX)
+
+    assert "Ouvrir dans le navigateur" in incomplete.text
+    assert 'data-key="e"' in incomplete.text
+    assert "Ouvrir dans le navigateur" not in complete.text
+
+
+def test_a_posting_is_opened_then_its_page_completes_the_offer(
+    board: Board, app: FastAPI
+) -> None:
+    offer = board.id("manager")
+
+    opened = board.client.post(
+        f"/offres/{offer}/navigateur",
+        data={"contexte": "fiche", "piste": ""},
+        headers=HTMX,
+    ).text
+
+    assert browser(app).opened == ["https://apec.example/offres/manager"]
+    assert "Lire la page affichée" in opened
+    assert 'name="onglet" value="onglet-1"' in opened
+    assert 'hx-target="#fiche"' in opened
+
+    read = board.client.post(
+        f"/offres/{offer}/navigateur/lire",
+        data={"onglet": "onglet-1", "contexte": "fiche", "piste": ""},
+        headers=HTMX,
+    )
+
+    assert browser(app).read == ["onglet-1"]
+    assert read.headers["HX-Trigger"] == "offers-changed"
+    assert READ_NOTE in read.text
+    assert "Ouvrir dans le navigateur" not in read.text  # complete now
+    with board.engine.connect() as connection:
+        stored = connection.execute(
+            select(job_offers).where(job_offers.c.id == offer)
+        ).one()
+    assert stored.description_complete and "Profil recherché" in stored.description
+    assert stored.last_seen_at == NOW
+    event = enrichment(board, offer)
+    assert event is not None
+    assert (event["how"], event["description_read"]) == ("browser", True)
+
+
+def test_a_workstation_that_does_not_answer_says_why(
+    board: Board, app: FastAPI
+) -> None:
+    browser(app).error = NOT_RUNNING
+
+    html = board.client.post(
+        f"/offres/{board.id('manager')}/navigateur",
+        data={"contexte": "tri"},
+        headers=HTMX,
+    ).text
+
+    assert str(escape(NOT_RUNNING)) in html
+    assert "Ouvrir dans le navigateur" in html  # the gesture can be made again
+
+
+def test_a_page_of_another_site_is_refused_and_the_offer_stays(
+    board: Board, app: FastAPI
+) -> None:
+    offer = board.id("excerpt")
+    browser(app).shown = ShownPage("https://login.example.com/sso", APEC_SHOWN.html)
+
+    html = board.client.post(
+        f"/offres/{offer}/navigateur/lire",
+        data={"onglet": "onglet-1", "contexte": "tri"},
+        headers=HTMX,
+    ).text
+
+    assert str(escape(OTHER_PAGE_REASON)) in html
+    assert title("excerpt") in card_of(html)  # the offer stays on screen
+    assert enrichment(board, offer) is None
+
+
+def test_the_reading_of_another_account_s_offer_is_not_found(
+    board: Board, app: FastAPI, migrated_engine: Engine
+) -> None:
+    other, _ = logged_in(app, migrated_engine)
+    offer = board.id("manager")
+
+    assert other.post(f"/offres/{offer}/navigateur", headers=HTMX).status_code == 404
+    assert (
+        other.post(
+            f"/offres/{offer}/navigateur/lire",
+            data={"onglet": "onglet-1"},
+            headers=HTMX,
+        ).status_code
+        == 404
+    )
+    assert browser(app).opened == [] and browser(app).read == []
+
+
+def test_the_reading_works_without_javascript(board: Board, app: FastAPI) -> None:
+    offer = board.id("manager")
+
+    opened = board.client.post(
+        f"/offres/{offer}/navigateur", data={"contexte": "fiche"}
+    )
+    read = board.client.post(
+        f"/offres/{offer}/navigateur/lire",
+        data={"onglet": "onglet-1", "contexte": "fiche"},
+        follow_redirects=False,
+    )
+
+    assert opened.status_code == 200
+    assert "<html" in opened.text and "Lire la page affichée" in opened.text
+    assert (read.status_code, read.headers["location"]) == (
+        303,
+        f"/offres/{offer}/fiche",
+    )
+    assert enrichment(board, offer) is not None
 
 
 def test_the_summary_is_asked_once_then_kept(board: Board, app: FastAPI) -> None:

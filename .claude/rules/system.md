@@ -38,14 +38,16 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - La clé ne figure jamais dans une raison, une URL ni un journal. Sans clé, les fonctions qui en dépendent le disent.
 - Tests : faux modèle ou `MockTransport`, jamais d'appel réel (AGENTS §7).
 
-## Poste Rocky (`rocky/system/workstation.py`, `workstation_host.py`, décision `docs/decisions/D5-revisions-envoi.md`)
-- **En sommeil** depuis la recette de D5 : gardé et testé, appelé seulement si `candidatures.web.PREFILL_ENABLED`.
-- L'application ne lance jamais de navigateur visible : elle remet un `PrefillJob` au poste (`app.state.workstation`,
-  faux poste dans les tests). Le poste tourne sur l'ordinateur (`uv run rocky-poste`), écoute sur `127.0.0.1`, refuse
-  `Origin`, exige JSON et un `Host` connu.
-- Le poste ne clique ni ne soumet jamais ; il remplit un champ vide reconnu et rend un rapport où chaque échec a sa
-  raison. Un seul fil possède Playwright (ses objets appartiennent au fil qui les a créés).
-- Tests : `fill_form` dans un Chromium headless sur un formulaire en `set_content` ; jamais de site réel.
+## Poste Rocky (`rocky/system/workstation.py`, `workstation_host.py`, décisions `docs/decisions/E5-lecture-assistee.md`, `D5-revisions-envoi.md`)
+- Trois demandes sous les mêmes gardes : `/ouvrir` et `/lire` (lecture assistée, E5), `/preremplir` (**en sommeil**
+  depuis la recette de D5, appelé seulement si `candidatures.web.PREFILL_ENABLED`).
+- L'application ne lance jamais de navigateur visible : elle appelle le poste (`app.state.workstation`, installé par
+  `system/web.py`, faux poste dans les tests), **hors de toute transaction**. Le poste tourne sur l'ordinateur
+  (`uv run rocky-poste`), écoute sur `127.0.0.1`, refuse `Origin`, exige JSON et un `Host` connu.
+- Le poste ne clique ni ne soumet jamais, ne résout aucun défi, ne retente rien ; chaque échec rend sa raison en
+  français. Un onglet ouvert est nommé par un jeton aléatoire (`Tabs`), qui voyage dans le formulaire de l'écran ; il
+  reste ouvert après la lecture. Un seul fil possède Playwright (ses objets appartiennent au fil qui les a créés).
+- Tests : `Tabs` et `fill_form` dans un Chromium headless (`data:` et `set_content`) ; jamais de site réel.
 
 ## Planificateur (`rocky/system/scheduler.py`, décision `docs/decisions/C6-veille.md`)
 - **Seul déclencheur** (D12) : aucune tâche par cron ni par un autre fil. Tâches quotidiennes à heure de Paris (une heure

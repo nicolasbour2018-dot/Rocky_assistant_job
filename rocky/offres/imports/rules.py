@@ -1,7 +1,8 @@
 """Import rules: no I/O. Link checks, the reading of a posting page, and the enrichment of an offer.
 
-A page is read in this order (decision C2): the ``JobPosting`` of its JSON-LD data, else a known description
-container, else its visible text, kept but marked incomplete. Facts stay as published (C1 rule): contract, remote
+A page is read in this order (decision C2): the sections of a known sectioned page (Apec as a visible browser draws
+it, decision E5), else the ``JobPosting`` of its JSON-LD data, else a known description container, else its visible
+text, kept but marked incomplete. Facts stay as published (C1 rule): contract, remote
 work and salary as source texts, no value guessed.
 """
 
@@ -47,6 +48,19 @@ DESCRIPTION_SELECTORS = (
     "[data-testid='job-description']",
     "[data-test='JobDescription']",  # Wellfound
     "[class*='job-description']",
+)
+# Pages whose posting is split in titled sections while their JSON-LD holds the first one only, read first: Apec as
+# its page is drawn in a visible browser (decision E5; its source is an empty shell). Each section is the element
+# after its ``h4`` heading; heading in the description (as the Apec detail of ``sources.apec`` writes it).
+SECTIONED_PAGES: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
+    (
+        ".container-details-offer",
+        (
+            ("Descriptif du poste", ""),
+            ("Profil recherché", "Profil recherché"),
+            ("Entreprise", "Entreprise"),
+        ),
+    ),
 )
 # Not part of a posting: dropped before the visible text is read.
 NOISE_TAGS = (
@@ -151,8 +165,11 @@ def parse_page(page_html: str, url: str, *, today: date) -> ImportPreview:
     if title is None:
         warnings.append("Intitulé introuvable sur la page.")
 
-    description = _description(posting.get("description"))
-    method = ImportMethod.JSON_LD
+    description = _sectioned_description(soup)
+    method = ImportMethod.TARGETED_HTML
+    if not description:
+        description = _description(posting.get("description"))
+        method = ImportMethod.JSON_LD
     if not description:
         description = _targeted_description(soup)
         method = ImportMethod.TARGETED_HTML
@@ -262,6 +279,21 @@ def with_pasted_description(offer: CollectedOffer, value: str) -> CollectedOffer
         description_complete=True,
         incomplete_reason=None,
     )
+
+
+# Reasons of a reading in a visible browser (decision E5, Q3, Q6).
+NOT_READABLE_REASON = (
+    "La page affichée ne donne pas l'annonce de façon lisible (ni annonce structurée, ni bloc de description "
+    "connu) : colle la description."
+)
+OTHER_PAGE_REASON = "La page affichée n'est plus l'annonce (autre site) : reviens-y dans le navigateur, puis relis-la."
+
+
+def shows_the_offer(offer: CollectedOffer, shown_url: str) -> bool:
+    """Whether a page shown at ``shown_url`` is on the site of ``offer`` (decision E5, Q6): its source, or the site of
+    its address (the tracking link of an alert leads to its platform, which is the offer's source)."""
+    site = source_for_url(shown_url)
+    return site is not None and site in {offer.source, source_for_url(offer.url)}
 
 
 def offer_from_paste(
@@ -404,6 +436,28 @@ def _targeted_description(soup: BeautifulSoup) -> str:
             description = html_to_text(str(node))
             if description:
                 return description
+    return ""
+
+
+def _sectioned_description(soup: BeautifulSoup) -> str:
+    """The sections of a known sectioned page, each under its heading; empty when the page is not one."""
+    for selector, sections in SECTIONED_PAGES:
+        container = soup.select_one(selector)
+        if container is None:
+            continue
+        headings = {
+            _SPACES.sub(" ", h.get_text(" ", strip=True)): h
+            for h in container.find_all("h4")
+        }
+        parts: list[str] = []
+        for title, heading in sections:
+            found = headings.get(title)
+            body = found.find_next_sibling() if found is not None else None
+            text_of = html_to_text(str(body)) if body is not None else ""
+            if text_of:
+                parts.append(f"{heading}\n{text_of}" if heading else text_of)
+        if parts:
+            return "\n\n".join(parts)
     return ""
 
 

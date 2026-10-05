@@ -1,13 +1,14 @@
-"""The Rocky workstation: the program run on the user's computer that opens a visible browser (decision D5, Q1).
+"""The Rocky workstation: the program run on the user's computer that opens a visible browser (decisions D5, E5).
 
-DORMANT (decision D5, acceptance of 04/10): the prefilling failed on 2 real postings out of 2 (the recruiters' sites
-show no form at once, they go through their own logins). This module is kept, tested, but not run: the application
-calls it only when ``candidatures.web.PREFILL_ENABLED`` is True. The lecture assistée (E5) may revive it.
+The application runs in Docker and cannot open a window on the computer: it hands the workstation a request over HTTP
+on the loopback, with everything it needs (no ticket, no route of Rocky open to the workstation). Here: what they
+exchange, and the application's client. The workstation itself is ``workstation_host.py`` (command ``rocky-poste``).
 
-The application runs in Docker and cannot open a window on the computer: it hands the workstation a form to prefill,
-over HTTP on the loopback, with every value and file it needs (no ticket, no route of Rocky open to the
-workstation). Here: what they exchange, and the application's client. The workstation itself is
-``workstation_host.py`` (command ``rocky-poste``); the lecture assistée (E5) will use it too.
+Two uses:
+- the **lecture assistée** (decision E5): open a posting in a tab (``/ouvrir``), the user passes any challenge
+  themselves, then hand back the page as it is shown (``/lire``);
+- the **prefilling** of a form (decision D5, Q1). DORMANT since the acceptance of 04/10 (it failed on 2 real postings
+  out of 2): kept and tested, called only when ``candidatures.web.PREFILL_ENABLED`` is True.
 """
 
 from __future__ import annotations
@@ -22,8 +23,13 @@ from urllib.parse import urlsplit
 
 import httpx2
 
-TIMEOUT_SECONDS = 90.0  # opening the page (60 s at most) and filling it
+TIMEOUT_SECONDS = 90.0  # opening the page (60 s at most) and filling or reading it
 PREFILL_PATH = "/preremplir"
+OPEN_PATH = "/ouvrir"
+READ_PATH = "/lire"
+# A page shown is read whole, as large as a page read by Rocky itself (``offres.sources.http.MAX_PAGE_BYTES``).
+MAX_PAGE_BYTES = 3_000_000
+MAX_TAB_LENGTH = 64
 
 # What the workstation can fill (Q4), with the label shown to the user and in its report.
 FIELDS: Mapping[str, str] = {
@@ -43,7 +49,7 @@ NOT_RUNNING = "Le poste Rocky ne répond pas : lance « uv run rocky-poste » su
 
 
 class WorkstationUnavailableError(Exception):
-    """The workstation did not take the form; ``reason`` is shown as is (French)."""
+    """The workstation did not do what it was asked; ``reason`` is shown as is (French)."""
 
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
@@ -143,19 +149,64 @@ def _strings(value: object) -> tuple[str, ...]:
     return tuple(value)
 
 
+@dataclass(frozen=True)
+class ShownPage:
+    """A page as the workstation's browser shows it: its address now (the user may have moved) and its HTML."""
+
+    url: str
+    html: str
+
+    def to_json(self) -> dict[str, Any]:
+        return {"url": self.url, "html": self.html}
+
+    @classmethod
+    def from_json(cls, data: Any) -> ShownPage:
+        if not isinstance(data, dict):
+            raise ValueError("a page is an object")
+        url, page_html = data.get("url"), data.get("html")
+        if not isinstance(url, str) or not isinstance(page_html, str):
+            raise ValueError("a page has an address and its HTML")
+        return cls(url, page_html)
+
+
+def url_to_open(data: Any) -> str:
+    """The address of ``{"url": …}``; raises ``ValueError`` unless it is http(s)."""
+    url = data.get("url") if isinstance(data, dict) else None
+    if not isinstance(url, str) or not target_is_valid(url):
+        raise ValueError("the address of the page is not http(s)")
+    return url
+
+
+def tab_to_read(data: Any) -> str:
+    """The tab of ``{"tab": …}``; raises ``ValueError`` for anything else."""
+    tab = data.get("tab") if isinstance(data, dict) else None
+    if not isinstance(tab, str) or not 0 < len(tab) <= MAX_TAB_LENGTH:
+        raise ValueError("unknown tab")
+    return tab
+
+
 def target_is_valid(url: str) -> bool:
     parts = urlsplit(url)
     return parts.scheme in {"http", "https"} and bool(parts.hostname)
 
 
 class Workstation(Protocol):
+    def open_page(self, url: str) -> str:
+        """``url`` opened in a tab of the visible browser; the tab is named by the token returned. Raises
+        ``WorkstationUnavailableError``."""
+        ...
+
+    def read_page(self, tab: str) -> ShownPage:
+        """The page shown in ``tab`` now. Raises ``WorkstationUnavailableError``."""
+        ...
+
     def prefill(self, job: PrefillJob) -> PrefillReport:
-        """The form opened and prefilled in a visible browser; raises ``WorkstationUnavailableError``."""
+        """DORMANT. The form opened and prefilled in a visible browser; raises ``WorkstationUnavailableError``."""
         ...
 
 
 class WorkstationClient:
-    """The application's side: one request per form, answered once the form is filled."""
+    """The application's side: one request per gesture, answered once the workstation is done."""
 
     def __init__(
         self,
@@ -164,16 +215,42 @@ class WorkstationClient:
         transport: httpx2.BaseTransport | None = None,
         timeout_seconds: float = TIMEOUT_SECONDS,
     ) -> None:
-        self._url = base_url.rstrip("/") + PREFILL_PATH
+        self._base_url = base_url.rstrip("/")
         self._transport = transport
         self._timeout = timeout_seconds
 
+    def open_page(self, url: str) -> str:
+        body = self._post(OPEN_PATH, {"url": url}, "n'a pas pu ouvrir la page")
+        tab = body.get("tab") if isinstance(body, dict) else None
+        if not isinstance(tab, str) or not tab:
+            raise WorkstationUnavailableError("Réponse illisible du poste Rocky.")
+        return tab
+
+    def read_page(self, tab: str) -> ShownPage:
+        body = self._post(READ_PATH, {"tab": tab}, "n'a pas pu lire la page")
+        try:
+            return ShownPage.from_json(body)
+        except ValueError as error:
+            raise WorkstationUnavailableError(
+                "Réponse illisible du poste Rocky."
+            ) from error
+
     def prefill(self, job: PrefillJob) -> PrefillReport:
+        body = self._post(PREFILL_PATH, job.to_json(), "a refusé le formulaire")
+        try:
+            return PrefillReport.from_json(body)
+        except ValueError as error:
+            raise WorkstationUnavailableError(
+                "Réponse illisible du poste Rocky."
+            ) from error
+
+    def _post(self, path: str, payload: dict[str, Any], failed: str) -> Any:
+        """The JSON answer of the workstation; ``failed`` says what it could not do (« Le poste Rocky … »)."""
         try:
             with httpx2.Client(
                 transport=self._transport, timeout=self._timeout
             ) as client:
-                response = client.post(self._url, json=job.to_json())
+                response = client.post(self._base_url + path, json=payload)
         except httpx2.TimeoutException as error:
             raise WorkstationUnavailableError(
                 "Le poste Rocky n'a pas répondu à temps : regarde sa fenêtre et son terminal."
@@ -189,11 +266,6 @@ class WorkstationClient:
         if response.status_code != 200:
             reason = body.get("error") if isinstance(body, dict) else None
             raise WorkstationUnavailableError(
-                f"Le poste Rocky a refusé le formulaire : {reason or f'HTTP {response.status_code}'}."
+                f"Le poste Rocky {failed} : {reason or f'HTTP {response.status_code}'}."
             )
-        try:
-            return PrefillReport.from_json(body)
-        except ValueError as error:
-            raise WorkstationUnavailableError(
-                "Réponse illisible du poste Rocky."
-            ) from error
+        return body
