@@ -12,7 +12,7 @@ import logging
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -25,7 +25,12 @@ from rocky.messages.alerts.model import (
     NotTried,
     ReadingStatus,
 )
-from rocky.messages.alerts.usecases import NO_PROFILE_REASON, TECHNICAL_REASON
+from rocky.messages.alerts.usecases import (
+    DAY_LIMIT_REASON,
+    NO_PROFILE_REASON,
+    TECHNICAL_REASON,
+    TOO_OLD_REASON,
+)
 from rocky.messages.classification.model import Category
 from rocky.messages.links import AlertOffersLink
 from rocky.messages.model import Query
@@ -149,12 +154,14 @@ class Inbox:
         )
 
 
-def _service(engine: Engine, pages: FakePages) -> MessagesService:
+def _service(
+    engine: Engine, pages: FakePages, *, now: datetime = NOW
+) -> MessagesService:
     @contextmanager
     def opened() -> Iterator[FakePages]:
         yield pages
 
-    return MessagesService(engine, settings=GMAIL, clock=lambda: NOW, pages=opened)
+    return MessagesService(engine, settings=GMAIL, clock=lambda: now, pages=opened)
 
 
 @pytest.fixture
@@ -329,17 +336,46 @@ def test_a_failed_link_keeps_its_reason_and_the_others_are_read(inbox: Inbox) ->
     assert (report.pages_read, report.pages_unread) == (3, 1)
 
 
-def test_the_postings_of_an_old_alert_are_not_read(inbox: Inbox) -> None:
-    """Q4: the alerts already collected are read, their postings only up to 7 days."""
-    inbox.alert("hellowork_alerte", received_at=NOW - timedelta(days=8))
+def test_an_alert_older_than_three_days_gives_nothing_and_says_so(
+    inbox: Inbox,
+) -> None:
+    """Q8: an old alert is marked « trop ancienne », without offer nor call; it does not count in the day's limit."""
+    inbox.alert("hellowork_alerte", received_at=NOW - timedelta(days=3, hours=1))
 
-    inbox.read()
+    report = inbox.read()
 
-    assert inbox.pages.calls == []
-    assert {row["not_tried"] for row in inbox.rows(alert_offers)} == {
-        NotTried.TOO_OLD.value
-    }
-    assert len(inbox.offers()) == 4
+    (reading,) = inbox.rows(alert_readings)
+    assert (reading["status"], reading["platform"], reading["cards"]) == (
+        ReadingStatus.TOO_OLD.value,
+        "hellowork",
+        0,
+    )
+    assert reading["reason"] == TOO_OLD_REASON
+    assert inbox.offers() == [] and inbox.pages.calls == []
+    assert report.too_old == 1
+
+
+def test_at_most_ten_alerts_a_day_give_their_offers_the_most_recent_first(
+    inbox: Inbox,
+) -> None:
+    """Q8: the others wait for the next day; on the screen they are not read yet, with the reason."""
+    ids = [
+        inbox.alert(
+            "hellowork_recommandation", received_at=RECENT - timedelta(minutes=n)
+        )
+        for n in range(12)
+    ]
+
+    report = inbox.read(links=False)
+
+    read = {row["message_id"] for row in inbox.rows(alert_readings)}
+    assert read == set(ids[:10])
+    assert (report.alerts, report.postponed) == (10, 2)
+    assert report.reason == DAY_LIMIT_REASON.format(limit=10)
+    assert inbox.read(links=False).alerts == 0
+
+    tomorrow = _service(inbox.engine, inbox.pages, now=NOW + timedelta(days=1))
+    assert tomorrow.read_alerts(inbox.account_id, links=False).alerts == 2
 
 
 def test_a_known_complete_offer_is_not_read_again_and_stays_the_watch_s(

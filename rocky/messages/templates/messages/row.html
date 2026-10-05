@@ -20,7 +20,7 @@
     {% set alert = state.alerts.get(message.id) %}
     <div class="small alert-offers">
       {% if alert is none %}
-      <span class="muted">Offres pas encore tirées de cette alerte (au prochain passage).</span>
+      <span class="muted">Offres pas encore tirées de cette alerte : au plus {{ alerts_per_day }} alertes par jour, les plus récentes d'abord.</span>
       {% elif alert.status == ReadingStatus.READ %}
       <details class="note">
         <summary>{{ alert.offers | length }} offre{{ 's' if alert.offers | length > 1 }} ({{ alert.created }} nouvelle{{ 's' if alert.created > 1 }})

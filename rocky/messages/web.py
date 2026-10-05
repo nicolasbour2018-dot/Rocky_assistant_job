@@ -22,6 +22,7 @@ from fastapi.templating import Jinja2Templates
 
 from rocky.candidatures.model import STAGE_LABELS, InvalidChangeError
 from rocky.messages.alerts.model import (
+    ALERTS_PER_DAY,
     LINK_OUTCOME_LABELS,
     PLATFORM_LABELS,
     READING_LABELS,
@@ -151,6 +152,7 @@ def install(app: FastAPI) -> None:
         link_outcome_labels=LINK_OUTCOME_LABELS,
         ReadingStatus=ReadingStatus,
         LinkOutcome=LinkOutcome,
+        alerts_per_day=ALERTS_PER_DAY,
     )
     # E4 (Q5): the lines of « Ce qui a bougé » beside 📬 in the navigation.
     add_badge(app, "messages", _pending_count)

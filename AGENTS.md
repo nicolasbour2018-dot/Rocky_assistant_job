@@ -142,6 +142,10 @@ docs/
 - Classement des messages d'un compte (décision E2) : les règles, puis Gemini dans les plafonds du compte (réseau réel :
   avec l'accord de Nicolas) : `docker compose run --rm app rocky-admin messages-classer <email> [--sans-llm] [--limite N]
   [--reclasser]`. L'application classe aussi après chaque collecte.
+- Alertes emploi → offres (décision E3) : `docker compose run --rm app rocky-admin alertes <email> [--sans-liens]` (les
+  alertes jamais lues donnent leurs offres, puis leurs fiches sont lues — réseau réel : avec l'accord de Nicolas ;
+  `--sans-liens` marque définitivement les fiches comme non lues, à réserver au diagnostic). L'application lit aussi les
+  alertes après chaque collecte.
 - Jeu étiqueté des messages (décision E4) : `docker compose run --rm app rocky-admin messages-etiquettes <email>` (CSV
   des corrections et confirmations sur la sortie standard ; données personnelles, jamais versionnées).
 - Poste Rocky (préremplissage dans un navigateur visible, sur l'ordinateur, hors Docker) : **en sommeil** depuis la

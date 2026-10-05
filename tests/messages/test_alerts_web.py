@@ -71,7 +71,10 @@ def screen(app: FastAPI, migrated_engine: Engine) -> Screen:
 def test_an_alert_not_read_yet_says_so(screen: Screen) -> None:
     screen.alert("hellowork_alerte")
 
-    assert "Offres pas encore tirées de cette alerte" in screen.alerts_view()
+    assert (
+        "Offres pas encore tirées de cette alerte : au plus 10 alertes par jour"
+        in screen.alerts_view()
+    )
 
 
 def test_an_alert_shows_its_offers_and_why_their_postings_were_not_read(

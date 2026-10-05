@@ -116,8 +116,17 @@ def card_key(card: AlertCard) -> str:
 
 def merged(card_offer: CollectedOffer, page: CollectedOffer) -> CollectedOffer:
     """The offer of a card completed by its posting: the description and the facts the card lacks; it keeps the
-    identity of the card (Q2) and takes the canonical address of the posting (found again by an import or a watch)."""
-    return replace(enriched(card_offer, page), url=page.url or card_offer.url)
+    identity of the card (Q2) and takes the canonical address of the posting (found again by an import or a watch).
+    A card has no description: an excerpt of its posting is better than none, and stays marked incomplete."""
+    result = enriched(card_offer, page)
+    if not result.description and page.description:
+        result = replace(
+            result,
+            description=page.description,
+            description_complete=page.description_complete,
+            incomplete_reason=page.incomplete_reason,
+        )
+    return replace(result, url=page.url or card_offer.url)
 
 
 def message_link(message: AlertMessage) -> str:

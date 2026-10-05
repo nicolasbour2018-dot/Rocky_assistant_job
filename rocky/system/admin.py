@@ -359,7 +359,8 @@ def read_account_alerts(
         out.write("Une lecture des alertes de ce compte est déjà en cours.\n")
         return 1
     out.write(
-        f"{report.alerts} alerte(s) lue(s) : {report.offers} offre(s), dont {report.created} nouvelle(s) ; "
+        f"{report.alerts} alerte(s) lue(s), dont {report.too_old} trop ancienne(s) : "
+        f"{report.offers} offre(s), dont {report.created} nouvelle(s) ; "
         f"{report.pages_read} fiche(s) lue(s), {report.pages_unread} non lue(s) ; "
         f"{report.unknown_formats} format(s) inconnu(s), {report.failed} en échec.\n"
     )

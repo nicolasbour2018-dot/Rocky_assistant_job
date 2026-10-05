@@ -366,9 +366,10 @@ alert_readings = Table(
     ),
     CheckConstraint(_in("status", ReadingStatus), name="status"),
     CheckConstraint("status <> 'unknown_format' OR platform IS NULL", name="no_reader"),
-    # A reading fails before its reader is known only by an error (its trace is in the log).
+    # A reading fails before its reader is known only by an error (its trace is in the log); an alert too old is not
+    # read at all (Q8).
     CheckConstraint(
-        "platform IS NOT NULL OR status IN ('unknown_format', 'failed')",
+        "platform IS NOT NULL OR status IN ('unknown_format', 'failed', 'too_old')",
         name="reader_known",
     ),
     CheckConstraint("(status = 'read') = (cards > 0)", name="cards_read"),
@@ -951,6 +952,19 @@ class SqlStore:
             )
             for row in self._conn.execute(query)
         ]
+
+    def alerts_read_since(self, account_id: int, since: datetime) -> int:
+        return int(
+            self._conn.execute(
+                select(func.count())
+                .select_from(alert_readings)
+                .where(
+                    alert_readings.c.account_id == account_id,
+                    alert_readings.c.status == ReadingStatus.READ.value,
+                    alert_readings.c.read_at >= since,
+                )
+            ).scalar_one()
+        )
 
     def alert_offers(self, account_id: int) -> AlertOffersLink | None:
         profile = profil_web.stored_profile(self._conn, account_id)

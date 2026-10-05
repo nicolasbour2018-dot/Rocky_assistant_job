@@ -18,10 +18,12 @@ from rocky.offres.imports.model import ImportResult
 from rocky.offres.sources.model import CollectedOffer
 from rocky.system.events import NewEvent
 
-# Changes whenever a reader or the offer of a card changes: kept with every reading (D14).
-ALERTS_VERSION = "alerts-2026-10-05.1"
-# Q4: the postings of older alerts are not read (an old tracking link, a posting probably closed).
-LINK_MAX_AGE = timedelta(days=7)
+# Changes whenever a reader, the offer of a card or a limit changes: kept with every reading (D14).
+ALERTS_VERSION = "alerts-2026-10-05.3"
+# Q8: at most this many alerts give their offers per day and per account (the most recent first), and an alert older
+# than this gives nothing (useless calls, postings probably closed). « Pour le moment »: to be reviewed with use.
+ALERTS_PER_DAY = 10
+ALERT_MAX_AGE = timedelta(days=3)
 
 
 class Platform(StrEnum):
@@ -51,6 +53,8 @@ class ReadingStatus(StrEnum):
     NO_CARD = "no_card"
     # An unexpected error while reading it (its trace is in the log).
     FAILED = "failed"
+    # Q8: older than ``ALERT_MAX_AGE``, it gives nothing.
+    TOO_OLD = "too_old"
 
 
 READING_LABELS = {
@@ -58,6 +62,7 @@ READING_LABELS = {
     ReadingStatus.UNKNOWN_FORMAT: "Format d'alerte non lu",
     ReadingStatus.NO_CARD: "Aucune offre trouvée dans l'alerte",
     ReadingStatus.FAILED: "Lecture de l'alerte en échec",
+    ReadingStatus.TOO_OLD: "Alerte trop ancienne",
 }
 
 
@@ -84,6 +89,8 @@ class NotTried(StrEnum):
     """Why the link of a card was not read."""
 
     KNOWN_COMPLETE = "known_complete"
+    # Readings of the versions before ``.3`` only (fiches of alerts older than 7 days); since Q8, such an alert gives
+    # nothing.
     TOO_OLD = "too_old"
     HOST_STOPPED = "host_stopped"
     NO_LINK = "no_link"
@@ -181,13 +188,14 @@ class AlertsReport:
     """What a pass did."""
 
     alerts: int = 0
+    too_old: int = 0
     offers: int = 0
     created: int = 0
     pages_read: int = 0
     pages_unread: int = 0
     unknown_formats: int = 0
     failed: int = 0
-    # Alerts left for the next pass (the offers of the account locked by a watch, no profile yet), and why.
+    # Alerts left for a next pass (the day's limit reached, the offers locked by a watch, no profile yet), and why.
     postponed: int = 0
     reason: str | None = None
     by_platform: dict[str, int] = field(default_factory=dict)
@@ -218,7 +226,13 @@ class AlertOffers(Protocol):
 class AlertStore(Protocol):
     """The reading of the alerts on a connection inside the caller's transaction; never commits."""
 
-    def alerts_to_read(self, account_id: int) -> list[AlertMessage]: ...
+    def alerts_to_read(self, account_id: int) -> list[AlertMessage]:
+        """The alerts never read, the most recent first."""
+        ...
+
+    def alerts_read_since(self, account_id: int, since: datetime) -> int:
+        """The alerts that gave their offers since ``since`` (Q8: the day's limit)."""
+        ...
 
     def alert_offers(self, account_id: int) -> AlertOffers | None:
         """The offers of the account, scored with its profile; None when the account has no profile."""

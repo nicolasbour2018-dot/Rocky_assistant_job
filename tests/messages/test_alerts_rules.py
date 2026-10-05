@@ -285,3 +285,26 @@ def test_the_posting_completes_the_card_and_gives_its_address() -> None:
     assert result.description_complete and result.incomplete_reason is None
     assert (result.title, result.company) == (offer.title, offer.company)
     assert result.salary_text == "40 000 €"
+
+
+def test_an_excerpt_of_the_posting_is_kept_for_a_card_without_description() -> None:
+    message = alert("hellowork_alerte")
+    card = cards(message, Platform.HELLOWORK)[0]
+    offer = card_offer(message, card, Platform.HELLOWORK, reason="r")
+    page = CollectedOffer(
+        source="hellowork.com",
+        external_id="https://www.hellowork.com/fr-fr/emplois/2.html",
+        url="https://www.hellowork.com/fr-fr/emplois/2.html",
+        title="Data Analyst (H/F)",
+        description="Rejoignez notre équipe data pour…",
+        description_complete=False,
+        incomplete_reason="La page ne donne qu'un extrait de l'annonce.",
+    )
+
+    result = merged(offer, page)
+
+    assert (result.description, result.description_complete) == (
+        "Rejoignez notre équipe data pour…",
+        False,
+    )
+    assert result.incomplete_reason == "La page ne donne qu'un extrait de l'annonce."

@@ -1,10 +1,11 @@
 """Use cases of the job alerts: read the alerts of an account that were never read, and turn their cards into offers.
 
-Decision ``docs/decisions/E3-alertes.md``. A card always gives an offer, without the network (Q2); the posting of its
-link is then read, outside any transaction, when it can be (Q2, Q4): never for a posting already known complete, an
-alert older than 7 days, a platform that refused during this pass. Each alert is written in one transaction: its
-offers, what became of each link, its reading and its event (Q5). The offers of the account are locked for that
-transaction: while a watch holds them, nothing is written and the alerts wait for the next pass.
+Decision ``docs/decisions/E3-alertes.md``. At most 10 alerts give their offers per day, the most recent first, and an
+alert older than 3 days gives nothing (Q8). A card always gives an offer, without the network (Q2); the posting of its
+link is then read, outside any transaction, when it can be: never for a posting already known complete or a platform
+that refused during this pass. Each alert is written in one transaction: its offers, what became of each link, its
+reading and its event (Q5). The offers of the account are locked for that transaction: while a watch holds them,
+nothing is written and the alerts wait for the next pass.
 """
 
 from __future__ import annotations
@@ -12,10 +13,11 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from rocky.messages.alerts.model import (
-    LINK_MAX_AGE,
+    ALERT_MAX_AGE,
+    ALERTS_PER_DAY,
     NOT_TRIED_REASONS,
     PLATFORM_LABELS,
     AlertCard,
@@ -34,6 +36,7 @@ from rocky.messages.alerts.rules import card_offer, cards, merged, reader_of
 from rocky.messages.decisions.rules import paris_day
 from rocky.offres.imports.model import ImportOutcome
 from rocky.system.events import Actor, NewEvent
+from rocky.system.scheduler import PARIS
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +49,8 @@ NO_CARD_REASON = (
     "Aucune offre trouvée dans cette alerte : son format a peut-être changé."
 )
 TECHNICAL_REASON = "Erreur technique pendant la lecture de l'alerte (trace dans le journal de l'application)."
+TOO_OLD_REASON = "Alerte de plus de 3 jours : aucune offre n'en est tirée."
+DAY_LIMIT_REASON = "Au plus {limit} alertes par jour donnent leurs offres, les plus récentes d'abord : la suite demain."
 PARTIAL_REASON = "La fiche a été lue, sans description complète."
 NO_PROFILE_REASON = "Le compte n'a pas encore de profil : les offres des alertes ne peuvent pas être notées."
 
@@ -76,39 +81,57 @@ def read_alerts(
     *,
     account_id: int,
     clock: Clock,
-    link_max_age: timedelta = LINK_MAX_AGE,
+    per_day: int = ALERTS_PER_DAY,
+    max_age: timedelta = ALERT_MAX_AGE,
 ) -> AlertsReport:
-    """Read every alert of the account never read (Q4). ``page`` None: no posting is read (« sans liens »).
-    Raises ``AlertsBusyError`` while another pass reads them."""
+    """Read the alerts of the account never read, the most recent first, within the day's limit (Q8). ``page`` None:
+    no posting is read (« sans liens »). Raises ``AlertsBusyError`` while another pass reads them."""
     with storage.alerts_lock(account_id) as locked:
         if not locked:
             raise AlertsBusyError(account_id)
         report = AlertsReport()
+        now = clock()
         with storage.transaction() as store:
             alerts = store.alerts_to_read(account_id)
             has_profile = store.alert_offers(account_id) is not None
+            left = per_day - store.alerts_read_since(account_id, _day_start(now))
         if alerts and not has_profile:
             report.postponed = len(alerts)
             report.reason = NO_PROFILE_REASON
             return report
         stopped: set[Platform] = set()
         for index, message in enumerate(alerts):
-            reading = _reading(
-                storage, account_id, message, page, stopped, clock, link_max_age
-            )
+            if now - message.received_at > max_age:
+                reading = _Reading(
+                    reader_of(message), ReadingStatus.TOO_OLD, TOO_OLD_REASON
+                )
+            elif left <= 0:
+                report.postponed += 1
+                report.reason = DAY_LIMIT_REASON.format(limit=per_day)
+                continue
+            else:
+                reading = _reading(storage, account_id, message, page, stopped, clock)
             try:
                 # A failure of the database is not one of the alert: it is raised, nothing of the alert is written,
                 # and the next pass reads it again.
                 _write(storage, account_id, message, reading, report, clock)
             except _OffersBusyError:
                 report.postponed = len(alerts) - index
+                report.reason = None
                 logger.info(
                     "offers of account %s are locked by a watch: %s alerts wait",
                     account_id,
                     report.postponed,
                 )
                 break
+            if reading.status is ReadingStatus.READ:
+                left -= 1
         return report
+
+
+def _day_start(now: datetime) -> datetime:
+    """Midnight of the day of ``now`` in Paris (the user's day, D12)."""
+    return datetime.combine(paris_day(now), time(), tzinfo=PARIS)
 
 
 def _reading(
@@ -118,7 +141,6 @@ def _reading(
     page: PageReading | None,
     stopped: set[Platform],
     clock: Clock,
-    link_max_age: timedelta,
 ) -> _Reading:
     """What an alert gave, before anything is written: its cards, then (outside any transaction) their postings.
 
@@ -148,9 +170,7 @@ def _reading(
             )
         )
     try:
-        results = _postings(
-            message, platform, found, page, known, stopped, clock, link_max_age
-        )
+        results = _postings(message, platform, found, page, known, stopped, clock)
     except Exception:
         logger.exception("reading of alert %s failed unexpectedly", message.id)
         return _Reading(platform, ReadingStatus.FAILED, TECHNICAL_REASON)
@@ -172,18 +192,15 @@ def _postings(
     known: set[tuple[str, str]],
     stopped: set[Platform],
     clock: Clock,
-    link_max_age: timedelta,
 ) -> tuple[CardResult, ...]:
     """The offer of each card, completed by its posting when it can be read (Q2), or with why it was not (Q5)."""
     now = clock()
-    too_old = now - message.received_at > link_max_age
     results: list[CardResult] = []
     for card in found:
         why = _not_tried(
             card,
             _identity(message, card, platform) in known,
             reading=page is not None,
-            too_old=too_old,
             stopped=platform in stopped,
         )
         if why is not None or page is None or card.link is None:
@@ -226,7 +243,7 @@ def _postings(
 
 
 def _not_tried(
-    card: AlertCard, known: bool, *, reading: bool, too_old: bool, stopped: bool
+    card: AlertCard, known: bool, *, reading: bool, stopped: bool
 ) -> NotTried | None:
     """Why the posting of a card is not read, or None when it is."""
     if known:
@@ -235,8 +252,6 @@ def _not_tried(
         return NotTried.WITHOUT_LINKS
     if card.link is None:
         return NotTried.NO_LINK
-    if too_old:
-        return NotTried.TOO_OLD
     if stopped:
         return NotTried.HOST_STOPPED
     return None
@@ -317,6 +332,8 @@ def _write(
         report.unknown_formats += 1
     if reading.status is ReadingStatus.FAILED:
         report.failed += 1
+    if reading.status is ReadingStatus.TOO_OLD:
+        report.too_old += 1
     if reading.platform is not None and reading.results:
         name = PLATFORM_LABELS[reading.platform]
         report.by_platform[name] = report.by_platform.get(name, 0) + len(

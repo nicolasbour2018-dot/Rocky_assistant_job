@@ -222,7 +222,8 @@ def test_the_alerts_give_their_offers_and_are_told(migrated_engine: Engine) -> N
 
     assert code == 0
     assert out.getvalue() == (
-        "1 alerte(s) lue(s) : 4 offre(s), dont 4 nouvelle(s) ; 0 fiche(s) lue(s), 4 non lue(s) ; "
+        "1 alerte(s) lue(s), dont 0 trop ancienne(s) : 4 offre(s), dont 4 nouvelle(s) ; "
+        "0 fiche(s) lue(s), 4 non lue(s) ; "
         "0 format(s) inconnu(s), 0 en échec.\n"
         "  Hellowork : 4 offre(s)\n"
     )
