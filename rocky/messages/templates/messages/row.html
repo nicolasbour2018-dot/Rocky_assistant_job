@@ -34,6 +34,11 @@
       {% endif %}
       <a class="btn btn-ghost btn-mini" href="/messages/{{ message.id }}/corriger"
         hx-get="/messages/{{ message.id }}/corriger" hx-target="#panneau-{{ message.id }}" hx-swap="innerHTML">Corriger</a>
+      {% if decision is not none and not decision.application_id and decision.proofs | selectattr("rule", "equalto", "employer.cited") | list %}
+      {# E4 (Q4): a platform names an employer Rocky knows no application with. #}
+      <a class="btn btn-ghost btn-mini" href="/messages/{{ message.id }}/creer"
+        hx-get="/messages/{{ message.id }}/creer" hx-target="#panneau-{{ message.id }}" hx-swap="innerHTML">Créer la candidature…</a>
+      {% endif %}
     </div>
     <div id="panneau-{{ message.id }}"></div>
   </td>

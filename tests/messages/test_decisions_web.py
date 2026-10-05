@@ -102,8 +102,10 @@ def test_what_moved_is_on_top_with_its_counter_in_the_navigation(
     assert "Ce qui a bougé" in page
     assert "Envoyée → Refusée" in page and "proposé" in page
     assert "Appliquer" in page and "Ignorer" in page
-    assert 'class="nav-count" title="1 à traiter">1<' in page
-    assert 'class="nav-count" title="1 à traiter">1<' in elsewhere
+    assert 'id="nav-count-messages" class="nav-count" title="1 à traiter">1<' in page
+    assert (
+        'id="tab-count-messages" class="nav-count" title="1 à traiter">1<' in elsewhere
+    )
 
 
 def test_applying_a_proposal_moves_the_application_and_empties_the_block(
@@ -120,7 +122,14 @@ def test_applying_a_proposal_moves_the_application_and_empties_the_block(
     assert "Étape de la candidature changée." in response.text
     assert "Ce qui a bougé" not in response.text
     assert screen.stage() is Stage.REJECTED
-    assert "nav-count" not in screen.client.get("/messages").text
+    # The counter of the navigation follows, out of band, and is hidden at 0.
+    assert (
+        'id="nav-count-messages" class="nav-count" title="0 à traiter" hx-swap-oob="true" hidden>'
+        in (response.text)
+    )
+    assert 'id="nav-count-messages" class="nav-count" title="0 à traiter" hidden>' in (
+        screen.client.get("/messages").text
+    )
 
 
 def test_a_gesture_without_htmx_goes_back_to_the_page(screen: Screen) -> None:
@@ -211,13 +220,17 @@ def test_creating_an_application_from_a_message(screen: Screen) -> None:
         "Hellowork <emploi@emails.hellowork.com>",
         "Votre candidature est arrivée chez ATHEIA",
     )
+    listed = screen.client.get("/messages?vue=accuses").text
 
     panel = screen.client.get(f"/messages/{message_id}/creer", headers=HTMX).text
     created = text_of(
         screen.client.post(
             f"/messages/{message_id}/creer",
             data={"employeur": "ATHEIA", "intitule": "Data Analyst", "lien": ""},
-            headers=HTMX,
+            headers={
+                **HTMX,
+                "HX-Current-URL": "http://testserver/messages?vue=accuses",
+            },
         ).text
     )
     bad_link = screen.client.post(
@@ -226,7 +239,11 @@ def test_creating_an_application_from_a_message(screen: Screen) -> None:
         headers=HTMX,
     )
 
+    # The platform names an employer without application: « Créer la candidature… » is offered on the line.
+    assert f'hx-get="/messages/{message_id}/creer"' in listed
     assert 'value="ATHEIA"' in panel
+    # The gesture keeps the view the page shows.
+    assert 'href="/messages?vue=accuses" aria-current="page"' in created
     assert "Candidature chez ATHEIA créée, à l&#39;étape « Envoyée »." in created
     found = re.search(r'href="/candidatures/(\d+)">Ouvrir le dossier', created)
     assert found is not None

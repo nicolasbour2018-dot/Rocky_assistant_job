@@ -14,6 +14,7 @@ import secrets
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Annotated, Any
+from urllib.parse import parse_qs, urlsplit
 
 from fastapi import APIRouter, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -217,7 +218,7 @@ def content_fragment(
         return RedirectResponse("/messages", status_code=303)
     templates: Jinja2Templates = request.app.state.templates
     return templates.TemplateResponse(
-        request, CONTENT, _context(request, account.id, view=_view(vue))
+        request, CONTENT, _context(request, account.id, view=_view(vue), fragment=True)
     )
 
 
@@ -233,7 +234,9 @@ def collect_now(request: Request, account: CurrentAccount) -> Response:
         return RedirectResponse("/messages", status_code=303)
     templates: Jinja2Templates = request.app.state.templates
     return templates.TemplateResponse(
-        request, CONTENT, _context(request, account.id, launched=service.configured)
+        request,
+        CONTENT,
+        _context(request, account.id, launched=service.configured, fragment=True),
     )
 
 
@@ -559,6 +562,14 @@ def _content(
     return templates.TemplateResponse(
         request,
         CONTENT,
-        _context(request, account_id, **extra),
+        _context(
+            request, account_id, fragment=True, view=_current_view(request), **extra
+        ),
         status_code=status_code,
     )
+
+
+def _current_view(request: Request) -> View:
+    """The view the page shows (HTMX names its address): a gesture keeps it."""
+    query = urlsplit(request.headers.get("HX-Current-URL", "")).query
+    return _view(parse_qs(query).get("vue", [""])[0])

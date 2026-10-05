@@ -9,3 +9,10 @@
   {% include "messages/recent.html" %}
   {% include "messages/sender_rules.html" %}
 </div>
+{% if fragment %}
+{# E4 (Q5): a gesture changes the counter of 📬 in the navigation, outside this fragment. #}
+{% set count = state.moved | length %}
+{% for prefix in ("nav", "tab") %}
+<span id="{{ prefix }}-count-messages" class="nav-count" title="{{ count }} à traiter" hx-swap-oob="true"{% if not count %} hidden{% endif %}>{{ count }}</span>
+{% endfor %}
+{% endif %}

@@ -18,8 +18,8 @@
       <ul class="nav-list">
         {% for entry in navigation %}
         <li><a href="{{ entry.path }}" class="nav-link"{% if entry.key == active %} aria-current="page"{% endif %}>
-          <span class="nav-icon" aria-hidden="true">{{ entry.icon }}</span>{{ entry.label }}{% if nav_counts.get(entry.key) %}
-          <span class="nav-count" title="{{ nav_counts[entry.key] }} à traiter">{{ nav_counts[entry.key] }}</span>{% endif %}</a></li>
+          <span class="nav-icon" aria-hidden="true">{{ entry.icon }}</span>{{ entry.label }}
+          {% set count = nav_counts.get(entry.key, 0) %}<span id="nav-count-{{ entry.key }}" class="nav-count" title="{{ count }} à traiter"{% if not count %} hidden{% endif %}>{{ count }}</span></a></li>
         {% endfor %}
       </ul>
       <div class="sidebar-foot">
@@ -39,7 +39,7 @@
   <nav class="tabbar" aria-label="Navigation principale">
     {% for entry in navigation if entry.primary %}
     <a href="{{ entry.path }}" class="tab"{% if entry.key == active %} aria-current="page"{% endif %}>
-      <span aria-hidden="true">{{ entry.icon }}</span><span>{{ entry.label }}</span>{% if nav_counts.get(entry.key) %}<span class="nav-count" title="{{ nav_counts[entry.key] }} à traiter">{{ nav_counts[entry.key] }}</span>{% endif %}</a>
+      <span aria-hidden="true">{{ entry.icon }}</span><span>{{ entry.label }}</span>{% set count = nav_counts.get(entry.key, 0) %}<span id="tab-count-{{ entry.key }}" class="nav-count" title="{{ count }} à traiter"{% if not count %} hidden{% endif %}>{{ count }}</span></a>
     {% endfor %}
     <button type="button" class="tab" popovertarget="more-menu"
       {% for entry in navigation if not entry.primary and entry.key == active %}aria-current="page"{% endfor %}>
