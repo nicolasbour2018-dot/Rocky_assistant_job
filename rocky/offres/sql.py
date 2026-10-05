@@ -73,8 +73,11 @@ from rocky.offres.watch.model import (
 from rocky.system.db import metadata
 from rocky.system.events import NewEvent, append_event
 
-# First key of the advisory locks of the watch (the second is the account): no other lock of Rocky uses it.
-WATCH_LOCK_SPACE = 6006
+# First key of the advisory locks of an account's offers (the second is the account): a hash of this name and of the
+# schema, since advisory locks are shared by the whole database (each test worker has its own schema; plan §8, E1 → C6).
+# Held by the watch for its whole run; tried by the reading of the alerts for one transaction (decision E3).
+WATCH_LOCK_SPACE = "rocky.offres.watch"
+LOCK_KEY = "hashtext(CAST(:space AS text) || current_schema())"
 
 
 def _in(column: str, values: type[StrEnum]) -> str:
@@ -475,6 +478,17 @@ class SqlStore:
         ).all()
         return [_stored(row) for row in rows]
 
+    def try_lock(self, account_id: int) -> bool:
+        """The lock of the account's offers until the end of this transaction; False while a watch holds it."""
+        return bool(
+            self._conn.execute(
+                text(
+                    f"SELECT pg_try_advisory_xact_lock({LOCK_KEY}, CAST(:account AS integer))"
+                ),
+                {"space": WATCH_LOCK_SPACE, "account": account_id},
+            ).scalar_one()
+        )
+
     def complete_keys(
         self, account_id: int, keys: Iterable[tuple[str, str]]
     ) -> set[tuple[str, str]]:
@@ -867,8 +881,7 @@ class SqlStorage:
             locked = bool(
                 connection.execute(
                     text(
-                        "SELECT pg_try_advisory_lock("
-                        "CAST(:space AS integer), CAST(:account AS integer))"
+                        f"SELECT pg_try_advisory_lock({LOCK_KEY}, CAST(:account AS integer))"
                     ),
                     {"space": WATCH_LOCK_SPACE, "account": account_id},
                 ).scalar_one()
@@ -880,8 +893,7 @@ class SqlStorage:
                 if locked:
                     connection.execute(
                         text(
-                            "SELECT pg_advisory_unlock("
-                            "CAST(:space AS integer), CAST(:account AS integer))"
+                            f"SELECT pg_advisory_unlock({LOCK_KEY}, CAST(:account AS integer))"
                         ),
                         {"space": WATCH_LOCK_SPACE, "account": account_id},
                     )

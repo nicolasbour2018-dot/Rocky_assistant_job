@@ -38,7 +38,7 @@ from rocky.offres.decisions import (
 )
 from rocky.offres.imports import web as imports_web
 from rocky.offres.imports.model import InvalidPasteError
-from rocky.offres.model import OfferHeading
+from rocky.offres.model import OfferHeading, Origin
 from rocky.offres.rules import match_key, scoring_inputs
 from rocky.offres.screen import (
     DECISION_FILTER_LABELS,
@@ -64,6 +64,7 @@ from rocky.offres.usecases import (
     enrich_offer,
     keep_summary,
     record_decision,
+    record_offer,
     stored_summary,
 )
 from rocky.offres.watch import web as watch_web
@@ -763,6 +764,43 @@ def record_message_offer(
         now=now,
         today=today,
     ).offer_id
+
+
+def record_alert_offer(
+    connection: Connection,
+    *,
+    account_id: int,
+    offer: CollectedOffer,
+    profile: Profile,
+    now: datetime,
+    today: date,
+) -> tuple[int, bool]:
+    """The offer of a card of a job alert (decision E3, Q3), with its best track and its scores: its id and whether it
+    is new. A known offer is completed, never overwritten (C6, Q7). No event per offer, as for the watch: the reading
+    of the alert is the fact (``messages.alert_read``)."""
+    recorded = record_offer(
+        SqlStore(connection),
+        account_id=account_id,
+        offer=offer,
+        inputs=scoring_inputs(profile),
+        origin=Origin.ALERT,
+        now=now,
+        today=today,
+    )
+    return recorded.offer_id, recorded.created
+
+
+def complete_offer_keys(
+    connection: Connection, account_id: int, keys: Iterable[tuple[str, str]]
+) -> set[tuple[str, str]]:
+    """Among ``(source, external_id)`` keys, those of the account's offers already known with a complete description
+    (decision E3: their posting is not read again)."""
+    return SqlStore(connection).complete_keys(account_id, keys)
+
+
+def try_lock_offers(connection: Connection, account_id: int) -> bool:
+    """The lock of the account's offers for the transaction in progress; False while a watch holds it (decision E3)."""
+    return SqlStore(connection).try_lock(account_id)
 
 
 def cancel_application_decision(

@@ -36,14 +36,23 @@ SOURCE_LABELS = {
 MESSAGE_SOURCE = "message"
 
 
+# Hosts whose postings come in by import or by job alerts (decision E3), named as their platform.
+HOST_LABELS = {
+    "hellowork.com": "Hellowork",
+    "cadremploi.fr": "Cadremploi",
+    "efinancialcareers.fr": "eFinancialCareers",
+    "indeed.com": "Indeed",
+}
+
+
 def source_label(name: str) -> str:
-    """Label of a source name: the platform name of a connector, else the host itself."""
+    """Label of a source name: the platform name of a connector or of a known host, else the host itself."""
     if name == MESSAGE_SOURCE:
         return "Message reçu"
     try:
         return SOURCE_LABELS[SourceCode(name)]
     except ValueError:
-        return name
+        return HOST_LABELS.get(name, name)
 
 
 class Availability(StrEnum):

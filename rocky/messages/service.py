@@ -9,13 +9,17 @@ so that a message a pass could not decide is taken up by the next one.
 Decision ``docs/decisions/E4-decisions-ecran.md``: each decision gives its application's transition in its own
 transaction; the user's gestures (« Ce qui a bougé », corrections, « Créer la candidature ») run here, one transaction
 each, then classify again by the rules what a new rule or a new application concerns.
+
+Decision ``docs/decisions/E3-alertes.md``: after the classification, the job alerts never read give their offers; the
+postings of their links are read on a public HTTP client opened for the pass (``pages``).
 """
 
 from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from contextlib import AbstractContextManager
+from dataclasses import dataclass, field
 from datetime import timedelta
 
 import httpx2
@@ -23,6 +27,13 @@ from sqlalchemy import Engine
 
 from rocky.candidatures import web as candidatures_web
 from rocky.candidatures.model import MailTarget
+from rocky.messages.alerts.model import (
+    AlertsBusyError,
+    AlertsReport,
+    AlertSummary,
+    PageReading,
+)
+from rocky.messages.alerts.usecases import read_alerts
 from rocky.messages.classification.model import (
     Category,
     Limits,
@@ -83,6 +94,8 @@ logger = logging.getLogger(__name__)
 
 # The messages a collection wrote, after its commit: (account id, message ids), an empty list when nothing is new.
 type CollectedHook = Callable[[int, Sequence[int]], None]
+# Decision E3: what reads the postings of the alerts' links during one pass (a public HTTP client, closed after it).
+type PagesFactory = Callable[[], AbstractContextManager[PageReading]]
 SHOWN_MESSAGES = 50
 NEXT_ROUND_REASON = "Classement au prochain passage (toutes les heures)."
 
@@ -113,6 +126,8 @@ class MessagesState:
     moved: tuple[Moved, ...] = ()
     groups: tuple[MessageGroup, ...] = ()
     rules: tuple[SenderRule, ...] = ()
+    # Decision E3 (Q5): what each shown alert gave, by message; an alert without one is not read yet.
+    alerts: dict[int, AlertSummary] = field(default_factory=dict)
 
     @property
     def running(self) -> bool:
@@ -153,6 +168,7 @@ class MessagesService:
         gmail: Gmail | None = None,
         llm: LlmSettings | None = None,
         model: JsonModel | None = None,
+        pages: PagesFactory | None = None,
     ) -> None:
         self.engine = engine
         # E4: every decision gives the transition of its application, in its transaction.
@@ -169,6 +185,8 @@ class MessagesService:
         self._cipher = TokenCipher(settings.secret_key) if settings.secret_key else None
         self._clock = clock
         self._on_collected = on_collected
+        # None: the alerts give their offers from their cards alone (a service without network, in the tests).
+        self._pages = pages
 
     @property
     def configured(self) -> bool:
@@ -303,11 +321,40 @@ class MessagesService:
     def classify_after_collection(
         self, account_id: int, message_ids: Sequence[int]
     ) -> None:
-        """The hook after a collection (E2): every message of the account still without a decision, not only these."""
+        """The hook after a collection (E2): every message of the account still without a decision, not only these;
+        then the job alerts never read (E3)."""
         try:
             self.classify(account_id)
         except ClassifyBusyError:
             logger.info("account %s is already being classified", account_id)
+        try:
+            self.read_alerts(account_id)
+        except AlertsBusyError:
+            logger.info("alerts of account %s are already being read", account_id)
+
+    def read_alerts(self, account_id: int, *, links: bool = True) -> AlertsReport:
+        """The job alerts of the account never read give their offers (decision E3); ``links`` False: no posting is
+        read. Raises ``AlertsBusyError``."""
+        if not links or self._pages is None:
+            report = read_alerts(
+                self.storage, None, account_id=account_id, clock=self._clock
+            )
+        else:
+            with self._pages() as page:
+                report = read_alerts(
+                    self.storage, page, account_id=account_id, clock=self._clock
+                )
+        logger.info(
+            "alerts of account %s: %s read, %s offers (%s new), %s postings read, %s unread, %s waiting",
+            account_id,
+            report.alerts,
+            report.offers,
+            report.created,
+            report.pages_read,
+            report.pages_unread,
+            report.postponed,
+        )
+        return report
 
     def state(self, account_id: int, view: View = View.TO_LOOK_AT) -> MessagesState:
         with self.storage.transaction() as store:
@@ -322,6 +369,15 @@ class MessagesService:
             ]
             moved = store.pending_moves(account_id)
             rules = store.sender_rule_list(account_id)
+            alerts = store.alert_summaries(
+                account_id,
+                [
+                    message.id
+                    for message in messages
+                    if message.decision is not None
+                    and message.decision.category is Category.JOB_ALERT
+                ],
+            )
         attached = {
             message.decision.application_id
             for message in messages
@@ -339,6 +395,7 @@ class MessagesService:
             moved=tuple(moved),
             groups=tuple(grouped(messages)),
             rules=tuple(rules),
+            alerts=alerts,
         )
 
     def _labels(self, account_id: int, application_ids: set[int]) -> dict[int, str]:

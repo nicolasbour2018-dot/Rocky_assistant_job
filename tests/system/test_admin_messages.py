@@ -1,6 +1,6 @@
 """``rocky-admin messages``: a real collection of an account's Gmail mailboxes, written, then told;
 ``rocky-admin messages-classer``: their classification, told; ``rocky-admin messages-etiquettes``: the user's labels
-as CSV (decision E4, Q6)."""
+as CSV (decision E4, Q6); ``rocky-admin alertes``: the offers of the job alerts, told (decision E3)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import io
 from sqlalchemy import Engine
 
 from rocky.messages.classification.model import CLASSIFY_VERSION, View
+from rocky.messages.model import Query
 from rocky.messages.service import MessagesService
 from rocky.messages.usecases import connect_mailbox
 from rocky.system.admin import (
@@ -17,6 +18,7 @@ from rocky.system.admin import (
     classify_account_messages,
     collect_messages,
     export_mail_labels,
+    read_account_alerts,
 )
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.config import GmailSettings
@@ -27,7 +29,10 @@ from tests.messages.fakes import (
     ScriptedModel,
     cipher,
     new_account,
+    recorded_alert,
+    store_mail,
 )
+from tests.offres.fakes import equip
 
 
 def run(engine: Engine, email: str, settings: GmailSettings = GMAIL) -> tuple[int, str]:
@@ -189,3 +194,52 @@ def test_exporting_the_labels_of_an_unknown_account_says_so(
     )
 
     assert (code, out.getvalue()) == (1, "Aucun compte pour personne@example.fr.\n")
+
+
+def test_the_alerts_give_their_offers_and_are_told(migrated_engine: Engine) -> None:
+    email = account_with_mailbox(migrated_engine)
+    service = MessagesService(migrated_engine, settings=GMAIL, clock=lambda: NOW)
+    with migrated_engine.begin() as connection:
+        account = SqlAuthStore(connection).find_account(email)
+        assert account is not None
+        equip(connection, account.id, email)
+    (mailbox,) = service.state(account.id).mailboxes
+    data = recorded_alert("hellowork_alerte")
+    store_mail(
+        service.storage,
+        mailbox.mailbox.id,
+        sender=data["sender"],
+        subject=data["subject"],
+        body_html=data["body_html"],
+        found_by=Query.ALERTS,
+    )
+    service.classify(account.id, use_model=False)
+    out = io.StringIO()
+
+    code = read_account_alerts(
+        migrated_engine, email=email, service=service, links=False, out=out
+    )
+
+    assert code == 0
+    assert out.getvalue() == (
+        "1 alerte(s) lue(s) : 4 offre(s), dont 4 nouvelle(s) ; 0 fiche(s) lue(s), 4 non lue(s) ; "
+        "0 format(s) inconnu(s), 0 en échec.\n"
+        "  Hellowork : 4 offre(s)\n"
+    )
+
+
+def test_reading_the_alerts_of_an_unknown_account_says_so(
+    migrated_engine: Engine,
+) -> None:
+    out = io.StringIO()
+    service = MessagesService(migrated_engine, settings=GMAIL, clock=lambda: NOW)
+
+    code = read_account_alerts(
+        migrated_engine,
+        email="personne@example.com",
+        service=service,
+        links=False,
+        out=out,
+    )
+
+    assert (code, out.getvalue()) == (1, "Aucun compte pour personne@example.com.\n")

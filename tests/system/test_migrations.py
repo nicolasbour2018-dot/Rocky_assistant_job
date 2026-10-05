@@ -61,6 +61,8 @@ HEAD_TABLES = {
     "mail_transitions",
     "mail_transition_settlements",
     "mail_sender_rules",
+    "alert_readings",
+    "alert_offers",
 }
 
 

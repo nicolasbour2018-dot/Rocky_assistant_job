@@ -3,6 +3,7 @@ connection of the transaction in progress. ``messages`` never reads their tables
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import date, datetime
 
 from sqlalchemy import Connection
@@ -11,6 +12,7 @@ from rocky.candidatures import web as candidatures_web
 from rocky.candidatures.model import Stage
 from rocky.offres import web as offres_web
 from rocky.offres.decisions import Author
+from rocky.offres.sources.model import CollectedOffer
 from rocky.profil.model import Profile
 
 
@@ -109,6 +111,34 @@ class OffresLink:
             company=company,
             title=title,
             link=link,
+            profile=self._profile,
+            now=now,
+            today=today,
+        )
+
+
+class AlertOffersLink:
+    """``AlertOffers`` (decision E3) on the public functions of ``offres``, scored with the account's ``profile``."""
+
+    def __init__(self, connection: Connection, profile: Profile) -> None:
+        self._conn = connection
+        self._profile = profile
+
+    def complete_keys(
+        self, account_id: int, keys: Iterable[tuple[str, str]]
+    ) -> set[tuple[str, str]]:
+        return offres_web.complete_offer_keys(self._conn, account_id, keys)
+
+    def try_lock(self, account_id: int) -> bool:
+        return offres_web.try_lock_offers(self._conn, account_id)
+
+    def record(
+        self, account_id: int, offer: CollectedOffer, *, now: datetime, today: date
+    ) -> tuple[int, bool]:
+        return offres_web.record_alert_offer(
+            self._conn,
+            account_id=account_id,
+            offer=offer,
             profile=self._profile,
             now=now,
             today=today,

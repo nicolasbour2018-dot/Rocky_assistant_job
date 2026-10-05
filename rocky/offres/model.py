@@ -26,11 +26,15 @@ class Origin(StrEnum):
     IMPORT = "import"
     # « Créer la candidature » from a message (decision E4, Q4, Q12): an application made outside Rocky.
     MESSAGE = "message"
+    # A card of a job alert (decision E3, Q3).
+    ALERT = "alert"
 
 
 ORIGIN_LABELS = {
     Origin.WATCH: "Trouvée par la veille",
     Origin.IMPORT: "Ajoutée par toi",
+    Origin.MESSAGE: "Créée depuis un message",
+    Origin.ALERT: "Tirée d'une alerte",
 }
 
 

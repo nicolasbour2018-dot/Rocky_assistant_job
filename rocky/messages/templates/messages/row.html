@@ -15,6 +15,30 @@
     {% if decision.application_id %}
     <br><a class="small" href="/candidatures/{{ decision.application_id }}">{{ state.applications.get(decision.application_id, 'Candidature') }}</a>
     {% endif %}
+    {% if decision.category == "job_alert" %}
+    {# E3 (Q5): what the alert gave, and the reason of every posting not read. #}
+    {% set alert = state.alerts.get(message.id) %}
+    <div class="small alert-offers">
+      {% if alert is none %}
+      <span class="muted">Offres pas encore tirées de cette alerte (au prochain passage).</span>
+      {% elif alert.status == ReadingStatus.READ %}
+      <details class="note">
+        <summary>{{ alert.offers | length }} offre{{ 's' if alert.offers | length > 1 }} ({{ alert.created }} nouvelle{{ 's' if alert.created > 1 }})
+          · {{ alert.read }} fiche{{ 's' if alert.read > 1 }} lue{{ 's' if alert.read > 1 }}
+          · {{ alert.unread }} non lue{{ 's' if alert.unread > 1 }}</summary>
+        <ul>
+          {% for offer in alert.offers %}
+          <li><a href="/offres/{{ offer.offer_id }}/fiche">{{ offer.title }}</a>{% if offer.company %} · {{ offer.company }}{% endif %}
+            {% if offer.created %}<span class="badge">nouvelle</span>{% endif %}
+            <br><span class="muted">{{ link_outcome_labels[offer.outcome] }}{% if offer.reason %} : {{ offer.reason }}{% endif %}</span></li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% else %}
+      <span class="badge badge-warn">{{ reading_labels[alert.status] }}</span> <span class="muted">{{ alert.reason }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
     <details class="note small">
       <summary>Pourquoi ?</summary>
       <p>{{ level_labels[decision.level] }} · {{ 'Modèle de langage' if decision.author == Author.AI else ('Toi' if decision.author == Author.USER else 'Règles') }}

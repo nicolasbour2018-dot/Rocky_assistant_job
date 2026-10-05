@@ -21,6 +21,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from rocky.candidatures.model import STAGE_LABELS, InvalidChangeError
+from rocky.messages.alerts.model import (
+    LINK_OUTCOME_LABELS,
+    PLATFORM_LABELS,
+    READING_LABELS,
+    LinkOutcome,
+    ReadingStatus,
+)
 from rocky.messages.classification.model import (
     CATEGORY_LABELS,
     EMPLOYER_CATEGORIES,
@@ -57,6 +64,8 @@ from rocky.messages.usecases import (
     MailboxNotFoundError,
 )
 from rocky.offres.decisions import Author
+from rocky.offres.imports.web import posting_pages
+from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import InvalidLinkError
 from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
@@ -108,6 +117,11 @@ def install(app: FastAPI) -> None:
         # Read again at each collection, never kept here: a test or E4 may replace it on app.state.
         app.state.messages_collected(account_id, message_ids)
 
+    def new_http() -> PublicHttp:
+        # Read again at each pass, never kept here: a test replaces the client of the import on app.state.
+        http: PublicHttp = app.state.import_http()
+        return http
+
     service = MessagesService(
         app.state.engine,
         settings=settings.gmail,
@@ -115,6 +129,8 @@ def install(app: FastAPI) -> None:
         on_collected=collected,
         llm=settings.llm,
         model=GeminiModel(settings.llm) if settings.llm.api_key else None,
+        # E3: the postings of the alerts' links, on the client of the import.
+        pages=posting_pages(new_http, settings.sources),
     )
     app.state.messages = service
     # E2: what follows a collection is the classification of the account's messages without a decision.
@@ -130,6 +146,11 @@ def install(app: FastAPI) -> None:
         tier_labels=TIER_LABELS,
         view_labels=VIEW_LABELS,
         stage_labels=STAGE_LABELS,
+        platform_labels=PLATFORM_LABELS,
+        reading_labels=READING_LABELS,
+        link_outcome_labels=LINK_OUTCOME_LABELS,
+        ReadingStatus=ReadingStatus,
+        LinkOutcome=LinkOutcome,
     )
     # E4 (Q5): the lines of « Ce qui a bougé » beside 📬 in the navigation.
     add_badge(app, "messages", _pending_count)

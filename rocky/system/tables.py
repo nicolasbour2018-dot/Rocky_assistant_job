@@ -20,6 +20,8 @@ from rocky.candidatures.sql import (
     document_revisions,
 )
 from rocky.messages.sql import (
+    alert_offers,
+    alert_readings,
     email_messages,
     mail_model_calls,
     mail_sender_rules,
@@ -62,6 +64,8 @@ from rocky.system.events import events
 __all__ = [
     "account_tokens",
     "accounts",
+    "alert_offers",
+    "alert_readings",
     "application_changes",
     "application_cv_selections",
     "application_domains",

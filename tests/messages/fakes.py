@@ -70,6 +70,13 @@ def raw_message(name: str) -> dict[str, Any]:
     return copy.deepcopy(data)
 
 
+def recorded_alert(name: str) -> dict[str, str]:
+    """A real job alert, anonymised (``data/alerts/``, step E3): sender, subject, received_at, bodies."""
+    data = recorded(f"alerts/{name}.json")
+    assert isinstance(data, dict)
+    return {key: str(value) for key, value in data.items()}
+
+
 def all_messages() -> dict[str, dict[str, Any]]:
     return {
         REPLY_ID: raw_message("message_reply.json"),
@@ -171,8 +178,10 @@ def store_mail(
     sender: str,
     subject: str,
     body: str = "",
+    body_html: str = "",
     thread: str | None = None,
     received_at: datetime = NOW,
+    found_by: Query = Query.REPLIES,
 ) -> int:
     """A message written as a collection writes it, in a collection of its own."""
     with storage.transaction() as store:
@@ -193,13 +202,13 @@ def store_mail(
                 subject=subject,
                 snippet=body[:200],
                 body_text=body,
-                body_html="",
+                body_html=body_html,
                 truncated=False,
                 labels=(),
                 attachments=(),
                 rfc822_id=None,
             ),
-            found_by=[Query.REPLIES],
+            found_by=[found_by],
             sync_id=sync_id,
             now=NOW,
         )

@@ -32,3 +32,28 @@ personnes nommées (recruteurs, réseau) deviennent « Recrutement » ou « Une 
 noms de domaine personnels remplacés. Les employeurs restent : ils sont la matière du rattachement.
 Étiquettes : proposées par l'agent, acceptées par Nicolas à la clôture d'E2 sans relecture ligne à ligne (`checked`
 reste vide ; `oui` quand une ligne est relue). Une catégorie vide veut dire « À vérifier ».
+
+## Alertes emploi réelles, anonymisées (E3)
+
+`alerts/*.json` : dix alertes **réelles** des boîtes de Nicolas (base de développement, lecture seule, 05/10/2026),
+une par forme connue, passées par `docs/procedures/e3-captures/anonymize_alerts.py`. Chaque fichier garde l'expéditeur,
+l'objet, la date, le corps texte et la **structure** du HTML (balises, textes visibles, `href` seuls).
+
+| Fichier | Forme | Cartes |
+|---|---|---|
+| `hellowork_notification.json` | « X recrute un… » + offres proches (`notification@emails.hellowork.com`) | 20 |
+| `hellowork_alerte.json` | Alerte enregistrée + « publiées dernièrement » (`alerte@emails.hellowork.com`) | 4 |
+| `hellowork_recommandation.json` | Une seule offre (`recommandation@emails.hellowork.com`) | 1 |
+| `cadremploi_nouvelles.json` | « N nouvelles offres ont été publiées… » | 5 |
+| `cadremploi_profil.json` | « Votre profil intéresse ces entreprises ! » | 1 |
+| `efc_selection.json` | « Les dernières offres d'emploi sélectionnées pour vous ! » (employeur et lieu sur leurs lignes) | 20 |
+| `efc_opportunites.json` | « Les dernières opportunités… » (« employeur, lieu », contrat, salaire) | 10 |
+| `efc_recommandee.json` | « Offre recommandée : … » (« intitulé \| employeur ») | 1 |
+| `linkedin_alerte.json` | Alerte LinkedIn (`jobalerts-noreply@linkedin.com`) | 6 |
+| `linkedin_relais.json` | « X recrute au poste de… » (`jobs-noreply@linkedin.com`) | 4 |
+
+Anonymisation : prénom et nom de Nicolas → « Camille Martin », son titre de profil LinkedIn retiré, toute adresse
+e-mail → `candidat@example.com` ; chemins et paramètres des liens remplacés (jetons de suivi) : un lien de suivi devient
+`https://<hôte>/clic/<n>` ; seuls restent les numéros publics des annonces (LinkedIn `/jobs/view/<n>`, eFinancialCareers
+`.id<n>`). Images (pixels de suivi), styles, scripts, commentaires et attributs autres que `href` retirés. Les
+employeurs et intitulés restent : ce sont des offres publiques, et la matière des lecteurs.

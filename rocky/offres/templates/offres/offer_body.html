@@ -19,7 +19,7 @@
   {% if card.analysis.deadline %}<li class="badge badge-warn">⏰ limite {{ card.analysis.deadline.strftime("%d/%m/%Y") }}</li>{% endif %}
   {% for name in card.tracks %}<li class="badge badge-accent">{{ name }}</li>{% endfor %}
   {% if shown.track_name and card.score.tracks | length > 1 %}<li class="badge">score de la piste « {{ shown.track_name }} »</li>{% endif %}
-  <li class="badge">{{ source_label(offer.source) }} · {{ offer.published_on | age }}</li>
+  <li class="badge">{% if card.stored.origin == "alert" %}Tirée d'une alerte {% endif %}{{ source_label(offer.source) }} · {{ offer.published_on | age }}</li>
   {% if not offer.description_complete %}<li class="badge badge-muted">annonce incomplète</li>{% endif %}
   {% if shown.caps %}<li class="badge badge-warn">plafonné à {{ score_cap }}</li>{% elif card.score.threshold_reason %}<li class="badge badge-muted">sous le seuil</li>{% endif %}
   {% for other_id, source in card.same_posting %}

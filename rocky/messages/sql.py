@@ -46,6 +46,17 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from rocky.candidatures.model import Stage
+from rocky.messages.alerts.model import (
+    ALERTS_VERSION,
+    AlertMessage,
+    AlertOffer,
+    AlertSummary,
+    CardResult,
+    LinkOutcome,
+    NotTried,
+    Platform,
+    ReadingStatus,
+)
 from rocky.messages.classification.model import (
     ACTION_RULES,
     CLASSIFY_VERSION,
@@ -72,7 +83,7 @@ from rocky.messages.decisions.model import (
     SenderRule,
     Transition,
 )
-from rocky.messages.links import CandidaturesLink, OffresLink
+from rocky.messages.links import AlertOffersLink, CandidaturesLink, OffresLink
 from rocky.messages.model import (
     CollectedMessage,
     Mailbox,
@@ -86,6 +97,7 @@ from rocky.messages.model import (
 from rocky.messages.rules import QUERIES_VERSION
 from rocky.offres.analysis.text import fold
 from rocky.offres.decisions import Author
+from rocky.profil import web as profil_web
 from rocky.profil.model import Profile
 from rocky.system.db import metadata
 from rocky.system.events import NewEvent, append_event
@@ -95,6 +107,8 @@ from rocky.system.events import NewEvent, append_event
 COLLECT_LOCK_SPACE = "rocky.messages.collect"
 # The same for the classification of an account's messages (two passes never decide the same message twice).
 CLASSIFY_LOCK_SPACE = "rocky.messages.classify"
+# The same for the reading of an account's job alerts (decision E3).
+ALERTS_LOCK_SPACE = "rocky.messages.alerts"
 LOCK_KEY = "hashtext(CAST(:space AS text) || current_schema())"
 
 
@@ -324,6 +338,72 @@ mail_sender_rules = Table(
         name="sender_address",
     ),
     Index("ix_mail_sender_rules_account_id", "account_id", "id"),
+)
+
+# Decision E3 (Q4, Q5): the reading of a job alert, once per message, and the offers it gave with what became of the
+# link of each card. The card's title and employer are kept here: the screen of the messages never reads ``offres``.
+alert_readings = Table(
+    "alert_readings",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column(
+        "message_id",
+        BigInteger,
+        ForeignKey("email_messages.id"),
+        nullable=False,
+        unique=True,
+    ),
+    # None: no reader for this sender (« Format d'alerte non lu »).
+    Column("platform", Text),
+    Column("status", Text, nullable=False),
+    Column("reason", Text),
+    Column("cards", Integer, nullable=False),
+    Column("alerts_version", Text, nullable=False),
+    _timestamp("read_at"),
+    CheckConstraint(
+        "platform IS NULL OR " + _in("platform", Platform), name="platform"
+    ),
+    CheckConstraint(_in("status", ReadingStatus), name="status"),
+    CheckConstraint("status <> 'unknown_format' OR platform IS NULL", name="no_reader"),
+    # A reading fails before its reader is known only by an error (its trace is in the log).
+    CheckConstraint(
+        "platform IS NOT NULL OR status IN ('unknown_format', 'failed')",
+        name="reader_known",
+    ),
+    CheckConstraint("(status = 'read') = (cards > 0)", name="cards_read"),
+    CheckConstraint("(status = 'read') = (reason IS NULL)", name="reason_unless_read"),
+    Index("ix_alert_readings_account_id", "account_id", "id"),
+)
+
+alert_offers = Table(
+    "alert_offers",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("reading_id", BigInteger, ForeignKey("alert_readings.id"), nullable=False),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("position", Integer, nullable=False),
+    Column("offer_id", BigInteger, ForeignKey("job_offers.id"), nullable=False),
+    Column("title", Text, nullable=False),
+    Column("company", Text),
+    Column("created", Boolean, nullable=False),
+    Column("link_outcome", Text, nullable=False),
+    Column("not_tried", Text),
+    # French; never the link (it may carry a tracking token).
+    Column("reason", Text),
+    UniqueConstraint("reading_id", "position", name="uq_alert_offers_reading_id"),
+    CheckConstraint(_in("link_outcome", LinkOutcome), name="link_outcome"),
+    CheckConstraint(
+        "not_tried IS NULL OR " + _in("not_tried", NotTried), name="not_tried"
+    ),
+    CheckConstraint(
+        "(link_outcome = 'not_tried') = (not_tried IS NOT NULL)", name="why_not_tried"
+    ),
+    CheckConstraint(
+        "(link_outcome = 'read') = (reason IS NULL)", name="reason_unless_read"
+    ),
+    CheckConstraint("position > 0", name="position"),
+    Index("ix_alert_offers_offer_id", "offer_id"),
 )
 
 # Decision E4: what follows a decision inside its transaction (``decisions.usecases.follow_decision``), given by the
@@ -838,6 +918,137 @@ class SqlStore:
     def append_event(self, event: NewEvent) -> int:
         return append_event(self._conn, event)
 
+    # Job alerts (E3)
+
+    def alerts_to_read(self, account_id: int) -> list[AlertMessage]:
+        """The messages whose decision in force is « Alerte emploi » and that were never read as an alert (Q4: the
+        alerts already collected are read by the first pass)."""
+        current = _current_decisions(account_id).subquery()
+        read = select(literal(1)).where(
+            alert_readings.c.message_id == email_messages.c.id
+        )
+        query = (
+            select(email_messages, mailboxes.c.address)
+            .join(mailboxes, mailboxes.c.id == email_messages.c.mailbox_id)
+            .join(current, current.c.message_id == email_messages.c.id)
+            .where(
+                email_messages.c.account_id == account_id,
+                current.c.category == Category.JOB_ALERT.value,
+                ~read.exists(),
+            )
+            .order_by(email_messages.c.received_at.desc(), email_messages.c.id.desc())
+        )
+        return [
+            AlertMessage(
+                id=row.id,
+                received_at=row.received_at,
+                mailbox_address=row.address,
+                gmail_id=row.gmail_id,
+                sender_address=row.sender_address,
+                subject=row.subject,
+                body_text=row.body_text,
+                body_html=row.body_html,
+            )
+            for row in self._conn.execute(query)
+        ]
+
+    def alert_offers(self, account_id: int) -> AlertOffersLink | None:
+        profile = profil_web.stored_profile(self._conn, account_id)
+        return None if profile is None else AlertOffersLink(self._conn, profile)
+
+    def add_reading(
+        self,
+        account_id: int,
+        message_id: int,
+        *,
+        platform: Platform | None,
+        status: ReadingStatus,
+        reason: str | None,
+        cards: int,
+        now: datetime,
+    ) -> int | None:
+        reading_id: int | None = self._conn.execute(
+            pg_insert(alert_readings)
+            .values(
+                account_id=account_id,
+                message_id=message_id,
+                platform=None if platform is None else platform.value,
+                status=status.value,
+                reason=reason,
+                cards=cards,
+                alerts_version=ALERTS_VERSION,
+                read_at=now,
+            )
+            .on_conflict_do_nothing(index_elements=["message_id"])
+            .returning(alert_readings.c.id)
+        ).scalar_one_or_none()
+        return reading_id
+
+    def add_alert_offer(
+        self,
+        account_id: int,
+        reading_id: int,
+        result: CardResult,
+        *,
+        offer_id: int,
+        created: bool,
+    ) -> None:
+        self._conn.execute(
+            insert(alert_offers).values(
+                reading_id=reading_id,
+                account_id=account_id,
+                position=result.card.position,
+                offer_id=offer_id,
+                title=result.card.title,
+                company=result.card.company,
+                created=created,
+                link_outcome=result.outcome.value,
+                not_tried=None if result.not_tried is None else result.not_tried.value,
+                reason=result.reason,
+            )
+        )
+
+    def alert_summaries(
+        self, account_id: int, message_ids: Sequence[int]
+    ) -> dict[int, AlertSummary]:
+        """What the alerts among ``message_ids`` gave (Q5), by message."""
+        if not message_ids:
+            return {}
+        readings = self._conn.execute(
+            select(alert_readings).where(
+                alert_readings.c.account_id == account_id,
+                alert_readings.c.message_id.in_(list(message_ids)),
+            )
+        ).all()
+        offers: dict[int, list[AlertOffer]] = {}
+        if readings:
+            rows = self._conn.execute(
+                select(alert_offers)
+                .where(alert_offers.c.reading_id.in_([row.id for row in readings]))
+                .order_by(alert_offers.c.reading_id, alert_offers.c.position)
+            )
+            for row in rows:
+                offers.setdefault(row.reading_id, []).append(
+                    AlertOffer(
+                        position=row.position,
+                        offer_id=row.offer_id,
+                        title=row.title,
+                        company=row.company,
+                        created=row.created,
+                        outcome=LinkOutcome(row.link_outcome),
+                        reason=row.reason,
+                    )
+                )
+        return {
+            row.message_id: AlertSummary(
+                status=ReadingStatus(row.status),
+                platform=None if row.platform is None else Platform(row.platform),
+                offers=tuple(offers.get(row.id, ())),
+                reason=row.reason,
+            )
+            for row in readings
+        }
+
     # Decisions on the messages (E4)
 
     def follow(
@@ -1183,6 +1394,9 @@ class SqlStorage:
 
     def classify_lock(self, account_id: int) -> AbstractContextManager[bool]:
         return self._advisory(CLASSIFY_LOCK_SPACE, account_id)
+
+    def alerts_lock(self, account_id: int) -> AbstractContextManager[bool]:
+        return self._advisory(ALERTS_LOCK_SPACE, account_id)
 
     @contextmanager
     def _advisory(self, space: str, key: int) -> Iterator[bool]:

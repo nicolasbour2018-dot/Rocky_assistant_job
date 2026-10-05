@@ -17,6 +17,7 @@ from typing import TextIO
 
 from sqlalchemy import Engine
 
+from rocky.messages.alerts.model import AlertsBusyError
 from rocky.messages.classification.model import (
     CATEGORY_LABELS,
     CLASSIFY_VERSION,
@@ -27,6 +28,7 @@ from rocky.messages.classification.usecases import ClassifyBusyError
 from rocky.messages.model import SYNC_STATUS_LABELS, SyncStatus
 from rocky.messages.model import Trigger as MailTrigger
 from rocky.messages.service import MessagesService
+from rocky.offres.imports.web import posting_pages
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import JobSource
 from rocky.offres.sources.registry import build_sources
@@ -331,6 +333,49 @@ def classify_account_messages(
     return 0
 
 
+def read_account_alerts(
+    engine: Engine,
+    *,
+    email: str,
+    service: MessagesService,
+    links: bool,
+    out: TextIO,
+) -> int:
+    """Turn the job alerts of ``email`` never read into offers (decision E3); the postings of their links are read for
+    real unless ``links`` is False (network: with Nicolas's agreement)."""
+    try:
+        address = normalize_email(email)
+    except InvalidEmailError as error:
+        out.write(f"{error}\n")
+        return 2
+    with engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(address)
+    if account is None:
+        out.write(f"Aucun compte pour {address}.\n")
+        return 1
+    try:
+        report = service.read_alerts(account.id, links=links)
+    except AlertsBusyError:
+        out.write("Une lecture des alertes de ce compte est déjà en cours.\n")
+        return 1
+    out.write(
+        f"{report.alerts} alerte(s) lue(s) : {report.offers} offre(s), dont {report.created} nouvelle(s) ; "
+        f"{report.pages_read} fiche(s) lue(s), {report.pages_unread} non lue(s) ; "
+        f"{report.unknown_formats} format(s) inconnu(s), {report.failed} en échec.\n"
+    )
+    out.writelines(
+        f"  {platform} : {count} offre(s)\n"
+        for platform, count in sorted(report.by_platform.items())
+    )
+    if report.postponed:
+        out.write(
+            f"{report.postponed} alerte(s) en attente"
+            + (f" : {report.reason}" if report.reason else " (veille en cours)")
+            + "\n"
+        )
+    return 0
+
+
 LABEL_COLUMNS = (
     "message_id",
     "received_at",
@@ -460,6 +505,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="classe à nouveau tous les messages (jamais par-dessus une décision de l'utilisateur)",
     )
+    alerts_parser = commands.add_parser(
+        "alertes",
+        help="tire les offres des alertes emploi d'un compte qui n'ont jamais été lues, puis lit leurs fiches "
+        "(réseau réel), et résume ce qu'elles ont donné",
+    )
+    alerts_parser.add_argument("email")
+    alerts_parser.add_argument(
+        "--sans-liens",
+        action="store_true",
+        help="cartes seules : aucune fiche n'est lue (aucun appel réseau)",
+    )
     labels_parser = commands.add_parser(
         "messages-etiquettes",
         help="exporte en CSV (sortie standard) les corrections et confirmations de l'utilisateur sur ses messages, "
@@ -489,6 +545,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 engine,
                 email=arguments.email,
                 service=MessagesService(engine, settings=settings.gmail, clock=utc_now),
+                out=sys.stdout,
+            )
+        if arguments.command == "alertes":
+            return read_account_alerts(
+                engine,
+                email=arguments.email,
+                service=MessagesService(
+                    engine,
+                    settings=settings.gmail,
+                    clock=utc_now,
+                    pages=posting_pages(PublicHttp, settings.sources),
+                ),
+                links=not arguments.sans_liens,
                 out=sys.stdout,
             )
         if arguments.command == "messages-etiquettes":

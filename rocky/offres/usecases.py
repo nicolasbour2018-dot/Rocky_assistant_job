@@ -54,7 +54,8 @@ def record_offer(
     """Write ``offer`` with its tracks and its current scores; idempotent.
 
     A known offer (same source and identifier, or same address) is completed, never overwritten (Q7). The watch gives
-    the tracks whose queries found the offer; an import is linked to the track where it scores best (Q10).
+    the tracks whose queries found the offer; an import, the offer of a message or of an alert is linked to the track
+    where it scores best (Q10; decision E3, Q3).
     """
     existing = store.find(account_id, offer)
     if existing is None:
@@ -70,7 +71,7 @@ def record_offer(
         else:
             store.mark_seen(offer_id, now)
     result = _score(merged, inputs, today)
-    if origin in (Origin.IMPORT, Origin.MESSAGE):
+    if origin in (Origin.IMPORT, Origin.MESSAGE, Origin.ALERT):
         best = best_track(result)
         track_ids = () if best is None else (best,)
     store.link_tracks(offer_id, track_ids, found_by=origin, run_id=run_id, now=now)
