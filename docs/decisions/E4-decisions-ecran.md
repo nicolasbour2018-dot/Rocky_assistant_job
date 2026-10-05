@@ -68,6 +68,17 @@ compteur de la navigation, hors du fragment, gardait son ancienne valeur (mis à
 « Créer la candidature » n'était que dans « Corriger » (offert sur la ligne d'un message dont la plateforme cite un
 employeur sans candidature).
 
+## Recette (Nicolas, 05/10)
+
+| # | Sujet | Décision |
+|---|---|---|
+| Q13 | Créer la candidature en un clic | Le lien de l'annonce est difficile d'accès, l'employeur et l'intitulé sont lisibles : un bouton **« Créer la candidature »** sur la ligne du message crée l'offre et le dossier « Envoyée » sans formulaire, avec l'employeur cité par la plateforme et l'intitulé qu'elle écrit (`decisions.rules.written_title` : objet, puis corps) ; le lien de l'offre est celui du message dans Gmail. Si l'un des deux n'est pas lisible, le formulaire s'ouvre prérempli sur la ligne. Les offres tirées des alertes restent l'objet d'E3. |
+
+Constats et mesure pour Q13 (base de développement, lecture seule) : les seuls messages qui citent un employeur sont
+des avis Hellowork ; tous leurs liens passent par une redirection de suivi (`emails.hellowork.com/clic`), jamais
+suivie (appel réseau, jeton de suivi). L'intitulé est lu dans **42 messages sur 42** (35 « Votre candidature est
+arrivée chez… », 7 « Finalisez votre candidature… »).
+
 ## Hors E4
 
 « Sans réponse » après un délai (Q11, F1 ou après) ; offres tirées des alertes (E3) ; reprise des étiquettes de

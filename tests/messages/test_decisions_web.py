@@ -239,8 +239,8 @@ def test_creating_an_application_from_a_message(screen: Screen) -> None:
         headers=HTMX,
     )
 
-    # The platform names an employer without application: « Créer la candidature… » is offered on the line.
-    assert f'hx-get="/messages/{message_id}/creer"' in listed
+    # The platform names an employer without application: « Créer la candidature » is offered on the line.
+    assert f'hx-post="/messages/{message_id}/creer-en-un-clic"' in listed
     assert 'value="ATHEIA"' in panel
     # The gesture keeps the view the page shows.
     assert 'href="/messages?vue=accuses" aria-current="page"' in created
@@ -285,3 +285,45 @@ def test_another_accounts_message_is_not_found(
     assert panel.status_code == 404
     assert corrected.status_code == 404
     assert screen.service.labels(screen.account_id) == []
+
+
+def test_an_application_is_created_in_one_click(screen: Screen) -> None:
+    """Q13: the employer cited and the title the platform writes; the link is the message's."""
+    message_id = screen.mail(
+        "Hellowork <contact@emails.hellowork.com>",
+        "Votre candidature est arrivée chez GEODIS",
+        'Votre candidature est enregistrée.\n"Finance Bi & Data Analyst H/F" pour l\'entreprise GEODIS.',
+    )
+
+    created = text_of(
+        screen.client.post(
+            f"/messages/{message_id}/creer-en-un-clic", headers=HTMX
+        ).text
+    )
+
+    assert (
+        "Candidature « Finance Bi &amp; Data Analyst H/F » chez GEODIS créée" in created
+    )
+    found = re.search(r'href="/candidatures/(\d+)">Ouvrir le dossier', created)
+    assert found is not None
+    assert screen.stage(int(found.group(1))) is Stage.SENT
+    assert "nav-count" in created
+
+
+def test_without_a_readable_title_the_form_opens_prefilled(screen: Screen) -> None:
+    message_id = screen.mail(
+        "Hellowork <contact@emails.hellowork.com>",
+        "Votre candidature est arrivée chez GEODIS",
+        "Bonjour, à bientôt.",
+    )
+
+    response = screen.client.post(
+        f"/messages/{message_id}/creer-en-un-clic", headers=HTMX
+    )
+
+    assert response.status_code == 200
+    assert response.headers["HX-Retarget"] == f"#panneau-{message_id}"
+    assert response.headers["HX-Reswap"] == "innerHTML"
+    assert "pas pu lire l&#39;intitulé du poste" in response.text
+    assert 'value="GEODIS"' in response.text
+    assert screen.service.state(screen.account_id).moved == ()

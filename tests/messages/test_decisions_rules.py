@@ -27,6 +27,7 @@ from rocky.messages.decisions.rules import (
     rule_offered,
     rule_possible,
     target_stage,
+    written_title,
 )
 from rocky.offres.decisions import Author
 
@@ -227,3 +228,53 @@ def test_the_messages_of_an_application_are_grouped_the_most_decisive_first() ->
         (5, []),
         (6, []),
     ]
+
+
+def _platform(subject: str, body: str = "") -> MessageRef:
+    return MessageRef(
+        id=1,
+        mailbox_address="camille@example.com",
+        gmail_id="18f0a1",
+        received_at=NOW,
+        sender="Hellowork <contact@emails.hellowork.com>",
+        sender_address="contact@emails.hellowork.com",
+        subject=subject,
+        body_text=body,
+    )
+
+
+@pytest.mark.parametrize(
+    ("subject", "body", "title"),
+    [
+        (
+            "Votre candidature est arrivée chez GEODIS",
+            (
+                "Hello Camille !\nVotre candidature est enregistrée.\n"
+                '"Finance Bi & Data Analyst H/F" pour l\'entreprise GEODIS.\nPréparons la suite'
+            ),
+            "Finance Bi & Data Analyst H/F",
+        ),
+        (
+            "Votre candidature est arrivée chez ATHEIA",
+            "« Data Analyst  Junior » pour l’entreprise ATHEIA.",
+            "Data Analyst Junior",
+        ),
+        (
+            "Finalisez votre candidature sur le site de Ministère",
+            "Pour postuler à l'offre Data Analyst N°2 H/F,\nvous avez été redirigé(e)",
+            "Data Analyst N°2 H/F",
+        ),
+        ("Réponse de ATHEIA pour l'offre Data Analyst H/F", "", "Data Analyst H/F"),
+        (
+            "Un problème avec votre candidature au poste de Data Engineer",
+            "",
+            "Data Engineer",
+        ),
+        ("Votre candidature est arrivée chez GEODIS", "Bonjour, à bientôt.", None),
+    ],
+)
+def test_the_title_a_platform_writes_is_read(
+    subject: str, body: str, title: str | None
+) -> None:
+    """Q13 (acceptance): « Créer la candidature » in one click reads the offer's title as the platform writes it."""
+    assert written_title(_platform(subject, body)) == title

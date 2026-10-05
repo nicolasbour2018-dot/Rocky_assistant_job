@@ -7,6 +7,7 @@ are grouped (Q8).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from datetime import date, datetime
 from urllib.parse import quote
@@ -181,6 +182,35 @@ def cited_employer(decision: StoredDecision | None) -> str | None:
         (proof.excerpt for proof in decision.proofs if proof.rule == "employer.cited"),
         None,
     )
+
+
+# Q13 (acceptance): where a platform writes the title of the offer the user applied to, as written. The subject first,
+# then the body (Hellowork: « "Finance Bi & Data Analyst H/F" pour l'entreprise GEODIS. », « Pour postuler à l'offre
+# Data Analyst H/F, »).
+_TITLE_FORMS = (
+    re.compile(r"pour l['’]offre\s+(?P<title>[^\n]{2,150}?)\s*$", re.IGNORECASE),
+    re.compile(
+        r"candidature (?:au|pour le) poste (?:de |d['’])\s*(?P<title>[^\n]{2,150}?)\s*$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"[\"“«]\s*(?P<title>[^\"”»\n]{2,150}?)\s*[\"”»]\s+pour l['’]entreprise",
+        re.IGNORECASE,
+    ),
+    re.compile(r"postuler à l['’]offre\s+(?P<title>[^,\n]{2,150}?)\s*,", re.IGNORECASE),
+)
+
+
+def written_title(message: MessageRef) -> str | None:
+    """Q13: the title of the offer as the platform writes it in the message (subject, then body), None when it writes
+    none Rocky can read."""
+    for place in (message.subject, message.body_text):
+        for line in place.splitlines():
+            for form in _TITLE_FORMS:
+                found = form.search(" ".join(line.split()))
+                if found is not None:
+                    return found["title"].strip(" .")
+    return None
 
 
 def _rank(message: SortedMessage) -> int:

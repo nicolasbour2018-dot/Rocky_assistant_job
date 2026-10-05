@@ -875,6 +875,7 @@ class SqlStore:
             sender=row.sender,
             sender_address=row.sender_address,
             subject=row.subject,
+            body_text=readable(row.body_text),
         )
 
     def current_decision(self, message_id: int) -> StoredDecision | None:

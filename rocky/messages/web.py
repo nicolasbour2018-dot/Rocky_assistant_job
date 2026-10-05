@@ -522,6 +522,47 @@ def create(
     )
 
 
+@router.post("/{message_id}/creer-en-un-clic", response_class=HTMLResponse)
+def create_in_one_click(
+    request: Request, account: CurrentAccount, message_id: int
+) -> Response:
+    """« Créer la candidature » on the line of a message (Q13): employer and title read in it, the link is the
+    message's. When one cannot be read, the form opens in the line's panel, prefilled."""
+    service = _service(request)
+    try:
+        created = service.create_in_one_click(
+            account.id, message_id, profile=profile_of(request, account)
+        )
+    except (InvalidGestureError, InvalidChangeError) as refused:
+        return _content(request, account.id, status_code=400, error=str(refused))
+    except LookupError:
+        return _content(
+            request, account.id, status_code=404, error="Ce message n'existe pas."
+        )
+    if created is None:
+        if not is_htmx(request):
+            return RedirectResponse("/messages", status_code=303)
+        templates: Jinja2Templates = request.app.state.templates
+        response = templates.TemplateResponse(
+            request,
+            CREATE_PANEL,
+            {
+                "view": service.correction(account.id, message_id),
+                "unread": True,
+            },
+        )
+        response.headers["HX-Retarget"] = f"#panneau-{message_id}"
+        response.headers["HX-Reswap"] = "innerHTML"
+        return response
+    application_id, company, title = created
+    return _content(
+        request,
+        account.id,
+        notice=f"Candidature « {title} » chez {company} créée, à l'étape « Envoyée ».",
+        notice_link=(f"/candidatures/{application_id}", "Ouvrir le dossier"),
+    )
+
+
 @router.post("/regles/{rule_id}/retirer", response_class=HTMLResponse)
 def remove_rule(request: Request, account: CurrentAccount, rule_id: int) -> Response:
     """Retirer a rule of the account (Q7)."""

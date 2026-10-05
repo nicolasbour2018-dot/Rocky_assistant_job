@@ -2,10 +2,11 @@
 {% set message = view.message %}
 <form method="post" action="/messages/{{ message.id }}/creer" class="stack create-panel"
   hx-post="/messages/{{ message.id }}/creer" hx-target="#messages-contenu" hx-swap="outerHTML">
+  {% if unread %}<p class="alert alert-info" role="status">Rocky n'a pas pu lire {{ "l'employeur" if not view.cited_employer else "l'intitulé du poste" }} dans ce message : complète-le.</p>{% endif %}
   <p class="muted small">Pour une candidature faite hors de Rocky : Rocky crée l'offre et le dossier « Envoyée » du
     {{ message.received_at | paris_time }}, et y rattache ce message.</p>
   <label>Employeur <input type="text" name="employeur" value="{{ view.cited_employer or '' }}" required></label>
-  <label>Intitulé du poste <input type="text" name="intitule" value="" required></label>
+  <label>Intitulé du poste <input type="text" name="intitule" value="{{ view.title or '' }}" required></label>
   <label>Lien de l'annonce <span class="muted small">(facultatif : sans lien, l'offre renvoie à ce message)</span>
     <input type="url" name="lien" value="" placeholder="https://…"></label>
   <p><button type="submit" class="btn btn-mini">Créer la candidature</button></p>

@@ -118,6 +118,8 @@ class MessageRef:
     sender: str
     sender_address: str | None
     subject: str
+    # The text part, read decoded (``classification.rules.readable``): « Créer la candidature » reads the title in it.
+    body_text: str = ""
 
 
 @dataclass(frozen=True)

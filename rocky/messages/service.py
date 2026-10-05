@@ -52,6 +52,7 @@ from rocky.messages.decisions.rules import (
     domain_offered,
     grouped,
     rule_possible,
+    written_title,
 )
 from rocky.messages.gmail import GoogleGmail
 from rocky.messages.model import (
@@ -132,6 +133,8 @@ class CorrectionView:
     rule_possible: bool
     domain: str | None
     cited_employer: str | None
+    # Q13 (acceptance): the offer's title the platform writes in the message.
+    title: str | None = None
 
 
 def nothing_decided(account_id: int, message_ids: Sequence[int]) -> None:
@@ -414,6 +417,7 @@ class MessagesService:
             rule_possible=rule_possible(message.sender_address),
             domain=domain_offered(message.sender_address),
             cited_employer=cited_employer(decision),
+            title=written_title(message),
         )
 
     def correct(
@@ -477,6 +481,25 @@ class MessagesService:
             again = store.messages_citing(account_id, company)
         self._classify_again(account_id, again)
         return application_id
+
+    def create_in_one_click(
+        self, account_id: int, message_id: int, *, profile: Profile
+    ) -> tuple[int, str, str] | None:
+        """Q13: « Créer la candidature » in one click, with the employer the platform cites and the title it writes:
+        the application's id, the employer and the title; None when either cannot be read (the form, prefilled, asks
+        the user)."""
+        view = self.correction(account_id, message_id)
+        if not view.cited_employer or not view.title:
+            return None
+        application_id = self.create_application(
+            account_id,
+            message_id,
+            company=view.cited_employer,
+            title=view.title,
+            link="",
+            profile=profile,
+        )
+        return application_id, view.cited_employer, view.title
 
     def remove_rule(self, account_id: int, rule_id: int) -> None:
         with self.storage.transaction() as store:
