@@ -1,0 +1,59 @@
+{% import "profil/macros.html" as m %}
+{% set key = "parcours" %}
+{% macro experience_form(action, values, state, experience=None) %}
+{{ m.form_open(key, action) }}
+  {{ m.error(state) }}
+  <div class="form-grid">
+    <label class="field">Type
+      <select name="kind">{% for code in choices.kinds %}<option value="{{ code }}"{% if values.has("kind", code) %} selected{% endif %}>{{ experience_kind_labels[code] }}</option>{% endfor %}</select></label>
+    {{ m.input("organisation", "Organisme", values, required=True, hint="Entreprise, école…") }}
+    {{ m.input("title_fr", "Intitulé en français", values, required=True, hint="Poste ou diplôme") }}
+    {{ m.input("title_en", "Intitulé en anglais", values, hint="Facultatif") }}
+    {{ m.input("start", "Début", values, "month", True) }}
+    {{ m.input("end", "Fin", values, "month", hint="Vide si en cours") }}
+    {{ m.input("place", "Lieu", values, hint="Facultatif") }}
+  </div>
+  <div class="form-grid">
+    {{ m.lines("bullets_fr", "Réalisations en français", values, "Une puce par ligne", 5) }}
+    {{ m.lines("bullets_en", "Réalisations en anglais", values, "Facultatif, une puce par ligne", 5) }}
+  </div>
+  {{ m.skill_choices(profile, values) }}
+  {{ m.actions(key, state) }}
+</form>
+{% if experience %}{{ m.delete(key, "/profil/parcours/" ~ experience.id ~ "/supprimer", "« " ~ experience.content.title.fr ~ " » sera retirée du profil.") }}{% endif %}
+{% endmacro %}
+
+{% if not profile.experiences and state.editing != "nouveau" %}
+<p class="empty-note">Aucune expérience ni formation pour l'instant.</p>
+{% endif %}
+{% for kind in choices.kinds %}
+{% set group = profile.experiences | selectattr("content.kind", "equalto", kind) | list %}
+{% if group %}
+<h3 class="group-title">{{ experience_kind_labels[kind] }}s</h3>
+<ul class="item-list">
+  {% for experience in group %}
+  {% set content = experience.content %}
+  <li class="item">
+    {% if state.editing == experience.id|string %}
+    {{ experience_form("/profil/parcours/" ~ experience.id, state.values, state, experience) }}
+    {% else %}
+    <div class="item-head">
+      <h3>{{ m.text(content.title, language) }}</h3>
+      {{ m.link(key, "Modifier", "?modifier=" ~ experience.id ~ "&langue=" ~ language) }}
+    </div>
+    <p class="muted">{{ content.organisation }}{% if content.place %} · {{ content.place }}{% endif %} · {{ content.start | month }} – {{ content.end | month }}</p>
+    {% set bullets = content.bullets_en if language == "en" and content.bullets_en else content.bullets_fr %}
+    {% if bullets %}<ul class="bullets">{% for bullet in bullets %}<li>{{ bullet }}</li>{% endfor %}</ul>{% endif %}
+    {% if language == "en" and not content.bullets_en and content.bullets_fr %}<p class="muted small">Réalisations pas encore traduites.</p>{% endif %}
+    {{ m.skill_badges(content.skill_ids, skills_by_id, language) }}
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endfor %}
+{% if state.editing == "nouveau" %}
+<div class="item item-new">{{ experience_form("/profil/parcours", state.values, state) }}</div>
+{% else %}
+{{ m.link(key, "+ Ajouter une expérience ou une formation", "?modifier=nouveau", "btn") }}
+{% endif %}

@@ -1,0 +1,41 @@
+schema_version: 3
+id: rocky
+architecture_version: '3'
+
+roles:
+  - orchestrator
+  - architect
+  - software_engineer
+  - general_reviewer
+
+context_sources:
+  core_rules:
+    - AGENTS.md
+  manifest:
+    - project.yaml
+
+validation_commands:
+  - id: audit-report-structure
+    argv:
+      - /usr/bin/python3
+      - -c
+      - |
+        from pathlib import Path
+        p = Path("docs/rocky-architecture-audit.md")
+        assert p.exists(), "Missing docs/rocky-architecture-audit.md"
+        text = p.read_text(encoding="utf-8")
+        required = [
+            "# Audit architectural Rocky",
+            "## Résumé exécutif",
+            "## Architecture actuelle",
+            "## Points forts",
+            "## Risques et dettes",
+            "## Recommandations",
+            "## Plan d'action priorisé",
+            "## Limites de l'audit",
+        ]
+        missing = [heading for heading in required if heading not in text]
+        assert not missing, f"Missing sections: {missing}"
+        assert len(text.strip()) >= 1200, "Audit report is unexpectedly short"
+    scope: .
+    final_only: true

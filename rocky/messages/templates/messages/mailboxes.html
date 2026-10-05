@@ -1,0 +1,61 @@
+{# The Gmail mailboxes of the account (decision E1, Q2, Q7, Q8). #}
+<section id="boites" class="profile-section" aria-labelledby="boites-titre">
+  <div class="section-head">
+    <h2 id="boites-titre">Boîtes Gmail</h2>
+  </div>
+  {% if not configured %}
+  <p class="alert alert-info" role="status">Gmail n'est pas configuré : il manque le client Google ou la clé de Rocky.
+    La procédure est dans <code>docs/procedures/e1-gmail/</code>.</p>
+  {% else %}
+  <p class="muted small">Rocky lit tes e-mails sans jamais rien modifier ni envoyer : ta boîte principale (hors
+    promotions, réseaux sociaux et forums) et les messages des sites d'alertes emploi, chaque heure.</p>
+  {% if state.mailboxes %}
+  <ul class="item-list">
+    {% for view in state.mailboxes %}
+    {% set mailbox = view.mailbox %}
+    {% set last = view.last %}
+    <li class="item">
+      <div class="item-head">
+        <strong>{{ mailbox.address }}</strong>
+        <span class="badge {{ 'badge-warn' if mailbox.status == MailboxStatus.ACCESS_LOST else ('badge-muted' if mailbox.status == MailboxStatus.DISCONNECTED else 'badge-accent') }}">{{ mailbox_status_labels[mailbox.status] }}</span>
+      </div>
+      {% if last %}
+      <p class="small">
+        {% if last.status == SyncStatus.RUNNING %}Collecte en cours depuis le {{ last.started_at | paris_time }}…
+        {% else %}Dernière collecte le {{ last.started_at | paris_time }} : {{ sync_status_labels[last.status] | lower }},
+          {{ last.counts.new }} nouveau{{ 'x' if last.counts.new > 1 }} message{{ 's' if last.counts.new > 1 }}
+          ({{ last.counts.known }} déjà relevé{{ 's' if last.counts.known > 1 }}).{% endif %}
+      </p>
+      {% if last.reason and last.status != SyncStatus.COMPLETED %}<p class="small watch-reason">{{ last.reason }}</p>{% endif %}
+      {% elif mailbox.status == MailboxStatus.CONNECTED %}
+      <p class="small muted">Première collecte à venir.</p>
+      {% endif %}
+      <div class="item-actions">
+        {% if mailbox.status != MailboxStatus.CONNECTED %}
+        <form method="post" action="/messages/gmail/connecter" hx-boost="false" class="inline-form">
+          <button type="submit" class="btn {{ 'btn-primary' if mailbox.status == MailboxStatus.ACCESS_LOST else 'btn-ghost' }}">Reconnecter</button>
+        </form>
+        {% else %}
+        <form method="post" action="/messages/boites/{{ mailbox.id }}/deconnecter" class="inline-form">
+          <button type="submit" class="btn btn-ghost btn-mini">Déconnecter</button>
+        </form>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-lead">Aucune boîte connectée : Rocky ne voit pas encore les réponses des recruteurs.</p>
+  {% endif %}
+  <div class="form-actions">
+    <form method="post" action="/messages/gmail/connecter" hx-boost="false" class="inline-form">
+      <button type="submit" class="btn {{ 'btn-ghost' if state.mailboxes else 'btn-primary' }}">Connecter une boîte Gmail</button>
+    </form>
+    {% if state.mailboxes | selectattr("mailbox.status", "equalto", MailboxStatus.CONNECTED) | list %}
+    <form method="post" action="/messages/relever" hx-post="/messages/relever" hx-target="#messages-contenu" hx-swap="outerHTML" class="inline-form">
+      <button type="submit" class="btn btn-primary" {% if running %}disabled{% endif %}>{{ "Collecte en cours…" if running else "Relever maintenant" }}</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>

@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block title %}Offres · Rocky{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1><span aria-hidden="true">🔎</span> Offres</h1>
+  <nav class="segmented" aria-label="Affichage">
+    <a href="/offres?vue=tri"{% if view == "tri" %} aria-current="page"{% endif %}>Trier</a>
+    <a href="/offres?vue=liste"{% if view == "liste" %} aria-current="page"{% endif %}>Liste</a>
+  </nav>
+  {% include "offres/counts.html" %}
+  <a class="btn" href="/offres/importer">Importer une annonce</a>
+  <button type="button" class="btn btn-ghost help-button" popovertarget="shortcuts" data-key="?" title="Raccourcis clavier">?</button>
+</header>
+
+{% if view == "tri" %}{% include "offres/triage.html" %}{% else %}{% include "offres/list.html" %}{% endif %}
+{% endblock %}
+
+{% block overlays %}
+<div id="shortcuts" class="sheet shortcuts" popover>
+  <h2>Raccourcis</h2>
+  <dl>
+    {% for keys, label in offer_shortcuts %}<dt>{{ keys }}</dt><dd>{{ label }}</dd>
+    {% endfor %}
+  </dl>
+  <button type="button" class="btn" popovertarget="shortcuts" popovertargetaction="hide">Fermer</button>
+</div>
+{% endblock %}

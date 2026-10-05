@@ -1,0 +1,39 @@
+schema_version: 3
+
+profiles:
+  - name: planning
+    model: gpt-6-astra
+    effort: high
+
+  - name: work
+    model: gpt-5.6-sol
+    effort: medium
+
+roles:
+  - role: orchestrator
+    access: read_only
+    profile: planning
+    scopes:
+      - .
+
+  - role: architect
+    access: read_only
+    profile: work
+    scopes:
+      - .
+
+  - role: software_engineer
+    access: workspace_write
+    profile: work
+    scopes:
+      - docs
+
+  - role: general_reviewer
+    access: read_only
+    profile: work
+    scopes:
+      - .
+
+context_limits:
+  max_bytes: 65536
+  max_documents: 20

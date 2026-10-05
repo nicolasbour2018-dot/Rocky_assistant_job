@@ -1,0 +1,24 @@
+{# The cards of a cross-cutting screen (step F1). One main action per screen (Q14): the card ``main``, or else the
+   screen's ``empty`` action; every other action is a plain button. #}
+<div id="cards" class="screen-cards"{% if polling %} hx-get="{{ entry.path }}" hx-trigger="every {{ poll_every }}" hx-target="this" hx-swap="outerHTML"{% endif %}>
+  {% for card in cards %}
+  <section class="card screen-card{% if card.problem %} screen-card-problem{% endif %}">
+    <h2>{{ card.title }}</h2>
+    {% for line in card.lines %}<p>{{ line }}</p>{% endfor %}
+    {% if card.details %}
+    <dl class="screen-details">
+      {% for label, value in card.details %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}
+    </dl>
+    {% endif %}
+    {% if card.action %}{% with action = card.action, primary = loop.index0 == main %}{% include "card_action.html" %}{% endwith %}{% endif %}
+  </section>
+  {% endfor %}
+  {% if not cards %}
+  <section class="empty-state">
+    <p class="empty-lead">{% if entry.key == "today" %}Rien ne demande ton attention pour l'instant.{% else %}Rien à signaler.{% endif %}</p>
+  </section>
+  {% endif %}
+  {% if main is none and empty %}
+  <p>{% with action = empty, primary = true %}{% include "card_action.html" %}{% endwith %}</p>
+  {% endif %}
+</div>

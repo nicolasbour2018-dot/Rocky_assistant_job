@@ -3,18 +3,15 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterable
-from typing import Any
+from typing import Any, Iterable
 
-from dashboard.rocky.errors import SourceError
-from dashboard.rocky.models import CandidateProfile, JobOffer
-
+from ..errors import SourceError
+from ..models import CandidateProfile, JobOffer
 from .common import deduplicate_offers, iso_date, public_get
 
 
 class WelcomeToTheJungleSource:
     """Adaptateur Welcome to the Jungle pour intégrer ses offres au flux homogène Rocky."""
-
     name = "Welcome to the Jungle"
     search_url = "https://api.welcometothejungle.com/api/v3/public/jobs"
     website_url = "https://www.welcometothejungle.com"
@@ -29,7 +26,9 @@ class WelcomeToTheJungleSource:
         url = f"{cls.website_url}/fr/companies/{organization_slug}/jobs/{job_slug}"
         sectors = organization.get("sectors") or []
         domain = ", ".join(
-            str(sector.get("name") or "") for sector in sectors if sector.get("name")
+            str(sector.get("name") or "")
+            for sector in sectors
+            if sector.get("name")
         )
         summary = str(item.get("company_summary") or "").strip()
         context = ". ".join(
@@ -101,5 +100,7 @@ class WelcomeToTheJungleSource:
                 raise SourceError(
                     "Welcome to the Jungle a renvoyé une réponse invalide."
                 ) from error
-            collected.extend(self._offer(item) for item in items[:results_per_query])
+            collected.extend(
+                self._offer(item) for item in items[:results_per_query]
+            )
         return deduplicate_offers(collected)

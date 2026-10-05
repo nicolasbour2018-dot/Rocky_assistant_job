@@ -1,5 +1,7 @@
 """Contrats du préremplissage Playwright supervisé."""
 
+from pathlib import Path
+
 from playwright.sync_api import sync_playwright
 
 from dashboard.rocky import browser_apply

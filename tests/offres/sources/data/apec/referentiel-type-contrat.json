@@ -1,0 +1,200 @@
+[
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": null,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": null
+    },
+    "codeNomenclature": "2",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 9,
+    "idNomenclature": 101888,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "CDI",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 1
+  },
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": null,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": null
+    },
+    "codeNomenclature": "1",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 10,
+    "idNomenclature": 101887,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "CDD",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 2
+  },
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": null,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": null
+    },
+    "codeNomenclature": "3",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 11,
+    "idNomenclature": 20053,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "Alternance",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 3
+  },
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": 1713907407000,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": "SOCLE"
+    },
+    "codeNomenclature": "4",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 12,
+    "idNomenclature": 597137,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "CDD - Alternance - Contrat d'apprentissage",
+    "lienUrl": null,
+    "numeroVersion": 1,
+    "ordre": 4
+  },
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": 1713907407000,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": "SOCLE"
+    },
+    "codeNomenclature": "5",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 13,
+    "idNomenclature": 597138,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "CDD - Alternance - Contrat de professionnalisation",
+    "lienUrl": null,
+    "numeroVersion": 1,
+    "ordre": 5
+  },
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": 1713907407000,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": "SOCLE"
+    },
+    "codeNomenclature": "6",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 14,
+    "idNomenclature": 597139,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "CDI - Alternance - Contrat d'apprentissage",
+    "lienUrl": null,
+    "numeroVersion": 1,
+    "ordre": 6
+  },
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": 1713907407000,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": "SOCLE"
+    },
+    "codeNomenclature": "7",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 15,
+    "idNomenclature": 597140,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "CDI - Alternance - Contrat de professionnalisation",
+    "lienUrl": null,
+    "numeroVersion": 1,
+    "ordre": 7
+  },
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": null,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": null
+    },
+    "codeNomenclature": "3",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 16,
+    "idNomenclature": 101930,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "Intérim",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 8
+  },
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": null,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": null
+    },
+    "codeNomenclature": "8",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 17,
+    "idNomenclature": 597141,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "CDI interimaire",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 9
+  },
+  {
+    "audit": {
+      "dateCreation": 1508272458000,
+      "dateModification": null,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": null
+    },
+    "codeNomenclature": "3",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 18,
+    "idNomenclature": 101889,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "Mission d'intérim",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 10
+  },
+  {
+    "audit": {
+      "dateCreation": 1738103154000,
+      "dateModification": null,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": null
+    },
+    "codeNomenclature": "9",
+    "codePresentation": "RECHERCHE_OFFRE_TYPE_CONTRAT",
+    "id": 2961,
+    "idNomenclature": 597171,
+    "idPresentation": 29,
+    "indicateurValidite": true,
+    "libelle": "Stage",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 11
+  }
+]

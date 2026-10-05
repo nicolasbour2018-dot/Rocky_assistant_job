@@ -16,7 +16,6 @@ from .errors import DocumentError
 @dataclass(frozen=True)
 class LetterVariables:
     """Variables factuelles injectées dans le modèle de lettre d'une candidature."""
-
     job_title: str
     company_name: str
     company_paragraph: str
@@ -33,18 +32,8 @@ class LetterVariables:
     def template_values(self) -> dict[str, str]:
         """Expose les variables contrôlées injectables dans le modèle de lettre."""
         months = [
-            "janvier",
-            "février",
-            "mars",
-            "avril",
-            "mai",
-            "juin",
-            "juillet",
-            "août",
-            "septembre",
-            "octobre",
-            "novembre",
-            "décembre",
+            "janvier", "février", "mars", "avril", "mai", "juin",
+            "juillet", "août", "septembre", "octobre", "novembre", "décembre",
         ]
         french_date = (
             f"{self.letter_date.day} {months[self.letter_date.month - 1]} "
@@ -87,9 +76,9 @@ class LetterSections:
 
 def _template(settings: Settings) -> str:
     """Charge le modèle de lettre validé, sans en modifier le texte métier."""
-    return (settings.project_dir / "templates" / "lettre_motivation.txt").read_text(
-        encoding="utf-8"
-    )
+    return (
+        settings.project_dir / "templates" / "lettre_motivation.txt"
+    ).read_text(encoding="utf-8")
 
 
 def render_letter(settings: Settings, variables: LetterVariables) -> str:
@@ -98,22 +87,20 @@ def render_letter(settings: Settings, variables: LetterVariables) -> str:
         return render_letter_from_body(
             variables,
             (
-                (
-                    f"I am applying for the {variables.job_title.strip()} "
-                    f"position at {variables.company_name.strip()}."
-                ),
+                f"I am applying for the {variables.job_title.strip()} position "
+                f"at {variables.company_name.strip()}.",
                 variables.company_paragraph.strip(),
-                (
-                    "My attached resume presents the experience, skills and "
-                    "projects supporting this application."
-                ),
+                "My attached resume presents the experience, skills and projects "
+                "supporting this application.",
                 "I would welcome the opportunity to discuss the role and my application.",
             ),
         )
     template = _template(settings)
     allowed = set(variables.template_values())
     requested = {
-        name for _, name, _, _ in Formatter().parse(template) if name is not None
+        name
+        for _, name, _, _ in Formatter().parse(template)
+        if name is not None
     }
     if requested != allowed:
         raise DocumentError(
@@ -196,7 +183,9 @@ def parse_letter_sections(letter_text: str) -> LetterSections:
     )
 
 
-def render_letter_preview_html(variables: LetterVariables, letter_text: str) -> str:
+def render_letter_preview_html(
+    variables: LetterVariables, letter_text: str
+) -> str:
     """Construit une prévisualisation fidèle sans injecter de contenu HTML.
 
     Toutes les valeurs saisies sont échappées avant leur affichage. Le HTML ne
@@ -206,7 +195,9 @@ def render_letter_preview_html(variables: LetterVariables, letter_text: str) -> 
 
     def lines(value: str) -> str:
         """Échappe et conserve les sauts de ligne pour l'aperçu HTML de la lettre."""
-        return "<br>".join(escape(line) for line in value.splitlines() if line.strip())
+        return "<br>".join(
+            escape(line) for line in value.splitlines() if line.strip()
+        )
 
     sender = lines(sections.sender)
     recipient = lines(sections.recipient)
@@ -242,7 +233,7 @@ def render_letter_preview_html(variables: LetterVariables, letter_text: str) -> 
         <p style="text-align:left; margin:0 0 0.65rem 0;">
             {escape(sections.salutation)}
         </p>
-        {"".join(body_paragraphs)}
+        {''.join(body_paragraphs)}
     </div>
     """
 
@@ -322,13 +313,15 @@ def create_docx(path: Path, variables: LetterVariables, letter_text: str) -> Non
             if text == sender_name
             else WD_ALIGN_PARAGRAPH.JUSTIFY
         )
-        _add_docx_paragraph(document, text, alignment=alignment)
+        _add_docx_paragraph(
+            document, text, alignment=alignment
+        )
 
     document.core_properties.title = (
         f"Candidature - {values['job_title']} - {values['company_name']}"
     )
     document.core_properties.author = values["sender_name"]
-    document.save(str(path))
+    document.save(path)
 
 
 def create_pdf(path: Path, variables: LetterVariables, letter_text: str) -> None:
@@ -385,10 +378,14 @@ def create_pdf(path: Path, variables: LetterVariables, letter_text: str) -> None
     )
 
     sender = "<br/>".join(
-        escape(line) for line in sections.sender.splitlines() if line.strip()
+        escape(line)
+        for line in sections.sender.splitlines()
+        if line.strip()
     )
     recipient = "<br/>".join(
-        escape(line) for line in sections.recipient.splitlines() if line.strip()
+        escape(line)
+        for line in sections.recipient.splitlines()
+        if line.strip()
     )
     story = [
         Paragraph(sender, left_style),
@@ -404,7 +401,9 @@ def create_pdf(path: Path, variables: LetterVariables, letter_text: str) -> None
     document.build(story)
 
 
-def save_profile_cv(settings: Settings, profile_id: int, content: bytes) -> Path:
+def save_profile_cv(
+    settings: Settings, profile_id: int, content: bytes
+) -> Path:
     """Enregistre le CV du profil dans un emplacement privé et stable."""
     if not content.startswith(b"%PDF"):
         raise DocumentError("Le CV doit être un fichier PDF valide.")

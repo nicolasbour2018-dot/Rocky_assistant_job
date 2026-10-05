@@ -8,14 +8,14 @@ est propre : URL, paramètres et conversion vers :class:`JobOffer`.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Iterable
 
 import requests
 
-from dashboard.rocky.errors import SourceError
-from dashboard.rocky.models import JobOffer
+from ..errors import SourceError
+from ..models import JobOffer
+
 
 BROWSER_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
@@ -52,7 +52,11 @@ def public_get(
         response.raise_for_status()
         return response
     except requests.HTTPError as error:
-        status = error.response.status_code if error.response is not None else "inconnu"
+        status = (
+            error.response.status_code
+            if error.response is not None
+            else "inconnu"
+        )
         raise SourceError(
             f"{source_name} a refusé la requête publique (HTTP {status})."
         ) from error
@@ -86,7 +90,11 @@ def public_post_json(
         response.raise_for_status()
         return response
     except requests.HTTPError as error:
-        status = error.response.status_code if error.response is not None else "inconnu"
+        status = (
+            error.response.status_code
+            if error.response is not None
+            else "inconnu"
+        )
         raise SourceError(
             f"{source_name} a refusé la requête publique (HTTP {status})."
         ) from error
@@ -101,18 +109,18 @@ def iso_date(value: object) -> date | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(str(value)).date()
+        return datetime.fromisoformat(
+            str(value).replace("Z", "+00:00")
+        ).date()
     except ValueError:
         return None
 
 
 def unix_date(value: object) -> date | None:
     """Convertit un timestamp Unix en date UTC."""
-    if not isinstance(value, int | float | str):
-        return None
     try:
         return datetime.fromtimestamp(float(value), tz=UTC).date()
-    except (ValueError, OSError):
+    except (TypeError, ValueError, OSError):
         return None
 
 
@@ -127,7 +135,9 @@ def salary_values(value: object) -> tuple[float | None, float | None, str]:
 
     values: list[float] = []
     range_uses_thousands = bool(re.search(r"\d\s*[kK]", text))
-    for number, suffix in re.findall(r"(\d+(?:[\s.,]\d+)?)\s*([kK]?)", text):
+    for number, suffix in re.findall(
+        r"(\d+(?:[\s.,]\d+)?)\s*([kK]?)", text
+    ):
         cleaned = number.replace(" ", "").replace(",", ".")
         try:
             parsed = float(cleaned)
@@ -160,6 +170,6 @@ def deduplicate_offers(offers: Iterable[JobOffer]) -> list[JobOffer]:
 
 def web_slug(value: str) -> str:
     """Crée un segment d'URL ASCII prévisible pour les pages de rôle."""
-    from dashboard.rocky.text_utils import normalize_text
+    from ..text_utils import normalize_text
 
     return re.sub(r"[^a-z0-9]+", "-", normalize_text(value)).strip("-")

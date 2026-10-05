@@ -24,9 +24,7 @@ class _Repository:
         assert application_id == 7
         return {"status": "CANDIDATURE ENVOYÉE"}
 
-    def update_application_status(
-        self, application_id: int, status: str, **details
-    ) -> None:
+    def update_application_status(self, application_id: int, status: str, **details) -> None:
         self.status_updates.append(
             {"application_id": application_id, "status": status, **details}
         )

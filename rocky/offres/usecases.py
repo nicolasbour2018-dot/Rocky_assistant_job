@@ -1,0 +1,461 @@
+"""Use cases of the stored offers: the unit "offer + tracks + scores", shared by the watch and the import by URL;
+the decisions of the offers screen (C7), the description pasted by the user or read on the page shown by a visible
+browser (E5), and the stored summary.
+
+Each use case runs inside one transaction opened by the caller (the stores never commit): an offer is never
+written without its tracks and its scores (exit criterion of C6), a decision never without its event (C7).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterable
+from dataclasses import dataclass
+from datetime import date, datetime
+from enum import StrEnum
+from typing import Any, Protocol
+
+from rocky.offres.analysis.rules import analyze
+from rocky.offres.analysis.usecases import Summary
+from rocky.offres.decisions import (
+    Author,
+    Decision,
+    DecisionKind,
+    DecisionRow,
+    effective_decisions,
+    to_cancel,
+)
+from rocky.offres.imports.rules import (
+    NOT_READABLE_REASON,
+    OTHER_PAGE_REASON,
+    enriched,
+    parse_page,
+    shows_the_offer,
+    with_pasted_description,
+)
+from rocky.offres.model import (
+    DecisionStore,
+    OfferStore,
+    Origin,
+    Recorded,
+    ScoringInputs,
+    StoredOffer,
+    StoredSummary,
+)
+from rocky.offres.rules import best_track, description_hash, match_key
+from rocky.offres.scoring.model import Score
+from rocky.offres.scoring.rules import score
+from rocky.offres.screen import shown_track
+from rocky.offres.sources.model import CollectedOffer, SourceFailedError
+from rocky.system.events import Actor, NewEvent
+
+
+def record_offer(
+    store: OfferStore,
+    *,
+    account_id: int,
+    offer: CollectedOffer,
+    inputs: ScoringInputs,
+    origin: Origin,
+    track_ids: Iterable[int] = (),
+    run_id: int | None = None,
+    now: datetime,
+    today: date,
+) -> Recorded:
+    """Write ``offer`` with its tracks and its current scores; idempotent.
+
+    A known offer (same source and identifier, or same address) is completed, never overwritten (Q7). The watch gives
+    the tracks whose queries found the offer; an import, the offer of a message or of an alert is linked to the track
+    where it scores best (Q10; decision E3, Q3).
+    """
+    existing = store.find(account_id, offer)
+    if existing is None:
+        merged = offer
+        offer_id = store.insert(
+            account_id, offer, origin=origin, match_key=match_key(offer), now=now
+        )
+    else:
+        merged = enriched(existing.offer, offer)
+        offer_id = existing.id
+        if merged != existing.offer:
+            store.update(offer_id, merged, match_key=match_key(merged), now=now)
+        else:
+            store.mark_seen(offer_id, now)
+    result = _score(merged, inputs, today)
+    if origin in (Origin.IMPORT, Origin.MESSAGE, Origin.ALERT):
+        best = best_track(result)
+        track_ids = () if best is None else (best,)
+    store.link_tracks(offer_id, track_ids, found_by=origin, run_id=run_id, now=now)
+    store.replace_scores(offer_id, result, inputs_hash=inputs.inputs_hash, now=now)
+    return Recorded(
+        offer_id=offer_id,
+        created=existing is None,
+        completed=existing is not None and merged != existing.offer,
+        score=result,
+        description_complete=merged.description_complete,
+    )
+
+
+def add_imported_offer(
+    store: OfferStore,
+    *,
+    account_id: int,
+    offer: CollectedOffer,
+    inputs: ScoringInputs,
+    now: datetime,
+    today: date,
+) -> Recorded:
+    """« Ajouter à mes offres » (Q10): the offer of an import preview joins the offers, with the user's event."""
+    recorded = record_offer(
+        store,
+        account_id=account_id,
+        offer=offer,
+        inputs=inputs,
+        origin=Origin.IMPORT,
+        now=now,
+        today=today,
+    )
+    store.append_event(
+        NewEvent(
+            type="offres.offer_added",
+            actor=Actor.USER,
+            subject_type="job_offer",
+            subject_id=str(recorded.offer_id),
+            payload={
+                "source": offer.source,
+                "created": recorded.created,
+                "track_id": recorded.score.best.track_id,
+                "score": recorded.score.best.display,
+            },
+            account_id=account_id,
+        )
+    )
+    return recorded
+
+
+def add_offer_from_message(
+    store: OfferStore,
+    *,
+    account_id: int,
+    offer: CollectedOffer,
+    inputs: ScoringInputs,
+    message_id: int,
+    now: datetime,
+    today: date,
+) -> Recorded:
+    """« Créer la candidature » from a message (decision E4, Q4, Q12): the minimal offer of an application made outside
+    Rocky, scored and linked as an import, with the user's event. Idempotent: its identifier names the message."""
+    recorded = record_offer(
+        store,
+        account_id=account_id,
+        offer=offer,
+        inputs=inputs,
+        origin=Origin.MESSAGE,
+        now=now,
+        today=today,
+    )
+    if recorded.created:
+        store.append_event(
+            NewEvent(
+                type="offres.offer_added",
+                actor=Actor.USER,
+                subject_type="job_offer",
+                subject_id=str(recorded.offer_id),
+                payload={
+                    "source": offer.source,
+                    "created": True,
+                    "message_id": message_id,
+                    "track_id": recorded.score.best.track_id,
+                    "score": recorded.score.best.display,
+                },
+                account_id=account_id,
+            )
+        )
+    return recorded
+
+
+def rescore_offer(
+    store: OfferStore,
+    stored: StoredOffer,
+    *,
+    inputs: ScoringInputs,
+    now: datetime,
+    today: date,
+) -> Score:
+    """New current scores of a stored offer, after a change of the profile or of the rules (Q5)."""
+    result = _score(stored.offer, inputs, today)
+    store.replace_scores(stored.id, result, inputs_hash=inputs.inputs_hash, now=now)
+    return result
+
+
+def enrich_offer(
+    store: OfferStore,
+    stored: StoredOffer,
+    text: str,
+    *,
+    inputs: ScoringInputs,
+    now: datetime,
+    today: date,
+) -> Score:
+    """« Coller la description » (C7, Q5, Q13): the pasted text becomes the complete description of the offer, which is
+    scored again at once, with the user's event. Tracks are kept. Raises ``InvalidPasteError`` (message shown)."""
+    offer = with_pasted_description(stored.offer, text)
+    return _write_enrichment(
+        store, stored, offer, {"how": "pasted"}, inputs=inputs, now=now, today=today
+    )
+
+
+class ReadingOutcome(StrEnum):
+    """What a page shown in a visible browser gave to an offer (decision E5)."""
+
+    COMPLETED = "completed"  # a complete description, and maybe facts
+    FACTS_ONLY = "facts_only"  # facts the offer did not know, the description stays incomplete (Q3)
+    NOTHING_NEW = "nothing_new"
+    OTHER_PAGE = "other_page"  # not the site of the offer (Q6)
+    UNREADABLE = "unreadable"
+
+
+@dataclass(frozen=True)
+class PageReading:
+    outcome: ReadingOutcome
+    # Why the description is still incomplete (French, shown); None once complete.
+    reason: str | None = None
+    score: Score | None = None  # the new score, when something was written
+
+
+def enrich_offer_from_page(
+    store: OfferStore,
+    stored: StoredOffer,
+    shown_url: str,
+    shown_html: str,
+    *,
+    inputs: ScoringInputs,
+    now: datetime,
+    today: date,
+) -> PageReading:
+    """« Lire la page affichée » (decision E5): the page shown by the visible browser, read by ``parse_page``,
+    completes the offer through ``enriched``: the description only by a complete one (Q3), facts the offer does not
+    know, never its identity. Scored again with the user's event; nothing is written when the page brings nothing, or
+    is not on the site of the offer (Q6)."""
+    if not shows_the_offer(stored.offer, shown_url):
+        return PageReading(ReadingOutcome.OTHER_PAGE, OTHER_PAGE_REASON)
+    try:
+        preview = parse_page(shown_html, shown_url, today=today)
+    except SourceFailedError as error:
+        return PageReading(ReadingOutcome.UNREADABLE, error.reason)
+    offer = enriched(stored.offer, preview.offer)
+    completed = offer.description_complete and not stored.offer.description_complete
+    reason = None if offer.description_complete else NOT_READABLE_REASON
+    if offer == stored.offer:
+        return PageReading(ReadingOutcome.NOTHING_NEW, reason)
+    result = _write_enrichment(
+        store,
+        stored,
+        offer,
+        {
+            "how": "browser",
+            "method": preview.method.value,
+            "description_read": completed,
+        },
+        inputs=inputs,
+        now=now,
+        today=today,
+    )
+    outcome = ReadingOutcome.COMPLETED if completed else ReadingOutcome.FACTS_ONLY
+    return PageReading(outcome, reason, result)
+
+
+def _write_enrichment(
+    store: OfferStore,
+    stored: StoredOffer,
+    offer: CollectedOffer,
+    how: dict[str, Any],
+    *,
+    inputs: ScoringInputs,
+    now: datetime,
+    today: date,
+) -> Score:
+    """The enriched offer, its new current scores and the user's event (C7), in the caller's transaction; the date
+    of last sighting stays the source's, the tracks are kept. The event never holds an address (it may carry a
+    token)."""
+    before = store.current_score(stored.id)
+    store.update(stored.id, offer, match_key=match_key(offer), now=now, seen=False)
+    result = _score(offer, inputs, today)
+    store.replace_scores(stored.id, result, inputs_hash=inputs.inputs_hash, now=now)
+    store.append_event(
+        NewEvent(
+            type="offres.offer_enriched",
+            actor=Actor.USER,
+            subject_type="job_offer",
+            subject_id=str(stored.id),
+            payload={
+                **how,
+                "was_complete": stored.offer.description_complete,
+                "score_before": None if before is None else before.best.display,
+                "score_after": result.best.display,
+            },
+            account_id=stored.account_id,
+        )
+    )
+    return result
+
+
+def record_decision(
+    store: DecisionStore,
+    *,
+    account_id: int,
+    offer_id: int,
+    decision: Decision,
+    track_id: int | None,
+    now: datetime,
+    author: Author = Author.USER,
+) -> int:
+    """A decision on an offer (C7), with a copy of its current score and the track whose score was shown (Q11), and
+    its event. A new decision on a decided offer replaces the previous one, which stays in the history (Q8)."""
+    score = store.current_score(offer_id)
+    if score is None:
+        # Never true: every stored offer has a score (C6).
+        raise LookupError(f"offer {offer_id} has no score")
+    track = shown_track(score, track_id)
+    previous = effective_decisions(store.decision_rows(account_id, offer_id)).get(
+        offer_id
+    )
+    decision_id = store.insert_decision(
+        account_id,
+        offer_id,
+        decision,
+        author=author,
+        track=track,
+        score=score,
+        inputs_hash=store.current_inputs_hash(offer_id),
+        now=now,
+    )
+    store.append_event(
+        NewEvent(
+            type="offres.decision_recorded",
+            actor=Actor(author.value),
+            subject_type="job_offer",
+            subject_id=str(offer_id),
+            payload={
+                "decision_id": decision_id,
+                "value": decision.value.value,
+                "reasons": list(decision.reasons),
+                "note": decision.note,
+                "track_id": track.track_id,
+                "score": track.display,
+                "rules_version": score.rules_version,
+                "previous": None
+                if previous is None or previous.decision is None
+                else previous.decision.value.value,
+            },
+            account_id=account_id,
+        )
+    )
+    return decision_id
+
+
+def cancel_last_decision(
+    store: DecisionStore,
+    *,
+    account_id: int,
+    now: datetime,
+    author: Author = Author.USER,
+) -> int | None:
+    """« Annuler » (C7, Q8): cancels the latest decision of the account still in force, with its event; the offer gets
+    its previous decision back, or is to examine again. Returns the offer, or None when nothing is left to cancel."""
+    rows = store.decision_rows(account_id)
+    cancelled = to_cancel(rows)
+    if cancelled is None or cancelled.decision is None:
+        return None
+    _cancel(
+        store, account_id, rows, cancelled, cancelled.decision, author=author, now=now
+    )
+    return cancelled.offer_id
+
+
+def cancel_decision(
+    store: DecisionStore,
+    *,
+    account_id: int,
+    decision_id: int,
+    now: datetime,
+    author: Author = Author.USER,
+) -> bool:
+    """Cancel one given decision of the account, with its event (D1, Q9: the « Intéressé » written by « Préparer la
+    candidature » goes with the cancelled application). False when it was already cancelled."""
+    rows = store.decision_rows(account_id)
+    target = next(
+        (
+            row
+            for row in rows
+            if row.id == decision_id and row.kind is DecisionKind.DECISION
+        ),
+        None,
+    )
+    if target is None or target.decision is None:
+        raise LookupError(f"decision {decision_id} is not a decision of the account")
+    if any(row.cancels == decision_id for row in rows):
+        return False
+    _cancel(store, account_id, rows, target, target.decision, author=author, now=now)
+    return True
+
+
+def _cancel(
+    store: DecisionStore,
+    account_id: int,
+    rows: list[DecisionRow],
+    cancelled: DecisionRow,
+    decision: Decision,
+    *,
+    author: Author,
+    now: datetime,
+) -> None:
+    cancellation = store.insert_cancellation(
+        account_id, cancelled, author=author, now=now
+    )
+    restored = effective_decisions([*rows, cancellation]).get(cancelled.offer_id)
+    store.append_event(
+        NewEvent(
+            type="offres.decision_cancelled",
+            actor=Actor(author.value),
+            subject_type="job_offer",
+            subject_id=str(cancelled.offer_id),
+            payload={
+                "decision_id": cancelled.id,
+                "value": decision.value.value,
+                "restored": None
+                if restored is None or restored.decision is None
+                else restored.decision.value.value,
+            },
+            account_id=account_id,
+        )
+    )
+
+
+class SummaryStore(Protocol):
+    def summary(self, offer_id: int) -> StoredSummary | None: ...
+
+    def save_summary(
+        self, offer_id: int, summary: StoredSummary, now: datetime
+    ) -> None: ...
+
+
+def stored_summary(store: SummaryStore, stored: StoredOffer) -> Summary | None:
+    """The summary kept for the offer, unless its description changed since (Q6)."""
+    kept = store.summary(stored.id)
+    if kept is None or kept.description_hash != description_hash(stored.offer):
+        return None
+    return kept.summary
+
+
+def keep_summary(
+    store: SummaryStore, stored: StoredOffer, summary: Summary, *, now: datetime
+) -> None:
+    """Keep a summary the language model gave, for the description it summarised; a failed one is never kept."""
+    store.save_summary(
+        stored.id, StoredSummary(description_hash(stored.offer), summary), now
+    )
+
+
+def _score(offer: CollectedOffer, inputs: ScoringInputs, today: date) -> Score:
+    analysis = analyze(offer, inputs.skills, today=today)
+    return score(analysis, offer, inputs.profile, today=today)

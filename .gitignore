@@ -4,6 +4,8 @@ venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .DS_Store
 .hf_deploy/
 /logs/
@@ -17,3 +19,7 @@ tmp/
 /.secrets/
 .playwright-cli/
 /test.ipynb
+.playwright-mcp/
+
+# Claude Code worktrees of parallel sessions
+.claude/worktrees/

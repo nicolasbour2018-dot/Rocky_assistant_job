@@ -1,0 +1,74 @@
+[
+  {
+    "audit": {
+      "dateCreation": 1638312005000,
+      "dateModification": 1638312013000,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": "SOCLE"
+    },
+    "codeNomenclature": "01",
+    "codePresentation": "LISTE_OPTIONS_REDUITES_TELETRAVAIL",
+    "id": 1060,
+    "idNomenclature": 20766,
+    "idPresentation": 171,
+    "indicateurValidite": true,
+    "libelle": "Ponctuel autorisé",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 1
+  },
+  {
+    "audit": {
+      "dateCreation": 1638312005000,
+      "dateModification": 1638312013000,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": "SOCLE"
+    },
+    "codeNomenclature": "02",
+    "codePresentation": "LISTE_OPTIONS_REDUITES_TELETRAVAIL",
+    "id": 1059,
+    "idNomenclature": 20765,
+    "idPresentation": 171,
+    "indicateurValidite": true,
+    "libelle": "Partiel possible",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 2
+  },
+  {
+    "audit": {
+      "dateCreation": 1638312005000,
+      "dateModification": null,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": null
+    },
+    "codeNomenclature": "03",
+    "codePresentation": "LISTE_OPTIONS_REDUITES_TELETRAVAIL",
+    "id": 1061,
+    "idNomenclature": 20767,
+    "idPresentation": 171,
+    "indicateurValidite": true,
+    "libelle": "Total possible",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 3
+  },
+  {
+    "audit": {
+      "dateCreation": 1693343833000,
+      "dateModification": null,
+      "utilisateurCreation": "SOCLE",
+      "utilisateurModification": null
+    },
+    "codeNomenclature": "1",
+    "codePresentation": "LISTE_OPTIONS_REDUITES_TELETRAVAIL",
+    "id": 1298,
+    "idNomenclature": 20949,
+    "idPresentation": 171,
+    "indicateurValidite": true,
+    "libelle": "Non autorisé",
+    "lienUrl": null,
+    "numeroVersion": 0,
+    "ordre": 4
+  }
+]

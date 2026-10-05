@@ -1,0 +1,47 @@
+{# « Messages triés » (decisions E2 Q14, E4 Q8): the last messages of a view, grouped by application (the most decisive
+   first, the others behind « +n messages »), with their decision, its proof behind « Pourquoi ? » and the gestures
+   « Juste » and « Corriger ». #}
+{% from "messages/row.html" import message_row with context %}
+<section class="profile-section messages-recent" aria-labelledby="derniers-messages">
+  <div class="section-head">
+    <h2 id="derniers-messages">Messages triés</h2>
+  </div>
+  <nav class="segmented app-tabs" aria-label="Messages par catégorie">
+    {% for found in View %}
+    <a href="/messages{{ '' if found == View.TO_LOOK_AT else '?vue=' ~ found.value }}"
+      {% if found == state.view %}aria-current="page"{% endif %}>{{ view_labels[found] }}</a>
+    {% endfor %}
+  </nav>
+  {% if state.waiting %}
+  <p class="alert alert-info" role="status"><strong>{{ state.waiting }} message{{ 's' if state.waiting > 1 }} en attente
+    de classement.</strong> {{ state.waiting_reason }}</p>
+  {% endif %}
+  {% if state.view == View.TO_LOOK_AT and state.acknowledgements %}
+  <p class="muted small">{{ state.acknowledgements }} accusé{{ 's' if state.acknowledgements > 1 }} de réception, hors de
+    cette vue : <a href="/messages?vue={{ View.ACKNOWLEDGEMENTS.value }}">les voir</a>.</p>
+  {% endif %}
+  {% if state.groups %}
+  <table class="offer-table messages-table">
+    <thead><tr><th>Reçu le</th><th>De</th><th>Objet</th><th>Classement</th></tr></thead>
+    {% for group in state.groups %}
+    <tbody class="message-group">
+      {{ message_row(group.head, state) }}
+      {% if group.others %}
+      <tr class="group-more"><td colspan="4">
+        <details class="note small">
+          <summary>+{{ group.others | length }} message{{ 's' if group.others | length > 1 }} de cette candidature</summary>
+          <table class="offer-table messages-table">
+            <tbody>
+              {% for message in group.others %}{{ message_row(message, state) }}{% endfor %}
+            </tbody>
+          </table>
+        </details>
+      </td></tr>
+      {% endif %}
+    </tbody>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty-lead">Aucun message dans cette vue pour l'instant.</p>
+  {% endif %}
+</section>

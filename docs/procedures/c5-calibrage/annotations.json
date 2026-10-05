@@ -1,0 +1,734 @@
+{
+ "seed": 20260928,
+ "exported_at": "2026-09-28T22:57:29.015Z",
+ "answers": [
+  {
+   "position": 1,
+   "id": "794",
+   "level": "non",
+   "reasons": {
+    "seniorite": "-",
+    "lieu": "-",
+    "salaire": "-",
+    "condition": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 2,
+   "id": "879",
+   "level": "non",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "secteur": "-",
+    "lieu": "-",
+    "condition": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 3,
+   "id": "764",
+   "level": "examiner",
+   "reasons": {
+    "metier": "+",
+    "seniorite": "-",
+    "competences": "+",
+    "contrat": "+",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 4,
+   "id": "1243",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "secteur": "-",
+    "seniorite": "+",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 5,
+   "id": "1075",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "secteur": "-",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 6,
+   "id": "1041",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "lieu": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 7,
+   "id": "1074",
+   "level": "non",
+   "reasons": {
+    "competences": "-",
+    "seniorite": "-",
+    "lieu": "-",
+    "condition": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 8,
+   "id": "1241",
+   "level": "non",
+   "reasons": {
+    "contrat": "-",
+    "condition": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 9,
+   "id": "91",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "piste": "-",
+    "competences": "-",
+    "secteur": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 10,
+   "id": "409",
+   "level": "non",
+   "reasons": {
+    "competences": "-",
+    "seniorite": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 11,
+   "id": "1161",
+   "level": "examiner",
+   "reasons": {
+    "metier": "+",
+    "seniorite": "-",
+    "lieu": "+",
+    "salaire": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 12,
+   "id": "1023",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "teletravail": "+",
+    "lieu": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 13,
+   "id": "1190",
+   "level": "non",
+   "reasons": {
+    "lieu": "-",
+    "condition": "-",
+    "metier": "+",
+    "competences": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 14,
+   "id": "945",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 15,
+   "id": "38",
+   "level": "examiner",
+   "reasons": {
+    "metier": "+",
+    "lieu": "+",
+    "salaire": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 16,
+   "id": "925",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "competences": "-",
+    "seniorite": "-",
+    "secteur": "+",
+    "lieu": "+",
+    "teletravail": "+",
+    "contrat": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 17,
+   "id": "638",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "seniorite": "+",
+    "lieu": "+",
+    "contrat": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 18,
+   "id": "404",
+   "level": "non",
+   "reasons": {
+    "competences": "+",
+    "seniorite": "-",
+    "lieu": "+",
+    "langue": "+",
+    "contrat": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 19,
+   "id": "83",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "secteur": "-",
+    "contrat": "+",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 20,
+   "id": "877",
+   "level": "non",
+   "reasons": {
+    "competences": "-",
+    "lieu": "-",
+    "teletravail": "+",
+    "condition": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 21,
+   "id": "990",
+   "level": "non",
+   "reasons": {
+    "seniorite": "-",
+    "competences": "+",
+    "lieu": "+",
+    "contrat": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 22,
+   "id": "1058",
+   "level": "non",
+   "reasons": {
+    "seniorite": "-",
+    "metier": "+",
+    "competences": "+",
+    "lieu": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 23,
+   "id": "608",
+   "level": "non",
+   "reasons": {
+    "seniorite": "-",
+    "competences": "-",
+    "contrat": "+",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 24,
+   "id": "846",
+   "level": "non",
+   "reasons": {
+    "competences": "-",
+    "seniorite": "-",
+    "lieu": "+",
+    "contrat": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 25,
+   "id": "751",
+   "level": "non",
+   "reasons": {
+    "competences": "-",
+    "secteur": "-",
+    "lieu": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 26,
+   "id": "1076",
+   "level": "examiner",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "seniorite": "-",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 27,
+   "id": "1159",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "secteur": "+",
+    "seniorite": "-",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 28,
+   "id": "446",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "seniorite": "+",
+    "lieu": "+",
+    "teletravail": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 29,
+   "id": "880",
+   "level": "non",
+   "reasons": {
+    "metier": "+",
+    "condition": "-",
+    "competences": "+",
+    "salaire": "+",
+    "secteur": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 30,
+   "id": "1071",
+   "level": "non",
+   "reasons": {
+    "seniorite": "-",
+    "metier": "-",
+    "competences": "+",
+    "lieu": "-",
+    "teletravail": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 31,
+   "id": "1082",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "seniorite": "-",
+    "lieu": "+",
+    "teletravail": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 32,
+   "id": "54",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "secteur": "-",
+    "lieu": "+",
+    "contrat": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 33,
+   "id": "180",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "lieu": "+",
+    "contrat": "+",
+    "salaire": "+",
+    "langue": "+",
+    "competences": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 34,
+   "id": "399",
+   "level": "examiner",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "seniorite": "-",
+    "lieu": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 35,
+   "id": "14",
+   "level": "examiner",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "seniorite": "-",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 36,
+   "id": "99",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "competences": "-",
+    "seniorite": "-",
+    "lieu": "+",
+    "contrat": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 37,
+   "id": "32",
+   "level": "non",
+   "reasons": {
+    "metier": "+",
+    "competences": "-",
+    "seniorite": "-",
+    "lieu": "-",
+    "teletravail": "+",
+    "salaire": "+",
+    "condition": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 38,
+   "id": "434",
+   "level": "non",
+   "reasons": {
+    "competences": "-",
+    "teletravail": "+",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 39,
+   "id": "1244",
+   "level": "examiner",
+   "reasons": {
+    "seniorite": "+",
+    "competences": "+",
+    "teletravail": "+",
+    "lieu": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 40,
+   "id": "451",
+   "level": "oui",
+   "reasons": {
+    "salaire": "+",
+    "lieu": "+",
+    "contrat": "+",
+    "metier": "+",
+    "competences": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 41,
+   "id": "534",
+   "level": "non",
+   "reasons": {
+    "metier": "+",
+    "contrat": "+",
+    "lieu": "+",
+    "langue": "+",
+    "salaire": "+",
+    "competences": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 42,
+   "id": "101",
+   "level": "examiner",
+   "reasons": {
+    "metier": "-",
+    "competences": "+",
+    "lieu": "+",
+    "contrat": "+",
+    "langue": "+",
+    "salaire": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 43,
+   "id": "1052",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "competences": "-",
+    "seniorite": "-",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 44,
+   "id": "94",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "competences": "-",
+    "seniorite": "-",
+    "contrat": "+",
+    "lieu": "+",
+    "teletravail": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 45,
+   "id": "77",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "competences": "-",
+    "seniorite": "-",
+    "lieu": "-",
+    "teletravail": "+",
+    "condition": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 46,
+   "id": "100",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "competences": "-",
+    "seniorite": "-",
+    "lieu": "+",
+    "contrat": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 47,
+   "id": "10",
+   "level": "oui",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "lieu": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 48,
+   "id": "1225",
+   "level": "non",
+   "reasons": {
+    "metier": "+",
+    "seniorite": "-",
+    "lieu": "+",
+    "teletravail": "+",
+    "salaire": "+",
+    "langue": "+",
+    "condition": "-",
+    "competences": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 49,
+   "id": "39",
+   "level": "non",
+   "reasons": {
+    "metier": "+",
+    "competences": "-",
+    "seniorite": "+",
+    "lieu": "+",
+    "teletravail": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 50,
+   "id": "1022",
+   "level": "examiner",
+   "reasons": {
+    "metier": "+",
+    "seniorite": "+",
+    "competences": "-",
+    "lieu": "+",
+    "teletravail": "+",
+    "contrat": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 51,
+   "id": "1058",
+   "level": "examiner",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "seniorite": "-",
+    "lieu": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 52,
+   "id": "434",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "competences": "-",
+    "teletravail": "+",
+    "lieu": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 53,
+   "id": "1074",
+   "level": "non",
+   "reasons": {
+    "metier": "+",
+    "competences": "+",
+    "seniorite": "-",
+    "lieu": "-",
+    "teletravail": "+",
+    "salaire": "+",
+    "condition": "-"
+   },
+   "comment": ""
+  },
+  {
+   "position": 54,
+   "id": "1161",
+   "level": "examiner",
+   "reasons": {
+    "seniorite": "-",
+    "competences": "+",
+    "metier": "+",
+    "lieu": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  },
+  {
+   "position": 55,
+   "id": "99",
+   "level": "non",
+   "reasons": {
+    "metier": "-",
+    "competences": "-",
+    "seniorite": "-",
+    "lieu": "+",
+    "salaire": "+",
+    "langue": "+"
+   },
+   "comment": ""
+  }
+ ]
+}

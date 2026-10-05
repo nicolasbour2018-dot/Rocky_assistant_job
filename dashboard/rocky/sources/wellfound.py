@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import json
 import subprocess
-from collections.abc import Iterable
-from typing import Any
+from typing import Any, Iterable
 
 from bs4 import BeautifulSoup
 
-from dashboard.rocky.errors import SourceError
-from dashboard.rocky.models import CandidateProfile, JobOffer
-
+from ..errors import SourceError
+from ..models import CandidateProfile, JobOffer
 from .common import (
     BROWSER_HEADERS,
     deduplicate_offers,
@@ -24,7 +22,6 @@ from .common import (
 
 class WellfoundSource:
     """Adaptateur Wellfound qui lit les opportunités publiques pour la veille Rocky."""
-
     name = "Wellfound"
     base_url = "https://wellfound.com"
 
@@ -37,8 +34,8 @@ class WellfoundSource:
         n'ouvre jamais de shell.
         """
         try:
-            result = subprocess.run(  # noqa: S603 - même GET public, jamais de shell
-                [  # noqa: S607 - curl optionnel, repli transport sur le PATH
+            result = subprocess.run(
+                [
                     "curl",
                     "--fail",
                     "--location",
@@ -59,9 +56,7 @@ class WellfoundSource:
                 timeout=35,
             )
         except (OSError, subprocess.SubprocessError) as error:
-            raise SourceError(
-                "Wellfound ne répond pas à la requête publique."
-            ) from error
+            raise SourceError("Wellfound ne répond pas à la requête publique.") from error
         if result.returncode != 0 or not result.stdout.strip():
             raise SourceError("Wellfound a refusé la requête publique.")
         return result.stdout
@@ -79,14 +74,18 @@ class WellfoundSource:
             return cls._curl_html(url)
 
     @classmethod
-    def _offer(cls, item: dict[str, Any], company_name: str) -> JobOffer:
+    def _offer(
+        cls, item: dict[str, Any], company_name: str
+    ) -> JobOffer:
         """Normalise une carte Wellfound avec son entreprise et ses liens de provenance."""
         external_id = str(item.get("id") or "")
         slug = str(item.get("slug") or "job")
         url = f"{cls.base_url}/jobs/{external_id}-{slug}"
         description = str(item.get("description") or "").strip()
         locations = item.get("locationNames") or []
-        salary_min, salary_max, currency = salary_values(item.get("compensation"))
+        salary_min, salary_max, currency = salary_values(
+            item.get("compensation")
+        )
         remote = "Télétravail complet" if item.get("remote") else ""
         return JobOffer(
             external_id=external_id,
@@ -160,7 +159,9 @@ class WellfoundSource:
         for query in queries:
             role_slug = web_slug(query)
             try:
-                html = self._download_html(f"{self.base_url}/role/r/{role_slug}")
+                html = self._download_html(
+                    f"{self.base_url}/role/r/{role_slug}"
+                )
                 collected.extend(self.parse_html(html, results_per_query))
                 successful_query = True
             except SourceError as error:

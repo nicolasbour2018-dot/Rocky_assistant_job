@@ -7,26 +7,17 @@ règles métier, qui restent isolées dans les services Rocky.
 
 # Importation des libairies nécessaires.
 from __future__ import annotations
-
 import streamlit as st
 
-# `st.Page` est la fabrique ; le type de ce qu'elle rend n'est pas réexporté
-# sur `st`, il faut donc aller le chercher dans son module.
-from streamlit.navigation.page import StreamlitPage
-
 # importation des modules internes
-from dashboard.auth_ui import render_account_sidebar, require_authenticated_user
-from dashboard.dashboard_common import (
-    load_data,
-    load_repository,
-    render_floating_chatbot,
-)
+from dashboard.auth_ui import require_authenticated_user, render_account_sidebar
+from dashboard.dashboard_common import load_data, load_repository, render_floating_chatbot
 from dashboard.rocky.config import Settings
 from dashboard.rocky.gmail_service import GmailService
 from dashboard.rocky.scheduler import ensure_local_scheduler
 
 
-def _complete_gmail_oauth_callback(monitoring_page: StreamlitPage) -> None:
+def _complete_gmail_oauth_callback(monitoring_page: st.Page) -> None:
     """Finalise le retour Google reçu par Streamlit sur le port du Mac.
 
     Le callback arrive à la racine car les clients OAuth Desktop autorisent le
@@ -83,7 +74,6 @@ def _complete_gmail_oauth_callback(monitoring_page: StreamlitPage) -> None:
     st.session_state["gmail_oauth_notice"] = notice
     st.query_params.clear()
     st.switch_page(monitoring_page)
-
 
 # Configuration de la l'application Streamlit.
 # Configure l'apparence globale de l'application avant le rendu des pages.
@@ -219,14 +209,7 @@ st.markdown(
 navigation = st.navigation(
     {
         "Rocky": [cockpit, applications, statistics, assistant],
-        "Préparer": [
-            profiles,
-            ats,
-            add_url,
-            enrichment,
-            job_detail,
-            application_prepare,
-        ],
+        "Préparer": [profiles, ats, add_url, enrichment, job_detail, application_prepare],
         "Veille & données": [all_jobs, monitoring],
     },
     position="sidebar",

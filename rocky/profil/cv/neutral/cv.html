@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="{{ cv.language }}">
+<head>
+<meta charset="utf-8">
+<title>{{ cv.full_name }}</title>
+<style>
+{{ font_faces }}
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: "Poppins", sans-serif; font-size: 8.6pt; line-height: 1.38; color: #22262e; }
+.page { width: 210mm; height: 297mm; display: grid; grid-template-columns: 66mm 1fr; overflow: hidden; }
+.side { background: #eef1f5; padding: 14mm 7mm 10mm 9mm; overflow: hidden; }
+.main { padding: 14mm 11mm 10mm 9mm; overflow: hidden; }
+.photo { width: 34mm; height: 34mm; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 6mm; }
+h1 { font-family: "Glacial Indifference", sans-serif; font-weight: 700; font-size: 25pt; line-height: 1.05; letter-spacing: 0.04em; text-transform: uppercase; margin: 0; }
+.title { font-family: "Questrial", sans-serif; font-size: 12.5pt; letter-spacing: 0.05em; text-transform: uppercase; color: #2d6e8e; margin: 2mm 0 0; }
+.age { color: #5b6270; margin: 1mm 0 0; }
+.headline { margin: 5mm 0 0; }
+.headline p { margin: 0 0 2mm; }
+h2 { font-family: "Glacial Indifference", sans-serif; font-weight: 700; font-size: 10pt; letter-spacing: 0.05em; text-transform: uppercase; color: #2d6e8e; margin: 6mm 0 2mm; padding-bottom: 1mm; border-bottom: 0.4mm solid #bcd3de; }
+.side h2 { margin-top: 5mm; }
+.side h3 { font-size: 8.4pt; font-weight: 700; margin: 2.5mm 0 0.5mm; }
+ul { margin: 0; padding: 0; list-style: none; }
+.side li { margin: 0 0 0.6mm; }
+.contact li { overflow-wrap: anywhere; }
+.entry { margin: 0 0 3mm; break-inside: avoid; }
+.entry-head { display: flex; justify-content: space-between; gap: 3mm; }
+.entry-title { font-weight: 700; }
+.period { color: #5b6270; white-space: nowrap; }
+.organisation { color: #2d6e8e; }
+.bullets { padding-left: 3.5mm; list-style: disc; margin-top: 0.8mm; }
+.project { margin: 0 0 2.5mm; }
+.project-name { font-weight: 700; }
+.project dl { margin: 0.5mm 0 0; display: grid; grid-template-columns: max-content 1fr; column-gap: 2mm; }
+.project dt { color: #5b6270; }
+.project dd { margin: 0; }
+</style>
+</head>
+<body>
+<main class="page" data-box="page">
+  <aside class="side" data-box="colonne latérale">
+    {% if photo %}<img class="photo" src="{{ photo }}" alt="">{% endif %}
+    <h2>{{ labels.contact }}</h2>
+    <ul class="contact">
+      {% if cv.email %}<li>{{ cv.email }}</li>{% endif %}
+      {% if cv.phone %}<li>{{ cv.phone }}</li>{% endif %}
+      {% if cv.city %}<li>{{ cv.city }}</li>{% endif %}
+      {% for link in cv.links %}<li>{{ link.label }} · {{ link.url | replace("https://", "") | replace("www.", "") }}</li>{% endfor %}
+    </ul>
+    {% if cv.groups %}
+    <h2>{{ labels.technical }}</h2>
+    {% for group in cv.groups %}{% if group.skills %}
+    <h3>{{ group.name }}</h3>
+    <p style="margin:0">{{ group.skills | join(" · ") }}</p>
+    {% endif %}{% endfor %}
+    {% endif %}
+    {% if cv.transversal %}
+    <h2>{{ labels.transversal }}</h2>
+    <ul>{% for skill in cv.transversal %}<li>{{ skill }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if cv.languages %}
+    <h2>{{ labels.languages }}</h2>
+    <ul>{% for name, level in cv.languages %}<li>{{ name }} — {{ level }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if cv.hobbies %}
+    <h2>{{ labels.hobbies }}</h2>
+    <ul>{% for hobby in cv.hobbies %}<li>{{ hobby }}</li>{% endfor %}</ul>
+    {% endif %}
+  </aside>
+  <section class="main" data-box="colonne principale">
+    <h1>{{ cv.full_name }}</h1>
+    {% if cv.title %}<p class="title">{{ cv.title }}</p>{% endif %}
+    {% if cv.age %}<p class="age">{{ cv.age }}</p>{% endif %}
+    {% if cv.headline %}<div class="headline">{% for paragraph in cv.headline %}<p>{% for span in paragraph %}{% if span.bold %}<strong>{{ span.text }}</strong>{% else %}{{ span.text }}{% endif %}{% endfor %}</p>{% endfor %}</div>{% endif %}
+    {% if cv.experiences %}
+    <h2>{{ labels.experiences }}</h2>
+    {% for entry in cv.experiences %}
+    <div class="entry">
+      <div class="entry-head"><span class="entry-title">{{ entry.title }}</span><span class="period">{{ entry.period }}</span></div>
+      <div class="organisation">{{ entry.organisation }}{% if entry.place %} · {{ entry.place }}{% endif %}</div>
+      {% if entry.bullets %}<ul class="bullets">{% for bullet in entry.bullets %}<li>{{ bullet }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% if cv.projects %}
+    <h2>{{ labels.projects }}</h2>
+    {% for project in cv.projects %}
+    <div class="project">
+      <div class="project-name">{{ project.name }}</div>
+      <dl>
+        {% if project.problem %}<dt>{{ labels.problem }}</dt><dd>{{ project.problem }}</dd>{% endif %}
+        {% if project.stack %}<dt>{{ labels.stack }}</dt><dd>{{ project.stack | join(", ") }}</dd>{% endif %}
+        {% if project.work %}<dt>{{ labels.work }}</dt><dd>{{ project.work }}</dd>{% endif %}
+        {% if project.results %}<dt>{{ labels.results }}</dt><dd>{{ project.results }}</dd>{% endif %}
+      </dl>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% if cv.education %}
+    <h2>{{ labels.education }}</h2>
+    {% for entry in cv.education %}
+    <div class="entry">
+      <div class="entry-head"><span class="entry-title">{{ entry.title }}</span><span class="period">{{ entry.period }}</span></div>
+      <div class="organisation">{{ entry.organisation }}{% if entry.place %} · {{ entry.place }}{% endif %}</div>
+      {% if entry.bullets %}<ul class="bullets">{% for bullet in entry.bullets %}<li>{{ bullet }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </section>
+</main>
+</body>
+</html>

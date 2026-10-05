@@ -1,0 +1,98 @@
+{# The card of one offer (decision C7, Q12), in the triage (context "tri") or the side sheet (context "fiche"). #}
+{% set offer = card.stored.offer %}
+{% set shown = card.shown %}
+{% set piste = "" if shown.track_id is none else shown.track_id %}
+{% set offer_id = card.id %}
+{% set chosen = card.decision.decision if card.decision else none %}
+<header class="offer-head">
+  <div class="offer-heading">
+    <h2 class="offer-title">{{ offer.title }}</h2>
+    <p class="muted">{{ offer.company or "Entreprise non précisée" }}{% if offer.location %} · {{ offer.location }}{% endif %}{% if offer.country and offer.country | lower not in ("france", "fr", "fra") %} ({{ offer.country }}){% endif %}</p>
+  </div>
+  <div class="score-block">
+    <span class="score score-{{ band(shown.display) }}">{{ shown.display }}</span>
+    <span class="confidence confidence-{{ shown.confidence.level }}">{{ confidence_labels[shown.confidence.level] | lower }}</span>
+  </div>
+</header>
+
+<ul class="badges">
+  {% if card.analysis.deadline %}<li class="badge badge-warn">⏰ limite {{ card.analysis.deadline.strftime("%d/%m/%Y") }}</li>{% endif %}
+  {% for name in card.tracks %}<li class="badge badge-accent">{{ name }}</li>{% endfor %}
+  {% if shown.track_name and card.score.tracks | length > 1 %}<li class="badge">score de la piste « {{ shown.track_name }} »</li>{% endif %}
+  <li class="badge">{% if card.stored.origin == "alert" %}Tirée d'une alerte {% endif %}{{ source_label(offer.source) }} · {{ offer.published_on | age }}</li>
+  {% if not offer.description_complete %}<li class="badge badge-muted">annonce incomplète</li>{% endif %}
+  {% if shown.caps %}<li class="badge badge-warn">plafonné à {{ score_cap }}</li>{% elif card.score.threshold_reason %}<li class="badge badge-muted">sous le seuil</li>{% endif %}
+  {% for other_id, source in card.same_posting %}
+  <li class="badge">{% if context == "fiche" %}<a href="/offres/{{ other_id }}/fiche" hx-get="/offres/{{ other_id }}/fiche" hx-target="#fiche" hx-swap="innerHTML">{% else %}<a href="/offres/tri/{{ other_id }}" hx-get="/offres/tri/{{ other_id }}" hx-target="#triage" hx-swap="outerHTML">{% endif %}vue aussi sur {{ source_label(source) }}</a></li>
+  {% endfor %}
+</ul>
+
+<section class="synthesis" aria-label="Synthèse">
+  {% if shown.caps %}
+  <p class="line-bad">⛔ {% for cap in shown.caps %}{{ cap.label }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  {% else %}
+  <p class="muted">⛔ Éliminatoires : aucun repéré</p>
+  {% endif %}
+  {% if card.skills %}
+  <p>{% for line in card.skills %}<span class="{{ 'line-good' if line.proven else 'line-partial' }}" title="{{ 'prouvée par une expérience ou un projet' if line.proven else 'déclarée dans ton profil, sans preuve' }}">{{ "✔" if line.proven else "≈" }} {{ line.match.skill }}</span>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  {% else %}
+  <p class="muted">Compétences : aucune des tiennes n'est nommée dans l'annonce</p>
+  {% endif %}
+  {% if card.gaps %}
+  <ul class="gaps line-bad">{% for gap in card.gaps %}<li>✘ {{ gap }}</li>{% endfor %}</ul>
+  {% endif %}
+</section>
+
+{% set facts = analysis_facts(card.analysis) %}
+<dl class="facts">
+  {% for label, value in facts if label != "Date limite" %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+  {% else %}<div><dt>Faits</dt><dd class="muted">ni contrat, ni salaire, ni télétravail lus dans l'annonce</dd></div>{% endfor %}
+</dl>
+
+<div id="decision-area" class="decision-area">{% include "offres/actions.html" %}</div>
+
+<div id="summary-{{ card.id }}" class="summary-area" aria-live="polite">
+  {% if card.summary %}{% set summary_result = card.summary_result %}{% include "offres/import_summary.html" %}
+  {% else %}
+  <form method="post" action="/offres/{{ card.id }}/resume" hx-post="/offres/{{ card.id }}/resume"
+    hx-target="#summary-{{ card.id }}" hx-swap="innerHTML">
+    <button type="submit" class="btn btn-ghost" data-key="r">Résumer l'annonce <kbd>r</kbd></button>
+    <span class="import-busy hint">Résumé en cours…</span>
+  </form>
+  {% endif %}
+</div>
+
+{% if reading_message %}<p class="alert alert-{{ reading_message[0] }}" role="status">{{ reading_message[1] }}</p>{% endif %}
+{% if not offer.description_complete %}
+{% if card.readable_in_browser %}
+<div id="lecture-{{ card.id }}" class="browser-reading" aria-live="polite">
+  {% with offer_id = card.id %}{% include "offres/browser_reading.html" %}{% endwith %}
+</div>
+{% endif %}
+<details class="paste"{% if paste_error or (reading_message and reading_message[0] != "done") %} open{% endif %}>
+  <summary data-key="c">Coller la description <kbd>c</kbd></summary>
+  <form method="post" action="/offres/{{ card.id }}/description" hx-post="/offres/{{ card.id }}/description"
+    {% if context == "fiche" %}hx-target="#fiche" hx-swap="innerHTML"{% else %}hx-target="#triage" hx-swap="outerHTML"{% endif %}>
+    <input type="hidden" name="contexte" value="{{ context }}">
+    <input type="hidden" name="piste" value="{{ piste }}">
+    <p class="hint">{{ offer.incomplete_reason or "La source ne donne qu'un extrait." }} Copie le texte complet depuis l'annonce d'origine : le score sera recalculé.</p>
+    {% if paste_error %}<p class="alert alert-error" role="alert">{{ paste_error }}</p>{% endif %}
+    <textarea name="texte" rows="8" required aria-label="Texte de l'annonce"></textarea>
+    <div class="form-actions"><button type="submit" class="btn btn-primary">Enregistrer la description</button></div>
+  </form>
+</details>
+{% endif %}
+
+<details class="why">
+  <summary data-key="w" hx-get="/offres/{{ card.id }}/pourquoi?piste={{ piste }}" hx-target="next .why-body"
+    hx-swap="innerHTML" hx-trigger="click once">Pourquoi ce score ? <kbd>w</kbd></summary>
+  <div class="why-body"><p class="muted">Chargement…</p></div>
+</details>
+
+<details class="description">
+  <summary>Description{% if not offer.description_complete %} (incomplète){% endif %}</summary>
+  <div class="description-text">{{ card.analysis.description }}</div>
+</details>
+
+<p><a href="{{ offer.url }}" target="_blank" rel="noopener noreferrer" hx-boost="false" data-key="o">
+  Voir l'annonce d'origine ↗ <kbd>o</kbd></a></p>

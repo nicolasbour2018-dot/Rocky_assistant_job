@@ -15,7 +15,8 @@ def normalize_text(value: object) -> str:
         return ""
     text = unicodedata.normalize("NFKD", str(value))
     text = "".join(char for char in text if not unicodedata.combining(char))
-    return re.sub(r"\s+", " ", text.lower()).strip()
+    text = re.sub(r"\s+", " ", text.lower()).strip()
+    return text
 
 
 def ensure_list(value: object) -> list[str]:

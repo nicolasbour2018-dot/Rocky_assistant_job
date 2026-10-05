@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="{{ sheet.language }}">
+<head>
+<meta charset="utf-8">
+<title>{{ sheet.subject }}</title>
+<style>
+{{ font_faces }}
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: "Poppins", sans-serif; font-size: 9.6pt; line-height: 1.42; color: #22262e; }
+.page { width: 210mm; height: 297mm; padding: 16mm 20mm 14mm; overflow: hidden; display: flex; flex-direction: column; }
+.parties { display: flex; justify-content: space-between; gap: 10mm; margin: 0 0 6mm; }
+.sender .name { font-family: "Glacial Indifference", sans-serif; font-weight: 700; font-size: 15pt; letter-spacing: 0.03em; color: #2d6e8e; }
+.recipient { width: 70mm; padding-top: 9mm; }
+.lines { margin: 0; padding: 0; list-style: none; }
+.place-date { align-self: flex-end; width: 70mm; margin: 0 0 5mm; }
+.subject { font-weight: 700; margin: 0 0 5mm; }
+.body { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.body p { margin: 0 0 2.6mm; text-align: justify; hyphens: manual; }
+.signature { margin-top: 5mm; }
+</style>
+</head>
+<body>
+<main class="page" data-box="page">
+  <div class="parties">
+    <ul class="lines sender">
+      {% for line in sheet.sender %}<li{% if loop.first %} class="name"{% endif %}>{{ line }}</li>{% endfor %}
+    </ul>
+    <ul class="lines recipient">{% for line in sheet.recipient %}<li>{{ line }}</li>{% endfor %}</ul>
+  </div>
+  <p class="place-date">{{ sheet.place_date }}</p>
+  <p class="subject">{{ subject_label }} {{ sheet.subject }}</p>
+  <div class="body" data-box="lettre">
+    <p>{{ sheet.salutation }}</p>
+    {% for paragraph in sheet.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+    <p>{{ sheet.closing }}</p>
+    <p class="signature">{{ sheet.signature }}</p>
+  </div>
+</main>
+</body>
+</html>

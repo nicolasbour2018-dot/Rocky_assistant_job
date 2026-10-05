@@ -1,98 +1,63 @@
 # Rocky
 
-Rocky est un assistant local et explicable de recherche d'emploi. Il collecte
-des offres publiques, calcule un matching déterministe, prépare des documents
-bilingues et trie les réponses Gmail en lecture seule. Il ne soumet jamais une
-candidature et ne clique jamais sur « Postuler ».
+Rocky est un assistant personnel de recherche d'emploi : il collecte des offres, les classe avec un score
+déterministe et explicable, prépare les candidatures et suit les réponses Gmail en lecture seule. Il ne postule
+jamais à la place de l'utilisateur.
 
-## Pré-requis
+> **Refonte en cours** sur la branche `refonte`, selon [`docs/rocky-refonte-plan-v2.md`](docs/rocky-refonte-plan-v2.md).
+> L'ancien Rocky (Streamlit) reste l'outil quotidien jusqu'à la bascule : il est lancé depuis le worktree
+> `../Rocky_v1` (tag `rocky-v1-streamlit`), jamais depuis ce dépôt. Les règles des agents sont dans
+> [`AGENTS.md`](AGENTS.md).
 
-- macOS, Python 3.11 ou plus récent et PostgreSQL local ;
-- un environnement virtuel dans `.venv` ;
-- Chromium Playwright installé (`.venv/bin/python -m playwright install chromium`) ;
-- LibreOffice installé pour convertir les lettres DOCX en PDF.
+## Prérequis
 
-Le dépôt est prévu pour une exécution native macOS. `compose.yaml` reste un
-prototype local non suivi dans les commits fonctionnels ; aucun déploiement
-Hugging Face n'est prévu par cette version.
+- Docker (Docker Desktop sur macOS) ;
+- [uv](https://docs.astral.sh/uv/) (`brew install uv`) pour l'environnement local et l'éditeur.
 
-## Installation et configuration
+Le dépôt vit dans `~/Developer/`, **hors iCloud**.
 
-```bash
-python3.11 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m playwright install chromium
-cp .env.example .env
-```
-
-`dashboard/rocky/config.py` est l'unique lecteur de `.env`. Renseigne dans
-`.env` les identifiants PostgreSQL, les clés API utilisées et, si nécessaire,
-les réglages SMTP. Les adresses Gmail réelles vont uniquement dans
-`GMAIL_ACCOUNTS`, jamais dans le dépôt ; les jetons sont dans
-`data/users/<user_id>/gmail/accounts/`.
-
-La base PostgreSQL configurée est la source de données courante. Une base vide
-est créée avec `database/schema.sql` ou `database/schema_sqlite.sql`. Une base
-existante est seulement validée : si son schéma est incompatible, Rocky échoue
-avec une erreur explicite. Il n'y a pas de migration automatique ni de reprise
-silencieuse d'un ancien format.
-
-## Lancer Rocky
+## Installation
 
 ```bash
-.venv/bin/python -m streamlit run dashboard/dashboard_v2.py
+uv sync                  # .venv avec Python 3.13 géré par uv et les versions de uv.lock
+cp .env.example .env     # puis renseigner les mots de passe PostgreSQL et le SMTP
 ```
 
-Crée un compte, active-le via le lien SMTP, puis importe un CV PDF et une lettre
-DOCX dans Profil & CV. Les versions françaises et anglaises sont séparées ;
-Rocky ne traduit que les champs courts validés et ne fabrique aucune expérience.
+## Commandes
 
-## Documents et candidature
+| Besoin | Commande |
+|---|---|
+| Vérification globale (format, lint, types, tests) | `docker compose run --rm --build check` |
+| Tests seuls, depuis le poste | `docker compose up -d test-db` puis `uv run pytest` |
+| Lancer l'application (migrations comprises) | `docker compose up -d --build --wait app` → <http://127.0.0.1:8000/health> |
+| Appliquer les migrations (base de développement) | `docker compose run --rm --build migrate` |
+| Inviter une personne (création de compte) | `docker compose run --rm app rocky-admin invite <email>` |
+| Lancer une veille tout de suite (offres enregistrées) | `docker compose run --rm app rocky-admin veille <email> [--piste <nom>]` |
+| Arrêter | `docker compose down` (les données restent dans le volume `rocky-db-data`) |
 
-Le CV français peut être ciblé avec les compétences et projets déjà présents
-dans le profil. PyMuPDF est utilisé exclusivement par `cv_tailoring.py` pour
-réécrire les zones autorisées du modèle ; il n'entre pas dans les scores ATS.
-Les deux PDF générés sont stockés sous `data/users/<user_id>/output/candidatures/`.
+La vérification globale n'a besoin que de Docker ; elle tourne contre une base PostgreSQL de test jetable
+(`test-db`, publiée sur `127.0.0.1:55432`).
 
-Quand les deux PDF sont validés, le bouton **Préremplir avec Playwright** ouvre
-Chromium avec une session privée au compte, renseigne les champs reconnus et
-laisse l'utilisateur relire puis envoyer lui-même le dossier. Aucun bouton de
-soumission n'est ciblé.
+Il n'y a pas d'inscription publique : un compte naît par invitation. La personne invitée reçoit un lien
+d'activation (valable 7 jours), choisit son mot de passe et reste connectée tant qu'elle revient au moins une fois
+par semaine.
 
-## Gmail et veille quotidienne
-
-Gmail demande uniquement le scope `gmail.readonly`. Chaque adresse possède un
-jeton distinct et les décisions automatiques restent limitées aux signaux à
-haute confiance ; les cas ambigus restent dans la file de revue.
-
-Pour une exécution manuelle :
-
-```bash
-.venv/bin/python scripts/run_daily.py --dry-run
-.venv/bin/python scripts/run_daily.py
-```
-
-Le scheduler intégré et l'exemple `cron/rocky.cron.example` déclenchent Gmail
-puis la veille à **12:00 Europe/Paris**. Le cron n'est jamais installé
-automatiquement.
-
-## Vérifications
-
-```bash
-.venv/bin/python -m pytest
-.venv/bin/python -m compileall dashboard scripts
-.venv/bin/python scripts/smoke_dashboard.py
-```
-
-Les tests sont hors ligne : les APIs et le client Mistral sont simulés. Le
-smoke dashboard lit la base locale mais n'envoie aucun message et ne lance
-aucune candidature.
+Tant que l'application tourne, sa veille part chaque jour à 12 h (heure de Paris) pour chaque compte qui a une piste
+active. Si la dernière veille réussie date de plus de 24 h, un bandeau le signale en haut des pages et propose de la
+lancer.
 
 ## Structure
 
-- `dashboard/dashboard_v2.py` : point d'entrée Streamlit ;
-- `dashboard/rocky/` : configuration, repository SQL et services métier ;
-- `database/` : schémas complets pour une base vide ;
-- `assets/` : modèle CV et polices ;
-- `.agents/skills/playwright-cli/` et `.claude/skills/playwright-cli/` :
-  instructions Playwright versionnées avec le projet.
+```
+rocky/
+  system/        socle technique : configuration, base, comptes, événements, web…
+  profil/        profil unique FR/EN, pistes, compétences, CV maître
+  offres/        sources, analyse d'annonce, scoring, veille, décisions
+  candidatures/  dossier, statuts, documents, envoi, suivi
+  messages/      Gmail, classification, alertes emploi
+tests/<module>/  tests du nouveau Rocky (les tests/test_*.py à plat sont ceux de l'ancien)
+docs/            plan de refonte, décisions, procédures
+```
+
+Les autres dossiers à la racine (`dashboard/`, `database/`, `scripts/`…) appartiennent à l'ancien Rocky et seront
+retirés à la bascule (étape F2).

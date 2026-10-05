@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 from pathlib import Path
 
+
 EXPRESSIONS = (
     "smiling",
     "thinking",
@@ -27,7 +28,7 @@ _PNG_DATA: str | None = None
 
 def _png_data_uri() -> str:
     """Charge une seule fois la mascotte locale sous forme de data URI."""
-    global _PNG_DATA  # noqa: PLW0603 - memoisation d'un asset lu une seule fois
+    global _PNG_DATA
     if _PNG_DATA is None:
         encoded = base64.b64encode(_ASSET_PATH.read_bytes()).decode("ascii")
         _PNG_DATA = f"data:image/png;base64,{encoded}"

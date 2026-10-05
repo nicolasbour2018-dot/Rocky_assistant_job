@@ -1,0 +1,20 @@
+{# Box of an offer's sheet (D1), loaded by the sheet of the module offres. #}
+<section class="application-box" aria-label="Candidature">
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if state %}
+  <p>Candidature : <strong>{{ stage_labels[state.stage] }}</strong>
+    {% if state.next_action %}— {{ state.next_action.label }} le {{ state.next_action.due.strftime("%d/%m/%Y") }}{% endif %}</p>
+  <p><a class="btn btn-primary" href="/candidatures/{{ application_id }}">Ouvrir le dossier</a>
+    <a class="btn" href="/candidatures">📝 Voir mes candidatures</a></p>
+  {% elif rejected %}
+  <p class="muted">Offre écartée : change ta décision pour préparer une candidature.</p>
+  {% elif needs_reasons %}
+  <a class="btn btn-primary" href="/candidatures/offre/{{ offer_id }}/preparer"
+    hx-get="/candidatures/offre/{{ offer_id }}/preparer" hx-target="#dossier" hx-swap="innerHTML">Préparer la candidature</a>
+  {% else %}
+  <form method="post" action="/candidatures/offre/{{ offer_id }}/preparer" hx-post="/candidatures/offre/{{ offer_id }}/preparer"
+    hx-target="#dossier" hx-swap="innerHTML">
+    <button type="submit" class="btn btn-primary">Préparer la candidature</button>
+  </form>
+  {% endif %}
+</section>

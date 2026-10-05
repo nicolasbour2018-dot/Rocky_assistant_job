@@ -6,8 +6,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
 from typing import Any, Literal
 
+
 Locale = Literal["fr", "en"]
-DocumentKind = Literal["cv", "letter"]
 
 
 @dataclass(frozen=True)
@@ -40,7 +40,7 @@ class ProfileDocument:
     id: int
     profile_id: int
     locale: Locale
-    kind: DocumentKind
+    kind: str
     source_path: str
     preview_pdf_path: str = ""
     origin: str = "uploaded"
@@ -207,7 +207,7 @@ class ApplicationPackage:
     directory: str
     cv_pdf_path: str
     letter_pdf_path: str
-    application_id: int
+    application_id: int | None = None
     locale: Locale = "fr"
 
 

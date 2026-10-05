@@ -1,0 +1,71 @@
+{# One message of « Messages triés » with its decision and its gestures (decisions E2 Q14, E4 Q6). #}
+{% macro message_row(message, state, extra_class="") %}
+{% set decision = message.decision %}
+<tr class="{{ extra_class }}">
+  <td class="small">{{ message.received_at | paris_time }}</td>
+  <td>{{ message.sender }}{% if state.mailboxes | length > 1 %}<br><span class="muted small">→ {{ message.mailbox_address }}</span>{% endif %}</td>
+  <td>{{ message.subject or "(sans objet)" }}</td>
+  <td>
+    {% if decision is none %}
+    <span class="badge badge-muted">En attente</span>
+    {% else %}
+    {% if decision.category %}<span class="badge {{ 'badge-accent' if decision.category in employer_categories else 'badge-muted' }}">{{ category_labels[decision.category] }}</span>{% endif %}
+    {% if decision.level == Level.LOW %}<span class="badge badge-warn">À vérifier</span>{% endif %}
+    {% if decision.author == Author.USER %}<span class="badge">par toi</span>{% endif %}
+    {% if decision.application_id %}
+    <br><a class="small" href="/candidatures/{{ decision.application_id }}">{{ state.applications.get(decision.application_id, 'Candidature') }}</a>
+    {% endif %}
+    {% if decision.category == "job_alert" %}
+    {# E3 (Q5): what the alert gave, and the reason of every posting not read. #}
+    {% set alert = state.alerts.get(message.id) %}
+    <div class="small alert-offers">
+      {% if alert is none %}
+      <span class="muted">Offres pas encore tirées de cette alerte : au plus {{ alerts_per_day }} alertes par jour, les plus récentes d'abord.</span>
+      {% elif alert.status == ReadingStatus.READ %}
+      <details class="note">
+        <summary>{{ alert.offers | length }} offre{{ 's' if alert.offers | length > 1 }} ({{ alert.created }} nouvelle{{ 's' if alert.created > 1 }})
+          · {{ alert.read }} fiche{{ 's' if alert.read > 1 }} lue{{ 's' if alert.read > 1 }}
+          · {{ alert.unread }} non lue{{ 's' if alert.unread > 1 }}</summary>
+        <ul>
+          {% for offer in alert.offers %}
+          <li><a href="/offres/{{ offer.offer_id }}/fiche">{{ offer.title }}</a>{% if offer.company %} · {{ offer.company }}{% endif %}
+            {% if offer.created %}<span class="badge">nouvelle</span>{% endif %}
+            <br><span class="muted">{{ link_outcome_labels[offer.outcome] }}{% if offer.reason %} : {{ offer.reason }}{% endif %}</span></li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% else %}
+      <span class="badge badge-warn">{{ reading_labels[alert.status] }}</span> <span class="muted">{{ alert.reason }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+    <details class="note small">
+      <summary>Pourquoi ?</summary>
+      <p>{{ level_labels[decision.level] }} · {{ 'Modèle de langage' if decision.author == Author.AI else ('Toi' if decision.author == Author.USER else 'Règles') }}
+        · version {{ decision.version }}</p>
+      <ul>
+        {% for proof in decision.proofs %}
+        <li><strong>{{ tier_labels[proof.tier] }}</strong> : {{ proof.reason }}<br><q>{{ proof.excerpt }}</q></li>
+        {% endfor %}
+      </ul>
+      <p class="muted">Recherche : {% for query in message.found_by %}{{ query_labels[query] }}{{ ', ' if not loop.last }}{% endfor %}</p>
+    </details>
+    {% endif %}
+    <div class="btn-row">
+      {% if decision is not none and decision.category and decision.author != Author.USER %}
+      <form method="post" action="/messages/{{ message.id }}/juste" class="inline-form" hx-post="/messages/{{ message.id }}/juste" hx-target="#messages-contenu" hx-swap="outerHTML">
+        <button type="submit" class="btn btn-ghost btn-mini" title="Rocky a bien classé ce message">Juste</button></form>
+      {% endif %}
+      <a class="btn btn-ghost btn-mini" href="/messages/{{ message.id }}/corriger"
+        hx-get="/messages/{{ message.id }}/corriger" hx-target="#panneau-{{ message.id }}" hx-swap="innerHTML">Corriger</a>
+      {% if decision is not none and not decision.application_id and decision.proofs | selectattr("rule", "equalto", "employer.cited") | list %}
+      {# E4 (Q4, Q13): a platform names an employer Rocky knows no application with: one click creates it. #}
+      <form method="post" action="/messages/{{ message.id }}/creer-en-un-clic" class="inline-form"
+        hx-post="/messages/{{ message.id }}/creer-en-un-clic" hx-target="#messages-contenu" hx-swap="outerHTML">
+        <button type="submit" class="btn btn-mini" title="Rocky crée l'offre et le dossier « Envoyée » avec l'employeur et l'intitulé lus dans ce message">Créer la candidature</button></form>
+      {% endif %}
+    </div>
+    <div id="panneau-{{ message.id }}"></div>
+  </td>
+</tr>
+{% endmacro %}

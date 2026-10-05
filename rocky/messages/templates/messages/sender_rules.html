@@ -1,0 +1,19 @@
+{# The account's rules « adresse exacte → catégorie » (decision E4, Q7), born of corrections, visible and removable. #}
+{% if state.rules %}
+<section class="profile-section" aria-labelledby="regles-de-tri">
+  <details class="note">
+    <summary id="regles-de-tri">Tes règles de tri ({{ state.rules | length }})</summary>
+    <ul class="note-list">
+      {% for rule in state.rules %}
+      <li>{{ rule.sender_address }} → <strong>{{ category_labels[rule.category] }}</strong>
+        <span class="muted small">depuis le {{ rule.created_at | paris_time }}</span>
+        <form method="post" action="/messages/regles/{{ rule.id }}/retirer" class="inline-form"
+          hx-post="/messages/regles/{{ rule.id }}/retirer" hx-target="#messages-contenu" hx-swap="outerHTML">
+          <button type="submit" class="btn btn-ghost btn-mini">Retirer</button></form></li>
+      {% endfor %}
+    </ul>
+    <p class="muted small">Une règle s'applique aux messages déjà reçus de cette adresse et aux suivants ; tes propres
+      corrections restent.</p>
+  </details>
+</section>
+{% endif %}

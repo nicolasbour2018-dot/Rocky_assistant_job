@@ -1,0 +1,38 @@
+{# « Ce qui a bougé » (decision E4, Q5): every transition a message gave, applied or proposed, stays here until a
+   gesture. Nothing leaves it by itself (exit criterion). #}
+{% if state.moved %}
+<section class="profile-section messages-moved" aria-labelledby="ce-qui-a-bouge">
+  <div class="section-head">
+    <h2 id="ce-qui-a-bouge">Ce qui a bougé <span class="badge badge-accent">{{ state.moved | length }}</span></h2>
+  </div>
+  <ul class="moved-list">
+    {% for line in state.moved %}
+    {% set transition = line.transition %}
+    {% set base = "/messages/mouvements/" ~ transition.id %}
+    <li class="moved-item">
+      <p><strong><a href="/candidatures/{{ transition.application_id }}">{{ state.applications.get(transition.application_id, 'Candidature') }}</a></strong>
+        : {{ stage_labels[transition.from_stage] }} → {{ stage_labels[transition.to_stage] }}
+        {% if transition.outcome == Outcome.APPLIED %}<span class="badge badge-muted">{{ 'par l’IA' if line.author == Author.AI else 'par une règle' }}</span>
+        {% else %}<span class="badge badge-warn">proposé</span>{% endif %}</p>
+      <p class="muted small">{{ line.received_at | paris_time }} · {{ line.sender }} · {{ line.subject or "(sans objet)" }}{% if line.category %} · {{ category_labels[line.category] }}{% endif %}</p>
+      <div class="btn-row">
+        {% if transition.outcome == Outcome.APPLIED %}
+        <form method="post" action="{{ base }}/vu" class="inline-form" hx-post="{{ base }}/vu" hx-target="#messages-contenu" hx-swap="outerHTML">
+          <button type="submit" class="btn btn-mini">Vu</button></form>
+        <form method="post" action="{{ base }}/annuler" class="inline-form" hx-post="{{ base }}/annuler" hx-target="#messages-contenu" hx-swap="outerHTML">
+          <button type="submit" class="btn btn-ghost btn-mini" title="Remettre la candidature à « {{ stage_labels[transition.from_stage] }} »">Annuler</button></form>
+        {% else %}
+        <form method="post" action="{{ base }}/appliquer" class="inline-form" hx-post="{{ base }}/appliquer" hx-target="#messages-contenu" hx-swap="outerHTML">
+          <button type="submit" class="btn btn-mini">Appliquer</button></form>
+        <form method="post" action="{{ base }}/ignorer" class="inline-form" hx-post="{{ base }}/ignorer" hx-target="#messages-contenu" hx-swap="outerHTML">
+          <button type="submit" class="btn btn-ghost btn-mini">Ignorer</button></form>
+        {% endif %}
+        <a class="btn btn-ghost btn-mini" href="/messages/{{ transition.message_id }}/corriger"
+          hx-get="/messages/{{ transition.message_id }}/corriger" hx-target="#panneau-mouvement-{{ transition.id }}" hx-swap="innerHTML">Corriger le message</a>
+      </div>
+      <div id="panneau-mouvement-{{ transition.id }}"></div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

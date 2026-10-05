@@ -1,0 +1,33 @@
+{% import "profil/macros.html" as m %}
+{% set key = "langues" %}
+{% macro language_form(action, values, state, language=None) %}
+{{ m.form_open(key, action, "edit-form edit-inline") }}
+  {{ m.error(state) }}
+  <label class="field">Langue
+    <select name="code">{% for code, name in language_names.items() %}<option value="{{ code }}"{% if values.has("code", code) %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+  <label class="field">Niveau
+    <select name="level">{% for code in choices.language_levels %}<option value="{{ code }}"{% if values.has("level", code) %} selected{% endif %}>{{ language_level_labels[code] }}</option>{% endfor %}</select></label>
+  {{ m.actions(key, state) }}
+</form>
+{% if language %}{{ m.delete(key, "/profil/langues/" ~ language.id ~ "/supprimer", language_names[language.content.code] ~ " sera retirée du profil.") }}{% endif %}
+{% endmacro %}
+
+{% if not profile.languages and state.editing != "nouveau" %}
+<p class="empty-note">Aucune langue pour l'instant.</p>
+{% endif %}
+<ul class="item-list compact">
+  {% for language in profile.languages %}
+  <li class="item">
+    {% if state.editing == language.id|string %}
+    {{ language_form("/profil/langues/" ~ language.id, state.values, state, language) }}
+    {% else %}
+    <div class="item-head">
+      <span><strong>{{ language_names[language.content.code] }}</strong> — {{ language_level_labels[language.content.level] }}</span>
+      {{ m.link(key, "Modifier", "?modifier=" ~ language.id) }}
+    </div>
+    {% endif %}
+  </li>
+  {% endfor %}
+  {% if state.editing == "nouveau" %}<li class="item item-new">{{ language_form("/profil/langues", state.values, state) }}</li>{% endif %}
+</ul>
+{% if state.editing != "nouveau" %}{{ m.link(key, "+ Ajouter une langue", "?modifier=nouveau", "btn") }}{% endif %}

@@ -17,6 +17,7 @@ from typing import Any
 
 from .text_utils import normalize_text
 
+
 CONTRACT_TYPES = ("CDI", "CDD", "VIE")
 WORK_SCHEDULES = ("Temps plein", "Temps partiel")
 

@@ -10,7 +10,6 @@ from __future__ import annotations
 import inspect
 import json
 from html import escape
-from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -51,17 +50,9 @@ def _source_label(item: dict[str, object]) -> str:
     return f"{source} via {collector}" if collector else source
 
 
-def _count(item: dict[str, object], key: str) -> int:
-    """Relit un compteur du bilan JSON de veille, écrit par la veille elle-même."""
-    value = item.get(key)
-    return int(value) if isinstance(value, int | float) else 0
-
-
 def _horizontal_carousel_container():
     """Construit un rail horizontal compatible avec Streamlit 1.51+ ."""
-    # Les paramètres sont assemblés d'après la signature réellement présente :
-    # leur type ne peut pas être connu avant l'appel à `inspect`.
-    options: dict[str, Any] = {"horizontal": True, "gap": "small"}
+    options: dict[str, object] = {"horizontal": True, "gap": "small"}
     if "wrap" in inspect.signature(st.container).parameters:
         options["wrap"] = False
     return st.container(**options)
@@ -102,12 +93,7 @@ def _render_note_carousel(notes: pd.DataFrame, repository) -> None:
     carousel = _horizontal_carousel_container()
     for _, note in notes.iterrows():
         with carousel.container(width=280, height=220):
-            updated_at = note.get("updated_at")
-            date_label = (
-                pd.NaT
-                if updated_at is None
-                else pd.to_datetime(updated_at, errors="coerce")
-            )
+            date_label = pd.to_datetime(note.get("updated_at"), errors="coerce")
             date_text = (
                 date_label.strftime("%d/%m/%Y %H:%M")
                 if pd.notna(date_label)
@@ -152,9 +138,7 @@ metrics[2].metric("À enrichir", counts["incomplete"])
 metrics[3].metric("Profil actif", profile.profile_name if profile else "Aucun")
 
 st.subheader("Notes de projet")
-st.caption(
-    "Un espace rapide pour garder les prochaines actions, idées et rappels de Rocky."
-)
+st.caption("Un espace rapide pour garder les prochaines actions, idées et rappels de Rocky.")
 with st.form("monitoring_note_form", clear_on_submit=True):
     note_content = st.text_area(
         "Nouvelle note",
@@ -191,7 +175,7 @@ st.dataframe(
     width="stretch",
 )
 st.caption(
-    f"Modèle Mistral : {settings.mistral_model} · "
+    f"Modèle Groq : {settings.groq_model} · "
     f"Seuil par défaut : {settings.match_threshold} %"
 )
 
@@ -210,7 +194,9 @@ if profile:
         GmailService(settings, repository, profile, account_email)
         for account_email in settings.gmail_accounts
     ]
-    oauth_client_type = gmail_services[0].oauth_client_type if gmail_services else None
+    oauth_client_type = (
+        gmail_services[0].oauth_client_type if gmail_services else None
+    )
     if oauth_client_type == "web":
         st.warning(
             "Le JSON présent est un client OAuth Web. Télécharge un client "
@@ -224,21 +210,17 @@ if profile:
         type=["json"],
         help="Le fichier reste uniquement dans ce dossier local ignoré par Git.",
     )
-    if (
-        st.button(
-            "Installer les identifiants Gmail",
-            disabled=uploaded_credentials is None,
-        )
-        and uploaded_credentials is not None
+    if st.button(
+        "Installer les identifiants Gmail",
+        disabled=uploaded_credentials is None,
     ):
         try:
-            content = uploaded_credentials.getvalue()
-            payload = json.loads(content.decode("utf-8"))
+            payload = json.loads(uploaded_credentials.getvalue().decode("utf-8"))
             if not isinstance(payload, dict) or "installed" not in payload:
                 raise ValueError(
                     "Choisis le JSON d'un client OAuth de type Desktop app."
                 )
-            settings.gmail_credentials_path.write_bytes(content)
+            settings.gmail_credentials_path.write_bytes(uploaded_credentials.getvalue())
             st.success("Identifiants Gmail enregistrés localement.")
             st.rerun()
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
@@ -260,14 +242,15 @@ if profile:
             disabled=not gmail.is_configured,
             help=(
                 "Place d'abord credentials.json dans .secrets/gmail/."
-                if not gmail.is_configured
-                else None
+                if not gmail.is_configured else None
             ),
             use_container_width=True,
         ):
             try:
                 st.session_state[authorization_url_key] = (
-                    gmail.begin_browser_authorization(settings.gmail_oauth_redirect_uri)
+                    gmail.begin_browser_authorization(
+                        settings.gmail_oauth_redirect_uri
+                    )
                 )
                 st.rerun()
             except Exception as error:
@@ -280,7 +263,9 @@ if profile:
             use_container_width=True,
         ):
             try:
-                with st.spinner(f"Lecture et classement de {gmail.account_email}…"):
+                with st.spinner(
+                    f"Lecture et classement de {gmail.account_email}…"
+                ):
                     summary = gmail.sync_gmail()
                 # Le total du scan peut inclure des messages que les règles
                 # viennent de classer. La file PENDING/REVIEW est la seule
@@ -389,12 +374,7 @@ else:
             )
             for error in errors
         }
-        started_at = run.get("started_at")
-        started = (
-            pd.NaT
-            if started_at is None
-            else pd.to_datetime(started_at, errors="coerce")
-        )
+        started = pd.to_datetime(run.get("started_at"), errors="coerce")
         started_label = (
             started.strftime("%d/%m/%Y %H:%M")
             if not pd.isna(started)
@@ -426,11 +406,11 @@ else:
                         st.info("Aucune source n’a terminé avec succès.")
                     for item in successful:
                         source = _source_label(item)
-                        count = _count(item, "fetched_count")
-                        inserted = _count(item, "inserted_count")
-                        duplicates = _count(item, "duplicate_count")
-                        rejected = _count(item, "rejected_count")
-                        incomplete = _count(item, "incomplete_count")
+                        count = int(item.get("fetched_count") or 0)
+                        inserted = int(item.get("inserted_count") or 0)
+                        duplicates = int(item.get("duplicate_count") or 0)
+                        rejected = int(item.get("rejected_count") or 0)
+                        incomplete = int(item.get("incomplete_count") or 0)
                         st.success(
                             f"{source} · OK · {count} détectée(s) · "
                             f"{inserted} nouvelle(s) · {duplicates} doublon(s) · "

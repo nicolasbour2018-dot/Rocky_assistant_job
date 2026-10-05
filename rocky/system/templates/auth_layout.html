@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Rocky{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/rocky.css">
+</head>
+<body class="auth">
+  <main class="auth-card">
+    <p class="brand">Rocky <span aria-hidden="true">🐾</span></p>
+    {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+    {% if info %}<p class="alert alert-info" role="status">{{ info }}</p>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

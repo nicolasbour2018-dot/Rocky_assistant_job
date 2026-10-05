@@ -15,6 +15,7 @@ from .models import CandidateProfile
 from .repository import RockyRepository
 from .text_utils import project_relative
 
+
 DEFAULT_SKILLS = [
     ("Python", "technical", True),
     ("SQL", "technical", True),

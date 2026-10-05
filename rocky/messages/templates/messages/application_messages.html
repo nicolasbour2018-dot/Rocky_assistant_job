@@ -1,0 +1,17 @@
+{# The messages of an application in its dossier (decision E4, Q8), loaded from the module ``candidatures`` by URL. #}
+<div class="follow-card" id="messages-candidature">
+  <h3 class="group-title">Messages</h3>
+  {% if messages %}
+  <ul class="note-list">
+    {% for message in messages %}
+    {% set decision = message.decision %}
+    <li><span class="muted small">{{ message.received_at | paris_time }}</span>
+      {% if decision and decision.category %}<span class="badge {{ 'badge-accent' if decision.category in employer_categories else 'badge-muted' }}">{{ category_labels[decision.category] }}</span>{% endif %}
+      <p>{{ message.subject or "(sans objet)" }} <span class="muted small">· {{ message.sender }}</span></p></li>
+    {% endfor %}
+  </ul>
+  <p class="small"><a href="/messages?vue=tous">Voir dans 📬 Messages</a></p>
+  {% else %}
+  <p class="muted small">Aucun message rattaché à cette candidature.</p>
+  {% endif %}
+</div>

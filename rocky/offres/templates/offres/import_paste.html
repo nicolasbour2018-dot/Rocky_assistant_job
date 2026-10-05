@@ -1,0 +1,19 @@
+<form method="post" action="/offres/importer/texte" class="edit-form paste-form"
+      hx-post="/offres/importer/texte" hx-target="#import-result" hx-swap="innerHTML">
+  <h3>Coller la description</h3>
+  <p class="hint">Ouvre l'annonce, copie son texte et colle-le ici : Rocky s'en servira comme description complète.</p>
+  {% if paste.error %}<p class="alert alert-error" role="alert">{{ paste.error }}</p>{% endif %}
+  <input type="hidden" name="lien" value="{{ paste.link }}">
+  <div class="form-grid">
+    <label class="field">Intitulé
+      <input name="intitule" type="text" value="{{ paste.title }}">
+    </label>
+    <label class="field">Employeur <span class="hint">facultatif</span>
+      <input name="employeur" type="text" value="{{ paste.company }}">
+    </label>
+  </div>
+  <label class="field">Texte de l'annonce
+    <textarea name="texte" rows="10">{{ paste.text }}</textarea>
+  </label>
+  <div class="form-actions"><button type="submit" class="btn btn-primary">Utiliser ce texte</button></div>
+</form>

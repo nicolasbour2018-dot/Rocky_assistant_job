@@ -1,0 +1,724 @@
+"""Profile use cases, on the ``ProfileStore`` port.
+
+Each use case runs inside one transaction opened by the caller. Input that cannot be accepted raises
+``ProfileInputError`` with a message for the user; an item of another profile is answered as missing (False).
+The events journal only receives what explains a change of score or of watch (decision B5, Q5).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, replace
+from datetime import datetime
+
+from rocky.profil.cv.layout import (
+    check_layout,
+    remove_skill,
+    rename_group,
+    update_hobby,
+)
+from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
+from rocky.profil.letter import letter_sha256
+from rocky.profil.model import (
+    CvLayout,
+    CvTemplateRecord,
+    ExperienceDraft,
+    GenericLetter,
+    GlossaryTerm,
+    Identity,
+    ImportedCv,
+    ImportedProfile,
+    LanguageDraft,
+    LetterOrigin,
+    Preferences,
+    Profile,
+    ProfileStore,
+    ProjectDraft,
+    Remembered,
+    SkillCategory,
+    SkillDraft,
+    SkillGroup,
+    StoredLetter,
+    StoredPhoto,
+    Text,
+    TrackDraft,
+    TrackInUseError,
+    TrackStatus,
+)
+from rocky.profil.rules import (
+    ProfileInputError,
+    has_content,
+    is_ready,
+    make_skill,
+    needs_onboarding,
+    normalize_term,
+    skill_terms,
+)
+from rocky.profil.translation import segments_of
+from rocky.system.events import Actor, JsonValue, NewEvent
+
+type Clock = Callable[[], datetime]
+
+TRACK_IN_USE = "Des offres sont rattachées à cette piste : archive-la plutôt."
+TEMPLATE_IN_SERVICE = "Ce gabarit est celui de ton CV : utilise d'abord un autre gabarit pour le supprimer."
+
+
+@dataclass(frozen=True)
+class SkillsAdded:
+    added: tuple[str, ...]
+    already_there: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ProfileImported:
+    profile_id: int
+    counts: Mapping[str, int]
+
+
+@dataclass(frozen=True)
+class AlreadyFilled:
+    """The profile already has content: an import never merges into it."""
+
+    profile_id: int
+
+
+class ProfileEditor:
+    """The profile of one account; created on first use (one account, one profile)."""
+
+    def __init__(
+        self, store: ProfileStore, *, clock: Clock, account_id: int, email: str
+    ) -> None:
+        self._store = store
+        self._clock = clock
+        self._account_id = account_id
+        self._email = email
+        self._profile_id: int | None = None
+
+    # Reading
+
+    def profile(self) -> Profile:
+        return self._store.load(self._id())
+
+    def needs_onboarding(self) -> bool:
+        """Read only: a missing profile is not created to answer."""
+        return needs_onboarding(self._store.onboarding_state(self._account_id))
+
+    # Identity, preferences, onboarding
+
+    def save_identity(self, identity: Identity) -> None:
+        self._store.save_identity(self._id(), identity, self._clock())
+
+    def save_preferences(self, preferences: Preferences) -> None:
+        profile = self.profile()
+        if preferences == profile.preferences:
+            return
+        self._store.save_preferences(profile.id, preferences, self._clock())
+        self._event(
+            "profil.preferences_updated",
+            "profile",
+            profile.id,
+            {
+                "contracts": [c.value for c in preferences.contracts],
+                "remote_modes": [m.value for m in preferences.remote_modes],
+                "min_salary_eur": preferences.min_salary_eur,
+                "min_daily_rate_eur": preferences.min_daily_rate_eur,
+            },
+        )
+
+    def save_photo(self, photo: StoredPhoto | None) -> None:
+        """The file is already stored (``system.files``); the profile only points to it."""
+        profile = self.profile()
+        if photo != profile.photo:
+            self._store.save_photo(profile.id, photo, self._clock())
+
+    # Master CV (decision D2, Q9, Q10): no event, it moves no score.
+
+    def save_cv_layout(self, layout: CvLayout, slots: Slots = NEUTRAL_SLOTS) -> None:
+        """``slots``: those of the active template (the neutral one until a template is derived, Q16)."""
+        profile = self.profile()
+        check_layout(profile, layout, slots)
+        if layout != profile.cv:
+            self._store.save_cv_layout(profile.id, layout)
+
+    # CV templates (decision D2, Q16, Q24): one active at most; none means the neutral template.
+
+    def record_cv_template(
+        self,
+        path: str,
+        sha256: str,
+        name: str,
+        language: str,
+        source_sha256: str | None = None,
+    ) -> int:
+        """``source_sha256``: the French template an English one was translated from (decision D3, Q18)."""
+        profile_id = self._id()
+        template_id, new = self._store.add_cv_template(
+            profile_id, path, sha256, name, language, self._clock(), source_sha256
+        )
+        if new:
+            self._event(
+                "profil.cv_template_derived",
+                "cv_template",
+                template_id,
+                {
+                    "sha256": sha256,
+                    "name": name,
+                    "language": language,
+                    "source_sha256": source_sha256,
+                },
+            )
+        return template_id
+
+    def cv_templates(self) -> tuple[CvTemplateRecord, ...]:
+        return self._store.cv_templates(self._id())
+
+    def active_cv_template(self, language: str) -> CvTemplateRecord | None:
+        return next(
+            (t for t in self.cv_templates() if t.active and t.language == language),
+            None,
+        )
+
+    def activate_cv_template(self, template_id: int | None, language: str) -> bool:
+        """``None`` goes back to the neutral template for ``language``."""
+        current = self.active_cv_template(language)
+        if (current.id if current else None) == template_id:
+            return True
+        profile_id = self._id()
+        if not self._store.activate_cv_template(profile_id, language, template_id):
+            return False
+        self._event(
+            "profil.cv_template_activated",
+            "profile",
+            profile_id,
+            {"template_id": template_id, "language": language},
+        )
+        return True
+
+    def delete_cv_template(self, template_id: int) -> bool:
+        """Remove a template no longer used (decision D6, Q8): its row goes, its immutable bundle stays in the files
+        root; the template in service is refused. False when it is not of this profile."""
+        record = next((t for t in self.cv_templates() if t.id == template_id), None)
+        if record is None:
+            return False
+        if record.active:
+            raise ProfileInputError(TEMPLATE_IN_SERVICE)
+        if not self._store.delete_cv_template(self._id(), template_id):
+            return False
+        self._event(
+            "profil.cv_template_deleted",
+            "cv_template",
+            template_id,
+            {
+                "sha256": record.sha256,
+                "name": record.name,
+                "language": record.language,
+            },
+        )
+        return True
+
+    def defer_onboarding(self) -> None:
+        profile = self.profile()
+        if profile.onboarding.deferred_at is None:
+            self._store.mark_onboarding_deferred(profile.id, self._clock())
+
+    # Tracks
+
+    def add_track(self, track: TrackDraft) -> int:
+        profile = self.profile()
+        self._check_track_name(profile, track.name, except_track=None)
+        track_id = self._store.add_track(profile.id, track, self._clock())
+        self._event("profil.track_created", "search_track", track_id, _track(track))
+        self._complete_onboarding_if_ready()
+        return track_id
+
+    def update_track(self, track_id: int, track: TrackDraft) -> bool:
+        profile = self.profile()
+        current = profile.track(track_id)
+        if current is None:
+            return False
+        self._check_track_name(profile, track.name, except_track=track_id)
+        if track == current.content:
+            return True
+        self._store.update_track(profile.id, track_id, track, self._clock())
+        self._event("profil.track_updated", "search_track", track_id, _track(track))
+        self._complete_onboarding_if_ready()
+        return True
+
+    def pause_track(self, track_id: int) -> bool:
+        return self._set_track_status(
+            track_id, TrackStatus.PAUSED, "profil.track_paused"
+        )
+
+    def resume_track(self, track_id: int) -> bool:
+        """Back to active, from paused or archived."""
+        return self._set_track_status(
+            track_id, TrackStatus.ACTIVE, "profil.track_resumed"
+        )
+
+    def archive_track(self, track_id: int) -> bool:
+        return self._set_track_status(
+            track_id, TrackStatus.ARCHIVED, "profil.track_archived"
+        )
+
+    def delete_track(self, track_id: int) -> bool:
+        """Final removal, refused once an offer is linked to the track (decision B5, Q21): it is archived instead."""
+        profile = self.profile()
+        track = profile.track(track_id)
+        if track is None:
+            return False
+        try:
+            deleted = self._store.delete_track(profile.id, track_id)
+        except TrackInUseError as error:
+            raise ProfileInputError(TRACK_IN_USE) from error
+        if not deleted:
+            return False
+        self._event(
+            "profil.track_deleted", "search_track", track_id, _track(track.content)
+        )
+        return True
+
+    def _set_track_status(
+        self, track_id: int, status: TrackStatus, event_type: str
+    ) -> bool:
+        profile = self.profile()
+        track = profile.track(track_id)
+        if track is None:
+            return False
+        if track.status is status:
+            return True
+        self._store.set_track_status(profile.id, track_id, status, self._clock())
+        self._event(event_type, "search_track", track_id, {"name": track.name})
+        self._complete_onboarding_if_ready()
+        return True
+
+    def _check_track_name(
+        self, profile: Profile, name: str, *, except_track: int | None
+    ) -> None:
+        wanted = normalize_term(name)
+        for track in profile.tracks:
+            if track.id != except_track and normalize_term(track.name) == wanted:
+                raise ProfileInputError(f"Une piste s'appelle déjà « {track.name} ».")
+
+    def _complete_onboarding_if_ready(self) -> None:
+        profile = self.profile()
+        if profile.onboarding.completed_at is None and is_ready(profile.tracks):
+            self._store.mark_onboarding_completed(profile.id, self._clock())
+            self._event("profil.onboarding_completed", "profile", profile.id, {})
+
+    # Skills
+
+    def add_skill(self, skill: SkillDraft) -> int:
+        profile_id = self._id()
+        terms = self._free_terms(profile_id, skill, except_skill=None)
+        skill_id = self._store.add_skill(profile_id, skill, terms)
+        self._event("profil.skill_added", "skill", skill_id, _skill(skill))
+        return skill_id
+
+    def update_skill(self, skill_id: int, skill: SkillDraft) -> bool:
+        profile = self.profile()
+        current = profile.skill(skill_id)
+        if current is None:
+            return False
+        terms = self._free_terms(profile.id, skill, except_skill=skill_id)
+        if skill == current.content:
+            return True
+        if skill.category is not current.content.category:
+            # A skill changing category leaves the CV: its place (group or transversal list) no longer fits.
+            self._store.save_cv_layout(profile.id, remove_skill(profile.cv, skill_id))
+        self._store.update_skill(profile.id, skill_id, skill, terms)
+        self._event("profil.skill_updated", "skill", skill_id, _skill(skill))
+        return True
+
+    def delete_skill(self, skill_id: int) -> bool:
+        profile = self.profile()
+        skill = profile.skill(skill_id)
+        if skill is None or not self._store.delete_skill(profile.id, skill_id):
+            return False
+        self._event("profil.skill_removed", "skill", skill_id, _skill(skill.content))
+        return True
+
+    def add_skills(
+        self, names_by_category: Mapping[SkillCategory, Iterable[str]]
+    ) -> SkillsAdded:
+        """Quick entry of the onboarding: one name per line; a name already known is reported, not added."""
+        added: list[str] = []
+        already_there: list[str] = []
+        for category, names in names_by_category.items():
+            for name in names:
+                skill = make_skill(label_fr=name, category=category.value)
+                try:
+                    self.add_skill(skill)
+                except ProfileInputError:
+                    already_there.append(skill.label.fr)
+                else:
+                    added.append(skill.label.fr)
+        return SkillsAdded(tuple(added), tuple(already_there))
+
+    def _free_terms(
+        self, profile_id: int, skill: SkillDraft, *, except_skill: int | None
+    ) -> frozenset[str]:
+        terms = skill_terms(skill)
+        owners = self._store.term_owners(profile_id, terms, except_skill)
+        if owners:
+            raise ProfileInputError(
+                f"« {skill.label.fr} » est déjà présent sous « {owners[0]} »."
+            )
+        return terms
+
+    # Languages, experiences, projects (no event: they do not move a score yet)
+
+    def add_language(self, language: LanguageDraft) -> int:
+        profile = self.profile()
+        self._check_language(profile, language, except_language=None)
+        return self._store.add_language(profile.id, language)
+
+    def update_language(self, language_id: int, language: LanguageDraft) -> bool:
+        profile = self.profile()
+        if not any(item.id == language_id for item in profile.languages):
+            return False
+        self._check_language(profile, language, except_language=language_id)
+        return self._store.update_language(profile.id, language_id, language)
+
+    def delete_language(self, language_id: int) -> bool:
+        return self._store.delete_language(self._id(), language_id)
+
+    def _check_language(
+        self, profile: Profile, language: LanguageDraft, *, except_language: int | None
+    ) -> None:
+        for item in profile.languages:
+            if item.id != except_language and item.content.code == language.code:
+                raise ProfileInputError("Cette langue figure déjà dans ton profil.")
+
+    def add_experience(self, experience: ExperienceDraft) -> int:
+        profile = self.profile()
+        _check_skills(profile, experience.skill_ids)
+        return self._store.add_experience(profile.id, experience)
+
+    def update_experience(
+        self, experience_id: int, experience: ExperienceDraft
+    ) -> bool:
+        profile = self.profile()
+        _check_skills(profile, experience.skill_ids)
+        return self._store.update_experience(profile.id, experience_id, experience)
+
+    def delete_experience(self, experience_id: int) -> bool:
+        return self._store.delete_experience(self._id(), experience_id)
+
+    def add_project(self, project: ProjectDraft) -> int:
+        profile = self.profile()
+        _check_skills(profile, project.skill_ids)
+        return self._store.add_project(profile.id, project)
+
+    def update_project(self, project_id: int, project: ProjectDraft) -> bool:
+        profile = self.profile()
+        _check_skills(profile, project.skill_ids)
+        return self._store.update_project(profile.id, project_id, project)
+
+    def delete_project(self, project_id: int) -> bool:
+        return self._store.delete_project(self._id(), project_id)
+
+    # Translation (decision D3, Q5, Q6, Q13, Q14, Q19)
+
+    def glossary(self) -> tuple[GlossaryTerm, ...]:
+        return self._store.glossary(self._id())
+
+    def save_glossary_term(self, fr: str, en: str) -> int:
+        """Add a term, or give the one already there a new English; the same text: never translated."""
+        french, english = " ".join(fr.split()), " ".join(en.split())
+        term = normalize_term(french)
+        if not term or not english:
+            raise ProfileInputError(
+                "Un terme du glossaire a besoin de son français et de son anglais."
+            )
+        return self._store.save_glossary_term(
+            self._id(), term, french, english, self._clock()
+        )
+
+    def delete_glossary_term(self, term_id: int) -> bool:
+        return self._store.delete_glossary_term(self._id(), term_id)
+
+    def translation_memory(self) -> dict[str, Remembered]:
+        return self._store.translation_memory(self._id())
+
+    # Generic letter (decision D4, Q6, Q9, Q17): appended at each save, journaled (training data, D14).
+
+    def generic_letter(self, language: str) -> StoredLetter | None:
+        return self._store.generic_letter(self._id(), language)
+
+    def save_generic_letter(
+        self,
+        letter: GenericLetter,
+        origin: LetterOrigin,
+        source_sha256: str | None = None,
+    ) -> bool:
+        """Keep a new version of the letter in its language; False when it is the one in force already."""
+        profile_id = self._id()
+        sha256 = letter_sha256(letter)
+        current = self._store.generic_letter(profile_id, letter.language)
+        if (
+            current is not None
+            and current.sha256 == sha256
+            and current.source_sha256 == source_sha256
+        ):
+            return False
+        stored = self._store.add_generic_letter(
+            profile_id, letter, origin, sha256, source_sha256, self._clock()
+        )
+        self._event(
+            "profil.cover_letter_saved",
+            "profile",
+            profile_id,
+            {
+                "letter_id": stored.id,
+                "language": letter.language,
+                "origin": origin.value,
+                "sha256": sha256,
+                "source_sha256": source_sha256,
+                "paragraphs": [p.role.value for p in letter.paragraphs],
+            },
+        )
+        return True
+
+    def validate_translation(self, source: str, english: str) -> str:
+        """Keep the English the user validated for a text of the imported CV (its English version, Q16, Q19)."""
+        lines = [" ".join(line.split()) for line in english.strip().splitlines()]
+        cleaned = "\n".join(line for line in lines if line)
+        if not cleaned:
+            raise ProfileInputError("La traduction est vide.")
+        self._store.remember_translation(self._id(), source, cleaned, self._clock())
+        return cleaned
+
+    def accept_translation(self, key: str, source_sha256: str, english: str) -> None:
+        """Write the English the user accepted for one text of the profile, keep it in the memory, journal it (the
+        text came from the model, validated by the user). Refused when the French changed since the proposal."""
+        profile = self.profile()
+        segment = next((s for s in segments_of(profile) if s.key == key), None)
+        if segment is None:
+            raise ProfileInputError("Ce texte n'est plus dans ton profil.")
+        if segment.source_sha256 != source_sha256:
+            raise ProfileInputError(
+                "Le texte français a changé depuis la proposition : traduis-le à nouveau."
+            )
+        lines = [" ".join(line.split()) for line in english.strip().splitlines()]
+        english = "\n".join(line for line in lines if line)
+        if not english:
+            raise ProfileInputError("La traduction est vide.")
+        self._write_english(profile, key, english)
+        self._store.remember_translation(
+            profile.id, segment.source, english, self._clock()
+        )
+        self._event(
+            "profil.translation_accepted",
+            "profile",
+            profile.id,
+            {"field": key, "source_sha256": source_sha256},
+        )
+
+    def _write_english(self, profile: Profile, key: str, english: str) -> None:
+        kind, _, rest = key.partition(":")
+        identifier, _, field = rest.partition(":")
+        lines = tuple(english.split("\n"))
+        if kind == "identity":
+            identity = profile.identity
+            if identifier == "title":
+                identity = replace(identity, title=Text(identity.title.fr, english))
+            else:
+                identity = replace(
+                    identity, headline=Text(identity.headline.fr, english)
+                )
+            self.save_identity(identity)
+        elif kind == "group":
+            index = int(identifier)
+            name = Text(profile.cv.groups[index].name.fr, english)
+            self._store.save_cv_layout(
+                profile.id, rename_group(profile.cv, index, name)
+            )
+        elif kind == "hobby":
+            index = int(identifier)
+            label = Text(profile.cv.hobbies[index].label.fr, english)
+            self._store.save_cv_layout(
+                profile.id, update_hobby(profile.cv, index, label)
+            )
+        elif kind == "skill" and (skill := profile.skill(int(identifier))) is not None:
+            label = Text(skill.label.fr, english)
+            self.update_skill(skill.id, replace(skill.content, label=label))
+        elif kind == "project":
+            project = next(p for p in profile.projects if p.id == int(identifier))
+            draft = project.content
+            if field == "stack":
+                draft = replace(draft, stack_en=lines)
+            elif field == "name":
+                draft = replace(draft, name=Text(draft.name.fr, english))
+            elif field == "problem":
+                draft = replace(draft, problem=Text(draft.problem.fr, english))
+            elif field == "work":
+                draft = replace(draft, work=Text(draft.work.fr, english))
+            else:
+                draft = replace(draft, results=Text(draft.results.fr, english))
+            self.update_project(project.id, draft)
+        elif kind == "experience":
+            experience = next(e for e in profile.experiences if e.id == int(identifier))
+            job = experience.content
+            if field == "bullets":
+                job = replace(job, bullets_en=lines)
+            else:
+                job = replace(job, title=Text(job.title.fr, english))
+            self.update_experience(experience.id, job)
+        else:
+            raise ProfileInputError("Ce texte n'est plus dans ton profil.")
+
+    # Import
+
+    def import_profile(
+        self, imported: ImportedProfile
+    ) -> ProfileImported | AlreadyFilled:
+        """Write a whole reviewed profile at once, into an empty profile only (a second run changes nothing).
+
+        Any refusal (a duplicate skill, an unknown linked skill) raises before the caller commits: nothing is
+        written then.
+        """
+        profile = self.profile()
+        if has_content(profile):
+            return AlreadyFilled(profile.id)
+        now = self._clock()
+        identity = imported.identity
+        if identity.contact_email is None:
+            identity = replace(identity, contact_email=self._email)
+        self._store.save_identity(profile.id, identity, now)
+        self._store.save_preferences(profile.id, imported.preferences, now)
+        skill_ids: dict[str, int] = {}
+        for skill in imported.skills:
+            terms = self._free_terms(profile.id, skill, except_skill=None)
+            skill_id = self._store.add_skill(profile.id, skill, terms)
+            skill_ids.update(dict.fromkeys(terms, skill_id))
+        for language in imported.languages:
+            self.add_language(language)
+        for experience in imported.experiences:
+            linked = _resolve(skill_ids, experience.skills)
+            self._store.add_experience(
+                profile.id, replace(experience.content, skill_ids=linked)
+            )
+        project_ids: dict[str, int] = {}
+        for project in imported.projects:
+            linked = _resolve(skill_ids, project.skills)
+            project_ids[normalize_term(project.content.name.fr)] = (
+                self._store.add_project(
+                    profile.id, replace(project.content, skill_ids=linked)
+                )
+            )
+        if imported.cv is not None:
+            layout = _imported_layout(imported.cv, skill_ids, project_ids)
+            check_layout(self.profile(), layout, NEUTRAL_SLOTS)
+            self._store.save_cv_layout(profile.id, layout)
+        for track in imported.tracks:
+            self._check_track_name(self.profile(), track.name, except_track=None)
+            self._store.add_track(profile.id, track, now)
+        counts = {
+            "skills": len(imported.skills),
+            "languages": len(imported.languages),
+            "experiences": len(imported.experiences),
+            "projects": len(imported.projects),
+            "tracks": len(imported.tracks),
+        }
+        self._event(
+            "profil.profile_imported", "profile", profile.id, dict(counts), Actor.SYSTEM
+        )
+        self._complete_onboarding_if_ready()
+        return ProfileImported(profile.id, counts)
+
+    # Helpers
+
+    def _id(self) -> int:
+        if self._profile_id is None:
+            found = self._store.find_profile_id(self._account_id)
+            self._profile_id = (
+                found
+                if found is not None
+                else self._store.create_profile(
+                    self._account_id, self._email, self._clock()
+                )
+            )
+        return self._profile_id
+
+    def _event(
+        self,
+        event_type: str,
+        subject_type: str,
+        subject_id: int,
+        payload: Mapping[str, JsonValue],
+        actor: Actor = Actor.USER,
+    ) -> None:
+        self._store.append_event(
+            NewEvent(
+                type=event_type,
+                actor=actor,
+                subject_type=subject_type,
+                subject_id=str(subject_id),
+                payload=payload,
+                account_id=self._account_id,
+            )
+        )
+
+
+def _check_skills(profile: Profile, skill_ids: Iterable[int]) -> None:
+    known = {skill.id for skill in profile.skills}
+    if any(skill_id not in known for skill_id in skill_ids):
+        raise ProfileInputError(
+            "Une des compétences liées n'existe pas dans ton profil."
+        )
+
+
+def _imported_layout(
+    cv: ImportedCv, skill_ids: Mapping[str, int], project_ids: Mapping[str, int]
+) -> CvLayout:
+    projects = []
+    for name in cv.projects:
+        project_id = project_ids.get(normalize_term(name))
+        if project_id is None:
+            raise ProfileInputError(
+                f"Le projet « {name} » du CV ne figure pas parmi les projets du fichier."
+            )
+        projects.append(project_id)
+    return CvLayout(
+        groups=tuple(
+            SkillGroup(group.name, _resolve(skill_ids, group.skills))
+            for group in cv.groups
+        ),
+        transversal=_resolve(skill_ids, cv.transversal),
+        projects=tuple(projects),
+        hobbies=cv.hobbies,
+    )
+
+
+def _resolve(skill_ids: Mapping[str, int], names: Iterable[str]) -> tuple[int, ...]:
+    """Ids of skills named by a label or an alias in an import file."""
+    resolved = []
+    for name in names:
+        skill_id = skill_ids.get(normalize_term(name))
+        if skill_id is None:
+            raise ProfileInputError(
+                f"La compétence liée « {name} » ne figure pas parmi les compétences du fichier."
+            )
+        resolved.append(skill_id)
+    return tuple(dict.fromkeys(resolved))
+
+
+def _track(track: TrackDraft) -> dict[str, JsonValue]:
+    return {
+        "name": track.name,
+        "titles": list(track.titles),
+        "keywords": list(track.keywords),
+        "excluded_keywords": list(track.excluded_keywords),
+        "locations": list(track.locations),
+    }
+
+
+def _skill(skill: SkillDraft) -> dict[str, JsonValue]:
+    return {
+        "label_fr": skill.label.fr,
+        "label_en": skill.label.en,
+        "aliases": list(skill.aliases),
+        "category": skill.category.value,
+        "level": skill.level.value if skill.level else None,
+        "is_key": skill.is_key,
+    }

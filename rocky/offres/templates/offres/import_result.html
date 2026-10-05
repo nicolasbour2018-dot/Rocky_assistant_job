@@ -1,0 +1,43 @@
+{% if result is defined and result %}
+  {% if result.preview %}
+  {% set offer = result.preview.offer %}
+  <article class="card import-preview">
+    <h2 class="offer-title">{{ offer.title or "Intitulé introuvable" }}</h2>
+    <ul class="badges">
+      <li class="badge">{{ source_label(offer.source) }}</li>
+      <li class="badge">Lue par : {{ method_labels[result.preview.method] }}</li>
+      {% if offer.description_complete %}
+      <li class="badge badge-accent">Description complète</li>
+      {% else %}
+      <li class="badge badge-warn">Description incomplète</li>
+      {% endif %}
+    </ul>
+    {% if not offer.description_complete %}<p class="alert alert-info">{{ offer.incomplete_reason }}</p>{% endif %}
+    {% for warning in result.preview.warnings %}<p class="alert alert-info">{{ warning }}</p>{% endfor %}
+    {% set facts = offer_facts(offer) %}
+    {% if facts %}
+    <dl class="facts">
+      {% for label, value in facts %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}
+    </dl>
+    {% endif %}
+    {% if score is defined and score %}{% include "offres/import_score.html" %}{% endif %}
+    {% if analysis is defined and analysis %}{% include "offres/import_analysis.html" %}{% endif %}
+    {% set description = analysis.description if analysis is defined and analysis else offer.description %}
+    <details class="import-description"{% if description | length < 1500 %} open{% endif %}>
+      <summary>Description ({{ description | length }} caractères)</summary>
+      <div class="description-text">{{ description }}</div>
+    </details>
+    <p><a href="{{ offer.url }}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce d'origine</a></p>
+    <form class="form-actions import-add" method="post" action="/offres/importer/ajouter"
+          hx-post="/offres/importer/ajouter" hx-target="this" hx-swap="outerHTML">
+      <input type="hidden" name="offre" value="{{ offer_json(offer) }}">
+      <button type="submit" class="btn btn-primary">Ajouter à mes offres</button>
+      <span class="hint">Aperçu seulement tant que tu ne l'ajoutes pas : elle rejoindra la piste où son score est le plus haut.</span>
+    </form>
+  </article>
+  {% else %}
+  <p class="alert alert-error" role="alert">{{ result.reason }}</p>
+  {% endif %}
+{% endif %}
+{% if paste is defined and paste %}{% include "offres/import_paste.html" %}{% endif %}
+{% if summary_result is defined and summary_result %}{% include "offres/import_summary.html" %}{% endif %}

@@ -1,0 +1,33 @@
+<form class="reasons" method="post" action="/offres/{{ offer_id }}/decision" hx-post="/offres/{{ offer_id }}/decision"
+  {% if context == "fiche" %}hx-target="#fiche" hx-swap="innerHTML"{% else %}hx-target="#triage" hx-swap="outerHTML"{% endif %}>
+  <input type="hidden" name="decision" value="{{ value }}">
+  <input type="hidden" name="contexte" value="{{ context }}">
+  <input type="hidden" name="piste" value="{{ piste }}">
+  <fieldset>
+    <legend>{{ question }} <span class="muted">plusieurs possibles</span></legend>
+    {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+    <div class="chips">
+      {% for reason in reasons %}
+      {% set key = reason_key(reason.code, loop.index) %}
+      <label class="chip" data-key="{{ key }}">
+        <input type="checkbox" name="motifs" value="{{ reason.code }}"{% if reason.code in checked %} checked{% endif %}>
+        <kbd>{{ key }}</kbd> {{ reason.label }}</label>
+      {% endfor %}
+    </div>
+    <label class="note"><span>Précision <kbd>t</kbd></span>
+      <input type="text" name="precision" value="{{ note or '' }}" data-key="t" autocomplete="off"
+        placeholder="obligatoire pour « autre »"></label>
+  </fieldset>
+  <div class="reasons-actions">
+    <button type="submit" class="btn btn-primary" data-key="Enter">Valider <kbd>Entrée</kbd></button>
+    {% if context == "tri" and value == "interested" %}
+    {# « Intéressé et préparer » (decision D6, Q8): the same reasons go to the application, written with its decision
+       by ``candidatures`` (D1, Q8, Q9); ``offres`` only knows its address. #}
+    <button type="submit" class="btn" data-key="d" formaction="/candidatures/offre/{{ offer_id }}/preparer"
+      hx-post="/candidatures/offre/{{ offer_id }}/preparer" hx-target="#decision-area" hx-swap="innerHTML">Valider et préparer la candidature <kbd>d</kbd></button>
+    {% endif %}
+    <button type="button" class="btn btn-ghost" data-key="Escape"
+      hx-get="/offres/{{ offer_id }}/actions?contexte={{ context }}&amp;piste={{ piste }}" hx-target="#decision-area"
+      hx-swap="innerHTML">Revenir <kbd>Échap</kbd></button>
+  </div>
+</form>

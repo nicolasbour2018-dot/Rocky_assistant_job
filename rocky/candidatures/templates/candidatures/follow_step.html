@@ -1,0 +1,163 @@
+{# Step « Suivi » of an application (decision D6, Q5–Q7): the next action and « Fait », the stage in one gesture, the
+   notes, the chronology read in the journal. Plain forms (never boosted): the page comes back here, its header up to
+   date. ``retour`` is a step of this page, a fixed value (no open redirection). #}
+{% set base = "/candidatures/" ~ dossier.application_id %}
+{% set follow = Step.FOLLOW.value %}
+{% macro back() %}<input type="hidden" name="retour" value="{{ follow }}">{% endmacro %}
+<section id="suivi" class="dossier-step" aria-label="Suivi de la candidature">
+  <h2 class="visually-hidden">Suivi</h2>
+  {% if follow_error %}<p class="alert alert-error" role="alert">{{ follow_error }}</p>{% endif %}
+  {% if done_notice %}
+  <div class="alert alert-done" role="status">
+    <p><strong>✓</strong> {{ done_notice }}</p>
+    <form method="post" action="{{ base }}/annuler" hx-boost="false" class="inline-form">
+      {{ back() }}<button type="submit" class="btn btn-ghost btn-mini">↶ Annuler</button>
+    </form>
+  </div>
+  {% endif %}
+  {% if not dossier.stage %}
+  <p class="alert alert-info">Candidature annulée : rouvre-la depuis <a href="/offres/{{ dossier.offer.id }}/fiche">la fiche de l'offre</a>.</p>
+  {% else %}
+  <div class="follow-grid">
+    <div class="follow-card">
+      <h3 class="group-title">Prochaine action</h3>
+      {% if editing_action %}
+      <form method="post" action="{{ base }}/action" hx-boost="false" class="stack">
+        {{ back() }}
+        <label>Action <input type="text" name="action" value="{{ dossier.next_action.label if dossier.next_action else '' }}"></label>
+        <label>Date <input type="date" name="echeance" value="{{ dossier.next_action.due.isoformat() if dossier.next_action else '' }}"></label>
+        <p class="muted small">Vide les deux champs pour effacer l'action.</p>
+        <p><button type="submit" class="btn btn-primary">Enregistrer</button>
+          <a class="btn btn-ghost" href="{{ base }}?etape={{ follow }}">Fermer</a></p>
+      </form>
+      {% elif dossier.next_action %}
+      {% set overdue = dossier.next_action.due < today %}
+      <p class="next-action{{ ' overdue' if overdue }}"><strong>{{ dossier.next_action.label }}</strong> — {{ dossier.next_action.due.strftime("%d/%m/%Y") }}{% if overdue %} (en retard){% elif dossier.next_action.due == today %} (aujourd'hui){% endif %}</p>
+      <div class="application-actions">
+        {% if dossier.stage in follow_up_stages %}
+        <form method="post" action="{{ base }}/fait" hx-boost="false" class="inline-form">
+          {{ back() }}
+          <button type="submit" class="btn btn-primary" title="Action faite : Rocky propose la suivante">✓ Fait</button>
+        </form>
+        {% endif %}
+        {% for days in defer_days %}
+        <form method="post" action="{{ base }}/differer" hx-boost="false" class="inline-form">
+          {{ back() }}<input type="hidden" name="jours" value="{{ days }}">
+          <button type="submit" class="btn btn-ghost btn-mini" title="Différer de {{ days }} jour{{ 's' if days > 1 }}">+{{ days }} j</button>
+        </form>
+        {% endfor %}
+        <a class="btn btn-ghost btn-mini" href="{{ base }}?etape={{ follow }}&amp;action=1">Modifier</a>
+      </div>
+      {% else %}
+      <p class="muted">Aucune. <a href="{{ base }}?etape={{ follow }}&amp;action=1">Ajouter une action</a></p>
+      {% endif %}
+
+      <h3 class="group-title">Étape : {{ stage_labels[dossier.stage] }}</h3>
+      {# One gesture per stage (plan, §3); « Envoyée » leads to its confirmation (D5, Q5), « Entretien » asks its date. #}
+      <div class="stage-moves">
+        {% set position = forward.index(dossier.stage) if dossier.stage in forward else -1 %}
+        {% for stage in forward[position + 1:] if stage != Stage.INTERVIEW %}
+        <form method="post" action="{{ base }}/etape" hx-boost="false" class="inline-form">
+          {{ back() }}<input type="hidden" name="etape" value="{{ stage.value }}">
+          <button type="submit" class="btn btn-mini">{{ stage_labels[stage] }}</button>
+        </form>
+        {% endfor %}
+        {% for stage in issues if stage != dossier.stage %}
+        <form method="post" action="{{ base }}/etape" hx-boost="false" class="inline-form">
+          {{ back() }}<input type="hidden" name="etape" value="{{ stage.value }}">
+          <button type="submit" class="btn btn-ghost btn-mini">{{ stage_labels[stage] }}</button>
+        </form>
+        {% endfor %}
+      </div>
+      {% if dossier.stage != Stage.INTERVIEW %}
+      <details class="note">
+        <summary>Entretien prévu</summary>
+        <form method="post" action="{{ base }}/etape" hx-boost="false" class="edit-inline edit-form">
+          {{ back() }}<input type="hidden" name="etape" value="{{ Stage.INTERVIEW.value }}"><input type="hidden" name="saisie" value="1">
+          <label>Action <input type="text" name="action" value="Préparer l'entretien"></label>
+          <label>Date <input type="date" name="echeance" required></label>
+          <div class="form-actions"><button type="submit" class="btn btn-primary">Passer en « Entretien »</button></div>
+        </form>
+      </details>
+      {% endif %}
+      <details class="note">
+        <summary>Autre étape</summary>
+        <form method="post" action="{{ base }}/etape" hx-boost="false" class="inline-form">
+          {{ back() }}
+          <select name="etape" aria-label="Étape">
+            {% for stage in stages if stage != dossier.stage %}<option value="{{ stage.value }}">{{ stage_labels[stage] }}</option>{% endfor %}
+          </select>
+          <button type="submit" class="btn btn-mini">Changer</button>
+        </form>
+      </details>
+      <details class="note">
+        <summary>E-mails de l'employeur{% if employer_domain %} : {{ employer_domain }}{% endif %}</summary>
+        {# Decision E2, Q3: the replies from this domain are attached to this application in 📬 Messages. #}
+        <form method="post" action="{{ base }}/domaine" hx-boost="false" class="inline-form">
+          {{ back() }}
+          <label>Domaine <input type="text" name="domaine" value="{{ employer_domain or '' }}" placeholder="covea.fr"></label>
+          <button type="submit" class="btn btn-mini">Enregistrer</button>
+        </form>
+        <p class="muted small">La partie après le @ des e-mails de l'employeur : Rocky y reconnaît ses réponses. Vide le
+          champ pour le retirer.</p>
+      </details>
+      {% set sent = send.sent %}
+      {% if sent %}
+      <p class="muted small">Envoyée le {{ sent.on.strftime("%d/%m/%Y") }}{% if sent.linked %} via {{ sent.channel }}{% endif %} · <a href="{{ base }}?etape={{ Step.SEND.value }}">documents envoyés</a></p>
+      {% endif %}
+    </div>
+
+    {# Decision E4 (Q8): the messages attached to this application, served by 📬 Messages (this module knows its URL only). #}
+    <div class="follow-card" hx-get="/messages/candidature/{{ dossier.application_id }}" hx-trigger="load" hx-target="this" hx-swap="outerHTML">
+      <h3 class="group-title">Messages</h3>
+      <p class="muted small">Chargement…</p>
+    </div>
+
+    <div class="follow-card">
+      <h3 class="group-title">Notes</h3>
+      <form method="post" action="{{ base }}/notes" hx-boost="false" class="stack">
+        <textarea name="texte" rows="2" aria-label="Nouvelle note" placeholder="Un appel, un nom, une info sur le poste…">{{ note_text }}</textarea>
+        <p><button type="submit" class="btn btn-mini">Ajouter la note</button></p>
+      </form>
+      {% if dossier.notes %}
+      <ul class="note-list">
+        {% for note in dossier.notes %}
+        <li><span class="muted small">{{ note.created_at | paris_time }}</span>
+          <p class="prose">{{ note.text }}</p>
+          <form method="post" action="{{ base }}/notes/{{ note.id }}/retirer" hx-boost="false" class="inline-form">
+            <button type="submit" class="btn btn-ghost btn-mini" title="Retirer cette note (le retrait reste dans la chronologie)">Retirer</button>
+          </form></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <h3 class="group-title">Chronologie</h3>
+  {% set lines = dossier.timeline %}
+  <ol class="timeline">
+    {% for line in lines if line.major %}
+    <li><time class="muted small">{{ line.at | paris_time }}</time> {{ line.text }}{% if line.by %} <span class="badge badge-muted">{{ line.by }}</span>{% endif %}</li>
+    {% else %}<li class="muted">Rien encore.</li>
+    {% endfor %}
+  </ol>
+  {% if lines | rejectattr("major") | list %}
+  <details class="note"><summary>Tout afficher ({{ lines | length }})</summary>
+    <ol class="timeline">
+      {% for line in lines %}
+      <li{% if not line.major %} class="muted"{% endif %}><time class="small">{{ line.at | paris_time }}</time> {{ line.text }}{% if line.by %} <span class="badge badge-muted">{{ line.by }}</span>{% endif %}</li>
+      {% endfor %}
+    </ol>
+  </details>
+  {% endif %}
+
+  {% if dossier.stage %}
+  <div class="step-footer">
+    <form method="post" action="{{ base }}/annuler" hx-boost="false" class="inline-form">
+      {{ back() }}
+      <button type="submit" class="btn btn-ghost" title="Défait le dernier changement d'étape ou d'action (les notes ne sont pas concernées)">↶ Annuler le dernier changement</button>
+    </form>
+  </div>
+  {% endif %}
+</section>

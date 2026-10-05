@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from dashboard.rocky.models import CandidateProfile, JobOffer
+from ..models import CandidateProfile, JobOffer
 
 
 class JobSource(Protocol):
     """Contrat minimal d'une source exploitable par la veille multi-connecteurs."""
-
     name: str
 
     def search(

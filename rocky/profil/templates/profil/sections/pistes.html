@@ -1,0 +1,76 @@
+{% import "profil/macros.html" as m %}
+{% set key = "pistes" %}
+{% macro track_form(action, values, state) %}
+{{ m.form_open(key, action) }}
+  {{ m.error(state) }}
+  {{ m.input("name", "Nom de la piste", values, required=True, hint="ex. Data analyst") }}
+  <div class="form-grid">
+    {{ m.lines("titles", "Intitulés recherchés", values, "Un par ligne, en français ou en anglais") }}
+    {{ m.lines("locations", "Lieux", values, "Un par ligne : ville, région, « France », « Télétravail complet »") }}
+    {{ m.lines("keywords", "Mots-clés", values, "Facultatif, un par ligne") }}
+    {{ m.lines("excluded_keywords", "Mots exclus", values, "Facultatif : les annonces qui les contiennent sont écartées") }}
+  </div>
+  {{ m.actions(key, state) }}
+</form>
+{% endmacro %}
+
+<p class="section-lead muted">Chaque piste alimente la veille : les offres trouvées gardent la ou les pistes qui les ont trouvées.</p>
+{% set active_tracks = profile.tracks | rejectattr("status", "equalto", TrackStatus.ARCHIVED) | list %}
+{% set archived = profile.tracks | selectattr("status", "equalto", TrackStatus.ARCHIVED) | list %}
+{% if not active_tracks and state.editing != "nouveau" %}
+<p class="empty-note">Aucune piste pour l'instant. Une piste réunit les intitulés que tu vises et les lieux où tu cherches.</p>
+{% endif %}
+<ul class="item-list">
+  {% for track in active_tracks %}
+  <li class="item">
+    {% if state.editing == track.id|string %}
+    {{ track_form("/profil/pistes/" ~ track.id, state.values, state) }}
+    {% else %}
+    <div class="item-head">
+      <h3>{{ track.name }}</h3>
+      {% if track.status != TrackStatus.ACTIVE %}<span class="badge badge-warn">{{ track_status_labels[track.status] }}</span>{% endif %}
+    </div>
+    <dl class="facts">
+      <div><dt>Intitulés</dt><dd>{{ track.content.titles | join(" · ") or "—" }}</dd></div>
+      <div><dt>Lieux</dt><dd>{{ track.content.locations | join(" · ") or "—" }}</dd></div>
+      {% if track.content.keywords %}<div><dt>Mots-clés</dt><dd>{{ track.content.keywords | join(" · ") }}</dd></div>{% endif %}
+      {% if track.content.excluded_keywords %}<div><dt>Mots exclus</dt><dd>{{ track.content.excluded_keywords | join(" · ") }}</dd></div>{% endif %}
+    </dl>
+    <div class="item-actions">
+      {{ m.link(key, "Modifier", "?modifier=" ~ track.id) }}
+      {% set action = "reprendre" if track.status == TrackStatus.PAUSED else "pause" %}
+      {{ m.form_open(key, "/profil/pistes/" ~ track.id ~ "/" ~ action, "inline-form") }}
+        <button type="submit" class="btn btn-ghost">{{ "Reprendre" if action == "reprendre" else "Mettre en pause" }}</button>
+      </form>
+      {{ m.form_open(key, "/profil/pistes/" ~ track.id ~ "/archiver", "inline-form") }}
+        <button type="submit" class="btn btn-ghost">Archiver</button>
+      </form>
+    </div>
+    {% endif %}
+  </li>
+  {% endfor %}
+  {% if state.editing == "nouveau" %}
+  <li class="item item-new">{{ track_form("/profil/pistes", state.values, state) }}</li>
+  {% endif %}
+</ul>
+{% if state.editing != "nouveau" %}{{ m.link(key, "+ Ajouter une piste", "?modifier=nouveau", "btn") }}{% endif %}
+
+{% if archived %}
+<details class="archived">
+  <summary>Pistes archivées ({{ archived | length }})</summary>
+  <ul class="item-list">
+    {% for track in archived %}
+    <li class="item">
+      <div class="item-head"><h3>{{ track.name }}</h3></div>
+      <p class="muted">{{ track.content.titles | join(" · ") }}</p>
+      <div class="item-actions">
+        {{ m.form_open(key, "/profil/pistes/" ~ track.id ~ "/reprendre", "inline-form") }}
+          <button type="submit" class="btn btn-ghost">Réactiver</button>
+        </form>
+        {{ m.delete(key, "/profil/pistes/" ~ track.id ~ "/supprimer", "La piste « " ~ track.name ~ " » sera supprimée définitivement.") }}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}

@@ -1,0 +1,8 @@
+{% if offers %}
+<table class="offer-table">
+  <thead><tr><th>Score</th><th>Offre</th><th class="wide-only">Lieu</th><th class="wide-only">Source</th><th class="wide-only">Publiée</th><th>Décision</th></tr></thead>
+  <tbody>{% include "offres/offer_rows.html" %}</tbody>
+</table>
+{% else %}
+<p class="empty-state">Aucune offre pour ces filtres.</p>
+{% endif %}

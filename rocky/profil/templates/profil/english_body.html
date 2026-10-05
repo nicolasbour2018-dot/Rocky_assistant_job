@@ -1,0 +1,71 @@
+{# « Préparer mon CV anglais » (decision D3, Q16–Q20): the imported French CV, translated text by text. #}
+<section id="cv-anglais" class="translation" aria-label="CV anglais">
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if message %}<p class="alert alert-info" role="status">{{ message }}</p>{% endif %}
+  {% if outdated %}<p class="alert alert-info">Ton CV anglais vient d'un ancien CV français : refais-le ci-dessous pour qu'il suive ton CV actuel.</p>{% endif %}
+  {% if state.refusal %}
+  <p class="alert alert-error">{{ state.refusal }}</p>
+  {% else %}
+  <p class="muted">Ton CV anglais reprend le design de ton CV français importé. Ses textes (titre, accroche, expériences, formations, titres de section…) sont traduits tels quels ; ton nom et tes coordonnées sont recopiés sans jamais être envoyés. Compétences et projets viennent de ton profil, comme en français.</p>
+
+  {% if proposals %}
+  <h2>Relis chaque proposition</h2>
+  <p class="muted">Rien n'est créé tant que tous les textes ne sont pas validés.</p>
+  <ul class="item-list">
+    {% for proposal in proposals %}
+    {% set key = proposal.segment.key %}{% set where = proposal.segment.where %}{% set english = proposal.english %}
+    {% set empreinte = proposal.segment.source_sha256 %}{% set source = proposal.segment.source %}
+    {% set warnings = proposal.warnings %}{% set from_memory = proposal.from_memory %}
+    {% set accept_url = "/profil/cv-anglais/accepter" %}
+    {% include "profil/translation_row.html" %}
+    {% endfor %}
+  </ul>
+  <p><a class="btn" href="/profil/cv-anglais">Voir l'aperçu à jour</a></p>
+  {% else %}
+  <h2>{{ state.texts | length - state.to_translate | length }} texte{{ "s" if state.texts | length - state.to_translate | length > 1 }} validé{{ "s" if state.texts | length - state.to_translate | length > 1 }} sur {{ state.texts | length }}</h2>
+  {% if state.to_translate %}
+  <ul class="compact item-list">
+    {% for text in state.to_translate %}<li class="small">{{ text.where }}</li>{% endfor %}
+  </ul>
+  <form method="post" action="/profil/cv-anglais" hx-post="/profil/cv-anglais" hx-target="#cv-anglais" hx-swap="outerHTML" class="stack">
+    <label><input type="checkbox" name="consentement" value="1"> J'accepte l'envoi du texte de ces {{ state.to_translate | length }} éléments de mon CV à Gemini.</label>
+    <button type="submit" class="btn btn-primary">Proposer une traduction</button>
+  </form>
+  {% else %}
+  <form method="post" action="/profil/cv-anglais/creer" hx-post="/profil/cv-anglais/creer" hx-target="#cv-anglais" hx-swap="outerHTML">
+    <button type="submit" class="btn btn-primary">{{ "Refaire" if english and english.source_sha256 else "Créer" }} mon CV anglais</button>
+  </form>
+  {% endif %}
+  {% endif %}
+
+  {% if missing_fields %}
+  <p class="alert alert-info">{{ missing_fields | length }} champ{{ "s" if missing_fields | length > 1 }} de ton profil (compétences, projets…) n'{{ "ont" if missing_fields | length > 1 else "a" }} pas encore d'anglais.
+    <a class="btn" href="/profil/traduction?retour=/profil/cv-anglais">Traduire les champs du profil</a></p>
+  {% endif %}
+
+  {% if preview %}
+  <h2>Aperçu</h2>
+  {% for problem in problems %}<p class="alert alert-error">{{ problem }}</p>{% endfor %}
+  <p class="muted small">Les textes pas encore validés apparaissent en français.</p>
+  <img class="cv-preview" src="data:image/png;base64,{{ preview }}" alt="Aperçu du CV anglais" width="476">
+  {% endif %}
+
+  {% if state.validated %}
+  {# Open when the preview overflows: shortening a validated text is the way out (Q20). #}
+  <details class="field-more"{% if problems %} open{% endif %}><summary>Textes validés</summary>
+    <ul class="compact item-list">
+      {% for text in state.texts if text.id in state.validated %}
+      {% set row_id = "traduction-" ~ (text.id | html_id) %}
+      <li class="small" id="{{ row_id }}"><strong>{{ text.where }}</strong> → {{ state.validated[text.id] }}
+        <form method="post" action="/profil/cv-anglais/modifier" hx-post="/profil/cv-anglais/modifier" hx-target="#{{ row_id }}" hx-swap="outerHTML" class="inline-form">
+          <input type="hidden" name="cle" value="{{ text.id }}">
+          <button type="submit" class="btn btn-ghost btn-mini">Modifier</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    <p><a class="btn" href="/profil/cv-anglais">Voir l'aperçu à jour</a></p>
+  </details>
+  {% endif %}
+  {% endif %}
+</section>

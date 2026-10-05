@@ -12,19 +12,18 @@ from dataclasses import asdict
 import pandas as pd
 import streamlit as st
 
-from dashboard.dashboard_common import load_data, records
+from dashboard.dashboard_common import load_data, stream_llm_response
 from dashboard.rocky.assistant_agent import plan_rocky_action
 from dashboard.rocky.llm import RockyLLM
 from dashboard.rocky.mascot import mascot_data_uri
 
-st.markdown(
-    '<div class="rocky-kicker">Copilote personnel</div>', unsafe_allow_html=True
-)
+
+st.markdown('<div class="rocky-kicker">Copilote personnel</div>', unsafe_allow_html=True)
 st.title("Assistant Rocky")
 st.caption("Rocky lit tes données; toute modification reste visible et confirmable.")
 st.markdown(
     '<div class="rocky-hero"><strong>On regarde les vraies annonces, ensemble.</strong><br>'
-    "Demande un comparatif, une piste de candidature ou un point rapide sur ton suivi.</div>",
+    'Demande un comparatif, une piste de candidature ou un point rapide sur ton suivi.</div>',
     unsafe_allow_html=True,
 )
 assistant_expression = st.session_state.get("rocky_expression", "smiling")
@@ -77,9 +76,7 @@ if prompt:
         scored = jobs.copy()
         if not scored.empty:
             scored["_score"] = pd.to_numeric(scored["match_score"], errors="coerce")
-            scored = scored.dropna(subset=["_score"]).sort_values(
-                "_score", ascending=False
-            )
+            scored = scored.dropna(subset=["_score"]).sort_values("_score", ascending=False)
         answer = (
             f"Tu suis {len(jobs)} offres et {len(applications)} candidatures. "
             f"{int((applications['status'] == 'ENTRETIEN').sum()) if not applications.empty else 0} "
@@ -101,32 +98,24 @@ if prompt:
             try:
                 with st.chat_message("assistant"):
                     st.session_state["rocky_expression"] = "thinking"
-                    streamed = st.write_stream(
-                        llm.stream_chat(
-                            prompt,
-                            profile,
-                            jobs=records(jobs),
-                            applications=records(
-                                repository.fetch_applications(profile.id)
-                            ),
-                            skills=repository.fetch_skills(profile.id),
-                            history=messages[:-1],
-                        )
+
+                    answer = llm.chat(
+                        prompt,
+                        profile,
+                        jobs=jobs.to_dict("records"),
+                        applications=repository.fetch_applications(profile.id).to_dict("records"),
+                        skills=repository.fetch_skills(profile.id),
+                        history=messages[:-1],
                     )
-                    # `write_stream` rend une liste dès qu'un fragment n'est pas
-                    # une chaîne ; l'historique n'accepte que du texte.
-                    answer = (
-                        streamed
-                        if isinstance(streamed, str)
-                        else "".join(str(part) for part in streamed)
-                    )
+
+                    st.markdown(answer)
             except Exception as error:
                 st.session_state["rocky_expression"] = "compassionate"
                 answer = str(error)
             else:
                 st.session_state["rocky_expression"] = "good-job-check"
         else:
-            answer = "Mistral n'est pas configuré, mais les commandes de statut restent disponibles."
+            answer = "Groq n'est pas configuré, mais les commandes de statut restent disponibles."
         messages.append({"role": "assistant", "content": answer})
         st.session_state.pop("rocky_pending_action", None)
     st.rerun()
@@ -136,26 +125,18 @@ if pending and pending.get("requires_confirmation"):
     with st.container(border=True):
         st.warning(pending["summary"])
         confirm, cancel = st.columns(2)
-        if confirm.button(
-            "Confirmer cette action", type="primary", use_container_width=True
-        ):
+        if confirm.button("Confirmer cette action", type="primary", use_container_width=True):
             action = pending["action"]
             entity_id = int(pending["entity_id"])
             if action == "UPDATE_APPLICATION_STATUS":
-                repository.update_application_status(
-                    entity_id, pending["value"], source="ROCKY"
-                )
+                repository.update_application_status(entity_id, pending["value"], source="ROCKY")
             elif action == "ADD_APPLICATION_NOTE":
                 repository.add_application_note(entity_id, pending["value"])
             elif action == "UPDATE_JOB_STATUS":
                 repository.update_job_status(entity_id, pending["value"])
             elif action == "UPDATE_JOB_FIELD":
-                repository.update_job_field(
-                    entity_id, pending["field"], pending["value"]
-                )
-            messages.append(
-                {"role": "assistant", "content": "Action appliquée et historisée."}
-            )
+                repository.update_job_field(entity_id, pending["field"], pending["value"])
+            messages.append({"role": "assistant", "content": "Action appliquée et historisée."})
             st.session_state.pop("rocky_pending_action", None)
             st.rerun()
         if cancel.button("Annuler", use_container_width=True):

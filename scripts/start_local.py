@@ -14,6 +14,7 @@ from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
+
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 LOGS_DIR = PROJECT_DIR / "logs"
 PID_PATH = LOGS_DIR / "rocky_streamlit.pid"
@@ -68,7 +69,7 @@ def main() -> int:
         "--browser.gatherUsageStats=false",
     ]
     with LOG_PATH.open("a", encoding="utf-8") as log_file:
-        process = subprocess.Popen(  # noqa: S603 - argv entièrement littéral
+        process = subprocess.Popen(
             command,
             cwd=PROJECT_DIR,
             stdin=subprocess.DEVNULL,

@@ -56,24 +56,23 @@ La veille connaît déjà le profil actif. Lorsqu'une annonce est :
 Les imports URL, recalculs de matching et créations de candidatures garantissent
 également le rattachement via le repository.
 
-## Absence de migration
+## Migration des données historiques
 
-Rocky ne migre pas les données historiques. Les deux fichiers de schéma
-`database/schema.sql` et `database/schema_sqlite.sql` décrivent l'état courant
-pour une base vide. Sur une base existante, `initialize_database` valide la
-structure et échoue avec un message clair si elle est incompatible.
+La migration est intégrée aux deux schémas idempotents déjà exécutés au
+démarrage de Rocky : `database/schema.sql` et `database/schema_sqlite.sql`.
+Elle ne modifie ni ne supprime aucune ligne de `job_offers`.
 
-`.claude/rules/data-layer.md` porte cette décision : les migrations et les
-chemins de compatibilité sont volontairement hors périmètre.
+L'ordre de reprise est :
 
-Une version antérieure de ce document décrivait quatre `INSERT` de reprise
-placés dans les schémas, qui rattachaient les annonces sans profil en
-s'appuyant sur `job_matches`, `applications`, les fenêtres de `watch_run` puis
-le profil le plus ancien. Ces `INSERT` ont été retirés.
+1. relations certaines trouvées dans `job_matches` ;
+2. relations certaines trouvées dans `applications` ;
+3. annonces créées entre le début et la fin d'un `watch_run`, rattachées au
+   profil de cette veille ;
+4. annonces anciennes restant sans aucune trace, rattachées au profil le plus
+   ancien pour préserver le comportement historique mono-profil.
 
-Conséquence à connaître : une annonce insérée sans profil n'est plus
-rattachable après coup. Le rattachement doit donc être fait à l'insertion, par
-le `profile_id` passé à `insert_job`.
+Tous les `INSERT` ignorent un couple déjà présent. Le schéma peut donc être
+rejoué sans créer de doublon.
 
 ## Retour en arrière
 

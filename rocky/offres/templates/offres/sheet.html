@@ -1,0 +1,10 @@
+{% if with_counts %}{% with oob=True %}{% include "offres/counts.html" %}{% endwith %}{% endif %}
+{% set context = "fiche" %}
+<article class="sheet-card">
+  <button type="button" class="btn btn-ghost sheet-close" hx-get="/offres/fiche/fermer" hx-target="#fiche"
+    hx-swap="innerHTML" aria-label="Fermer la fiche">✕</button>
+  {% include "offres/offer_body.html" %}
+</article>
+{# The application of the offer (D1): served by the module candidatures, which offres knows by its URL only. #}
+<div id="dossier" class="sheet-dossier" hx-get="/candidatures/offre/{{ card.id }}" hx-trigger="load"
+  hx-swap="innerHTML"></div>

@@ -1,0 +1,11 @@
+{# Answer of « Ajouter à mes offres » (step C6, Q10): replaces the form of the preview. #}
+{% if added_error is defined and added_error %}
+<p class="alert alert-error" role="alert">{{ added_error }}</p>
+{% elif added is defined and added %}
+{% set best = added.score.best %}
+<p class="alert alert-info import-added" role="status">
+  {% if added.created %}Ajoutée à tes offres{% elif added.completed %}Déjà dans tes offres : complétée par cette lecture{% else %}Déjà dans tes offres{% endif %}
+  {%- if best.track_name %} · piste « {{ best.track_name }} », score {{ best.display }}{% endif %}.
+  {% if added.score.below_threshold %}Sous le seuil, elle est gardée avec son motif.{% endif %}
+</p>
+{% endif %}

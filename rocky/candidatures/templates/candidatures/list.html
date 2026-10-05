@@ -1,0 +1,149 @@
+{# The screen 📝 Candidatures (decision D6, Q1): tabs by stage, « À faire » across them and open by default; one line
+   per application, its gestures in one click. Every gesture keeps the tab it was made from (``vue``). #}
+{% set tab = screen.tab %}
+{% set swap = 'hx-target="#candidatures" hx-swap="outerHTML"' %}
+{% macro keep_tab() %}<input type="hidden" name="vue" value="{{ tab.value }}">{% endmacro %}
+<section id="candidatures" class="applications">
+  <nav class="segmented app-tabs" aria-label="Candidatures par étape">
+    {% for found in Tab %}
+    <a href="/candidatures{{ '' if found == Tab.TO_DO else '?vue=' ~ found.value }}"
+      hx-get="/candidatures?vue={{ found.value }}" {{ swap | safe }} hx-push-url="/candidatures{{ '' if found == Tab.TO_DO else '?vue=' ~ found.value }}"
+      {% if found == tab %}aria-current="page"{% endif %}>{{ tab_labels[found] }}
+      <span class="tab-count{{ ' tab-count-due' if found == Tab.TO_DO and screen.counts[found] }}">{{ screen.counts[found] }}</span></a>
+    {% endfor %}
+  </nav>
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  {% if notice %}
+  {# What « Fait » did (recette of D6): said in words, with « Annuler », even when the line left the tab. #}
+  <div class="alert alert-done" role="status">
+    <p><strong>✓ <a href="/candidatures/{{ notice.id }}?etape=suivi">{{ notice.title }}</a></strong> — {{ notice.text }}</p>
+    <form method="post" action="/candidatures/{{ notice.id }}/annuler" hx-post="/candidatures/{{ notice.id }}/annuler" {{ swap | safe }} class="inline-form">
+      {{ keep_tab() }}<button type="submit" class="btn btn-ghost btn-mini">↶ Annuler</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if tab == Tab.TO_PREPARE %}
+  {# The offers « Intéressé » without an application (decision D3, Q26): one click opens the application's page. #}
+  {% if screen.to_prepare %}
+  <table class="offer-table application-table">
+    <tbody>
+    {% for offer in screen.to_prepare %}
+    <tr id="a-preparer-{{ offer.id }}">
+      <td><a href="/offres/{{ offer.id }}/fiche">{{ offer.title }}</a>
+        <div class="muted small">{{ offer.company or "Employeur inconnu" }}{% if offer.location %} · {{ offer.location }}{% endif %}</div></td>
+      <td class="row-actions">
+        <form method="post" action="/candidatures/offre/{{ offer.id }}/preparer" hx-boost="false" class="inline-form">
+          <button type="submit" class="btn btn-primary">Préparer la candidature</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p class="empty-lead">Aucune offre retenue en attente de dossier.</p>
+    <p class="muted">Les offres que tu marques « Intéressé » dans l'écran Offres arrivent ici.</p>
+    <p><a class="btn" href="/offres">🔎 Trier les offres</a></p>
+  </div>
+  {% endif %}
+
+  {% elif not screen.rows %}
+  <div class="empty-state">
+    {% if tab == Tab.TO_DO %}
+    <p class="empty-lead">Rien à faire aujourd'hui.</p>
+    {% if screen.upcoming %}
+    <p class="muted">Prochaine échéance : <a href="/candidatures/{{ screen.upcoming.id }}">{{ screen.upcoming.next_action.label }} — {{ screen.upcoming.offer.title }}</a>, le {{ screen.upcoming.next_action.due.strftime("%d/%m/%Y") }}.</p>
+    {% elif screen.counts[Tab.TO_PREPARE] %}
+    <p class="muted">Des offres retenues attendent leur dossier : <a href="/candidatures?vue={{ Tab.TO_PREPARE.value }}">À préparer ({{ screen.counts[Tab.TO_PREPARE] }})</a>.</p>
+    {% else %}
+    <p class="muted">Un dossier s'ouvre depuis une offre qui t'intéresse : « Préparer la candidature ».</p>
+    <p><a class="btn" href="/offres">🔎 Voir les offres</a></p>
+    {% endif %}
+    {% elif tab == Tab.CLOSED %}
+    <p class="empty-lead">Aucune candidature close.</p>
+    <p class="muted">Une candidature refusée, retirée ou sans réponse vient ici ; elle se rouvre en changeant son étape.</p>
+    {% else %}
+    <p class="empty-lead">{{ {Tab.PREPARING: "Aucune candidature en préparation.", Tab.READY: "Aucune candidature prête à envoyer.", Tab.FOLLOW_UP: "Aucune candidature envoyée en cours de suivi."}[tab] }}</p>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <table class="offer-table application-table">
+    <thead><tr><th>Offre</th><th>Étape</th><th>Prochaine action</th><th><span class="visually-hidden">Gestes</span></th></tr></thead>
+    <tbody>
+    {% for row in screen.rows %}
+    <tr id="candidature-{{ row.id }}"{% if row.overdue %} class="row-overdue"{% endif %}>
+      <td><a href="/candidatures/{{ row.id }}" class="row-title">{{ row.offer.title }}</a>
+        <div class="muted small">{{ row.offer.company or "Employeur inconnu" }}{% if row.offer.location %} · {{ row.offer.location }}{% endif %}
+          {% if row.shows_deadline %}<span class="badge {{ 'badge-warn' if row.deadline >= today else 'badge-muted' }}">⏰ {{ "limite le " ~ row.deadline.strftime("%d/%m") if row.deadline >= today else "limite dépassée" }}</span>{% endif %}</div></td>
+      <td>
+        {% if stage_form and stage_form.id == row.id %}
+        <form method="post" action="/candidatures/{{ row.id }}/etape" hx-post="/candidatures/{{ row.id }}/etape" {{ swap | safe }} class="stack">
+          {{ keep_tab() }}
+          <input type="hidden" name="etape" value="{{ stage_form.stage }}">
+          <input type="hidden" name="saisie" value="1">
+          <strong>{{ stage_labels[stage_form.stage] }}</strong>
+          <label>Prochaine action <input type="text" name="action" value="{{ stage_form.label }}"></label>
+          <label>Date <input type="date" name="echeance" required></label>
+          <button type="submit" class="btn btn-primary">Valider</button>
+        </form>
+        {% else %}
+        {# One gesture (plan, §3): choosing a stage sends it; the button is for a browser without JavaScript. #}
+        <form method="post" action="/candidatures/{{ row.id }}/etape" hx-post="/candidatures/{{ row.id }}/etape" {{ swap | safe }}
+          hx-trigger="change" class="inline-form">
+          {{ keep_tab() }}
+          <select name="etape" aria-label="Étape de {{ row.offer.title }}">
+            {% for stage in stages %}
+            <option value="{{ stage }}"{% if stage == row.stage %} selected{% endif %}>{{ stage_labels[stage] }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button type="submit" class="btn btn-mini">Changer</button></noscript>
+        </form>
+        {% endif %}
+      </td>
+      <td>
+        {% if editing == row.id %}
+        <form method="post" action="/candidatures/{{ row.id }}/action" hx-post="/candidatures/{{ row.id }}/action" {{ swap | safe }} class="stack">
+          {{ keep_tab() }}
+          <label>Action <input type="text" name="action" value="{{ row.next_action.label if row.next_action else '' }}"></label>
+          <label>Date <input type="date" name="echeance" value="{{ row.next_action.due.isoformat() if row.next_action else '' }}"></label>
+          <p class="muted small">Vide les deux champs pour effacer l'action.</p>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </form>
+        {% elif row.next_action %}
+        <span{% if row.overdue %} class="overdue"{% endif %}>{{ row.next_action.label }} — {{ row.next_action.due.strftime("%d/%m/%Y") }}{% if row.overdue %} (en retard){% elif row.next_action.due == today %} (aujourd'hui){% endif %}</span>
+        <div class="application-actions">
+          {% if row.done_offered %}
+          <form method="post" action="/candidatures/{{ row.id }}/fait" hx-post="/candidatures/{{ row.id }}/fait" {{ swap | safe }} class="inline-form">
+            {{ keep_tab() }}
+            <button type="submit" class="btn btn-mini" title="Action faite : Rocky propose la suivante">✓ Fait</button>
+          </form>
+          {% endif %}
+          {% for days in defer_days %}
+          <form method="post" action="/candidatures/{{ row.id }}/differer" hx-post="/candidatures/{{ row.id }}/differer" {{ swap | safe }} class="inline-form">
+            {{ keep_tab() }}
+            <input type="hidden" name="jours" value="{{ days }}">
+            <button type="submit" class="btn btn-ghost btn-mini" title="Différer de {{ days }} jour{{ 's' if days > 1 }}">+{{ days }} j</button>
+          </form>
+          {% endfor %}
+          <a class="btn btn-ghost btn-mini" href="/candidatures/{{ row.id }}/action?vue={{ tab.value }}" hx-get="/candidatures/{{ row.id }}/action?vue={{ tab.value }}" {{ swap | safe }}>Modifier</a>
+        </div>
+        {% else %}
+        <span class="muted">Aucune</span>
+        <a class="btn btn-ghost btn-mini" href="/candidatures/{{ row.id }}/action?vue={{ tab.value }}" hx-get="/candidatures/{{ row.id }}/action?vue={{ tab.value }}" {{ swap | safe }}>Ajouter</a>
+        {% endif %}
+      </td>
+      <td class="row-actions">
+        <form method="post" action="/candidatures/{{ row.id }}/annuler" hx-post="/candidatures/{{ row.id }}/annuler" {{ swap | safe }} class="inline-form">
+          {{ keep_tab() }}
+          <button type="submit" class="btn btn-ghost btn-mini" title="Annuler le dernier changement de cette candidature">↶ Annuler</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
