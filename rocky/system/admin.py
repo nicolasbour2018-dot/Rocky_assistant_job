@@ -6,6 +6,7 @@ Run in the application container: ``docker compose run --rm app rocky-admin <com
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from collections import Counter
@@ -330,6 +331,57 @@ def classify_account_messages(
     return 0
 
 
+LABEL_COLUMNS = (
+    "message_id",
+    "received_at",
+    "sender_address",
+    "subject",
+    "gesture",
+    "category",
+    "application_id",
+    "decided_at",
+    "reviewed_category",
+    "reviewed_application_id",
+    "reviewed_level",
+    "reviewed_author",
+    "reviewed_rule",
+    "reviewed_version",
+)
+
+
+def export_mail_labels(
+    engine: Engine, *, email: str, service: MessagesService, out: TextIO
+) -> int:
+    """The labels of ``email`` (decision E4, Q6, D14): each decision of the user about a message with the decision of
+    Rocky it reviewed, as CSV. Personal data: never kept in the repository."""
+    try:
+        address = normalize_email(email)
+    except InvalidEmailError as error:
+        out.write(f"{error}\n")
+        return 2
+    with engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(address)
+    if account is None:
+        out.write(f"Aucun compte pour {address}.\n")
+        return 1
+    writer = csv.writer(out)
+    writer.writerow(LABEL_COLUMNS)
+    for label in service.labels(account.id):
+        writer.writerow(
+            [
+                "" if (value := getattr(label, column)) is None else _csv_value(value)
+                for column in LABEL_COLUMNS
+            ]
+        )
+    return 0
+
+
+def _csv_value(value: object) -> str:
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value)
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -408,6 +460,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="classe à nouveau tous les messages (jamais par-dessus une décision de l'utilisateur)",
     )
+    labels_parser = commands.add_parser(
+        "messages-etiquettes",
+        help="exporte en CSV (sortie standard) les corrections et confirmations de l'utilisateur sur ses messages, "
+        "avec la décision de Rocky qu'elles revoient (jeu étiqueté, D14)",
+    )
+    labels_parser.add_argument("email")
     arguments = parser.parse_args(argv)
 
     settings = load_settings()
@@ -428,6 +486,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         if arguments.command == "messages":
             return collect_messages(
+                engine,
+                email=arguments.email,
+                service=MessagesService(engine, settings=settings.gmail, clock=utc_now),
+                out=sys.stdout,
+            )
+        if arguments.command == "messages-etiquettes":
+            return export_mail_labels(
                 engine,
                 email=arguments.email,
                 service=MessagesService(engine, settings=settings.gmail, clock=utc_now),

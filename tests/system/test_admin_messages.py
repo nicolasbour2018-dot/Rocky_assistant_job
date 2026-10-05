@@ -1,16 +1,23 @@
 """``rocky-admin messages``: a real collection of an account's Gmail mailboxes, written, then told;
-``rocky-admin messages-classer``: their classification, told."""
+``rocky-admin messages-classer``: their classification, told; ``rocky-admin messages-etiquettes``: the user's labels
+as CSV (decision E4, Q6)."""
 
 from __future__ import annotations
 
+import csv
 import io
 
 from sqlalchemy import Engine
 
-from rocky.messages.classification.model import CLASSIFY_VERSION
+from rocky.messages.classification.model import CLASSIFY_VERSION, View
 from rocky.messages.service import MessagesService
 from rocky.messages.usecases import connect_mailbox
-from rocky.system.admin import classify_account_messages, collect_messages
+from rocky.system.admin import (
+    LABEL_COLUMNS,
+    classify_account_messages,
+    collect_messages,
+    export_mail_labels,
+)
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.config import GmailSettings
 from tests.messages.fakes import (
@@ -142,3 +149,43 @@ def test_classifying_an_unknown_account_says_so(migrated_engine: Engine) -> None
         1,
         "Aucun compte pour personne@example.fr.\n",
     )
+
+
+def test_the_labels_are_exported_as_csv(migrated_engine: Engine) -> None:
+    email = account_with_mailbox(migrated_engine)
+    run(migrated_engine, email)
+    classify(migrated_engine, email, use_model=False)
+    service = MessagesService(migrated_engine, settings=GMAIL, clock=lambda: NOW)
+    with migrated_engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(email)
+    assert account is not None
+    alert = next(
+        message
+        for message in service.state(account.id, View.ALERTS).messages
+        if message.decision is not None
+    )
+    service.confirm(account.id, alert.id)
+    out = io.StringIO()
+
+    code = export_mail_labels(migrated_engine, email=email, service=service, out=out)
+
+    rows = list(csv.DictReader(io.StringIO(out.getvalue())))
+    assert code == 0
+    assert tuple(rows[0]) == LABEL_COLUMNS
+    assert [
+        (row["gesture"], row["category"], row["reviewed_category"]) for row in rows
+    ] == [("user.confirmed", "job_alert", "job_alert")]
+    assert rows[0]["reviewed_author"] == "rule"
+
+
+def test_exporting_the_labels_of_an_unknown_account_says_so(
+    migrated_engine: Engine,
+) -> None:
+    out = io.StringIO()
+    service = MessagesService(migrated_engine, settings=GMAIL, clock=lambda: NOW)
+
+    code = export_mail_labels(
+        migrated_engine, email="personne@example.fr", service=service, out=out
+    )
+
+    assert (code, out.getvalue()) == (1, "Aucun compte pour personne@example.fr.\n")

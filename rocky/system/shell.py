@@ -15,6 +15,8 @@ from rocky.system.auth.web import CurrentAccount
 
 # A module's notice above every page (the late watch of C6): its HTML, or None when there is nothing to say.
 type NoticeProvider = Callable[[Request, Account], Markup | None]
+# A counter beside an entry of the navigation (decision E4, Q5: what moved in 📬 Messages); 0 shows nothing.
+type BadgeProvider = Callable[[Request, Account], int]
 
 HTMX_SCRIPT = "htmx-2.0.11.min.js"
 
@@ -129,8 +131,9 @@ def page(
             "active": active,
             "account": account,
             "htmx_script": HTMX_SCRIPT,
-            # Called by the layout only: a fragment never computes the notices.
+            # Called by the layout only: a fragment never computes the notices nor the counters.
             "notices": lambda: notices(request, account),
+            "badges": lambda: badges(request, account),
             **(context or {}),
         },
         status_code=status_code,
@@ -141,6 +144,25 @@ def add_notice(app: FastAPI, provider: NoticeProvider) -> None:
     """Register a module's notice; the layout shows every notice that has something to say."""
     providers: list[NoticeProvider] = getattr(app.state, "notices", [])
     app.state.notices = [*providers, provider]
+
+
+def add_badge(app: FastAPI, key: str, provider: BadgeProvider) -> None:
+    """Register the counter of the navigation entry ``key``; the layout shows it when it is not 0."""
+    if key not in ENTRIES:
+        raise KeyError(key)
+    providers: dict[str, BadgeProvider] = getattr(app.state, "badges", {})
+    app.state.badges = {**providers, key: provider}
+
+
+def badges(request: Request, account: Account | None) -> dict[str, int]:
+    if account is None:
+        return {}
+    providers: dict[str, BadgeProvider] = getattr(request.app.state, "badges", {})
+    return {
+        key: count
+        for key, provider in providers.items()
+        if (count := provider(request, account))
+    }
 
 
 def notices(request: Request, account: Account | None) -> list[Markup]:

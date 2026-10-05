@@ -1,5 +1,6 @@
 """📬 « Messages triés » on screen (decision E2, Q14): the collection's hook classifies, the views filter,
-« Pourquoi ? » shows the proof, the messages waiting say why; no correction, no stage changed (E4)."""
+« Pourquoi ? » shows the proof, the messages waiting say why; a decision of confidence medium changes no stage (E4
+proposes it, ``test_decisions_web.py``)."""
 
 from __future__ import annotations
 

@@ -1,0 +1,12 @@
+{# « Créer la candidature » from a message (decision E4, Q4, Q12): an application made outside Rocky, at « Envoyée ». #}
+{% set message = view.message %}
+<form method="post" action="/messages/{{ message.id }}/creer" class="stack create-panel"
+  hx-post="/messages/{{ message.id }}/creer" hx-target="#messages-contenu" hx-swap="outerHTML">
+  <p class="muted small">Pour une candidature faite hors de Rocky : Rocky crée l'offre et le dossier « Envoyée » du
+    {{ message.received_at | paris_time }}, et y rattache ce message.</p>
+  <label>Employeur <input type="text" name="employeur" value="{{ view.cited_employer or '' }}" required></label>
+  <label>Intitulé du poste <input type="text" name="intitule" value="" required></label>
+  <label>Lien de l'annonce <span class="muted small">(facultatif : sans lien, l'offre renvoie à ce message)</span>
+    <input type="url" name="lien" value="" placeholder="https://…"></label>
+  <p><button type="submit" class="btn btn-mini">Créer la candidature</button></p>
+</form>

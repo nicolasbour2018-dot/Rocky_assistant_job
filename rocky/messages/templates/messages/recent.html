@@ -1,5 +1,7 @@
-{# « Messages triés » (decision E2, Q14): the last messages of a view with their decision in force and its proof
-   behind « Pourquoi ? ». Nothing is corrected here (E4); no application changes stage (Q1). #}
+{# « Messages triés » (decisions E2 Q14, E4 Q8): the last messages of a view, grouped by application (the most decisive
+   first, the others behind « +n messages »), with their decision, its proof behind « Pourquoi ? » and the gestures
+   « Juste » and « Corriger ». #}
+{% from "messages/row.html" import message_row with context %}
 <section class="profile-section messages-recent" aria-labelledby="derniers-messages">
   <div class="section-head">
     <h2 id="derniers-messages">Messages triés</h2>
@@ -18,41 +20,26 @@
   <p class="muted small">{{ state.acknowledgements }} accusé{{ 's' if state.acknowledgements > 1 }} de réception, hors de
     cette vue : <a href="/messages?vue={{ View.ACKNOWLEDGEMENTS.value }}">les voir</a>.</p>
   {% endif %}
-  {% if state.messages %}
+  {% if state.groups %}
   <table class="offer-table messages-table">
     <thead><tr><th>Reçu le</th><th>De</th><th>Objet</th><th>Classement</th></tr></thead>
-    <tbody>
-      {% for message in state.messages %}
-      {% set decision = message.decision %}
-      <tr>
-        <td class="small">{{ message.received_at | paris_time }}</td>
-        <td>{{ message.sender }}{% if state.mailboxes | length > 1 %}<br><span class="muted small">→ {{ message.mailbox_address }}</span>{% endif %}</td>
-        <td>{{ message.subject or "(sans objet)" }}</td>
-        <td>
-          {% if decision is none %}
-          <span class="badge badge-muted">En attente</span>
-          {% else %}
-          {% if decision.category %}<span class="badge {{ 'badge-accent' if decision.category in employer_categories else 'badge-muted' }}">{{ category_labels[decision.category] }}</span>{% endif %}
-          {% if decision.level == Level.LOW %}<span class="badge badge-warn">À vérifier</span>{% endif %}
-          {% if decision.application_id %}
-          <br><a class="small" href="/candidatures/{{ decision.application_id }}">{{ state.applications.get(decision.application_id, 'Candidature') }}</a>
-          {% endif %}
-          <details class="note small">
-            <summary>Pourquoi ?</summary>
-            <p>{{ level_labels[decision.level] }} · {{ 'Modèle de langage' if decision.author == Author.AI else 'Règles' }}
-              · version {{ decision.version }}</p>
-            <ul>
-              {% for proof in decision.proofs %}
-              <li><strong>{{ tier_labels[proof.tier] }}</strong> : {{ proof.reason }}<br><q>{{ proof.excerpt }}</q></li>
-              {% endfor %}
-            </ul>
-            <p class="muted">Recherche : {% for query in message.found_by %}{{ query_labels[query] }}{{ ', ' if not loop.last }}{% endfor %}</p>
-          </details>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
+    {% for group in state.groups %}
+    <tbody class="message-group">
+      {{ message_row(group.head, state) }}
+      {% if group.others %}
+      <tr class="group-more"><td colspan="4">
+        <details class="note small">
+          <summary>+{{ group.others | length }} message{{ 's' if group.others | length > 1 }} de cette candidature</summary>
+          <table class="offer-table messages-table">
+            <tbody>
+              {% for message in group.others %}{{ message_row(message, state) }}{% endfor %}
+            </tbody>
+          </table>
+        </details>
+      </td></tr>
+      {% endif %}
     </tbody>
+    {% endfor %}
   </table>
   {% else %}
   <p class="empty-lead">Aucun message dans cette vue pour l'instant.</p>

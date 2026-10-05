@@ -107,6 +107,12 @@
       {% endif %}
     </div>
 
+    {# Decision E4 (Q8): the messages attached to this application, served by 📬 Messages (this module knows its URL only). #}
+    <div class="follow-card" hx-get="/messages/candidature/{{ dossier.application_id }}" hx-trigger="load" hx-target="this" hx-swap="outerHTML">
+      <h3 class="group-title">Messages</h3>
+      <p class="muted small">Chargement…</p>
+    </div>
+
     <div class="follow-card">
       <h3 class="group-title">Notes</h3>
       <form method="post" action="{{ base }}/notes" hx-boost="false" class="stack">

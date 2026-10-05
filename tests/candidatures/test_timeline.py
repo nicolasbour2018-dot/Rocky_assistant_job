@@ -107,3 +107,35 @@ def test_an_event_by_a_rule_says_so_and_an_unknown_one_is_still_shown() -> None:
         "Étape : Envoyée → Refusée",
         "par une règle",
     )
+
+
+def test_what_a_message_did_says_so() -> None:
+    """Decision E4: an application made outside Rocky, and a stage changed by a rule after a message."""
+    created, moved, by_hand = timeline(
+        [
+            event(
+                "candidatures.application_created",
+                {"offer_id": 3, "stage": "sent", "origin": "message"},
+            ),
+            event(
+                "candidatures.stage_changed",
+                {"from": "sent", "to": "rejected", "message_id": 12},
+                Actor.RULE,
+            ),
+            event(
+                "candidatures.application_created",
+                {"offer_id": 4, "stage": "preparing"},
+            ),
+        ],
+        {},
+    )[::-1]
+
+    assert (
+        created.text
+        == "Candidature faite hors de Rocky, ouverte depuis un message (Envoyée)"
+    )
+    assert (moved.text, moved.by) == (
+        "Étape : Envoyée → Refusée, d'après un message",
+        "par une règle",
+    )
+    assert by_hand.text == "Candidature ouverte (En préparation)"

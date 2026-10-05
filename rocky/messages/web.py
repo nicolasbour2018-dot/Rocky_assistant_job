@@ -1,5 +1,6 @@
-"""📬 Messages (steps E1, E2): the Gmail mailboxes of the account, « Relever maintenant », the last messages with
-their classification and its proof (« Messages triés », E2 Q14). No application changes stage here (E4).
+"""📬 Messages (steps E1, E2, E4): the Gmail mailboxes of the account, « Relever maintenant », the last messages with
+their classification and its proof (« Messages triés », E2 Q14), grouped by application (E4 Q8); « Ce qui a bougé »
+and its gestures (E4 Q5), « Juste », « Corriger » and « Créer la candidature » (E4 Q4, Q6, Q7).
 
 A collection runs in the planner's thread, never in a request: the screen follows it by polling a fragment. Only
 the return from Google (the exchange of its code) calls Google inside a request.
@@ -12,21 +13,24 @@ import re
 import secrets
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
+from rocky.candidatures.model import STAGE_LABELS, InvalidChangeError
 from rocky.messages.classification.model import (
     CATEGORY_LABELS,
     EMPLOYER_CATEGORIES,
     LEVEL_LABELS,
     TIER_LABELS,
     VIEW_LABELS,
+    Category,
     Level,
     View,
 )
+from rocky.messages.decisions.model import InvalidGestureError, Outcome
 from rocky.messages.model import (
     MAILBOX_STATUS_LABELS,
     QUERY_LABELS,
@@ -52,16 +56,23 @@ from rocky.messages.usecases import (
     MailboxNotFoundError,
 )
 from rocky.offres.decisions import Author
+from rocky.offres.sources.model import InvalidLinkError
+from rocky.profil.web import profile_of
+from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.llm import GeminiModel
 from rocky.system.scheduler import Scheduler
-from rocky.system.shell import is_htmx, page, wants_fragment
+from rocky.system.shell import add_badge, is_htmx, page, wants_fragment
 
 logger = logging.getLogger(__name__)
 
 TEMPLATES = Path(__file__).parent / "templates"
 PAGE = "messages/page.html"
 CONTENT = "messages/content.html"
+CORRECT_PANEL = "messages/correct_panel.html"
+CREATE_PANEL = "messages/create_panel.html"
+APPLICATION_MESSAGES = "messages/application_messages.html"
+_PANEL_ID = re.compile(r"^panneau-(?:mouvement-)?\d{1,18}$")
 STATE_COOKIE = "rocky_gmail_oauth"
 COOKIE_PATH = "/messages/gmail"
 
@@ -117,8 +128,15 @@ def install(app: FastAPI) -> None:
         level_labels=LEVEL_LABELS,
         tier_labels=TIER_LABELS,
         view_labels=VIEW_LABELS,
+        stage_labels=STAGE_LABELS,
     )
+    # E4 (Q5): the lines of « Ce qui a bougé » beside 📬 in the navigation.
+    add_badge(app, "messages", _pending_count)
     app.include_router(router)
+
+
+def _pending_count(request: Request, account: Account) -> int:
+    return _service(request).pending_count(account.id)
 
 
 def _service(request: Request) -> MessagesService:
@@ -158,6 +176,7 @@ def _context(
         "View": View,
         "Level": Level,
         "Author": Author,
+        "Outcome": Outcome,
         **extra,
     }
 
@@ -331,3 +350,215 @@ def disconnect(request: Request, account: CurrentAccount, mailbox_id: int) -> Re
         )
     notice = "revocation" if warning else "deconnectee"
     return RedirectResponse(f"/messages?boite={notice}", status_code=303)
+
+
+# Decisions on the messages (E4). Every gesture answers with the content of the page (its notice or error on top); a
+# request without HTMX is sent back to the page.
+
+GESTURE_NOTICES = {
+    "vu": "C'est noté.",
+    "appliquer": "Étape de la candidature changée.",
+    "ignorer": "Proposition ignorée : la candidature garde son étape.",
+    "annuler": "Changement annulé : la candidature a retrouvé son étape.",
+}
+
+
+@router.post("/mouvements/{transition_id}/{gesture}", response_class=HTMLResponse)
+def settle(
+    request: Request, account: CurrentAccount, transition_id: int, gesture: str
+) -> Response:
+    """« Vu », « Appliquer », « Ignorer », « Annuler » on a line of « Ce qui a bougé » (Q5)."""
+    service = _service(request)
+    actions = {
+        "vu": service.mark_seen,
+        "appliquer": service.apply_proposal,
+        "ignorer": service.dismiss,
+        "annuler": service.cancel_transition,
+    }
+    action = actions.get(gesture)
+    if action is None:
+        return _content(request, account.id, status_code=404, error="Geste inconnu.")
+    try:
+        action(account.id, transition_id)
+    except (InvalidGestureError, InvalidChangeError) as refused:
+        return _content(request, account.id, status_code=400, error=str(refused))
+    return _content(request, account.id, notice=GESTURE_NOTICES[gesture])
+
+
+@router.get("/{message_id}/corriger", response_class=HTMLResponse)
+def correct_panel(
+    request: Request, account: CurrentAccount, message_id: int
+) -> Response:
+    """The panel « Corriger » of a message (Q6, Q7)."""
+    return _panel(request, account.id, message_id, CORRECT_PANEL)
+
+
+@router.get("/{message_id}/creer", response_class=HTMLResponse)
+def create_panel(
+    request: Request, account: CurrentAccount, message_id: int
+) -> Response:
+    """The panel « Créer la candidature » of a message (Q4)."""
+    return _panel(request, account.id, message_id, CREATE_PANEL)
+
+
+def _panel(request: Request, account_id: int, message_id: int, name: str) -> Response:
+    if not wants_fragment(request):
+        return RedirectResponse("/messages", status_code=303)
+    try:
+        view = _service(request).correction(account_id, message_id)
+    except LookupError:
+        return HTMLResponse(
+            "<p class='alert alert-error'>Ce message n'existe pas.</p>", 404
+        )
+    target = request.headers.get("HX-Target", "")
+    templates: Jinja2Templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        name,
+        {
+            "view": view,
+            "categories": list(Category),
+            "panel": target if _PANEL_ID.match(target) else f"panneau-{message_id}",
+        },
+    )
+
+
+@router.post("/{message_id}/corriger", response_class=HTMLResponse)
+def correct(
+    request: Request,
+    account: CurrentAccount,
+    message_id: int,
+    categorie: Annotated[str, Form()] = "",
+    candidature: Annotated[str, Form()] = "",
+    toujours: Annotated[str, Form()] = "",
+    domaine: Annotated[str, Form()] = "",
+) -> Response:
+    """« Enregistrer la correction » (Q3, Q6, Q7)."""
+    if categorie not in set(Category):
+        return _content(
+            request, account.id, status_code=400, error="Catégorie inconnue."
+        )
+    application_id = int(candidature) if candidature.isdigit() else None
+    try:
+        result = _service(request).correct(
+            account.id,
+            message_id,
+            category=Category(categorie),
+            application_id=application_id,
+            remember_sender=bool(toujours),
+            remember_domain=bool(domaine),
+        )
+    except InvalidGestureError as refused:
+        return _content(request, account.id, status_code=400, error=str(refused))
+    except LookupError:
+        return _content(
+            request, account.id, status_code=404, error="Ce message n'existe pas."
+        )
+    said = ["Correction enregistrée."]
+    if result.kept:
+        said.append(
+            "La candidature a changé depuis ce message : son étape reste, change-la depuis son dossier si besoin."
+        )
+    if result.proposal_id is not None:
+        said.append(
+            "Le changement d'étape qui en découle est proposé dans « Ce qui a bougé »."
+        )
+    if result.rule_address:
+        said.append(
+            f"Règle ajoutée : {result.rule_address} → {CATEGORY_LABELS[Category(categorie)]}."
+        )
+    if result.domain:
+        said.append(f"Domaine de l'employeur retenu : {result.domain}.")
+    return _content(request, account.id, notice=" ".join(said))
+
+
+@router.post("/{message_id}/juste", response_class=HTMLResponse)
+def confirm(request: Request, account: CurrentAccount, message_id: int) -> Response:
+    """« Juste »: the user confirms Rocky's decision (Q6)."""
+    try:
+        _service(request).confirm(account.id, message_id)
+    except InvalidGestureError as refused:
+        return _content(request, account.id, status_code=400, error=str(refused))
+    except LookupError:
+        return _content(
+            request, account.id, status_code=404, error="Ce message n'existe pas."
+        )
+    return _content(request, account.id, notice="Merci : classement confirmé.")
+
+
+@router.post("/{message_id}/creer", response_class=HTMLResponse)
+def create(
+    request: Request,
+    account: CurrentAccount,
+    message_id: int,
+    employeur: Annotated[str, Form()] = "",
+    intitule: Annotated[str, Form()] = "",
+    lien: Annotated[str, Form()] = "",
+) -> Response:
+    """« Créer la candidature » (Q4): the offer and the application at « Envoyée », the message attached."""
+    try:
+        application_id = _service(request).create_application(
+            account.id,
+            message_id,
+            company=employeur,
+            title=intitule,
+            link=lien,
+            profile=profile_of(request, account),
+        )
+    except (InvalidGestureError, InvalidLinkError, InvalidChangeError) as refused:
+        return _content(request, account.id, status_code=400, error=str(refused))
+    except LookupError:
+        return _content(
+            request, account.id, status_code=404, error="Ce message n'existe pas."
+        )
+    return _content(
+        request,
+        account.id,
+        notice=f"Candidature chez {' '.join(employeur.split())} créée, à l'étape « Envoyée ».",
+        notice_link=(f"/candidatures/{application_id}", "Ouvrir le dossier"),
+    )
+
+
+@router.post("/regles/{rule_id}/retirer", response_class=HTMLResponse)
+def remove_rule(request: Request, account: CurrentAccount, rule_id: int) -> Response:
+    """Retirer a rule of the account (Q7)."""
+    try:
+        _service(request).remove_rule(account.id, rule_id)
+    except InvalidGestureError as refused:
+        return _content(request, account.id, status_code=400, error=str(refused))
+    return _content(request, account.id, notice="Règle retirée.")
+
+
+@router.get("/candidature/{application_id}", response_class=HTMLResponse)
+def application_messages(
+    request: Request, account: CurrentAccount, application_id: int
+) -> Response:
+    """The block « Messages » of a dossier (Q8), loaded by its page."""
+    if not wants_fragment(request):
+        return RedirectResponse(f"/candidatures/{application_id}", status_code=303)
+    templates: Jinja2Templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        APPLICATION_MESSAGES,
+        {
+            "messages": _service(request).application_messages(
+                account.id, application_id
+            )
+        },
+    )
+
+
+def _content(
+    request: Request, account_id: int, *, status_code: int = 200, **extra: Any
+) -> Response:
+    if not is_htmx(request):
+        if status_code == 200:
+            return RedirectResponse("/messages", status_code=303)
+        return _page(request, account_id, status_code=status_code, **extra)
+    templates: Jinja2Templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        CONTENT,
+        _context(request, account_id, **extra),
+        status_code=status_code,
+    )
