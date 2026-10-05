@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
@@ -83,22 +83,25 @@ def classify_messages(
     max_calls: int | None = None,
     again: bool = False,
     no_model_reason: str = WITHOUT_MODEL_REASON,
+    only: Sequence[int] | None = None,
 ) -> ClassifyReport:
     """The messages of the account without a decision (``again``: all of them, never over a user's decision, Q13).
 
     ``model`` None: the rules only, the others waiting for ``no_model_reason``. ``max_calls`` bounds the calls of this
-    pass under the account's limits. Raises ``ClassifyBusyError``.
+    pass under the account's limits. ``only``: these messages alone (decision E4: those of a sender the user made a
+    rule for, or citing an employer whose application was just created). Raises ``ClassifyBusyError``.
     """
     with storage.classify_lock(account_id) as locked:
         if not locked:
             raise ClassifyBusyError(account_id)
         with storage.transaction() as store:
             threads = store.attached_threads(account_id)
-        context = Context(tuple(targets(account_id)), threads)
+            rules = store.sender_rules(account_id)
+        context = Context(tuple(targets(account_id)), threads, rules)
         report = ClassifyReport()
         waiting: list[tuple[MailToClassify, Pending]] = []
         after = 0
-        while batch := _batch(storage, account_id, after, again=again):
+        while batch := _batch(storage, account_id, after, again=again, only=only):
             after = batch[-1].id
             for message in batch:
                 found = classify(message, context)
@@ -128,10 +131,18 @@ def classify_messages(
 
 
 def _batch(
-    storage: ClassificationStorage, account_id: int, after: int, *, again: bool
+    storage: ClassificationStorage,
+    account_id: int,
+    after: int,
+    *,
+    again: bool,
+    only: Sequence[int] | None,
 ) -> list[MailToClassify]:
     """The next messages to classify, in the order they were collected (the rules are cheap: every batch is read)."""
     with storage.transaction() as store:
+        if only is not None:
+            wanted = sorted(message_id for message_id in only if message_id > after)
+            return store.messages_among(account_id, wanted[:BATCH])
         if again:
             return store.messages_of(account_id, after, BATCH)
         return store.undecided(account_id, after, BATCH)
@@ -269,6 +280,7 @@ def _write(
                 account_id=account_id,
             )
         )
+        store.follow(account_id, message, decision_id, verdict, now)
     return True
 
 

@@ -5,6 +5,10 @@ Decision ``docs/decisions/E1-collecte.md``. After each collection, the hook ``on
 messages it wrote, once they are committed: the only way in for what decides about a message (E2, E4). Decision
 ``docs/decisions/E2-classification.md``: the classification takes every message of the account without a decision,
 so that a message a pass could not decide is taken up by the next one.
+
+Decision ``docs/decisions/E4-decisions-ecran.md``: each decision gives its application's transition in its own
+transaction; the user's gestures (« Ce qui a bougé », corrections, « Créer la candidature ») run here, one transaction
+each, then classify again by the rules what a new rule or a new application concerns.
 """
 
 from __future__ import annotations
@@ -19,7 +23,13 @@ from sqlalchemy import Engine
 
 from rocky.candidatures import web as candidatures_web
 from rocky.candidatures.model import MailTarget
-from rocky.messages.classification.model import Limits, SortedMessage, View
+from rocky.messages.classification.model import (
+    Category,
+    Limits,
+    SortedMessage,
+    StoredDecision,
+    View,
+)
 from rocky.messages.classification.usecases import (
     DAY_LIMIT_REASON,
     NOT_CONFIGURED_REASON,
@@ -27,6 +37,21 @@ from rocky.messages.classification.usecases import (
     ClassifyBusyError,
     ClassifyReport,
     classify_messages,
+)
+from rocky.messages.decisions import usecases as decisions
+from rocky.messages.decisions.model import (
+    Corrected,
+    Label,
+    MessageGroup,
+    MessageRef,
+    Moved,
+    SenderRule,
+)
+from rocky.messages.decisions.rules import (
+    cited_employer,
+    domain_offered,
+    grouped,
+    rule_possible,
 )
 from rocky.messages.gmail import GoogleGmail
 from rocky.messages.model import (
@@ -48,6 +73,7 @@ from rocky.messages.usecases import (
     disconnect_mailbox,
     recover_interrupted,
 )
+from rocky.profil.model import Profile
 from rocky.system.config import GmailSettings, LlmSettings
 from rocky.system.crypto import TokenCipher
 from rocky.system.llm import JsonModel
@@ -82,6 +108,10 @@ class MessagesState:
     waiting_reason: str | None
     # Acknowledgements, out of the default view (Q19).
     acknowledgements: int = 0
+    # Decision E4: « Ce qui a bougé » (Q5), the messages grouped by application (Q8), the account's rules (Q7).
+    moved: tuple[Moved, ...] = ()
+    groups: tuple[MessageGroup, ...] = ()
+    rules: tuple[SenderRule, ...] = ()
 
     @property
     def running(self) -> bool:
@@ -89,6 +119,19 @@ class MessagesState:
             view.last is not None and view.last.status is SyncStatus.RUNNING
             for view in self.mailboxes
         )
+
+
+@dataclass(frozen=True)
+class CorrectionView:
+    """What the panel « Corriger » shows (decision E4, Q6, Q7)."""
+
+    message: MessageRef
+    decision: StoredDecision | None
+    # « Employeur — intitulé » of the open applications of the account.
+    applications: dict[int, str]
+    rule_possible: bool
+    domain: str | None
+    cited_employer: str | None
 
 
 def nothing_decided(account_id: int, message_ids: Sequence[int]) -> None:
@@ -109,7 +152,8 @@ class MessagesService:
         model: JsonModel | None = None,
     ) -> None:
         self.engine = engine
-        self.storage = SqlStorage(engine)
+        # E4: every decision gives the transition of its application, in its transaction.
+        self.storage = SqlStorage(engine, follow=decisions.follow_decision)
         # The language model of the classification (E2); None: the rules only, the others wait for a key.
         self.model = model
         settings_llm = llm or LlmSettings()
@@ -225,8 +269,10 @@ class MessagesService:
         use_model: bool = True,
         max_calls: int | None = None,
         again: bool = False,
+        only: Sequence[int] | None = None,
     ) -> ClassifyReport:
-        """The messages of the account without a decision (``again``: all of them). Raises ``ClassifyBusyError``."""
+        """The messages of the account without a decision (``again``: all of them; ``only``: these alone). Raises
+        ``ClassifyBusyError``."""
         report = classify_messages(
             self.storage,
             account_id=account_id,
@@ -239,6 +285,7 @@ class MessagesService:
             no_model_reason=NOT_CONFIGURED_REASON
             if use_model
             else WITHOUT_MODEL_REASON,
+            only=only,
         )
         logger.info(
             "classification of account %s: %s by the rules, %s by the model, %s calls, %s waiting",
@@ -270,25 +317,190 @@ class MessagesService:
                 MailboxView(mailbox, store.last_sync(mailbox.id))
                 for mailbox in mailboxes
             ]
+            moved = store.pending_moves(account_id)
+            rules = store.sender_rule_list(account_id)
         attached = {
             message.decision.application_id
             for message in messages
             if message.decision is not None
             and message.decision.application_id is not None
-        }
-        with self.engine.connect() as connection:
-            labels = candidatures_web.application_labels(
-                connection, account_id, attached
-            )
+        } | {line.transition.application_id for line in moved}
         return MessagesState(
             mailboxes=views,
             view=view,
             messages=messages,
-            applications=labels,
+            applications=self._labels(account_id, attached),
             waiting=waiting,
             waiting_reason=reason,
             acknowledgements=acknowledgements,
+            moved=tuple(moved),
+            groups=tuple(grouped(messages)),
+            rules=tuple(rules),
         )
+
+    def _labels(self, account_id: int, application_ids: set[int]) -> dict[int, str]:
+        with self.engine.connect() as connection:
+            return candidatures_web.application_labels(
+                connection, account_id, application_ids
+            )
+
+    # Decisions on the messages (E4)
+
+    def pending_count(self, account_id: int) -> int:
+        """The lines of « Ce qui a bougé » (Q5): the counter of the navigation."""
+        with self.storage.transaction() as store:
+            return store.pending_count(account_id)
+
+    def application_messages(
+        self, account_id: int, application_id: int
+    ) -> list[SortedMessage]:
+        """The messages attached to an application (Q8: the block « Messages » of its dossier)."""
+        with self.storage.transaction() as store:
+            return store.sorted_messages(
+                account_id, View.ALL, SHOWN_MESSAGES, application_id=application_id
+            )
+
+    def mark_seen(self, account_id: int, transition_id: int) -> None:
+        with self.storage.transaction() as store:
+            decisions.mark_seen(
+                store,
+                account_id=account_id,
+                transition_id=transition_id,
+                now=self._clock(),
+            )
+
+    def dismiss(self, account_id: int, transition_id: int) -> None:
+        with self.storage.transaction() as store:
+            decisions.dismiss(
+                store,
+                account_id=account_id,
+                transition_id=transition_id,
+                now=self._clock(),
+            )
+
+    def apply_proposal(self, account_id: int, transition_id: int) -> None:
+        with self.storage.transaction() as store:
+            decisions.apply_proposal(
+                store,
+                account_id=account_id,
+                transition_id=transition_id,
+                now=self._clock(),
+            )
+
+    def cancel_transition(self, account_id: int, transition_id: int) -> None:
+        with self.storage.transaction() as store:
+            decisions.cancel_transition(
+                store,
+                account_id=account_id,
+                transition_id=transition_id,
+                now=self._clock(),
+            )
+
+    def correction(self, account_id: int, message_id: int) -> CorrectionView:
+        """What « Corriger » shows. Raises ``LookupError`` for a message of another account."""
+        with self.storage.transaction() as store:
+            message = store.message(account_id, message_id)
+            if message is None:
+                raise LookupError(decisions.UNKNOWN_MESSAGE)
+            decision = store.current_decision(message_id)
+        with self.engine.connect() as connection:
+            applications = candidatures_web.open_application_labels(
+                connection, account_id
+            )
+        return CorrectionView(
+            message=message,
+            decision=decision,
+            applications=applications,
+            rule_possible=rule_possible(message.sender_address),
+            domain=domain_offered(message.sender_address),
+            cited_employer=cited_employer(decision),
+        )
+
+    def correct(
+        self,
+        account_id: int,
+        message_id: int,
+        *,
+        category: Category,
+        application_id: int | None,
+        remember_sender: bool,
+        remember_domain: bool,
+    ) -> Corrected:
+        """« Corriger » (Q6), then the messages of a sender the user made a rule for, classified again (Q7)."""
+        with self.storage.transaction() as store:
+            result = decisions.correct(
+                store,
+                account_id=account_id,
+                message_id=message_id,
+                category=category,
+                application_id=application_id,
+                now=self._clock(),
+                remember_sender=remember_sender,
+                remember_domain=remember_domain,
+            )
+            again = (
+                []
+                if result.rule_address is None
+                else store.messages_from(account_id, result.rule_address)
+            )
+        self._classify_again(account_id, again)
+        return result
+
+    def confirm(self, account_id: int, message_id: int) -> None:
+        with self.storage.transaction() as store:
+            decisions.confirm(
+                store, account_id=account_id, message_id=message_id, now=self._clock()
+            )
+
+    def create_application(
+        self,
+        account_id: int,
+        message_id: int,
+        *,
+        company: str,
+        title: str,
+        link: str,
+        profile: Profile,
+    ) -> int:
+        """« Créer la candidature » (Q4), then the messages citing the same employer, classified again."""
+        with self.storage.transaction() as store:
+            application_id = decisions.create_application(
+                store,
+                store.offers(profile),
+                account_id=account_id,
+                message_id=message_id,
+                company=company,
+                title=title,
+                link=link,
+                now=self._clock(),
+            )
+            again = store.messages_citing(account_id, company)
+        self._classify_again(account_id, again)
+        return application_id
+
+    def remove_rule(self, account_id: int, rule_id: int) -> None:
+        with self.storage.transaction() as store:
+            decisions.remove_sender_rule(
+                store, account_id=account_id, rule_id=rule_id, now=self._clock()
+            )
+
+    def labels(self, account_id: int) -> list[Label]:
+        """The user's decisions with the decision each reviewed (Q6, D14): ``rocky-admin messages-etiquettes``."""
+        with self.storage.transaction() as store:
+            return store.labels(account_id)
+
+    def _classify_again(self, account_id: int, message_ids: Sequence[int]) -> None:
+        """By the rules alone, never over the user's decisions; a pass in progress leaves them as they are."""
+        if not message_ids:
+            return
+        try:
+            self.classify(account_id, use_model=False, again=True, only=message_ids)
+        except ClassifyBusyError:
+            logger.warning(
+                "account %s is being classified: %s messages not classified again",
+                account_id,
+                len(message_ids),
+            )
 
     def _waiting_reason(self, store: SqlStore, account_id: int) -> str:
         if self.model is None:

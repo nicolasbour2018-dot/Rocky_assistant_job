@@ -58,6 +58,9 @@ HEAD_TABLES = {
     "message_decisions",
     "mail_model_calls",
     "application_domains",
+    "mail_transitions",
+    "mail_transition_settlements",
+    "mail_sender_rules",
 }
 
 

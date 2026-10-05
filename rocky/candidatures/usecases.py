@@ -43,11 +43,12 @@ from rocky.candidatures.rules import (
     dossier,
     employer_domain,
     language_in_force,
+    mail_next_action,
     notes_in_force,
     proposal,
     to_cancel,
 )
-from rocky.offres.decisions import Author, Decision, DecisionValue
+from rocky.offres.decisions import Author, Decision, DecisionValue, outside_decision
 from rocky.system.events import Actor, JsonValue, NewEvent
 
 REJECTED_OFFER = "Cette offre est écartée : change d'abord ta décision pour préparer une candidature."
@@ -137,6 +138,116 @@ def change_stage(
     return written is not None
 
 
+def move_by_message(
+    store: ApplicationStore,
+    *,
+    account_id: int,
+    application_id: int,
+    stage: Stage,
+    author: Author,
+    message_id: int,
+    now: datetime,
+    today: date,
+) -> int | None:
+    """A transition a received message gave (decision E4): applied by a rule (Q1), or by the user applying what was
+    proposed. Its next action is ``mail_next_action`` (Q9); the event names the message. Returns the change's id, None
+    when the application is already at ``stage``. Raises ``InvalidChangeError`` for a transition a rule may not make.
+    """
+    application, current = _open(store, account_id, application_id)
+    change = _stage_change(
+        store,
+        application,
+        current,
+        stage,
+        mail_next_action(stage, today),
+        now,
+        author,
+        extra={"message_id": message_id},
+    )
+    return None if change is None else change.id
+
+
+def cancel_change_if_last(
+    store: ApplicationStore,
+    offers: OfferDecisions,
+    *,
+    account_id: int,
+    application_id: int,
+    change_id: int,
+    now: datetime,
+) -> bool:
+    """Cancel the change ``change_id`` only while it is the latest change of the application in force (decision E4,
+    Q3: correcting a message undoes the transition it gave, never what the user did after it). False otherwise."""
+    application = store.locked_application(account_id, application_id)
+    if application is None:
+        raise LookupError(f"application {application_id} is not of the account")
+    target = to_cancel(store.changes(application.id))
+    if target is None or target.id != change_id:
+        return False
+    return (
+        cancel_last_change(
+            store,
+            offers,
+            account_id=account_id,
+            application_id=application_id,
+            now=now,
+        )
+        is not None
+    )
+
+
+def record_outside_application(
+    store: ApplicationStore,
+    offers: OfferDecisions,
+    *,
+    account_id: int,
+    offer_id: int,
+    sent_on: date,
+    now: datetime,
+) -> int:
+    """« Créer la candidature » from a message (decision E4, Q4): the application the user made outside Rocky, opened
+    at « Envoyée » with « Relancer » a week after ``sent_on``. The offer gets « Intéressé » (``applied_outside``) unless
+    it is already so; an offer « Écarté » is refused. Idempotent: an open application is returned as it is."""
+    in_force = offers.decision_in_force(account_id, offer_id)
+    if in_force is DecisionValue.REJECTED:
+        raise InvalidChangeError(REJECTED_OFFER)
+    application = store.application_for_offer(account_id, offer_id, now)
+    if dossier(store.changes(application.id)).open:
+        return application.id
+    decision_id = None
+    if in_force is not DecisionValue.INTERESTED:
+        decision_id = offers.record_interested(
+            account_id, offer_id, outside_decision(), now
+        )
+    next_action = _proposed(Stage.SENT, sent_on)
+    store.insert_change(
+        account_id,
+        application.id,
+        NewChange(
+            ChangeKind.CREATED,
+            stage=Stage.SENT,
+            next_action=next_action,
+            decision_id=decision_id,
+        ),
+        author=Author.USER,
+        now=now,
+    )
+    _event(
+        store,
+        application,
+        "candidatures.application_created",
+        Author.USER,
+        {
+            "offer_id": offer_id,
+            "stage": Stage.SENT.value,
+            "next_action": _action_json(next_action),
+            "decision_id": decision_id,
+            "origin": "message",
+        },
+    )
+    return application.id
+
+
 def _stage_change(
     store: ApplicationStore,
     application: Application,
@@ -145,6 +256,8 @@ def _stage_change(
     next_action: NextAction | None,
     now: datetime,
     author: Author,
+    *,
+    extra: Mapping[str, JsonValue] | None = None,
 ) -> Change | None:
     """The stage change and its event, on an application already locked; None when it is already at ``stage``."""
     previous = current.stage
@@ -170,6 +283,7 @@ def _stage_change(
             "from": previous.value,
             "to": stage.value,
             "next_action": _action_json(next_action),
+            **(extra or {}),
         },
     )
     return change

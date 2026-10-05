@@ -22,7 +22,10 @@ from rocky.candidatures.sql import (
 from rocky.messages.sql import (
     email_messages,
     mail_model_calls,
+    mail_sender_rules,
     mail_syncs,
+    mail_transition_settlements,
+    mail_transitions,
     mailboxes,
     message_decisions,
 )
@@ -82,7 +85,10 @@ __all__ = [
     "job_offers",
     "languages",
     "mail_model_calls",
+    "mail_sender_rules",
     "mail_syncs",
+    "mail_transition_settlements",
+    "mail_transitions",
     "mailboxes",
     "message_decisions",
     "offer_scores",

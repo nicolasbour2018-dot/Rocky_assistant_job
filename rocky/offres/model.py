@@ -24,6 +24,8 @@ class Origin(StrEnum):
 
     WATCH = "watch"
     IMPORT = "import"
+    # « Créer la candidature » from a message (decision E4, Q4, Q12): an application made outside Rocky.
+    MESSAGE = "message"
 
 
 ORIGIN_LABELS = {

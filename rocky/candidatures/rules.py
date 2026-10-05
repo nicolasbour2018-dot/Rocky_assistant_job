@@ -121,6 +121,21 @@ def proposal(
     return proposed.label, due
 
 
+# Decision E4 (Q9): a message never gives the interview's date; the transition asks for it.
+INTERVIEW_DATE_TO_SET = "Fixer la date de l'entretien"
+
+
+def mail_next_action(stage: Stage, today: date) -> NextAction | None:
+    """The next action set by a transition a message gave (decision E4): the proposal of the stage, and for an
+    interview « Fixer la date de l'entretien » the next day (Q9); None for an outcome."""
+    if stage is Stage.INTERVIEW:
+        return NextAction(INTERVIEW_DATE_TO_SET, today + timedelta(days=1))
+    proposed = proposal(stage, today)
+    if proposed is None or proposed[1] is None:
+        return None
+    return NextAction(proposed[0], proposed[1])
+
+
 def make_next_action(label: str | None, due: date | None) -> NextAction | None:
     """A next action as entered: both fields, or neither (no action)."""
     text = (label or "").strip()

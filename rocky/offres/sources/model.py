@@ -32,8 +32,14 @@ SOURCE_LABELS = {
 }
 
 
+# The source of an offer created from a received message (decision E4, Q4): no platform, no posting page.
+MESSAGE_SOURCE = "message"
+
+
 def source_label(name: str) -> str:
     """Label of a source name: the platform name of a connector, else the host itself."""
+    if name == MESSAGE_SOURCE:
+        return "Message reçu"
     try:
         return SOURCE_LABELS[SourceCode(name)]
     except ValueError:

@@ -70,7 +70,7 @@ def record_offer(
         else:
             store.mark_seen(offer_id, now)
     result = _score(merged, inputs, today)
-    if origin is Origin.IMPORT:
+    if origin in (Origin.IMPORT, Origin.MESSAGE):
         best = best_track(result)
         track_ids = () if best is None else (best,)
     store.link_tracks(offer_id, track_ids, found_by=origin, run_id=run_id, now=now)
@@ -118,6 +118,47 @@ def add_imported_offer(
             account_id=account_id,
         )
     )
+    return recorded
+
+
+def add_offer_from_message(
+    store: OfferStore,
+    *,
+    account_id: int,
+    offer: CollectedOffer,
+    inputs: ScoringInputs,
+    message_id: int,
+    now: datetime,
+    today: date,
+) -> Recorded:
+    """« Créer la candidature » from a message (decision E4, Q4, Q12): the minimal offer of an application made outside
+    Rocky, scored and linked as an import, with the user's event. Idempotent: its identifier names the message."""
+    recorded = record_offer(
+        store,
+        account_id=account_id,
+        offer=offer,
+        inputs=inputs,
+        origin=Origin.MESSAGE,
+        now=now,
+        today=today,
+    )
+    if recorded.created:
+        store.append_event(
+            NewEvent(
+                type="offres.offer_added",
+                actor=Actor.USER,
+                subject_type="job_offer",
+                subject_id=str(recorded.offer_id),
+                payload={
+                    "source": offer.source,
+                    "created": True,
+                    "message_id": message_id,
+                    "track_id": recorded.score.best.track_id,
+                    "score": recorded.score.best.display,
+                },
+                account_id=account_id,
+            )
+        )
     return recorded
 
 

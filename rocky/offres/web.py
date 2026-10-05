@@ -22,7 +22,7 @@ from rocky.offres.analysis.rules import analyze, deadline_of
 from rocky.offres.analysis.text import formatted_description
 from rocky.offres.analysis.usecases import Summary, SummaryResult, summarize
 from rocky.offres.decisions import (
-    APPLICATION_STARTED,
+    AUTOMATIC_REASONS,
     DECISION_KEYS,
     DECISION_LABELS,
     REASON_QUESTIONS,
@@ -55,8 +55,10 @@ from rocky.offres.screen import (
     offer_card,
     queue,
 )
+from rocky.offres.sources.model import MESSAGE_SOURCE, CollectedOffer
 from rocky.offres.sql import SqlStore
 from rocky.offres.usecases import (
+    add_offer_from_message,
     cancel_decision,
     cancel_last_decision,
     enrich_offer,
@@ -680,10 +682,11 @@ def interested_reason(
     decision = row.decision
     if decision.value is not DecisionValue.INTERESTED:
         return None
+    automatic = {reason.code for reason in AUTOMATIC_REASONS[decision.value]}
     labels = tuple(
         reason_label(decision.value, code)
         for code in decision.reasons
-        if code != APPLICATION_STARTED
+        if code not in automatic
     )
     return labels, decision.note
 
@@ -725,6 +728,41 @@ def record_application_decision(
         track_id=None,
         now=now,
     )
+
+
+def record_message_offer(
+    connection: Connection,
+    *,
+    account_id: int,
+    message_id: int,
+    company: str,
+    title: str,
+    link: str,
+    profile: Profile,
+    now: datetime,
+    today: date,
+) -> int:
+    """The minimal offer of an application made outside Rocky, created from a message (decision E4, Q4, Q12): the
+    employer and title the user confirmed, the posting's ``link`` (or the message's own link). Returns its id."""
+    offer = CollectedOffer(
+        source=MESSAGE_SOURCE,
+        external_id=f"message-{message_id}",
+        url=link,
+        title=title,
+        company=company or None,
+        description="",
+        description_complete=False,
+        incomplete_reason="Créée depuis un message : colle la description de l'annonce pour la compléter.",
+    )
+    return add_offer_from_message(
+        SqlStore(connection),
+        account_id=account_id,
+        offer=offer,
+        inputs=scoring_inputs(profile),
+        message_id=message_id,
+        now=now,
+        today=today,
+    ).offer_id
 
 
 def cancel_application_decision(

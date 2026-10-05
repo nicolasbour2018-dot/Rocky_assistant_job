@@ -20,7 +20,7 @@ from rocky.offres.decisions import Author
 from rocky.system.events import NewEvent
 
 # Changes whenever a rule, a list or the model's instructions change: kept with every decision (Q6, D14).
-CLASSIFY_VERSION = "mail-classify-2026-10-05.6"
+CLASSIFY_VERSION = "mail-classify-2026-10-05.7"
 
 
 class Category(StrEnum):
@@ -96,6 +96,7 @@ class Tier(StrEnum):
     PHRASE = "phrase"  # an explicit sentence of intent
     SIGNAL = "signal"  # a sign of the job search, or its absence
     MODEL = "model"  # the language model, with its quotation checked
+    USER = "user"  # the user's own correction or confirmation (decision E4, Q6)
 
 
 TIER_LABELS = {
@@ -107,6 +108,7 @@ TIER_LABELS = {
     Tier.PHRASE: "Phrase du message",
     Tier.SIGNAL: "Signaux de recherche",
     Tier.MODEL: "Modèle de langage",
+    Tier.USER: "Toi",
 }
 
 
@@ -172,6 +174,8 @@ class Context:
     targets: tuple[MailTarget, ...] = ()
     # (mailbox id, thread id) -> the application a message of that thread is attached to.
     threads: dict[tuple[int, str], int] = field(default_factory=dict)
+    # Decision E4 (Q7): the account's rules, an exact sender address (lower case) -> its category.
+    sender_rules: dict[str, Category] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -260,6 +264,12 @@ class ClassificationStore(Protocol):
         """Messages of the account without any decision, after ``after_id``, in the order they were collected."""
         ...
 
+    def messages_among(
+        self, account_id: int, message_ids: Sequence[int]
+    ) -> list[MailToClassify]:
+        """The account's messages among ``message_ids``, in the order they were collected."""
+        ...
+
     def messages_of(
         self, account_id: int, after_id: int, limit: int
     ) -> list[MailToClassify]: ...
@@ -274,9 +284,28 @@ class ClassificationStore(Protocol):
 
     def current_author(self, message_id: int) -> Author | None: ...
 
+    def sender_rules(self, account_id: int) -> dict[str, Category]: ...
+
     def add_decision(
-        self, account_id: int, message_id: int, verdict: Verdict, now: datetime
+        self,
+        account_id: int,
+        message_id: int,
+        verdict: Verdict,
+        now: datetime,
+        *,
+        reviews_id: int | None = None,
     ) -> int: ...
+
+    def follow(
+        self,
+        account_id: int,
+        message: MailToClassify,
+        decision_id: int,
+        verdict: Verdict,
+        now: datetime,
+    ) -> None:
+        """Decision E4: what follows a decision inside its transaction (the transition of its application)."""
+        ...
 
     def add_call(
         self,

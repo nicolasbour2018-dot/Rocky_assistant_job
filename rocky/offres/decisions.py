@@ -18,6 +18,8 @@ from enum import StrEnum
 OTHER = "other"
 # Set by « Préparer la candidature » (D1, Q8), never ticked in the triage panel.
 APPLICATION_STARTED = "application_started"
+# Set by « Créer la candidature » from a message (decision E4, Q4, Q12): the user applied outside Rocky.
+APPLIED_OUTSIDE = "applied_outside"
 # Keyboard key of "other" in the reasons panel; the other reasons take 1–9 by rank.
 OTHER_KEY = "0"
 MAX_REASON_KEYS = 9
@@ -101,7 +103,10 @@ REASONS: dict[DecisionValue, tuple[Reason, ...]] = {
 
 # Reasons that a gesture sets by itself: known to the labels, absent from the panels (their keys 1–9 never move).
 AUTOMATIC_REASONS: dict[DecisionValue, tuple[Reason, ...]] = {
-    DecisionValue.INTERESTED: (Reason(APPLICATION_STARTED, "candidature préparée"),),
+    DecisionValue.INTERESTED: (
+        Reason(APPLICATION_STARTED, "candidature préparée"),
+        Reason(APPLIED_OUTSIDE, "candidature faite hors de Rocky"),
+    ),
 }
 
 
@@ -163,6 +168,12 @@ def application_decision(reasons: Iterable[str], note: str | None = None) -> Dec
     triage), led by ``application_started``."""
     chosen = make_decision(DecisionValue.INTERESTED, reasons, note)
     return Decision(chosen.value, (APPLICATION_STARTED, *chosen.reasons), chosen.note)
+
+
+def outside_decision() -> Decision:
+    """« Intéressé » written by « Créer la candidature » from a message (decision E4, Q12): the user applied already,
+    outside Rocky; no reason is asked."""
+    return Decision(DecisionValue.INTERESTED, (APPLIED_OUTSIDE,))
 
 
 def _standing(rows: Iterable[DecisionRow]) -> list[DecisionRow]:

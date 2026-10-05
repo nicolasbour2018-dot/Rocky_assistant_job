@@ -3,12 +3,13 @@
 Decision ``docs/decisions/E1-collecte.md``: a message is written once, alone in its transaction, and never changed;
 ``SqlStorage`` opens the transactions and holds the collection lock of a mailbox. Decision
 ``docs/decisions/E2-classification.md``: the decisions about a message are appended, the latest in force, each with
-its proof; every call to the language model is a row.
+its proof; every call to the language model is a row. Decision ``docs/decisions/E4-decisions-ecran.md``: the
+transitions a decision gives, their settlements and the account's rules per sender are appended too.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import asdict
 from datetime import datetime
@@ -35,6 +36,8 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     insert,
+    literal,
+    or_,
     select,
     text,
     update,
@@ -42,6 +45,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from rocky.candidatures.model import Stage
 from rocky.messages.classification.model import (
     ACTION_RULES,
     CLASSIFY_VERSION,
@@ -58,6 +62,17 @@ from rocky.messages.classification.model import (
     View,
 )
 from rocky.messages.classification.rules import readable
+from rocky.messages.decisions.model import (
+    RULE_CATEGORIES,
+    Gesture,
+    Label,
+    MessageRef,
+    Moved,
+    Outcome,
+    SenderRule,
+    Transition,
+)
+from rocky.messages.links import CandidaturesLink, OffresLink
 from rocky.messages.model import (
     CollectedMessage,
     Mailbox,
@@ -69,7 +84,9 @@ from rocky.messages.model import (
     Trigger,
 )
 from rocky.messages.rules import QUERIES_VERSION
+from rocky.offres.analysis.text import fold
 from rocky.offres.decisions import Author
+from rocky.profil.model import Profile
 from rocky.system.db import metadata
 from rocky.system.events import NewEvent, append_event
 
@@ -188,9 +205,12 @@ message_decisions = Table(
     Column("proofs", JSONB, nullable=False),
     Column("classify_version", Text, nullable=False),
     _timestamp("decided_at"),
+    # Decision E4 (Q6): the decision a user's decision reviews (corrects or confirms), the pair is a label of D14.
+    Column("reviews_id", BigInteger, ForeignKey("message_decisions.id")),
     CheckConstraint(
         "category IS NULL OR " + _in("category", Category), name="category"
     ),
+    CheckConstraint("reviews_id IS NULL OR author = 'user'", name="reviews_by_user"),
     CheckConstraint(_in("level", Level), name="level"),
     CheckConstraint(_in("author", Author), name="author"),
     CheckConstraint("char_length(rule) > 0", name="rule_given"),
@@ -222,11 +242,116 @@ mail_model_calls = Table(
 )
 
 
+# Decision E4 (Q1): the transition a decision gives its application, recorded with it: applied (the change of the
+# application) or proposed (until the user applies it).
+mail_transitions = Table(
+    "mail_transitions",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column(
+        "decision_id",
+        BigInteger,
+        ForeignKey("message_decisions.id"),
+        nullable=False,
+        unique=True,
+    ),
+    Column("message_id", BigInteger, ForeignKey("email_messages.id"), nullable=False),
+    Column("application_id", BigInteger, ForeignKey("applications.id"), nullable=False),
+    Column("from_stage", Text, nullable=False),
+    Column("to_stage", Text, nullable=False),
+    Column("outcome", Text, nullable=False),
+    Column("change_id", BigInteger, ForeignKey("application_changes.id"), unique=True),
+    _timestamp("created_at"),
+    CheckConstraint(_in("from_stage", Stage), name="from_stage"),
+    CheckConstraint(_in("to_stage", Stage), name="to_stage"),
+    CheckConstraint(_in("outcome", Outcome), name="outcome"),
+    CheckConstraint("from_stage <> to_stage", name="moves"),
+    CheckConstraint(
+        "(outcome = 'applied') = (change_id IS NOT NULL)", name="change_when_applied"
+    ),
+    Index("ix_mail_transitions_account_id", "account_id", "id"),
+    Index("ix_mail_transitions_message_id", "message_id", "id"),
+)
+
+# Q5: how a transition left « Ce qui a bougé »; one row per gesture, a transition without any is still to settle.
+mail_transition_settlements = Table(
+    "mail_transition_settlements",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column(
+        "transition_id", BigInteger, ForeignKey("mail_transitions.id"), nullable=False
+    ),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("gesture", Text, nullable=False),
+    # The change of the application the gesture made (applied) or undid (cancelled, corrected).
+    Column("change_id", BigInteger, ForeignKey("application_changes.id")),
+    _timestamp("settled_at"),
+    UniqueConstraint(
+        "transition_id",
+        "gesture",
+        name="uq_mail_transition_settlements_transition_id",
+    ),
+    CheckConstraint(_in("gesture", Gesture), name="gesture"),
+    CheckConstraint(
+        "gesture <> 'applied' OR change_id IS NOT NULL", name="change_when_applied"
+    ),
+)
+
+# Q7: the account's rules « adresse exacte → catégorie », appended; a removal is a row of its own.
+mail_sender_rules = Table(
+    "mail_sender_rules",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("account_id", BigInteger, ForeignKey("accounts.id"), nullable=False),
+    Column("sender_address", Text, nullable=False),
+    Column("category", Text),
+    # The correction the rule was born of.
+    Column("decision_id", BigInteger, ForeignKey("message_decisions.id")),
+    Column("removes_id", BigInteger, ForeignKey("mail_sender_rules.id"), unique=True),
+    _timestamp("created_at"),
+    CheckConstraint(
+        "(category IS NULL) = (removes_id IS NOT NULL)", name="rule_or_removal"
+    ),
+    CheckConstraint(
+        "category IS NULL OR category IN ({})".format(
+            ", ".join(f"'{category.value}'" for category in sorted(RULE_CATEGORIES))
+        ),
+        name="category",
+    ),
+    CheckConstraint(
+        "char_length(sender_address) > 0 AND sender_address = lower(sender_address)",
+        name="sender_address",
+    ),
+    Index("ix_mail_sender_rules_account_id", "account_id", "id"),
+)
+
+# Decision E4: what follows a decision inside its transaction (``decisions.usecases.follow_decision``), given by the
+# composition; none for the collection and classification alone.
+type FollowHook = Callable[
+    [SqlStore, int, MailToClassify, int, Verdict, datetime], None
+]
+
+
+def _follow_nothing(
+    store: SqlStore,
+    account_id: int,
+    message: MailToClassify,
+    decision_id: int,
+    verdict: Verdict,
+    now: datetime,
+) -> None:
+    """No transition: the hook of a storage built without one."""
+
+
 class SqlStore:
     """``Store`` on a connection already inside a transaction; never commits."""
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(
+        self, connection: Connection, follow: FollowHook = _follow_nothing
+    ) -> None:
         self._conn = connection
+        self._follow = follow
 
     # Mailboxes
 
@@ -438,6 +563,21 @@ class SqlStore:
         )
         return [_to_classify(row) for row in self._conn.execute(query)]
 
+    def messages_among(
+        self, account_id: int, message_ids: Sequence[int]
+    ) -> list[MailToClassify]:
+        if not message_ids:
+            return []
+        query = (
+            select(email_messages)
+            .where(
+                email_messages.c.account_id == account_id,
+                email_messages.c.id.in_(list(message_ids)),
+            )
+            .order_by(email_messages.c.id)
+        )
+        return [_to_classify(row) for row in self._conn.execute(query)]
+
     def messages_of(
         self, account_id: int, after_id: int, limit: int
     ) -> list[MailToClassify]:
@@ -510,7 +650,13 @@ class SqlStore:
         return None if author is None else Author(author)
 
     def add_decision(
-        self, account_id: int, message_id: int, verdict: Verdict, now: datetime
+        self,
+        account_id: int,
+        message_id: int,
+        verdict: Verdict,
+        now: datetime,
+        *,
+        reviews_id: int | None = None,
     ) -> int:
         first = verdict.proofs[0]
         return int(
@@ -530,6 +676,7 @@ class SqlStore:
                     proofs=[asdict(proof) for proof in verdict.proofs],
                     classify_version=CLASSIFY_VERSION,
                     decided_at=now,
+                    reviews_id=reviews_id,
                 )
                 .returning(message_decisions.c.id)
             ).scalar_one()
@@ -597,9 +744,15 @@ class SqlStore:
         return reason
 
     def sorted_messages(
-        self, account_id: int, view: View, limit: int
+        self,
+        account_id: int,
+        view: View,
+        limit: int,
+        *,
+        application_id: int | None = None,
     ) -> list[SortedMessage]:
-        """The last messages of ``view`` with their decision in force (Q14)."""
+        """The last messages of ``view`` with their decision in force (Q14); ``application_id``: the messages attached
+        to that application, whatever the view (decision E4, Q8: the dossier shows them)."""
         current = _current_decisions(account_id).subquery()
         query = (
             select(
@@ -627,6 +780,9 @@ class SqlStore:
         )
         employers = [category.value for category in EMPLOYER_CATEGORIES]
         low = current.c.level == Level.LOW.value
+        if application_id is not None:
+            query = query.where(current.c.application_id == application_id)
+            view = View.ALL
         match view:
             case View.TO_LOOK_AT:
                 answers = [
@@ -682,18 +838,344 @@ class SqlStore:
     def append_event(self, event: NewEvent) -> int:
         return append_event(self._conn, event)
 
+    # Decisions on the messages (E4)
+
+    def follow(
+        self,
+        account_id: int,
+        message: MailToClassify,
+        decision_id: int,
+        verdict: Verdict,
+        now: datetime,
+    ) -> None:
+        self._follow(self, account_id, message, decision_id, verdict, now)
+
+    def applications(self) -> CandidaturesLink:
+        return CandidaturesLink(self._conn)
+
+    def offers(self, profile: Profile) -> OffresLink:
+        return OffresLink(self._conn, profile)
+
+    def message(self, account_id: int, message_id: int) -> MessageRef | None:
+        row = self._conn.execute(
+            select(email_messages, mailboxes.c.address)
+            .join(mailboxes, mailboxes.c.id == email_messages.c.mailbox_id)
+            .where(
+                email_messages.c.id == message_id,
+                email_messages.c.account_id == account_id,
+            )
+        ).one_or_none()
+        if row is None:
+            return None
+        return MessageRef(
+            id=row.id,
+            mailbox_address=row.address,
+            gmail_id=row.gmail_id,
+            received_at=row.received_at,
+            sender=row.sender,
+            sender_address=row.sender_address,
+            subject=row.subject,
+        )
+
+    def current_decision(self, message_id: int) -> StoredDecision | None:
+        row = self._conn.execute(
+            select(
+                message_decisions,
+                message_decisions.c.id.label("decision_id"),
+            )
+            .where(message_decisions.c.message_id == message_id)
+            .order_by(message_decisions.c.id.desc())
+            .limit(1)
+        ).one_or_none()
+        return None if row is None else _decision(row)
+
+    def add_transition(
+        self,
+        account_id: int,
+        *,
+        decision_id: int,
+        message_id: int,
+        application_id: int,
+        from_stage: Stage,
+        to_stage: Stage,
+        outcome: Outcome,
+        change_id: int | None,
+        now: datetime,
+    ) -> int:
+        return int(
+            self._conn.execute(
+                insert(mail_transitions)
+                .values(
+                    account_id=account_id,
+                    decision_id=decision_id,
+                    message_id=message_id,
+                    application_id=application_id,
+                    from_stage=from_stage.value,
+                    to_stage=to_stage.value,
+                    outcome=outcome.value,
+                    change_id=change_id,
+                    created_at=now,
+                )
+                .returning(mail_transitions.c.id)
+            ).scalar_one()
+        )
+
+    def transition(self, account_id: int, transition_id: int) -> Transition | None:
+        found = self._conn.execute(
+            select(mail_transitions.c.id)
+            .where(
+                mail_transitions.c.id == transition_id,
+                mail_transitions.c.account_id == account_id,
+            )
+            .with_for_update()
+        ).scalar_one_or_none()
+        if found is None:
+            return None
+        rows = self._conn.execute(
+            _transitions().where(mail_transitions.c.id == transition_id)
+        )
+        return next((_transition(row) for row in rows), None)
+
+    def transitions_of_message(self, message_id: int) -> list[Transition]:
+        query = _transitions().where(mail_transitions.c.message_id == message_id)
+        return [
+            _transition(row)
+            for row in self._conn.execute(query.order_by(mail_transitions.c.id))
+        ]
+
+    def settle(
+        self,
+        account_id: int,
+        transition_id: int,
+        gesture: Gesture,
+        *,
+        change_id: int | None,
+        now: datetime,
+    ) -> None:
+        self._conn.execute(
+            insert(mail_transition_settlements).values(
+                transition_id=transition_id,
+                account_id=account_id,
+                gesture=gesture.value,
+                change_id=change_id,
+                settled_at=now,
+            )
+        )
+
+    def pending_moves(self, account_id: int) -> list[Moved]:
+        """« Ce qui a bougé » (Q5): the transitions of the account without a settlement, the latest first."""
+        query = (
+            _transitions()
+            .add_columns(
+                email_messages.c.subject,
+                email_messages.c.sender,
+                email_messages.c.received_at,
+                message_decisions.c.author,
+                message_decisions.c.category,
+            )
+            .join(email_messages, email_messages.c.id == mail_transitions.c.message_id)
+            .join(
+                message_decisions,
+                message_decisions.c.id == mail_transitions.c.decision_id,
+            )
+            .where(mail_transitions.c.account_id == account_id, _unsettled())
+            .order_by(mail_transitions.c.id.desc())
+        )
+        return [
+            Moved(
+                transition=_transition(row),
+                subject=row.subject,
+                sender=row.sender,
+                received_at=row.received_at,
+                author=Author(row.author),
+                category=None if row.category is None else Category(row.category),
+            )
+            for row in self._conn.execute(query)
+        ]
+
+    def pending_count(self, account_id: int) -> int:
+        return int(
+            self._conn.execute(
+                select(func.count())
+                .select_from(mail_transitions)
+                .where(mail_transitions.c.account_id == account_id, _unsettled())
+            ).scalar_one()
+        )
+
+    def sender_rules(self, account_id: int) -> dict[str, Category]:
+        return {
+            rule.sender_address: rule.category
+            for rule in self.sender_rule_list(account_id)
+        }
+
+    def sender_rule_list(self, account_id: int) -> list[SenderRule]:
+        """The account's rules in force (not removed), the latest first."""
+        removal = mail_sender_rules.alias("removal")
+        removed = select(removal.c.id).where(
+            removal.c.removes_id == mail_sender_rules.c.id
+        )
+        query = (
+            select(mail_sender_rules)
+            .where(
+                mail_sender_rules.c.account_id == account_id,
+                mail_sender_rules.c.category.is_not(None),
+                ~removed.exists(),
+            )
+            .order_by(mail_sender_rules.c.id.desc())
+        )
+        return [
+            SenderRule(
+                id=row.id,
+                sender_address=row.sender_address,
+                category=Category(row.category),
+                created_at=row.created_at,
+            )
+            for row in self._conn.execute(query)
+        ]
+
+    def add_sender_rule(
+        self,
+        account_id: int,
+        sender_address: str,
+        category: Category,
+        *,
+        decision_id: int | None,
+        now: datetime,
+    ) -> int:
+        return int(
+            self._conn.execute(
+                insert(mail_sender_rules)
+                .values(
+                    account_id=account_id,
+                    sender_address=sender_address,
+                    category=category.value,
+                    decision_id=decision_id,
+                    created_at=now,
+                )
+                .returning(mail_sender_rules.c.id)
+            ).scalar_one()
+        )
+
+    def remove_sender_rule(
+        self, account_id: int, rule: SenderRule, now: datetime
+    ) -> None:
+        self._conn.execute(
+            insert(mail_sender_rules).values(
+                account_id=account_id,
+                sender_address=rule.sender_address,
+                category=None,
+                removes_id=rule.id,
+                created_at=now,
+            )
+        )
+
+    def messages_from(self, account_id: int, sender_address: str) -> list[int]:
+        """The account's messages from this exact address whose decision in force is not the user's (Q7: a new rule
+        classifies them again)."""
+        current = _current_decisions(account_id).subquery()
+        query = (
+            select(email_messages.c.id)
+            .outerjoin(current, current.c.message_id == email_messages.c.id)
+            .where(
+                email_messages.c.account_id == account_id,
+                func.lower(email_messages.c.sender_address) == sender_address,
+                or_(current.c.id.is_(None), current.c.author != Author.USER.value),
+            )
+            .order_by(email_messages.c.id)
+        )
+        return list(self._conn.execute(query).scalars())
+
+    def messages_citing(self, account_id: int, company: str) -> list[int]:
+        """The account's messages whose decision in force (not the user's) names ``company`` as the employer a
+        platform cites (``employer.cited``, Q4: classified again once its application exists)."""
+        current = _current_decisions(account_id).subquery()
+        query = (
+            select(current.c.message_id, current.c.proofs)
+            .where(
+                current.c.author != Author.USER.value,
+                current.c.application_id.is_(None),
+                current.c.proofs.contains([{"rule": "employer.cited"}]),
+            )
+            .order_by(current.c.message_id)
+        )
+        wanted = fold(company).text
+        return [
+            row.message_id
+            for row in self._conn.execute(query)
+            if any(
+                proof.get("rule") == "employer.cited"
+                and fold(str(proof.get("excerpt", ""))).text == wanted
+                for proof in row.proofs
+            )
+        ]
+
+    def labels(self, account_id: int) -> list[Label]:
+        """The user's decisions about the account's messages, with the decision each reviewed (Q6, D14)."""
+        reviewed = message_decisions.alias("reviewed")
+        query = (
+            select(
+                message_decisions.c.message_id,
+                email_messages.c.received_at,
+                email_messages.c.sender_address,
+                email_messages.c.subject,
+                message_decisions.c.rule,
+                message_decisions.c.category,
+                message_decisions.c.application_id,
+                message_decisions.c.decided_at,
+                reviewed.c.category.label("reviewed_category"),
+                reviewed.c.application_id.label("reviewed_application_id"),
+                reviewed.c.level.label("reviewed_level"),
+                reviewed.c.author.label("reviewed_author"),
+                reviewed.c.rule.label("reviewed_rule"),
+                reviewed.c.classify_version.label("reviewed_version"),
+            )
+            .join(email_messages, email_messages.c.id == message_decisions.c.message_id)
+            .outerjoin(reviewed, reviewed.c.id == message_decisions.c.reviews_id)
+            .where(
+                message_decisions.c.account_id == account_id,
+                message_decisions.c.author == Author.USER.value,
+            )
+            .order_by(message_decisions.c.id)
+        )
+        return [
+            Label(
+                message_id=row.message_id,
+                received_at=row.received_at,
+                sender_address=row.sender_address,
+                subject=row.subject,
+                gesture=row.rule,
+                category=None if row.category is None else Category(row.category),
+                application_id=row.application_id,
+                decided_at=row.decided_at,
+                reviewed_category=None
+                if row.reviewed_category is None
+                else Category(row.reviewed_category),
+                reviewed_application_id=row.reviewed_application_id,
+                reviewed_level=None
+                if row.reviewed_level is None
+                else Level(row.reviewed_level),
+                reviewed_author=None
+                if row.reviewed_author is None
+                else Author(row.reviewed_author),
+                reviewed_rule=row.reviewed_rule,
+                reviewed_version=row.reviewed_version,
+            )
+            for row in self._conn.execute(query)
+        ]
+
 
 class SqlStorage:
     """``Storage`` on an engine: one transaction per call, and the advisory locks of a mailbox's collection and of an
-    account's classification."""
+    account's classification. ``follow``: what follows a decision in its transaction (decision E4)."""
 
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: Engine, follow: FollowHook = _follow_nothing) -> None:
         self._engine = engine
+        self._follow = follow
 
     @contextmanager
     def transaction(self) -> Iterator[SqlStore]:
         with self._engine.begin() as connection:
-            yield SqlStore(connection)
+            yield SqlStore(connection, self._follow)
 
     def lock(self, mailbox_id: int) -> AbstractContextManager[bool]:
         return self._advisory(COLLECT_LOCK_SPACE, mailbox_id)
@@ -734,6 +1216,53 @@ def _current_decisions(account_id: int) -> Select[Any]:
         .where(message_decisions.c.account_id == account_id)
         .distinct(message_decisions.c.message_id)
         .order_by(message_decisions.c.message_id, message_decisions.c.id.desc())
+    )
+
+
+def _settled() -> Any:
+    """The gestures of each settled transition, and the change a user's « Appliquer » made."""
+    return (
+        select(
+            mail_transition_settlements.c.transition_id,
+            func.array_agg(mail_transition_settlements.c.gesture).label("gestures"),
+            func.max(mail_transition_settlements.c.change_id)
+            .filter(mail_transition_settlements.c.gesture == Gesture.APPLIED.value)
+            .label("applied_change"),
+        )
+        .group_by(mail_transition_settlements.c.transition_id)
+        .subquery("settled")
+    )
+
+
+def _transitions() -> Select[Any]:
+    settled = _settled()
+    return select(
+        mail_transitions,
+        settled.c.gestures,
+        settled.c.applied_change,
+    ).outerjoin(settled, settled.c.transition_id == mail_transitions.c.id)
+
+
+def _unsettled() -> Any:
+    return ~(
+        select(literal(1))
+        .where(mail_transition_settlements.c.transition_id == mail_transitions.c.id)
+        .exists()
+    )
+
+
+def _transition(row: Row[Any]) -> Transition:
+    return Transition(
+        id=row.id,
+        message_id=row.message_id,
+        decision_id=row.decision_id,
+        application_id=row.application_id,
+        from_stage=Stage(row.from_stage),
+        to_stage=Stage(row.to_stage),
+        outcome=Outcome(row.outcome),
+        change_id=row.change_id if row.change_id is not None else row.applied_change,
+        created_at=row.created_at,
+        settled=frozenset(Gesture(gesture) for gesture in row.gestures or ()),
     )
 
 

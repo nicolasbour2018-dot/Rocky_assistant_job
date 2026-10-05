@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 
 from rocky.candidatures.model import MailTarget
 from rocky.messages.classification.model import (
+    CATEGORY_LABELS,
     Category,
     Context,
     Level,
@@ -37,6 +38,8 @@ MIN_NAME = 3  # a folded employer name shorter than this is never looked for
 # The offer's title is found when most of its words are in the message; alone, it attaches with three words or more.
 TITLE_OVERLAP = 0.6
 MIN_TITLE_WORDS = 3
+# Decision E4 (Q7): the proof of a rule the user made for an exact sender address.
+ACCOUNT_RULE = "account.sender"
 
 # Q16 (1): addresses that send nothing but job alerts.
 ALERT_SENDERS = frozenset(
@@ -947,6 +950,19 @@ def classify(message: MailToClassify, context: Context) -> Verdict | Pending:
     """What the rules decide about ``message``, or what they found for the language model (``Pending``)."""
     mail = _Mail.of(message)
     targets = context.targets
+    ruled = context.sender_rules.get(mail.address)
+    if ruled is not None:
+        # Decision E4 (Q7): the user's own rule for this exact address comes first.
+        return _verdict(
+            ruled,
+            Level.HIGH,
+            Proof(
+                Tier.SENDER,
+                ACCOUNT_RULE,
+                mail.address,
+                f"Ta règle : cet expéditeur est toujours classé « {CATEGORY_LABELS[ruled]} ».",
+            ),
+        )
     if mail.address in ALERT_SENDERS:
         return _verdict(
             Category.JOB_ALERT,

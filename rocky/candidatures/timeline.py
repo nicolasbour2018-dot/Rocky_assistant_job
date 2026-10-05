@@ -62,11 +62,22 @@ def _language(value: JsonValue) -> str:
 
 
 def _created(payload: Payload, _: Mapping[int, str]) -> tuple[str, bool]:
-    return "Candidature ouverte (En préparation)", True
+    stage = _stage(payload.get("stage", Stage.PREPARING.value))
+    if payload.get("origin") == "message":
+        # Decision E4 (Q4): an application made outside Rocky, opened from a received message.
+        return (
+            f"Candidature faite hors de Rocky, ouverte depuis un message ({stage})",
+            True,
+        )
+    return f"Candidature ouverte ({stage})", True
 
 
 def _stage_changed(payload: Payload, _: Mapping[int, str]) -> tuple[str, bool]:
-    return f"Étape : {_stage(payload.get('from'))} → {_stage(payload.get('to'))}", True
+    moved = f"Étape : {_stage(payload.get('from'))} → {_stage(payload.get('to'))}"
+    # Decision E4: a transition given by a received message says so.
+    return (
+        f"{moved}, d'après un message" if payload.get("message_id") else moved
+    ), True
 
 
 def _next_action_set(payload: Payload, _: Mapping[int, str]) -> tuple[str, bool]:
