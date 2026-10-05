@@ -328,6 +328,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Complété en C3 (Nicolas, Q4) : dans une annonce, « X (Y) » répond aussi à X et à Y ; la comparaison des noms du
   profil (Q9) ne change pas.*
 - **(C1 → E3)** Indeed/TheirStack n'est pas porté (quota épuisé, API payante) : Indeed arrive par ses alertes e-mail.
+  *E3 : aucune alerte Indeed reçue sur les deux boîtes de Nicolas depuis le 29/08 ; alerte quotidienne créée par Nicolas
+  le 05/10, lecteur Indeed à écrire sur la première reçue (décision E3, Q1, Q6).*
 - **(C1 → C2, C7)** **Enrichissement** d'une offre incomplète (APEC refuse son détail, LinkedIn n'en donne pas, Adzuna
   un extrait). *Tranché par Nicolas (25/09)* : deux voies **coexistantes**, (1) **lecture assistée** : sur son geste,
   Rocky ouvre la fiche dans un navigateur visible, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte
@@ -374,6 +376,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   réseau (pare-feu sortant ou proxy) qui interdit au conteneur de joindre les adresses privées.
 - **(C2 → E3)** Les liens des alertes passent par `import_link` : chaque lien en échec garde sa raison (fin de
   `_import_links`). Un lien d'alerte porte souvent un jeton de suivi : il n'est jamais journalisé.
+  *Résolu en E3 : chaque fiche passe par `import_link`, son issue et sa raison sont gardées (`alert_offers`) ; aucun lien
+  dans le journal ni les événements (test `test_no_link_is_written_in_the_journal_nor_the_log`).*
 - **(C2 → C7)** Geste « Enrichir » : la lecture assistée (navigateur visible, sur le poste) donne le HTML affiché à
   `parse_page`, puis `enriched` ; le collage dans la fiche utilise `with_pasted_description`. Le formulaire de
   collage de l'import crée l'offre depuis le texte seul (lien, intitulé, employeur) : les faits déjà lus d'un
@@ -626,6 +630,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   (`WATCH_LOCK_SPACE`, identifiant du compte) peut donc se heurter d'un worker de test à l'autre depuis `pytest -n auto`
   (même identifiant de compte dans deux schémas). Jamais vu dans les passages de E1. Parade d'E1 :
   `hashtext(nom || current_schema())` comme première clé.
+  *Résolu en E3 : clé du verrou de la veille `hashtext('rocky.offres.watch' || current_schema())`, essayée aussi par la
+  lecture des alertes.*
 - **(E1)** Les dates de la liste des messages s'affichent sans l'année (`paris_time`) : suffisant sur la fenêtre de
   30 jours, ambigu au-delà.
 - **(E1 → E2, recette de Nicolas du 04/10)** La boîte principale apporte du bruit, comme prévu (E1 ne trie pas) : une
@@ -643,6 +649,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   (« hors recherche »), newsletter prise pour une alerte par le modèle.
 - **(E2 → E3)** Les alertes sont les décisions `job_alert` (adresses `ALERT_SENDERS`, formes d'objet des relais) : E3
   part de ces messages plutôt que de la requête *alertes* d'E1.
+  *Tenu en E3 : `alerts_to_read` part des décisions `job_alert` en vigueur.*
 - **(E2 → F1)** 🏠 Aujourd'hui « réponses à vérifier » : la vue `View.TO_CHECK` de `MessagesService.state`, et les
   messages en attente (`waiting`, `waiting_reason`).
 - **(E2)** Des expéditeurs mettent des entités HTML dans la partie texte (« re&ccedil;u ») : E1 les garde telles quelles,
@@ -673,3 +680,18 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   sur une machine calme, mais 1 min 52 puis **2 min 12** le même jour sous une charge de 12 (autres applications du
   poste, pas Rocky) ; 1 min 10 à E2. La limite des 2 min n'a plus de marge. Leviers : partager le compte et la boîte des
   tests SQL de `messages` (une fixture par module), ou mesurer la limite sur le passage GitHub plutôt que sur le poste.
+- **(E3 → Nicolas, plus tard)** **Cadremploi refuse la lecture de ses fiches** (HTTP 403, premier passage réel du 05/10) :
+  ses offres restent des cartes (intitulé, employeur, lieu, contrat), à compléter par « Coller la description ». Son
+  alerte « Analyste Programmeur, Paris, CDI » amène surtout des postes de développeur sans rapport avec les pistes : la
+  revoir chez Cadremploi.
+- **(E3, plus tard)** Formats d'alerte sans lecteur, signalés « Format d'alerte non lu » : JobLeads (`mailer@jobleads.com`),
+  Meteojob (`ne-pas-repondre@meteojob.com`), Unesco (`…@noreply2.jobs2web.com`). Apec et WTTJ : aucune alerte reçue.
+  Lecteur à écrire sur une vraie alerte si Nicolas y tient (décision E3, Q6).
+- **(E3 → recalibrage)** Lire la fiche seulement quand la carte « vaut la peine » (intitulé proche d'une piste, score de la
+  carte) réduirait encore les appels ; écarté pour l'instant au profit de la limite de 10 alertes par jour (Q8).
+- **(E3 → F2)** Compte de développement : 653 offres tirées de 199 alertes par la première version (avant Q8) ; à ne pas
+  reprendre dans le compte réel, qui repart de zéro (Nicolas, 05/10).
+- **(E3 → F1)** ⚙️ Système : ce que les alertes ont donné par plateforme (`alert_readings`, `alert_offers`, rapport
+  `AlertsReport`), refus de plateforme compris.
+- **(E3 → B1, vérification)** 1 471 tests : 3 min 21 sous une charge de 6 à 20 (5 min 50 sous 15) ; les tests d'E3 pèsent
+  10 s en séquentiel. La limite des 2 min se mesure sur le passage GitHub (constat E4 → B1, toujours ouvert).
