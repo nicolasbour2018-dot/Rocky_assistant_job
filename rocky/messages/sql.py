@@ -808,6 +808,17 @@ class SqlStore:
             ).scalar_one()
         )
 
+    def to_check(self, account_id: int) -> int:
+        """Messages of the account whose decision in force is of low confidence: the view « À vérifier » (Q14)."""
+        current = _current_decisions(account_id).subquery()
+        return int(
+            self._conn.execute(
+                select(func.count())
+                .select_from(current)
+                .where(current.c.level == Level.LOW.value)
+            ).scalar_one()
+        )
+
     def last_failure(self, account_id: int, since: datetime) -> str | None:
         """The reason of the last call that gave no answer since ``since``, if the last call failed."""
         row = self._conn.execute(

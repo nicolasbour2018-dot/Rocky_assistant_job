@@ -1,4 +1,5 @@
-"""The watch on screen (C6, Q2): the banner when the watch is late, running or failed, and « Lancer maintenant »."""
+"""The watch on screen (C6, Q2; decision F1, Q6): the first block of 🏠 Aujourd'hui when the watch is late, running or
+failed, with « Lancer maintenant », and the counter of 🏠."""
 
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.scheduler import Scheduler
 from tests.offres.fakes import posting
 from tests.offres.sources.fakes import FakeSource
-from tests.system.web_support import HTMX, logged_in, make_app
+from tests.system.web_support import logged_in, make_app
 
 TRACK = {"name": "Data", "titles": "Data analyst", "locations": "Paris"}
 
@@ -77,33 +78,34 @@ def seed_run(
             )
 
 
-def test_a_watch_never_run_is_proposed_on_every_page(
+def test_a_watch_never_run_is_proposed_in_today_and_nowhere_else(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
     client, _ = account(app, migrated_engine)
 
-    page = client.get("/profil").text
+    page = client.get("/").text
 
-    assert 'id="veille-bandeau"' in page
-    assert "Aucune veille n" in page
-    assert "Lancer maintenant" in page
+    assert "⏰ Veille en retard" in page
+    assert "Aucune veille n&#39;a encore réussi." in page
+    assert 'class="btn btn-primary">Lancer maintenant</button>' in page
+    assert "Veille en retard" not in client.get("/profil").text
 
 
-def test_no_banner_without_an_active_track(
+def test_no_block_without_an_active_track(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
     client, _ = account(app, migrated_engine, track=False)
 
-    assert 'id="veille-bandeau"' not in client.get("/profil").text
+    assert "Veille" not in client.get("/").text
 
 
-def test_no_banner_after_a_recent_successful_watch(
+def test_no_block_after_a_recent_successful_watch(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
     client, account_id = account(app, migrated_engine)
     seed_run(app, migrated_engine, account_id, RunStatus.PARTIAL, hours_ago=3)
 
-    assert 'id="veille-bandeau"' not in client.get("/profil").text
+    assert "Veille" not in client.get("/").text
 
 
 def test_a_late_watch_says_when_it_last_succeeded(
@@ -112,10 +114,10 @@ def test_a_late_watch_says_when_it_last_succeeded(
     client, account_id = account(app, migrated_engine)
     seed_run(app, migrated_engine, account_id, RunStatus.COMPLETED, hours_ago=30)
 
-    page = client.get("/profil").text
+    page = client.get("/").text
 
     # The fake clock says 24/09 12:00 UTC: 30 hours before is 23/09 06:00 UTC, 08:00 in Paris.
-    assert "la dernière veille réussie date du\n      23/09 à 08:00" in page
+    assert "La dernière veille réussie date du 23/09 à 08:00." in page
 
 
 def test_a_failed_watch_shows_its_reason(app: FastAPI, migrated_engine: Engine) -> None:
@@ -123,54 +125,74 @@ def test_a_failed_watch_shows_its_reason(app: FastAPI, migrated_engine: Engine) 
     seed_run(app, migrated_engine, account_id, RunStatus.COMPLETED, hours_ago=5)
     seed_run(app, migrated_engine, account_id, RunStatus.FAILED, hours_ago=1)
 
-    page = client.get("/profil").text
+    page = client.get("/").text
 
-    assert "alert-error" in page
-    assert "a échoué" in page
+    assert "screen-card-problem" in page
+    assert "⚠️ Veille échouée" in page
     assert "Apec : En panne (HTTP 503)" in page
 
 
-def test_a_running_watch_is_followed_by_polling(
+def test_a_running_watch_is_followed_by_polling_today(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
     client, account_id = account(app, migrated_engine)
     seed_run(app, migrated_engine, account_id, RunStatus.RUNNING, hours_ago=0)
 
-    fragment = client.get("/veille/bandeau", headers=HTMX).text
+    page = client.get("/").text
 
-    assert "Veille en cours depuis le 24/09 à 14:00" in fragment
-    assert 'hx-trigger="every 15s"' in fragment
+    assert "Veille en cours depuis le 24/09 à 14:00." in page
+    assert 'hx-get="/" hx-trigger="every 15s"' in page
+    assert "Lancer maintenant" not in page
 
 
-def test_launching_asks_the_planner_once_and_the_watch_then_runs(
+@pytest.mark.parametrize(
+    ("status", "hours_ago", "count"),
+    [
+        (RunStatus.COMPLETED, 30, 1),
+        (RunStatus.FAILED, 1, 1),
+        (RunStatus.RUNNING, 0, 0),
+        (RunStatus.COMPLETED, 3, 0),
+    ],
+    ids=["late", "failed", "running", "on-time"],
+)
+def test_the_counter_of_today_says_the_watch_asks_for_a_gesture(
+    app: FastAPI,
+    migrated_engine: Engine,
+    status: RunStatus,
+    hours_ago: float,
+    count: int,
+) -> None:
+    client, account_id = account(app, migrated_engine)
+    if status is not RunStatus.COMPLETED:
+        # A failure or a run in progress after a recent success: the watch is not late.
+        seed_run(app, migrated_engine, account_id, RunStatus.COMPLETED, hours_ago=5)
+    seed_run(app, migrated_engine, account_id, status, hours_ago=hours_ago)
+
+    page = client.get("/profil").text
+
+    shown = f'id="nav-count-today" class="nav-count" title="{count} à traiter"'
+    assert shown in page
+    assert (f"{shown} hidden" in page) is (count == 0)
+
+
+def test_launching_asks_the_planner_once_and_today_follows_the_watch(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
     client, account_id = account(app, migrated_engine)
     scheduler: Scheduler = app.state.scheduler
 
-    launched = client.post("/veille/lancer", headers=HTMX)
-    client.post("/veille/lancer", headers=HTMX)
+    launched = client.post("/veille/lancer")
+    client.post("/veille/lancer")
 
-    assert "Veille lancée" in launched.text
+    assert (launched.status_code, launched.headers["location"]) == (303, "/")
     assert scheduler.pending() == [f"veille-compte-{account_id}"]
+    assert "🔄 Veille lancée" in client.get("/").text
     assert f"veille-compte-{account_id}" in scheduler.tick()
     with SqlStorage(migrated_engine).transaction() as store:
         run = store.last_run(account_id)
     assert run is not None
     assert (run.trigger, run.status) == (Trigger.CATCH_UP, RunStatus.COMPLETED)
-    assert client.get("/veille/bandeau", headers=HTMX).text == (
-        '<div id="veille-bandeau" hidden></div>'
-    )
-
-
-def test_launching_without_htmx_goes_back_to_today(
-    app: FastAPI, migrated_engine: Engine
-) -> None:
-    client, _ = account(app, migrated_engine)
-
-    response = client.post("/veille/lancer")
-
-    assert (response.status_code, response.headers["location"]) == (303, "/")
+    assert "Veille" not in client.get("/").text
 
 
 def test_a_profile_change_wakes_the_rescoring_up(

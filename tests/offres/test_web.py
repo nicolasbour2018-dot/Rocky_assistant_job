@@ -190,6 +190,23 @@ def test_offers_open_on_triage_with_the_best_offer(board: Board) -> None:
     assert "Prototype" not in page.text
 
 
+def test_today_counts_the_offers_to_review_after_the_late_watch(
+    board: Board,
+) -> None:
+    """Decision F1, Q5: the block « Offres à examiner » is the queue of the triage; the watch never run comes first
+    and takes the one main action."""
+    page = board.client.get("/").text
+
+    assert "🔎 Offres à examiner" in page
+    assert f"{len(QUEUE)} offres au-dessus du seuil attendent ta décision." in page
+    assert (
+        '<a class="btn card-action" href="/offres?vue=tri">Trier les offres</a>' in page
+    )
+    assert page.index("⏰ Veille en retard") < page.index("🔎 Offres à examiner")
+    assert page.count("btn-primary") == 1
+    assert 'class="btn btn-primary">Lancer maintenant</button>' in page
+
+
 def test_a_decision_needs_a_reason(board: Board) -> None:
     response = board.client.post(
         f"/offres/{board.id('analyst')}/decision",

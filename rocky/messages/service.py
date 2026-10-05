@@ -138,6 +138,16 @@ class MessagesState:
 
 
 @dataclass(frozen=True)
+class Attention:
+    """What 🏠 Aujourd'hui shows of the messages (decision F1, Q7): what moved, and how many decisions to check."""
+
+    moved: tuple[Moved, ...]
+    to_check: int
+    # « Employeur — intitulé » of the applications that moved.
+    applications: dict[int, str]
+
+
+@dataclass(frozen=True)
 class CorrectionView:
     """What the panel « Corriger » shows (decision E4, Q6, Q7)."""
 
@@ -396,6 +406,18 @@ class MessagesService:
             groups=tuple(grouped(messages)),
             rules=tuple(rules),
             alerts=alerts,
+        )
+
+    def attention(self, account_id: int) -> Attention:
+        with self.storage.transaction() as store:
+            moved = store.pending_moves(account_id)
+            to_check = store.to_check(account_id)
+        return Attention(
+            moved=tuple(moved),
+            to_check=to_check,
+            applications=self._labels(
+                account_id, {line.transition.application_id for line in moved}
+            ),
         )
 
     def _labels(self, account_id: int, application_ids: set[int]) -> dict[int, str]:

@@ -463,17 +463,20 @@ body.auth { display: grid; place-items: center; min-height: 100vh; padding: var(
 }
 
 /* Watch banner (step C6): above every page when the watch is late, running or failed */
-.watch-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
-  max-width: 880px;
-  margin-bottom: var(--space-5);
-}
-.watch-banner p { margin: 0; }
-.watch-reason { display: block; font-size: 13px; opacity: 0.85; }
+/* The cross-cutting screens (F1): cards of 🏠 Aujourd'hui and ⚙️ Système, the drawer 🐾 */
+.screen-cards { display: grid; gap: var(--space-4); max-width: 880px; }
+.screen-card { gap: var(--space-2); }
+.screen-card h2 { font-size: 16px; margin: 0; }
+.screen-card p { margin: 0; }
+.screen-card-problem { border-color: var(--bad); }
+.screen-card .card-action { justify-self: start; margin-top: var(--space-2); }
+.screen-details { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-4); margin: 0; }
+.screen-details dt { color: var(--muted); }
+.screen-details dd { margin: 0; }
+.drawer h3 { margin: var(--space-4) 0 var(--space-2); font-size: 14px; }
+.drawer-actions { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.drawer-shortcuts { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); margin: 0 0 var(--space-4); }
+.drawer-shortcuts dd { margin: 0; }
 
 /* Master CV (profile, section « kit », D2): ordered lists with small gesture buttons. */
 .btn-mini { padding: 0 var(--space-2); min-height: 1.75rem; font-size: 0.85em; }

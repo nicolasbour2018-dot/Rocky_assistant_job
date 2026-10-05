@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Engine
 
+from rocky.candidatures import today as candidatures_today
 from rocky.candidatures import web as candidatures_web
 from rocky.messages import web as messages_web
 from rocky.messages.model import COLLECT_EVERY
@@ -91,6 +92,7 @@ def create_app(
     offres_web.install(app)
     profil_web.install(app)
     candidatures_web.install(app)
+    candidatures_today.install(app)
     messages_web.install(app)
     _plan(app, engine, clock)
 

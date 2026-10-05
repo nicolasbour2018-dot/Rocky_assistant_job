@@ -44,6 +44,7 @@ from rocky.offres.rules import match_key, scoring_inputs
 from rocky.offres.screen import (
     DECISION_FILTER_LABELS,
     PAGE_SIZE,
+    Counts,
     ListedOffer,
     ListFilters,
     OfferCard,
@@ -77,7 +78,7 @@ from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.llm import JsonModel
-from rocky.system.shell import page, wants_fragment
+from rocky.system.shell import Action, Card, add_today_cards, page, wants_fragment
 from rocky.system.workstation import Workstation, WorkstationUnavailableError
 
 TRIAGE = "tri"
@@ -103,7 +104,28 @@ def install(app: FastAPI) -> None:
     templates.env.filters["age"] = age
     imports_web.install(app)
     watch_web.install(app)
+    add_today_cards(app, "offres", _today_cards)
     app.include_router(router)
+
+
+def _today_cards(request: Request, account: Account) -> list[Card]:
+    """The block « Offres à examiner » of 🏠 Aujourd'hui (decision F1, Q5): the queue of the triage."""
+    screen = Screen(request, account)
+    card = review_card(counts(screen.offers, screen.decisions))
+    return [] if card is None else [card]
+
+
+def review_card(found: Counts) -> Card | None:
+    if not found.to_review:
+        return None
+    s = "s" if found.to_review > 1 else ""
+    return Card(
+        "🔎 Offres à examiner",
+        (
+            f"{found.to_review} offre{s} au-dessus du seuil attend{'ent' if s else ''} ta décision.",
+        ),
+        action=Action("Trier les offres", f"/offres?vue={TRIAGE}"),
+    )
 
 
 def age(day: date | None) -> str:

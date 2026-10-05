@@ -303,6 +303,10 @@ def test_a_refused_answer_is_a_decision_to_check(box: Box) -> None:
     [decision] = box.decisions()
     assert (decision["category"], decision["level"]) == (None, "low")
     assert box.calls() == ["refused"]
+    # Decision F1, Q7: 🏠 Aujourd'hui counts what the view « À vérifier » lists.
+    with box.storage.transaction() as store:
+        listed = store.sorted_messages(box.account_id, View.TO_CHECK, 10)
+        assert store.to_check(box.account_id) == len(listed) == 1
 
 
 def test_a_failure_decides_nothing_and_ends_the_pass(box: Box) -> None:

@@ -58,7 +58,7 @@ from rocky.messages.oauth import (
     redirect_uri,
     seal_pending,
 )
-from rocky.messages.service import MessagesService
+from rocky.messages.service import Attention, MessagesService
 from rocky.messages.usecases import (
     CollectBusyError,
     MailboxNotConnectedError,
@@ -73,7 +73,15 @@ from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.llm import GeminiModel
 from rocky.system.scheduler import Scheduler
-from rocky.system.shell import add_badge, is_htmx, page, wants_fragment
+from rocky.system.shell import (
+    Action,
+    Card,
+    add_badge,
+    add_today_cards,
+    is_htmx,
+    page,
+    wants_fragment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +164,49 @@ def install(app: FastAPI) -> None:
     )
     # E4 (Q5): the lines of « Ce qui a bougé » beside 📬 in the navigation.
     add_badge(app, "messages", _pending_count)
+    # Decision F1, Q7: a summary in 🏠 Aujourd'hui; the gestures stay here.
+    add_today_cards(app, "messages", _today_cards)
     app.include_router(router)
+
+
+# The lines of « Ce qui a bougé » shown in 🏠 Aujourd'hui; the others are counted.
+SHOWN_MOVES = 3
+
+
+def _today_cards(request: Request, account: Account) -> list[Card]:
+    card = attention_card(_service(request).attention(account.id))
+    return [] if card is None else [card]
+
+
+def attention_card(attention: Attention) -> Card | None:
+    """The block « Messages » of 🏠 Aujourd'hui (decision F1, Q7): one line by change, the decisions to check."""
+    moved, to_check = attention.moved, attention.to_check
+    if not moved and not to_check:
+        return None
+    lines = [
+        f"{attention.applications.get(line.transition.application_id, 'Candidature')} : "
+        f"{STAGE_LABELS[line.transition.from_stage]} → {STAGE_LABELS[line.transition.to_stage]}"
+        + (" (proposé)" if line.transition.outcome is Outcome.PROPOSED else "")
+        for line in moved[:SHOWN_MOVES]
+    ]
+    if len(moved) > SHOWN_MOVES:
+        others = len(moved) - SHOWN_MOVES
+        lines.append(
+            f"… et {others} autre{'s' if others > 1 else ''} changement{'s' if others > 1 else ''}."
+        )
+    if to_check:
+        s = "s" if to_check > 1 else ""
+        lines.append(
+            f"{to_check} message{s} à vérifier : Rocky n'est pas sûr de son classement."
+        )
+    return Card(
+        "📬 Ce qui a bougé" if moved else "📬 Messages à vérifier",
+        tuple(lines),
+        action=Action(
+            "Voir dans Messages",
+            "/messages" if moved else f"/messages?vue={View.TO_CHECK.value}",
+        ),
+    )
 
 
 def _pending_count(request: Request, account: Account) -> int:
