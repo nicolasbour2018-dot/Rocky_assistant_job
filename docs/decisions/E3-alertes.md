@@ -75,6 +75,18 @@ périmées (« trop d'appels inutiles »).
 | **Premier passage réel** (`rocky-admin alertes`, compte de développement, versions `.1`, avant Q8) | 199 alertes : 190 lues, 9 de format inconnu, 0 en échec ; 1 404 cartes, **653 offres nouvelles** ; **306 appels** : Hellowork 201 fiches lues, LinkedIn 36, eFinancialCareers 58 lues et 10 expirées (HTTP 410), **Cadremploi refuse (HTTP 403)** dès la première fiche, ses 100 cartes suivantes non demandées (règle d'arrêt) ; 314 cartes non relues (offre déjà complète), 684 cartes d'alertes de plus de 7 jours sans appel ; 4 fiches Hellowork réduites à un extrait (gardé depuis `.2`). Jugé trop d'appels inutiles par Nicolas : Q8 |
 | Migration `0018` (base de développement) | `upgrade` → `downgrade -1` → `upgrade head` |
 
+## Recette (Nicolas, 05/10)
+
+| Point | Résultat |
+|---|---|
+| Premier passage réel | Trop d'appels inutiles : limite Q8 (10 alertes par jour, rien au-delà de 3 jours) |
+| Écrans et passage automatique | « C'est tout bon » : application de développement relancée avec E3 (lecture après chaque collecte) |
+| Critère « au moins une offre Indeed réelle par jour » | **Non vérifié** : aucune alerte Indeed reçue sur les deux boîtes (dernière dans l'archive : 29/08) ; l'alerte quotidienne est à créer par Nicolas. Le lecteur Indeed s'écrira sur la première alerte reçue (plan §8) |
+
+**Étape close par décision de Nicolas** (05/10) : lecture des alertes Hellowork, Cadremploi, eFinancialCareers et
+LinkedIn en réel, erreurs d'import visibles sur l'alerte et sur l'offre, limite Q8 ; critère Indeed reporté faute
+d'alerte Indeed reçue ; vérification globale verte (locale et GitHub).
+
 ## Hors E3
 
 Lecture assistée d'une fiche dans un navigateur visible (E5) ; ⚙️ Système (F1) ; alertes Apec et WTTJ si aucune

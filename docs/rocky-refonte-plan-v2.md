@@ -153,7 +153,7 @@ aucun identifiant interne affiché.
 | E1. Collecte | Gmail lecture seule, plusieurs boîtes ; requête filtrée (`-category:promotions -category:social`…) ; message **enregistré avant toute décision**, de façon idempotente | Une resynchronisation ne retraite rien ; aucun statut ne change sans message enregistré | ✅ |
 | E2. Classification | 3 étages : expéditeur → domaine exact de l'employeur (plus de sous-chaîne) → LLM pour l'ambigu ; confiance réelle (plus de valeurs constantes) ; preuve : règle, extrait, auteur | 100 % des décisions ont une preuve lisible ; le digest Quora n'est plus rattaché à « French bee » ; jeu de test issu de l'archive | ✅ |
 | E4. Décisions et écran | Transition de candidature appliquée dans la même transaction que la décision ; « ce qui a bougé depuis ta dernière visite » ; correction humaine → nouvelle règle ; corrections conservées comme jeu étiqueté | Aucun changement de statut ne passe inaperçu | ✅ |
-| E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | 🔄 |
+| E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | ✅ |
 | E5. Lecture assistée | Sur le geste de l'utilisateur, Rocky ouvre la fiche d'une offre incomplète dans un navigateur visible sur le poste, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte affiché (`parse_page`, `enriched`) ; geste « Enrichir » dans la fiche de l'offre ; jamais dans la veille automatique (décision C1, Q6 ; étape ajoutée par la décision D2, Q3) | Une offre Apec incomplète enrichie depuis sa fiche | ⬜ |
 
 ### F. Bascule
@@ -695,3 +695,6 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `AlertsReport`), refus de plateforme compris.
 - **(E3 → B1, vérification)** 1 471 tests : 3 min 21 sous une charge de 6 à 20 (5 min 50 sous 15) ; les tests d'E3 pèsent
   10 s en séquentiel. La limite des 2 min se mesure sur le passage GitHub (constat E4 → B1, toujours ouvert).
+- **(E3 → plus tard, Nicolas 05/10)** E3 close **sans le critère Indeed** (aucune alerte Indeed reçue). Dès la première
+  alerte Indeed : la capturer (`docs/procedures/e3-captures/`), écrire son lecteur (`alerts.rules.READERS`, Indeed jamais
+  lu par son lien : refus constaté en C2), puis constater une offre Indeed par jour sur 3 jours.
