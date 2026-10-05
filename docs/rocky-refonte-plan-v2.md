@@ -154,7 +154,7 @@ aucun identifiant interne affiché.
 | E2. Classification | 3 étages : expéditeur → domaine exact de l'employeur (plus de sous-chaîne) → LLM pour l'ambigu ; confiance réelle (plus de valeurs constantes) ; preuve : règle, extrait, auteur | 100 % des décisions ont une preuve lisible ; le digest Quora n'est plus rattaché à « French bee » ; jeu de test issu de l'archive | ✅ |
 | E4. Décisions et écran | Transition de candidature appliquée dans la même transaction que la décision ; « ce qui a bougé depuis ta dernière visite » ; correction humaine → nouvelle règle ; corrections conservées comme jeu étiqueté | Aucun changement de statut ne passe inaperçu | ✅ |
 | E3. Alertes comme source | Mails d'alerte Indeed, APEC, LinkedIn, WTTJ, Hellowork, Cadremploi → offres via le module `offres` ; erreurs d'import visibles | Au moins une offre Indeed réelle par jour | ✅ |
-| E5. Lecture assistée | Sur le geste de l'utilisateur, Rocky ouvre la fiche d'une offre incomplète dans un navigateur visible sur le poste, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte affiché (`parse_page`, `enriched`) ; geste « Enrichir » dans la fiche de l'offre ; jamais dans la veille automatique (décision C1, Q6 ; étape ajoutée par la décision D2, Q3) | Une offre Apec incomplète enrichie depuis sa fiche | 🔄 |
+| E5. Lecture assistée | Sur le geste de l'utilisateur, Rocky ouvre la fiche d'une offre incomplète dans un navigateur visible sur le poste, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte affiché (`parse_page`, `enriched`) ; geste « Enrichir » dans la fiche de l'offre ; jamais dans la veille automatique (décision C1, Q6 ; étape ajoutée par la décision D2, Q3) | Une offre Apec incomplète enrichie depuis sa fiche | ✅ (close par décision de Nicolas, critère Apec reporté : décision E5, Q8) |
 
 ### F. Bascule
 
@@ -711,3 +711,12 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   (`docs/procedures/e5-captures/`).
 - **(E5 → §5 VPS)** « Ouvrir dans le navigateur » tient la requête web jusqu'au chargement de la page (60 s au plus),
   comme le préremplissage de D5 ; sur un VPS sans écran, pas de poste : la description collée reste la voie.
+- **(E5 → étape d'amélioration, Nicolas 05/10)** **Apec refuse le navigateur piloté du poste** (« Access is temporarily
+  restricted », « Automated (bot) activity », recette d'E5) : une offre Apec ne se complète qu'à la main (« Coller la
+  description ») et « Ouvrir dans le navigateur » ne lui est pas proposé (`BROWSER_REFUSED_SOURCES`, décision E5, Q8).
+  À reprendre dans une étape d'amélioration, sans aucun maquillage du navigateur (C1, Q5) : piste du **collage pleine
+  page** (Cmd+A, Cmd+C depuis le navigateur habituel ; Rocky retrouve « Descriptif du poste », « Profil recherché »,
+  « Entreprise » et ignore le reste), à écrire sur une vraie copie de page, la restriction levée. Critère d'E5 à
+  vérifier alors.
+- **(E5 → recette)** La lecture assistée n'a été éprouvée en réel que sur Apec : à constater sur une offre LinkedIn ou
+  Adzuna incomplète à l'usage (poste lancé).

@@ -149,7 +149,8 @@ docs/
 - Jeu étiqueté des messages (décision E4) : `docker compose run --rm app rocky-admin messages-etiquettes <email>` (CSV
   des corrections et confirmations sur la sortie standard ; données personnelles, jamais versionnées).
 - Poste Rocky (navigateur visible sur l'ordinateur, hors Docker) : `uv run rocky-poste`, pour la lecture assistée d'une
-  offre incomplète (décision E5 : « Ouvrir dans le navigateur » puis « Lire la page affichée » dans la fiche) ;
+  offre incomplète, sauf Apec qui le refuse (décision E5 : « Ouvrir dans le navigateur » puis « Lire la page affichée »
+  dans la fiche) ;
   procédure `docs/procedures/d5-poste/`. Son préremplissage reste **en sommeil** depuis la recette de D5
   (`candidatures.web.PREFILL_ENABLED = False`).
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`

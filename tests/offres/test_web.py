@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from markupsafe import escape
 from sqlalchemy import Engine, select
 
-from rocky.offres.imports.rules import OTHER_PAGE_REASON
+from rocky.offres.imports.rules import BROWSER_REFUSED_REASON, OTHER_PAGE_REASON
 from rocky.offres.model import Origin
 from rocky.offres.rules import scoring_inputs
 from rocky.offres.sql import SqlStore, job_decisions, job_offers
@@ -55,17 +55,23 @@ POSTINGS = {
         ),
         ("Data",),
     ),
-    "manager": (posting("manager", title="Chef de projet", complete=False), ("Data",)),
+    # On LinkedIn: the lecture assistée is offered (an Apec offer is completed by hand, decision E5, Q8).
+    "manager": (
+        posting("manager", source="linkedin", title="Chef de projet", complete=False),
+        ("Data",),
+    ),
     # The same posting as « junior » on another site (« vue aussi sur … »).
     "junior_apec": (
         posting("junior_apec", title="Data analyst junior (H/F)", company="JEMS"),
         ("Data",),
     ),
 }
-# The page an Apec posting shows in the workstation's browser (decision E5).
-APEC_SHOWN = ShownPage(
-    "https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/179509139W",
-    (Path(__file__).parent / "imports" / "data" / "apec" / "rendered.html").read_text(),
+# The page a LinkedIn posting shows in the workstation's browser (decision E5): the page recorded in C2.
+SHOWN = ShownPage(
+    "https://fr.linkedin.com/jobs/view/data-analyst-at-plenitude-4468625023",
+    (
+        Path(__file__).parent / "imports" / "data" / "linkedin" / "posting.html"
+    ).read_text(),
 )
 QUEUE = ["analyst", "python", "scientist", "junior", "junior_apec", "excerpt"]
 BELOW = ["accounting", "manager"]
@@ -108,7 +114,7 @@ def app(migrated_engine: Engine) -> FastAPI:
     app = make_app(migrated_engine)
     app.state.import_today = lambda: date(2026, 9, 29)
     app.state.llm_model = FakeModel(SUMMARY)
-    app.state.workstation = FakeBrowser(APEC_SHOWN)
+    app.state.workstation = FakeBrowser(SHOWN)
     return app
 
 
@@ -569,7 +575,7 @@ def test_a_posting_is_opened_then_its_page_completes_the_offer(
         headers=HTMX,
     ).text
 
-    assert browser(app).opened == ["https://apec.example/offres/manager"]
+    assert browser(app).opened == ["https://linkedin.example/offres/manager"]
     assert "Lire la page affichée" in opened
     assert 'name="onglet" value="onglet-1"' in opened
     assert 'hx-target="#fiche"' in opened
@@ -588,11 +594,25 @@ def test_a_posting_is_opened_then_its_page_completes_the_offer(
         stored = connection.execute(
             select(job_offers).where(job_offers.c.id == offer)
         ).one()
-    assert stored.description_complete and "Profil recherché" in stored.description
+    assert stored.description_complete and stored.incomplete_reason is None
     assert stored.last_seen_at == NOW
     event = enrichment(board, offer)
     assert event is not None
     assert (event["how"], event["description_read"]) == ("browser", True)
+
+
+def test_an_apec_offer_is_completed_by_hand_only(board: Board, app: FastAPI) -> None:
+    offer = board.id("excerpt")  # an Apec offer
+    card = board.client.get(f"/offres/{offer}/fiche", headers=HTMX).text
+
+    opened = board.client.post(
+        f"/offres/{offer}/navigateur", data={"contexte": "fiche"}, headers=HTMX
+    ).text
+
+    assert "Ouvrir dans le navigateur" not in card
+    assert "Coller la description" in card
+    assert str(escape(BROWSER_REFUSED_REASON)) in opened
+    assert browser(app).opened == []  # the workstation is never asked
 
 
 def test_a_workstation_that_does_not_answer_says_why(
@@ -614,7 +634,7 @@ def test_a_page_of_another_site_is_refused_and_the_offer_stays(
     board: Board, app: FastAPI
 ) -> None:
     offer = board.id("excerpt")
-    browser(app).shown = ShownPage("https://login.example.com/sso", APEC_SHOWN.html)
+    browser(app).shown = ShownPage("https://login.example.com/sso", SHOWN.html)
 
     html = board.client.post(
         f"/offres/{offer}/navigateur/lire",

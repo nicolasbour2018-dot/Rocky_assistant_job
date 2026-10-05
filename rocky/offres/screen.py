@@ -12,6 +12,7 @@ from datetime import date
 from rocky.offres.analysis.model import PostingAnalysis, SkillMatch
 from rocky.offres.analysis.usecases import Summary, SummaryResult
 from rocky.offres.decisions import DecisionRow, DecisionValue
+from rocky.offres.imports.rules import readable_in_browser
 from rocky.offres.model import StoredOffer
 from rocky.offres.scoring.model import (
     THRESHOLD,
@@ -251,6 +252,11 @@ class OfferCard:
     @property
     def summary_result(self) -> SummaryResult | None:
         return None if self.summary is None else SummaryResult(summary=self.summary)
+
+    @property
+    def readable_in_browser(self) -> bool:
+        """« Ouvrir dans le navigateur » is offered (decision E5, Q8)."""
+        return readable_in_browser(self.stored.offer)
 
 
 def shown_track(score: Score, track_id: int | None) -> TrackScore:

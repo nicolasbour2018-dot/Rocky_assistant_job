@@ -38,6 +38,7 @@ from rocky.offres.decisions import (
 )
 from rocky.offres.imports import web as imports_web
 from rocky.offres.imports.model import InvalidPasteError
+from rocky.offres.imports.rules import BROWSER_REFUSED_REASON, readable_in_browser
 from rocky.offres.model import OfferHeading, Origin
 from rocky.offres.rules import match_key, scoring_inputs
 from rocky.offres.screen import (
@@ -597,10 +598,13 @@ def open_in_browser(
         return Response(status_code=404)
     workstation: Workstation = request.app.state.workstation
     values: dict[str, object] = {}
-    try:
-        values["reading_tab"] = workstation.open_page(stored.offer.url)
-    except WorkstationUnavailableError as error:
-        values["reading_error"] = error.reason
+    if not readable_in_browser(stored.offer):
+        values["reading_error"] = BROWSER_REFUSED_REASON
+    else:
+        try:
+            values["reading_tab"] = workstation.open_page(stored.offer.url)
+        except WorkstationUnavailableError as error:
+            values["reading_error"] = error.reason
     if not wants_fragment(request):
         card = screen.card(offer_id, _track(piste))
         filters = ListFilters(track_id=_track(piste))

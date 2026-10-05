@@ -61,8 +61,9 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Écran : `docs/decisi
   assistée, E5) recalculent le score aussitôt, gardent les pistes, ne touchent pas `last_seen_at` et écrivent
   `offres.offer_enriched` (`how`), jamais une adresse.
 - Lecture assistée (décision `docs/decisions/E5-lecture-assistee.md`) : jamais dans la veille ni sans le geste de
-  l'utilisateur ; la page affichée doit être sur le site de l'offre (`shows_the_offer`) ; un simple texte visible ne
-  remplace pas la description (Q3). Une page dessinée par JavaScript se lit sur une capture faite par le poste
+  l'utilisateur ; jamais pour un site qui refuse le navigateur du poste (`BROWSER_REFUSED_SOURCES` : Apec, Q8) ; la
+  page affichée doit être sur le site de l'offre (`shows_the_offer`) ; un simple texte visible ne remplace pas la
+  description (Q3). Une page dessinée par JavaScript se lit sur une capture faite par le poste
   (`docs/procedures/e5-captures/`), jamais sur une page inventée.
 - Résumé : demandé par l'utilisateur, appelé hors de toute transaction, gardé dans `offer_summaries` avec l'empreinte
   de la description (`description_hash`) ; un résumé en échec n'est jamais gardé.

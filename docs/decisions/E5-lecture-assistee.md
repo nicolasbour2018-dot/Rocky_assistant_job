@@ -34,7 +34,8 @@ Constat : au second essai réel, Apec refuse le navigateur piloté du poste (« 
 
 | # | Sujet | Décision |
 |---|---|---|
-| Q7 | Voie Apec | **Collage pleine page**, sans aucune automatisation : l'utilisateur ouvre l'annonce dans son navigateur habituel, copie toute la page et la colle ; Rocky retrouve les sections connues (Apec d'abord) et ignore le reste de la page. Le poste et la lecture assistée sont gardés pour les sites qui les tolèrent. Le critère de sortie se vérifie sur Apec par ce collage. |
+| Q7 | Voie Apec | ~~Collage pleine page~~ : choisie, puis **remplacée par Q8** (la restriction d'Apec n'était pas levée pour capturer une vraie copie de page). |
+| Q8 | Apec, pour le moment | **Apec se complète à la main** (« Coller la description », C7). « Ouvrir dans le navigateur » n'est plus proposé pour une offre Apec (`BROWSER_REFUSED_SOURCES`), et la route le refuse sans appeler le poste : chaque essai pèserait sur la réputation de l'adresse de Nicolas, celle de la veille. La lecture des offres Apec (collage pleine page ou autre) est reportée à une **étape d'amélioration** (plan §8). Le poste et la lecture assistée restent pour les autres sites. |
 
 ## Décisions techniques
 
@@ -70,4 +71,12 @@ Constat : au second essai réel, Apec refuse le navigateur piloté du poste (« 
 ## Hors E5
 
 Réveil du préremplissage (D5) ; lecture assistée sur un VPS sans écran (plan §5) : la description collée reste la voie
-universelle.
+universelle ; lecture des offres Apec (Q8).
+
+## Clôture (Nicolas, 05/10)
+
+**Étape close par décision de Nicolas** : lecture assistée livrée (poste `/ouvrir` et `/lire`, lecteur des pages Apec
+dessinées, refus d'une page d'un autre site, faits seuls quand la description n'est pas lisible, écran à deux temps).
+Critère « une offre Apec incomplète enrichie depuis sa fiche » **non atteint par la lecture assistée** : Apec refuse
+le navigateur piloté (recette n° 1) ; une offre Apec se complète à la main (Q8). Reprise d'Apec : étape d'amélioration
+(plan §8).

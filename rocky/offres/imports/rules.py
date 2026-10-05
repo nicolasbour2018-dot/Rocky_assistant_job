@@ -23,6 +23,7 @@ from rocky.offres.imports.model import ImportMethod, ImportPreview, InvalidPaste
 from rocky.offres.sources.model import (
     CollectedOffer,
     InvalidLinkError,
+    SourceCode,
     SourceFailedError,
 )
 from rocky.offres.sources.rules import (
@@ -287,6 +288,20 @@ NOT_READABLE_REASON = (
     "connu) : colle la description."
 )
 OTHER_PAGE_REASON = "La page affichée n'est plus l'annonce (autre site) : reviens-y dans le navigateur, puis relis-la."
+
+
+# Sites that refuse the workstation's browser (decision E5, Q8): Apec answered « Access is temporarily restricted »
+# at the acceptance. Their offers are completed by hand only (« Coller la description »); each attempt would weigh on
+# the reputation of the user's address, the one the watch uses.
+BROWSER_REFUSED_SOURCES = frozenset({SourceCode.APEC.value})
+BROWSER_REFUSED_REASON = (
+    "Ce site refuse le navigateur du poste Rocky : colle la description de l'annonce."
+)
+
+
+def readable_in_browser(offer: CollectedOffer) -> bool:
+    """Whether the lecture assistée is offered for ``offer``: never for a site that refuses it (Q8)."""
+    return {offer.source, source_for_url(offer.url)}.isdisjoint(BROWSER_REFUSED_SOURCES)
 
 
 def shows_the_offer(offer: CollectedOffer, shown_url: str) -> bool:

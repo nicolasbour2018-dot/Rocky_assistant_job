@@ -22,6 +22,7 @@ from rocky.offres.imports.rules import (
     offer_json,
     parse_page,
     pasted_text,
+    readable_in_browser,
     shows_the_offer,
     with_pasted_description,
 )
@@ -605,3 +606,12 @@ def test_the_page_shown_must_be_on_the_site_of_the_offer(
 ) -> None:
     assert shows_the_offer(offer, shown) is same
     assert "autre site" in OTHER_PAGE_REASON
+
+
+def test_an_apec_offer_is_never_offered_to_the_workstation_s_browser() -> None:
+    linkedin = replace(APEC_EXCERPT, source="linkedin", url=LINKEDIN)
+
+    assert not readable_in_browser(APEC_EXCERPT)
+    # Known by its address too (an offer named after another source, on apec.fr).
+    assert not readable_in_browser(replace(APEC_EXCERPT, source="alerte"))
+    assert readable_in_browser(linkedin)
