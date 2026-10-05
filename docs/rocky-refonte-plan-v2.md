@@ -241,6 +241,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en B1 : rôle `rocky_app` sans privilège, vérifié par un test.*
 - **(A1 → F2)** `main` a divergé du code en service (78/82 fichiers différents : corrections lint/typage/sécurité
   jamais déployées). La référence de l'ancien Rocky est le tag `rocky-v1-streamlit` ; décider en F2 du sort de `main`.
+  *Résolu après F1 (Nicolas, 05/10) : l'ancien `main` est gardé sous le tag `rocky-v1-main` (ses décisions 0001–0014
+  ne sont pas reprises) ; `refonte` l'intègre par un merge « ours » et `main` devient la v0.1 (`v0.1.0`). `main` ne
+  reçoit plus que des versions (`AGENTS.md` §5).*
 - **(A1 → D5, B5)** Chemins de documents hétérogènes dans l'ancienne base : absolus (`/data/…`), relatifs au
   répertoire courant (`output/…`, `data/…`), dont un CV de profil de test jamais conservé. Le nouveau Rocky stocke
   des chemins relatifs à une racine de stockage configurée, vérifiés par hash.

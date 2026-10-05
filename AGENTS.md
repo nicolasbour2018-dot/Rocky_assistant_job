@@ -96,7 +96,9 @@ docs/
 
 - Commits : `<type>(<étape>): <summary>` à l'impératif, par ex. `feat(B2): add append-only event journal`.
   Types : `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
-- Branche de travail : `refonte` ; une PR vers `main` seulement à la bascule, sauf demande de Nicolas.
+- Branche de travail : `refonte` ; `main` ne reçoit que des **versions**, par une PR fusionnée avec un commit de merge
+  (jamais *squash* ni *rebase*), puis un tag : `v0.1.0` (fin de F1), `v0.2.0` (fin de G7), `v1.0.0` (fin de F2).
+  L'ancien `main` (Rocky Streamlit, non normatif) est gardé sous le tag `rocky-v1-main`.
 - Poste de travail : le dépôt vit dans `~/Developer/Rocky_assistant_job`, l'ancien Rocky dans `~/Developer/Rocky_v1`,
   **hors iCloud**. Ne jamais placer le dépôt dans le Bureau, Documents ou un dossier synchronisé (incident A1/A2 :
   fichiers déchargés puis supprimés par iCloud).
@@ -155,7 +157,7 @@ docs/
   (`candidatures.web.PREFILL_ENABLED = False`).
 - Garde-fou des agents : `/usr/bin/python3 .claude/hooks/check_guard_paths.py`
 - Sur GitHub : `.github/workflows/verification.yml` exécute la vérification globale à chaque push sur `refonte` et
-  sur chaque PR. Une étape n'est terminée que si ce passage est vert aussi.
+  `main`, et sur chaque PR. Une étape n'est terminée que si ce passage est vert aussi.
 
 Précautions (détails : `docs/decisions/B1-squelette.md`) :
 - **ne jamais lancer `docker compose config`** : il affiche les valeurs interpolées depuis le `.env` ;
