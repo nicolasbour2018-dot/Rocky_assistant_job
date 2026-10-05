@@ -260,7 +260,7 @@ def main_action(cards: Sequence[Card]) -> int | None:
 
 router = APIRouter()
 
-# The main action of an empty 🏠 Aujourd'hui (Q14: every state has one).
+# The main action of a screen whose cards offer none (Q14: every state has one).
 BROWSE_OFFERS = Action("Parcourir les offres", "/offres?vue=liste")
 
 
@@ -301,6 +301,21 @@ def today(request: Request, account: CurrentAccount) -> HTMLResponse:
     )
 
 
+@router.get("/systeme", response_class=HTMLResponse)
+def system(request: Request, account: CurrentAccount) -> HTMLResponse:
+    """⚙️ Système (decision F1, Q11): the watch source by source, the mailboxes, the alerts, the planner; the first
+    problem takes the main action."""
+    return _cards_screen(
+        request,
+        account,
+        key="system",
+        name="system_cards",
+        order=SYSTEM_ORDER,
+        # A watch running and nothing else to do: what it finds is in the offers.
+        empty=BROWSE_OFFERS,
+    )
+
+
 @router.get("/tiroir", response_class=HTMLResponse)
 def drawer(request: Request, account: CurrentAccount, ecran: str = "") -> HTMLResponse:
     """The drawer 🐾 of the screen ``ecran`` (a navigation key), loaded when it opens (decision F1, Q12)."""
@@ -337,5 +352,5 @@ def _empty_page(key: str) -> None:
     )
 
 
-for _key in ("report", "system"):
+for _key in ("report",):
     _empty_page(_key)

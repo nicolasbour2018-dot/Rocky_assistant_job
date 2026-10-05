@@ -162,6 +162,19 @@ class AlertOffer:
 
 
 @dataclass(frozen=True)
+class PlatformAlerts:
+    """What the alerts of one platform gave over a period (⚙️ Système, decision F1, Q11); ``platform`` None: the
+    alerts without a reader. ``unread``: alerts not read (no reader, no card, failed, too old)."""
+
+    platform: Platform | None
+    read: int = 0
+    unread: int = 0
+    offers: int = 0
+    created: int = 0
+    refused: int = 0
+
+
+@dataclass(frozen=True)
 class AlertSummary:
     """What an alert gave, as its row in 📬 Messages says it (Q5)."""
 

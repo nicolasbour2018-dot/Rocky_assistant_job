@@ -55,6 +55,7 @@ from rocky.messages.alerts.model import (
     LinkOutcome,
     NotTried,
     Platform,
+    PlatformAlerts,
     ReadingStatus,
 )
 from rocky.messages.classification.model import (
@@ -975,6 +976,57 @@ class SqlStore:
                     alert_readings.c.read_at >= since,
                 )
             ).scalar_one()
+        )
+
+    def alerts_by_platform(
+        self, account_id: int, since: datetime
+    ) -> list[PlatformAlerts]:
+        """The alerts read since ``since`` and what they gave, by platform (None: without a reader, last)."""
+        read = alert_readings.c.status == ReadingStatus.READ.value
+        readings = self._conn.execute(
+            select(
+                alert_readings.c.platform,
+                func.count().filter(read).label("read"),
+                func.count().filter(~read).label("unread"),
+            )
+            .where(
+                alert_readings.c.account_id == account_id,
+                alert_readings.c.read_at >= since,
+            )
+            .group_by(alert_readings.c.platform)
+        ).all()
+        offers = {
+            row.platform: row
+            for row in self._conn.execute(
+                select(
+                    alert_readings.c.platform,
+                    func.count().label("offers"),
+                    func.count().filter(alert_offers.c.created).label("created"),
+                    func.count()
+                    .filter(alert_offers.c.link_outcome == LinkOutcome.REFUSED.value)
+                    .label("refused"),
+                )
+                .join(alert_offers, alert_offers.c.reading_id == alert_readings.c.id)
+                .where(
+                    alert_readings.c.account_id == account_id,
+                    alert_readings.c.read_at >= since,
+                )
+                .group_by(alert_readings.c.platform)
+            )
+        }
+        found = [
+            PlatformAlerts(
+                platform=None if row.platform is None else Platform(row.platform),
+                read=row.read,
+                unread=row.unread,
+                offers=given.offers if (given := offers.get(row.platform)) else 0,
+                created=given.created if given else 0,
+                refused=given.refused if given else 0,
+            )
+            for row in readings
+        ]
+        return sorted(
+            found, key=lambda alerts: (alerts.platform is None, alerts.platform or "")
         )
 
     def alert_offers(self, account_id: int) -> AlertOffersLink | None:

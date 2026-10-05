@@ -66,7 +66,8 @@ def test_the_phone_bar_keeps_four_entries_and_a_more_menu(
     [
         e
         for e in NAVIGATION
-        if e.key not in {"today", "offers", "profile", "applications", "messages"}
+        if e.key
+        not in {"today", "offers", "profile", "applications", "messages", "system"}
     ],
     ids=lambda e: e.key,
 )

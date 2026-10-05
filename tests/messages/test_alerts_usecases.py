@@ -23,6 +23,8 @@ from rocky.messages.alerts.model import (
     AlertsReport,
     LinkOutcome,
     NotTried,
+    Platform,
+    PlatformAlerts,
     ReadingStatus,
 )
 from rocky.messages.alerts.usecases import (
@@ -437,6 +439,34 @@ def test_an_alert_of_an_unknown_format_is_shown_as_not_read(inbox: Inbox) -> Non
     assert "mailer@jobleads.com" in reading["reason"]
     assert inbox.offers() == []
     assert report.unknown_formats == 1
+
+
+def test_system_counts_what_the_alerts_gave_by_platform(inbox: Inbox) -> None:
+    """Decision F1, Q11 (plan §8, E3 → F1): read and unread alerts, offers, new ones and refused postings, by platform;
+    the alerts without a reader last."""
+    inbox.alert("hellowork_alerte")
+    inbox.pages.answers["https://emails.hellowork.com/clic/0003"] = (
+        ImportResult.failure(ImportOutcome.REFUSED, "Refusé par le site (HTTP 403).")
+    )
+    store_mail(
+        inbox.service.storage,
+        inbox.mailbox_id,
+        sender="JobLeads <mailer@jobleads.com>",
+        subject="Il y a 3 nouvelles offres d’emploi correspondant à votre recherche",
+        body="Data Analyst — Paris",
+        received_at=RECENT,
+        found_by=Query.ALERTS,
+    )
+    inbox.read()
+
+    found = inbox.service.alerts_by_platform(inbox.account_id, 7)
+
+    assert found == [
+        PlatformAlerts(
+            Platform.HELLOWORK, read=1, unread=0, offers=4, created=4, refused=1
+        ),
+        PlatformAlerts(None, read=0, unread=1),
+    ]
 
 
 def test_a_reader_that_breaks_marks_its_alert_and_the_others_go_on(

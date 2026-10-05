@@ -32,6 +32,7 @@ from rocky.messages.alerts.model import (
     AlertsReport,
     AlertSummary,
     PageReading,
+    PlatformAlerts,
 )
 from rocky.messages.alerts.usecases import read_alerts
 from rocky.messages.classification.model import (
@@ -419,6 +420,20 @@ class MessagesService:
                 account_id, {line.transition.application_id for line in moved}
             ),
         )
+
+    def mailbox_views(self, account_id: int) -> list[MailboxView]:
+        """The mailboxes of the account and their last collection (⚙️ Système, decision F1, Q11)."""
+        with self.storage.transaction() as store:
+            return [
+                MailboxView(mailbox, store.last_sync(mailbox.id))
+                for mailbox in store.mailboxes(account_id)
+            ]
+
+    def alerts_by_platform(self, account_id: int, days: int) -> list[PlatformAlerts]:
+        """What the alerts of the last ``days`` gave, by platform."""
+        since = self._clock() - timedelta(days=days)
+        with self.storage.transaction() as store:
+            return store.alerts_by_platform(account_id, since)
 
     def _labels(self, account_id: int, application_ids: set[int]) -> dict[int, str]:
         with self.engine.connect() as connection:

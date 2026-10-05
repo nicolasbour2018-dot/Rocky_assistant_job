@@ -27,6 +27,7 @@ from rocky.messages.alerts.model import (
     PLATFORM_LABELS,
     READING_LABELS,
     LinkOutcome,
+    PlatformAlerts,
     ReadingStatus,
 )
 from rocky.messages.classification.model import (
@@ -58,7 +59,7 @@ from rocky.messages.oauth import (
     redirect_uri,
     seal_pending,
 )
-from rocky.messages.service import Attention, MessagesService
+from rocky.messages.service import Attention, MailboxView, MessagesService
 from rocky.messages.usecases import (
     CollectBusyError,
     MailboxNotConnectedError,
@@ -68,6 +69,7 @@ from rocky.offres.decisions import Author
 from rocky.offres.imports.web import posting_pages
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import InvalidLinkError
+from rocky.offres.watch.web import paris_time
 from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
@@ -77,6 +79,7 @@ from rocky.system.shell import (
     Action,
     Card,
     add_badge,
+    add_system_cards,
     add_today_cards,
     is_htmx,
     page,
@@ -166,6 +169,9 @@ def install(app: FastAPI) -> None:
     add_badge(app, "messages", _pending_count)
     # Decision F1, Q7: a summary in 🏠 Aujourd'hui; the gestures stay here.
     add_today_cards(app, "messages", _today_cards)
+    # Decision F1, Q11: the mailboxes and the alerts in ⚙️ Système.
+    add_system_cards(app, "boites", _mailbox_cards)
+    add_system_cards(app, "alertes", _alert_cards)
     app.include_router(router)
 
 
@@ -207,6 +213,124 @@ def attention_card(attention: Attention) -> Card | None:
             "/messages" if moved else f"/messages?vue={View.TO_CHECK.value}",
         ),
     )
+
+
+# ⚙️ Système (decision F1, Q11): the mailboxes and what the alerts gave over the last days.
+ALERT_DAYS = 7
+CONNECT = Action("Connecter une boîte Gmail", "/messages/gmail/connecter", post=True)
+RECONNECT = Action("Reconnecter la boîte", "/messages/gmail/connecter", post=True)
+COLLECT_FROM_SYSTEM = Action(
+    "Relever maintenant", "/messages/relever?retour=systeme", post=True
+)
+
+
+def _mailbox_cards(request: Request, account: Account) -> list[Card]:
+    service = _service(request)
+    if not service.configured:
+        return [
+            Card(
+                "📬 Boîtes Gmail", ("Gmail n'est pas encore disponible sur ce Rocky.",)
+            )
+        ]
+    return [mailbox_card(service.mailbox_views(account.id))]
+
+
+def mailbox_card(views: Sequence[MailboxView]) -> Card:
+    """Each mailbox with its last collection; a mailbox to reconnect, or a failed collection, is a problem."""
+    shown = [
+        view for view in views if view.mailbox.status is not MailboxStatus.DISCONNECTED
+    ]
+    if not shown:
+        return Card(
+            "📬 Boîtes Gmail",
+            (
+                "Aucune boîte connectée : Rocky ne lit ni les réponses des recruteurs ni tes alertes.",
+            ),
+            action=CONNECT,
+        )
+    lost = any(view.mailbox.status is MailboxStatus.ACCESS_LOST for view in shown)
+    failed = any(
+        view.last is not None and view.last.status is SyncStatus.FAILED
+        for view in shown
+    )
+    running = any(
+        view.last is not None and view.last.status is SyncStatus.RUNNING
+        for view in shown
+    )
+    return Card(
+        "📬 Boîtes Gmail",
+        ("Relevé automatique toutes les heures.",),
+        tuple((view.mailbox.address, mailbox_line(view)) for view in shown),
+        action=None if running else RECONNECT if lost else COLLECT_FROM_SYSTEM,
+        problem=lost or failed,
+        polling=running,
+    )
+
+
+def mailbox_line(view: MailboxView) -> str:
+    parts = [MAILBOX_STATUS_LABELS[view.mailbox.status]]
+    last = view.last
+    if last is None:
+        parts.append("jamais relevée")
+    else:
+        parts.append(
+            f"dernier relevé le {paris_time(last.started_at)} : {SYNC_STATUS_LABELS[last.status]}"
+        )
+        if last.status is not SyncStatus.RUNNING:
+            new = last.counts.new
+            parts.append(
+                f"{new} nouveau{'x' if new > 1 else ''} message{'s' if new > 1 else ''}"
+            )
+        if last.reason:
+            parts.append(last.reason)
+    return " · ".join(parts)
+
+
+def _alert_cards(request: Request, account: Account) -> list[Card]:
+    service = _service(request)
+    if not service.configured:
+        return []
+    return [alerts_card(service.alerts_by_platform(account.id, ALERT_DAYS))]
+
+
+def alerts_card(found: Sequence[PlatformAlerts]) -> Card:
+    """What the alerts gave, by platform (plan §8, E3 → F1), refusals of the postings included."""
+    title = f"🔔 Alertes emploi · {ALERT_DAYS} derniers jours"
+    if not found:
+        return Card(title, ("Aucune alerte reçue ces derniers jours.",))
+    return Card(
+        title,
+        (f"Au plus {ALERTS_PER_DAY} alertes lues par jour.",),
+        tuple(
+            (
+                "Formats non lus"
+                if alerts.platform is None
+                else PLATFORM_LABELS[alerts.platform],
+                platform_line(alerts),
+            )
+            for alerts in found
+        ),
+    )
+
+
+def platform_line(alerts: PlatformAlerts) -> str:
+    def counted(count: int, word: str) -> str:
+        return f"{count} {word}{'s' if count > 1 else ''}"
+
+    if alerts.platform is None:
+        return f"{counted(alerts.unread, 'alerte')} sans lecteur"
+    parts = [f"{counted(alerts.read, 'alerte')} lue{'s' if alerts.read > 1 else ''}"]
+    if alerts.unread:
+        parts.append(f"{alerts.unread} non lue{'s' if alerts.unread > 1 else ''}")
+    if alerts.offers:
+        parts.append(
+            f"{counted(alerts.offers, 'offre')}, dont {alerts.created} nouvelle{'s' if alerts.created > 1 else ''}"
+        )
+    if alerts.refused:
+        parts.append(
+            f"{counted(alerts.refused, 'fiche')} refusée{'s' if alerts.refused > 1 else ''}"
+        )
+    return " · ".join(parts)
 
 
 def _pending_count(request: Request, account: Account) -> int:
@@ -296,7 +420,9 @@ def content_fragment(
 
 
 @router.post("/relever", response_class=HTMLResponse)
-def collect_now(request: Request, account: CurrentAccount) -> Response:
+def collect_now(
+    request: Request, account: CurrentAccount, retour: str = ""
+) -> Response:
     """« Relever maintenant »: every connected mailbox of the account; asking twice collects once."""
     service = _service(request)
     scheduler: Scheduler = request.app.state.scheduler
@@ -304,7 +430,9 @@ def collect_now(request: Request, account: CurrentAccount) -> Response:
     if service.configured and name not in scheduler.pending():
         scheduler.submit(name, lambda: _collect_quietly(service, account.id))
     if not is_htmx(request):
-        return RedirectResponse("/messages", status_code=303)
+        # ⚙️ Système asks with a fixed value, never a URL.
+        back = "/systeme" if retour == "systeme" else "/messages"
+        return RedirectResponse(back, status_code=303)
     templates: Jinja2Templates = request.app.state.templates
     return templates.TemplateResponse(
         request,

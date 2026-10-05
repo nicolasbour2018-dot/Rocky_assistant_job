@@ -13,9 +13,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 
 from rocky.offres.sources.model import JobSource, SourceCode
+from rocky.offres.sources.usecases import Outcome
 from rocky.offres.sql import SqlStorage
-from rocky.offres.watch.model import RunCounts, RunStatus, Trigger
+from rocky.offres.watch.model import RunCounts, RunStatus, SourceRun, Trigger
 from rocky.offres.watch.service import WatchService
+from rocky.offres.watch.web import source_line
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.scheduler import Scheduler
 from tests.offres.fakes import posting
@@ -60,6 +62,8 @@ def seed_run(
     status: RunStatus,
     *,
     hours_ago: float,
+    sources: Sequence[SourceRun] = (),
+    counts: RunCounts | None = None,
 ) -> None:
     started = app.state.auth.clock() - timedelta(hours=hours_ago)
     storage = SqlStorage(engine)
@@ -72,8 +76,8 @@ def seed_run(
                 reason="Apec : En panne (HTTP 503)"
                 if status is RunStatus.FAILED
                 else None,
-                counts=RunCounts(),
-                sources=(),
+                counts=counts or RunCounts(),
+                sources=sources,
                 now=started,
             )
 
@@ -193,6 +197,90 @@ def test_launching_asks_the_planner_once_and_today_follows_the_watch(
     assert run is not None
     assert (run.trigger, run.status) == (Trigger.CATCH_UP, RunStatus.COMPLETED)
     assert "Veille" not in client.get("/").text
+
+
+# ⚙️ Système (decision F1, Q11): the last run, source by source; the first problem takes the main action.
+
+APEC_RUN = SourceRun(
+    "apec",
+    Outcome.OK,
+    None,
+    offers=12,
+    incomplete=3,
+    skipped=(("Data analyst", "Eure et Loire", "lieu inconnu d'Apec"),) * 2,
+)
+LINKEDIN_RUN = SourceRun(
+    "linkedin", Outcome.REFUSED, "Refusé (HTTP 429)", offers=0, incomplete=0
+)
+
+
+def test_system_without_an_active_track_proposes_one(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    client, _ = account(app, migrated_engine, track=False)
+
+    page = client.get("/systeme").text
+
+    assert "Aucune piste active" in page
+    assert page.count("btn-primary") == 1
+    assert 'class="btn btn-primary card-action" href="/profil/pistes"' in page
+
+
+def test_system_tells_the_last_run_source_by_source(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    client, account_id = account(app, migrated_engine)
+    seed_run(
+        app,
+        migrated_engine,
+        account_id,
+        RunStatus.PARTIAL,
+        hours_ago=2,
+        sources=(APEC_RUN, LINKEDIN_RUN),
+        counts=RunCounts(found=12, new=5),
+    )
+
+    page = client.get("/systeme").text
+
+    assert "Dernière veille : 24/09 à 12:00 · Veille planifiée · Partielle" in page
+    assert "12 offres trouvées, dont 5 nouvelles." in page
+    assert "<dt>Apec</dt>" in page and "<dt>LinkedIn</dt>" in page
+    assert page.count("btn-primary") == 1
+    assert 'class="btn btn-primary">Lancer la veille maintenant</button>' in page
+    assert '<section class="card screen-card">\n    <h2>🔎 Veille</h2>' in page
+
+
+def test_system_proposes_to_relaunch_a_failed_watch_and_stays_there(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    client, account_id = account(app, migrated_engine)
+    seed_run(app, migrated_engine, account_id, RunStatus.COMPLETED, hours_ago=5)
+    seed_run(app, migrated_engine, account_id, RunStatus.FAILED, hours_ago=1)
+
+    page = client.get("/systeme").text
+    launched = client.post("/veille/lancer?retour=systeme")
+
+    assert (
+        '<section class="card screen-card screen-card-problem">\n    <h2>🔎 Veille</h2>'
+        in page
+    )
+    assert 'class="btn btn-primary">Relancer la veille</button>' in page
+    assert page.count("btn-primary") == 1
+    assert launched.headers["location"] == "/systeme"
+    assert client.post("/veille/lancer?retour=ailleurs").headers["location"] == "/"
+
+
+def test_a_source_line_says_what_rocky_admin_sources_says() -> None:
+    assert source_line(APEC_RUN) == (
+        "Collectée · 12 offres dont 3 incomplètes · requêtes sautées (2) : lieu inconnu d'Apec"
+    )
+    assert source_line(LINKEDIN_RUN) == "Refusée par la plateforme · Refusé (HTTP 429)"
+    assert source_line(
+        SourceRun("france_travail", Outcome.PENDING_ACCESS, None, 0, 0)
+    ) == ("En attente d'accès · activée quand l'accès à l'API sera accordé (D8)")
+    assert source_line(
+        SourceRun("wttj", Outcome.OK, None, 4, 0, detail_stopped="Refusé (HTTP 403)")
+    ) == ("Collectée · 4 offres · détail arrêté : Refusé (HTTP 403)")
 
 
 def test_a_profile_change_wakes_the_rescoring_up(

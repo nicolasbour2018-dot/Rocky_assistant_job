@@ -16,7 +16,7 @@ from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import JobSource
 from rocky.offres.sources.registry import build_sources
 from rocky.offres.sql import SqlStorage
-from rocky.offres.watch.model import Trigger, WatchBusyError, WatchRun
+from rocky.offres.watch.model import SourceRun, Trigger, WatchBusyError, WatchRun
 from rocky.offres.watch.rules import is_late
 from rocky.offres.watch.usecases import (
     Clock,
@@ -142,6 +142,11 @@ class WatchService:
                 "watch run %s was left running: closed as interrupted", run_id
             )
         return closed
+
+    def source_runs(self, run_id: int) -> list[SourceRun]:
+        """What each source gave in the run ``run_id`` (⚙️ Système, decision F1, Q11)."""
+        with self.storage.transaction() as store:
+            return store.source_runs(run_id)
 
     def state(self, account_id: int, now: datetime | None = None) -> WatchState:
         with self.storage.transaction() as store:
