@@ -421,6 +421,11 @@ class MessagesService:
             ),
         )
 
+    def acknowledged_applications(self, account_id: int) -> frozenset[int]:
+        """For 📈 Bilan (``candidatures.report.Acknowledged``, given by the composition)."""
+        with self.storage.transaction() as store:
+            return store.acknowledged_applications(account_id)
+
     def mailbox_views(self, account_id: int) -> list[MailboxView]:
         """The mailboxes of the account and their last collection (⚙️ Système, decision F1, Q11)."""
         with self.storage.transaction() as store:

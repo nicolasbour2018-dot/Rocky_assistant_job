@@ -32,7 +32,6 @@ class NavEntry:
     # On a phone, primary entries stay in the bottom bar; the others go under "Plus".
     primary: bool
     purpose: str
-    arrives_in: str
 
 
 NAVIGATION = (
@@ -44,7 +43,6 @@ NAVIGATION = (
         True,
         "Ce qui demande ton attention maintenant : offres à examiner, dossiers à finir, "
         "relances dues, réponses à vérifier.",
-        "F1",
     ),
     NavEntry(
         "offers",
@@ -53,7 +51,6 @@ NAVIGATION = (
         "/offres",
         True,
         "Découvrir les offres et décider.",
-        "C7",
     ),
     NavEntry(
         "applications",
@@ -62,7 +59,6 @@ NAVIGATION = (
         "/candidatures",
         True,
         "Préparer, envoyer et suivre tes candidatures, étape par étape.",
-        "D6",
     ),
     NavEntry(
         "messages",
@@ -71,7 +67,6 @@ NAVIGATION = (
         "/messages",
         True,
         "Les retours des recruteurs et les alertes emploi, avec leurs preuves.",
-        "E1",
     ),
     NavEntry(
         "report",
@@ -80,7 +75,6 @@ NAVIGATION = (
         "/bilan",
         False,
         "Apprendre de ta recherche : ce qui marche, ce qui bloque.",
-        "F1",
     ),
     NavEntry(
         "profile",
@@ -89,7 +83,6 @@ NAVIGATION = (
         "/profil",
         False,
         "Ton CV maître, tes pistes, tes compétences, en français et en anglais.",
-        "B5",
     ),
     NavEntry(
         "system",
@@ -98,7 +91,6 @@ NAVIGATION = (
         "/systeme",
         False,
         "Sources, veilles, Gmail, planification et diagnostics.",
-        "F1",
     ),
 )
 ENTRIES = {entry.key: entry for entry in NAVIGATION}
@@ -335,22 +327,3 @@ def drawer(request: Request, account: CurrentAccount, ecran: str = "") -> HTMLRe
         active=entry.key if entry is not None else "today",
         context=context,
     )
-
-
-def _empty_page(key: str) -> None:
-    entry = ENTRIES[key]
-
-    def show(request: Request, account: CurrentAccount) -> HTMLResponse:
-        return page(request, "empty.html", active=entry.key, context={"entry": entry})
-
-    router.add_api_route(
-        entry.path,
-        show,
-        methods=["GET"],
-        response_class=HTMLResponse,
-        name=f"empty_{entry.key}",
-    )
-
-
-for _key in ("report",):
-    _empty_page(_key)

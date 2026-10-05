@@ -809,6 +809,20 @@ class SqlStore:
             ).scalar_one()
         )
 
+    def acknowledged_applications(self, account_id: int) -> frozenset[int]:
+        """The applications that have a message whose decision in force is an acknowledgement (📈 Bilan, F1)."""
+        current = _current_decisions(account_id).subquery()
+        return frozenset(
+            self._conn.execute(
+                select(current.c.application_id)
+                .where(
+                    current.c.category == Category.ACKNOWLEDGEMENT.value,
+                    current.c.application_id.is_not(None),
+                )
+                .distinct()
+            ).scalars()
+        )
+
     def to_check(self, account_id: int) -> int:
         """Messages of the account whose decision in force is of low confidence: the view « À vérifier » (Q14)."""
         current = _current_decisions(account_id).subquery()

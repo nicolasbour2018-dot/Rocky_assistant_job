@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Engine
 
+from rocky.candidatures import report_web as candidatures_report
 from rocky.candidatures import today as candidatures_today
 from rocky.candidatures import web as candidatures_web
 from rocky.messages import web as messages_web
@@ -113,6 +114,8 @@ def create_app(
     candidatures_web.install(app)
     candidatures_today.install(app)
     messages_web.install(app)
+    # 📈 Bilan reads the acknowledgements of ``messages`` through a port (decision F1, Q13): no import of the module.
+    candidatures_report.install(app, app.state.messages.acknowledged_applications)
     _plan(app, engine, clock)
 
     @app.get("/health")

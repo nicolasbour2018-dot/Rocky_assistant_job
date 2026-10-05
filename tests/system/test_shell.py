@@ -61,28 +61,6 @@ def test_the_phone_bar_keeps_four_entries_and_a_more_menu(
     assert 'popovertarget="more-menu"' in tabbar
 
 
-@pytest.mark.parametrize(
-    "entry",
-    [
-        e
-        for e in NAVIGATION
-        if e.key
-        not in {"today", "offers", "profile", "applications", "messages", "system"}
-    ],
-    ids=lambda e: e.key,
-)
-def test_pages_not_built_yet_explain_themselves(
-    app: FastAPI, migrated_engine: Engine, entry: object
-) -> None:
-    client, _ = logged_in(app, migrated_engine)
-    path, step = entry.path, entry.arrives_in  # type: ignore[attr-defined]
-
-    page = client.get(path)
-
-    assert page.status_code == 200
-    assert f"étape {step}" in page.text
-
-
 def test_shell_pages_require_a_session(app: FastAPI) -> None:
     anonymous = TestClient(app, follow_redirects=False)
 

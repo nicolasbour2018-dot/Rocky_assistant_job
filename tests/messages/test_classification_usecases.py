@@ -197,6 +197,29 @@ def test_every_decision_has_its_proof_and_its_event(box: Box) -> None:
     }
 
 
+def test_the_applications_with_an_acknowledgement_are_given_to_the_report(
+    box: Box,
+) -> None:
+    """Decision F1, Q9: 📈 Bilan counts « accusé seul » from the acknowledgements attached to an application."""
+    box.mail(
+        "Recrutment department - French Bee <message@beetween-software.com>",
+        "French Bee - Votre candidature au poste de Data Analyst - Data Steward H/F",
+        "Nous avons bien reçu votre candidature au poste de Data Analyst - Data Steward H/F.",
+    )
+    box.mail(
+        "Hellowork Candidature <contact@emails.hellowork.com>",
+        "Votre candidature est arrivée chez GEODIS",
+    )
+
+    box.run()
+
+    with box.storage.transaction() as store:
+        assert store.acknowledgements(box.account_id) == 2
+        assert store.acknowledged_applications(box.account_id) == frozenset(
+            {box.french_bee}
+        )
+
+
 def test_the_base_refuses_a_decision_without_proof(box: Box) -> None:
     message_id = box.mail("Exemple <rh@exemple.fr>", "Objet")
     base = {

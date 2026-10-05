@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{# 📈 Bilan minimal (decision F1, Q9, Q10): each figure with its denominator, the sent applications. #}
+{% block title %}{{ entry.label }} · Rocky{% endblock %}
+{% macro share(count) %}<strong>{{ count }}</strong> sur {{ report.sent }}{% if report.sent %} <span class="muted">({{ (100 * count / report.sent) | round | int }} %)</span>{% endif %}{% endmacro %}
+{% block content %}
+<header class="page-header"><h1><span aria-hidden="true">{{ entry.icon }}</span> {{ entry.label }}</h1></header>
+<p class="muted page-purpose">{{ entry.purpose }}</p>
+<section class="card screen-card report">
+  {% if report.sent %}
+  <h2>{{ report.sent }} candidature{{ 's' if report.sent > 1 }} envoyée{{ 's' if report.sent > 1 }} depuis le {{ report.since.strftime('%d/%m/%Y') }}</h2>
+  <dl class="screen-details report-figures">
+    <dt>Réponse d'une personne</dt><dd>{{ share(report.answered) }}</dd>
+    <dt>dont entretien</dt><dd>{{ share(report.interviews) }}</dd>
+    <dt>dont offre</dt><dd>{{ share(report.offers) }}</dd>
+    <dt>Accusé de réception seul</dt><dd>{{ share(report.acknowledged_only) }}</dd>
+    <dt>Sans nouvelles</dt><dd>{{ share(report.without_news) }}</dd>
+  </dl>
+  <details>
+    <summary>Comment ces chiffres sont comptés</summary>
+    <p>Chaque chiffre se lit sur les candidatures envoyées. Une réponse d'une personne, c'est une candidature passée par
+      « En discussion », « Entretien », « Offre » ou « Refusée ». Un accusé de réception n'est pas une réponse : il est
+      compté à part, seulement quand rien d'autre n'est arrivé. Un changement annulé ne compte pas.</p>
+  </details>
+  {% else %}
+  <h2>Aucune candidature envoyée pour l'instant</h2>
+  <p>Le bilan commence avec la première candidature envoyée.</p>
+  {% endif %}
+  {% with primary = true %}{% include "card_action.html" %}{% endwith %}
+</section>
+{% endblock %}
