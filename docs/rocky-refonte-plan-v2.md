@@ -359,6 +359,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C1 → Nicolas, B5)** Lieu « Eure et Loire » dans les deux pistes : Apec ne connaît qu'« Eure-et-Loir » (requêtes
   sautées et signalées par `rocky-admin sources`).
 - **(C1 → F1)** État des sources à l'écran ⚙️ Système : reprendre `CollectionReport` et `report_lines`.
+  *Résolu en F1 : panneau « Veille » de ⚙️ Système, une ligne par source de la dernière veille (`watch.web.source_line`).*
 - **(C1 → §5 VPS)** Sur un VPS (IP de centre de données, plusieurs comptes), réévaluer le volume par compte et la
   tolérance de LinkedIn et Wellfound (Cloudflare) ; la règle d'arrêt reste.
 - **(C1 → C6)** Une panne sur une requête (erreur 5xx, délai dépassé, référentiel de lieux Apec indisponible) arrête
@@ -482,6 +483,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   décision ; le bouton de suppression est renvoyé à `profil`.*
 - **(C6 → F1)** Le bandeau de veille (retard, en cours, échec) va dans 🏠 Aujourd'hui ; ⚙️ Système lit `watch_runs` et
   `watch_run_sources` (état par source, requêtes sautées, détail arrêté).
+  *Résolu en F1 : bloc de tête de 🏠 Aujourd'hui (plus de bandeau sur les autres pages), compteur sur 🏠 ; Système lit
+  `watch_run_sources`.*
 - **(C6)** Un import par URL qui écrirait la même offre au même instant qu'une veille heurte la contrainte d'unicité
   (erreur visible, pas de donnée incohérente) : réessayer suffit. Les journaux `INFO` des modules ne sont pas affichés
   par uvicorn (seuls avertissements et erreurs, avec leur trace) : à régler avec la journalisation du VPS.
@@ -619,6 +622,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   reprendre plus tard, peut-être avec la lecture assistée (E5), qui a le même besoin d'un navigateur sur le poste.
 - **(D6 → F1)** 🏠 Aujourd'hui « relances dues » : reprendre `candidatures.web.rows_of` et `rules.tabs_of` (onglet
   « À faire ») plutôt qu'une seconde lecture des dossiers.
+  *Résolu en F1 : `candidatures/today.py` lit `rows_of` une fois par requête pour « Relances dues » et « Dossiers à finir ».*
 - **(D6)** La page du dossier recalcule le CV ciblé, la lettre et l'envoi pour n'afficher qu'une étape (`_dossier`,
   `_dossier_page`) : rapide en local ; à mesurer sur le VPS, et ne calculer que l'étape montrée si c'est lent.
 - **(D6 → E4)** Une transition écrite par une règle ou l'IA apparaît dans la chronologie avec « par une règle » / « par
@@ -630,6 +634,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   recruteurs utiles, mais aussi du bruit). À mesurer à la recette d'E1 ; resserrer sur les adresses d'alerte
   (`QUERIES_VERSION`) si le bruit gêne.
 - **(E1 → F1)** ⚙️ Système : état des boîtes et des collectes (`mailboxes`, `mail_syncs`, `MessagesService.state`).
+  *Résolu en F1 : panneau « Boîtes Gmail » (dernier relevé, à reconnecter, relever depuis Système).*
 - **(E1 → §5 VPS)** `ROCKY_SECRET_KEY` se sauvegarde avec la base : sans elle, les jetons scellés ne s'ouvrent plus et
   chaque boîte est à reconnecter. Validation de l'application Google (scope restreint `gmail.readonly`) avant les
   alpha-testeurs.
@@ -659,6 +664,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Tenu en E3 : `alerts_to_read` part des décisions `job_alert` en vigueur.*
 - **(E2 → F1)** 🏠 Aujourd'hui « réponses à vérifier » : la vue `View.TO_CHECK` de `MessagesService.state`, et les
   messages en attente (`waiting`, `waiting_reason`).
+  *Résolu en F1 : `MessagesService.attention` (ce qui a bougé, nombre à vérifier), résumé et lien vers 📬 (décision F1, Q7).*
 - **(E2)** Des expéditeurs mettent des entités HTML dans la partie texte (« re&ccedil;u ») : E1 les garde telles quelles,
   la classification les lit décodées (`classification.rules.readable`). À reprendre à la collecte si un autre usage du
   corps en souffre (E3).
@@ -671,8 +677,10 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   regroupement des messages d'une même candidature (Q21).
 - **(E4 → F1)** 🏠 Aujourd'hui reprend « Ce qui a bougé » : `MessagesService.state(...).moved` et `pending_count` (le
   compteur de 📬 passe par `system.shell.add_badge`, hors bande après un geste).
+  *Résolu en F1 : résumé dans Aujourd'hui, les gestes restent dans 📬 (Q7).*
 - **(E4 → F1 ou après, décision E4 Q11)** Passage à « Sans réponse » après un délai sans message : hors E4, par
   `automatic_transition_allowed`, une fois les rattachements fiables (constat D1 → E4, F1).
+  *F1 (Q3) : reporté après la bascule ; aucune transition automatique.*
 - **(E4 → Nicolas)** Étiquettes de l'échantillon de l'archive (`tests/messages/data/archive_sample.csv`, colonne `checked`
   vide, recette d'E2) : à reprendre avec les corrections réelles de Nicolas, exportées par
   `rocky-admin messages-etiquettes <email>` (jamais versionnées telles quelles).
@@ -700,6 +708,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   reprendre dans le compte réel, qui repart de zéro (Nicolas, 05/10).
 - **(E3 → F1)** ⚙️ Système : ce que les alertes ont donné par plateforme (`alert_readings`, `alert_offers`, rapport
   `AlertsReport`), refus de plateforme compris.
+  *Résolu en F1 : panneau « Alertes emploi » sur 7 jours (`SqlStore.alerts_by_platform`).*
 - **(E3 → B1, vérification)** 1 471 tests : 3 min 21 sous une charge de 6 à 20 (5 min 50 sous 15) ; les tests d'E3 pèsent
   10 s en séquentiel. Sur GitHub : **1 min 49** (passage `37295850878`), sous la limite des 2 min mais sans marge (constat E4 → B1, toujours ouvert).
 - **(E3 → plus tard, Nicolas 05/10)** E3 close **sans le critère Indeed** (aucune alerte Indeed reçue). Dès la première
@@ -720,3 +729,10 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   vérifier alors.
 - **(E5 → recette)** La lecture assistée n'a été éprouvée en réel que sur Apec : à constater sur une offre LinkedIn ou
   Adzuna incomplète à l'usage (poste lancé).
+- **(F1 → plus tard, §5 VPS)** Un échec d'une tâche du planificateur (purge, recalcul) n'est écrit que dans le journal
+  de l'application : ⚙️ Système ne le montre pas (décision F1, Q8, sans nouvelle table). Veille et relevé Gmail ont leur
+  état en base. À reprendre si une tâche échoue sans bruit à l'usage (table des passages planifiés).
+- **(F1, vérification)** `tests/system/test_render.py` a échoué une fois sur le poste (lancement de Chromium hors
+  délai sous une charge de 13, `uv run pytest` hors Docker) ; vert seul et dans le service `check`. À surveiller si
+  cela se répète.
+- **(F1 → F2)** Le tiroir 🐾 est déterministe (Q2) : un assistant conversationnel (Gemini) reste hors refonte.

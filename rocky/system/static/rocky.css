@@ -467,6 +467,7 @@ body.auth { display: grid; place-items: center; min-height: 100vh; padding: var(
 /* The cross-cutting screens (F1): cards of 🏠 Aujourd'hui and ⚙️ Système, the drawer 🐾 */
 .screen-cards { display: grid; gap: var(--space-4); max-width: 880px; }
 .screen-card { gap: var(--space-2); }
+.report { max-width: 880px; }
 .screen-card h2 { font-size: 16px; margin: 0; }
 .screen-card p { margin: 0; }
 .screen-card-problem { border-color: var(--bad); }

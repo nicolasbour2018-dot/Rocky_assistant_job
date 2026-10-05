@@ -59,6 +59,17 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Un module est prévenu d'un changement d'un autre par un crochet de `app.state` installé par la composition
   (`profile_changed`), jamais par un import de l'un dans l'autre.
 
+## Écrans transverses (`rocky/system/shell.py`, décision `docs/decisions/F1-ecrans-transverses.md`)
+- `system` n'importe aucun module métier : 🏠 Aujourd'hui, ⚙️ Système et le tiroir 🐾 se construisent par des
+  **registres** remplis à l'installation des modules (`add_today_cards`, `add_system_cards`, `add_drawer`, `add_badge`).
+  L'ordre des blocs est fixé dans `TODAY_ORDER` / `SYSTEM_ORDER` ; une clé inconnue est refusée.
+- Un bloc est une `Card` (titre, lignes, détails, au plus une `Action`, `problem`, `polling`) : la coque choisit **le
+  seul bouton principal** de l'écran (`main_action` : premier problème avec une action, sinon première action, sinon
+  l'action de repli). Un module ne rend jamais lui-même de `btn-primary` dans une carte. Tout nouvel état d'un écran
+  a son test « exactement un bouton principal ».
+- Un geste d'un écran transverse qui doit y revenir passe `retour=systeme` (valeur fixe, jamais une URL).
+- Le tiroir se lit à son ouverture (`/tiroir?ecran=<clé>`), jamais au rendu de la page ; trois actions au plus.
+
 ## Tests
 - Fixtures de `tests/conftest.py` : `db` (transaction annulée) pour tout test SQL ; `migrated_engine` quand le
   test doit valider ; `empty_engine` pour un schéma vierge. Ne jamais écrire dans le schéma `public` de `test-db`.
