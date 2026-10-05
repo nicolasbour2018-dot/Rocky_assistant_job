@@ -711,6 +711,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en F1 : panneau « Alertes emploi » sur 7 jours (`SqlStore.alerts_by_platform`).*
 - **(E3 → B1, vérification)** 1 471 tests : 3 min 21 sous une charge de 6 à 20 (5 min 50 sous 15) ; les tests d'E3 pèsent
   10 s en séquentiel. Sur GitHub : **1 min 49** (passage `37295850878`), sous la limite des 2 min mais sans marge (constat E4 → B1, toujours ouvert).
+  *F1 : **2 min 01** sur GitHub (passage `37361566948`, 1 556 tests), limite dépassée ; 49 s en local. À trancher avec
+  Nicolas : partager les fixtures SQL lourdes, ou mesurer la limite sur le poste plutôt que sur GitHub.*
 - **(E3 → plus tard, Nicolas 05/10)** E3 close **sans le critère Indeed** (aucune alerte Indeed reçue). Dès la première
   alerte Indeed : la capturer (`docs/procedures/e3-captures/`), écrire son lecteur (`alerts.rules.READERS`, Indeed jamais
   lu par son lien : refus constaté en C2), puis constater une offre Indeed par jour sur 3 jours.

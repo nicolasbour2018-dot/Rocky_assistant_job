@@ -68,3 +68,6 @@ Corrigé pendant l'essai : la carte du Bilan prenait toute la largeur (alignée 
 Étape close par Nicolas sur le critère vérifié par les tests et l'essai : chaque écran a une action principale claire.
 L'UX et l'UI de l'ensemble de Rocky seront **retravaillées dans une étape à part**, hors F1 (plan §8) ; aucune
 retouche visuelle des écrans transverses n'est faite ici.
+
+Vérification GitHub verte (passage `37361566948`) : 1 556 tests en **2 min 01** (1 min 39 à E5 pour 1 510 tests),
+au-dessus de la limite des 2 min ; en local, 49 s. Voir plan §8 (E4 → B1).
