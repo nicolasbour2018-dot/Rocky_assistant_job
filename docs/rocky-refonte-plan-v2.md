@@ -161,7 +161,23 @@ aucun identifiant interne affiché.
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
 | F1. Écrans transverses | 🏠 Aujourd'hui (offres à examiner, dossiers à finir, relances dues, réponses à vérifier, retard de veille) ; ⚙️ Système (état lisible par source, OAuth, planification) ; 📈 Bilan minimal (accusé technique ≠ réponse humaine ≠ entretien ≠ offre, dénominateurs affichés) ; tiroir Rocky | Chaque écran a une action principale claire | ✅ |
-| F2. Recette et bascule | Tests de bout en bout : choisir 3 offres, préparer et confirmer un envoi, retrouver une relance, lire un changement Gmail ; export final de l'ancien Rocky ; retrait de Streamlit, de l'ancien code et des scripts Hugging Face | Nicolas mène sa recherche une semaine entière uniquement dans le nouveau Rocky | ⬜ |
+| F2. Recette et bascule | **Après la section G.** Tests de bout en bout : choisir 3 offres, préparer et confirmer un envoi, retrouver une relance, lire un changement Gmail ; export final de l'ancien Rocky ; retrait de Streamlit, de l'ancien code et des scripts Hugging Face | Nicolas mène sa recherche une semaine entière uniquement dans le nouveau Rocky | ⬜ |
+
+### G. Consolidation avant bascule
+
+Ajoutée par Nicolas le 05/10, après la clôture de F1 (audit de §8 et du code) : réalisée **entre F1 et F2**, dans
+l'ordre des lignes. F2 garde son nom (renvois « → F2 » de §8). Arbitrages de Nicolas : les lieux avant le cockpit ;
+la vérification allégée plutôt que sa limite relevée ; une passe UX des autres écrans et l'identité graphique avant F2.
+
+| Étape | Contenu | Critère de sortie | État |
+|---|---|---|---|
+| G1. Vérification | *Direct.* Partager les fixtures SQL lourdes (compte, boîte, rendus) par module ; fixer `runs-on: ubuntu-24.04` avant le passage de GitHub à Ubuntu 26 (19/10) | Vérification GitHub verte en 1 min 40 au plus | ⬜ |
+| G2. Lieux et date limite | *Grill me, puis mode plan.* Référentiel versionné (communes, départements → région), sans réseau à l'exécution, pour qu'une région couvre ses villes dans le score ; nouvelle `RULES_VERSION` ; mesures C4/C5 relancées ; offre à date limite passée signalée ; contrat Hellowork lu dans le titre de la page | « Paris 01 - 75 », « Courbevoie - 92 » et « Chartres - 28 » répondent aux lieux des pistes de Nicolas ; écart de classement chiffré et documenté | ⬜ |
+| G3. Cockpit | *Grill me avec la skill de design, puis mode plan.* 🏠 Aujourd'hui devient le **Cockpit** (libellé de D12 mis à jour, validé par Nicolas le 05/10) : cartes de métriques, fil défilant de ce que Rocky signale, suggestions d'offres (meilleurs scores pour commencer), veille manuelle ; mécanismes et parcours, sans identité graphique | Fixé au grill | ⬜ |
+| G4. Assistant Rocky | *Grill me, puis mode plan.* Le tiroir 🐾 devient un assistant Gemini (révise la décision F1, Q2) : contexte construit par les cas d'usage des modules (offre, candidature, message, profil), par compte et en lecture seule, jamais de SQL écrit par le modèle ; réponses qui citent les faits ; aucun geste à la place de l'utilisateur ; plafonds d'appels communs dans `system` ; place de « À faire ici » face au cockpit | Fixé au grill | ⬜ |
+| G5. Profil et CV | *Mode plan.* Blocs projets et gabarit neutre du CV (limites de D2) ; compétences qui ne diffèrent que par la casse ou un espace ; listes des pistes « une valeur par ligne » et aide des mots exclus | Fixé au plan | ⬜ |
+| G6. Passe UX des écrans | *Grill me avec la skill de design, puis mode plan.* Offres, Candidatures (parcours du dossier), Messages, Bilan, Profil, Système : mécanismes, boutons, parcours ; frappes perdues (B4 → C7) | Fixé au grill | ⬜ |
+| G7. Identité graphique | *Grill me avec la skill de design.* Couche visuelle de tout Rocky, juste avant F2 | Fixé au grill | ⬜ |
 
 ## 5. Hors refonte (plus tard)
 
@@ -269,6 +285,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   Docker ou de Compose de la nouvelle image). Contournement immédiat : fixer `runs-on: ubuntu-24.04` dans
   `.github/workflows/verification.yml`. Le VPS de Nicolas tourne aussi sous Ubuntu : même vigilance lors de son
   installation.
+  *Placé en G1 (Nicolas, 05/10) : `runs-on` fixé avant le 19/10.*
 - **(B3 → C6)** Sessions et jetons expirés restent en base : purge par une tâche du planificateur.
   *Résolu en C6 : tâche quotidienne du planificateur (4 h), `SqlAuthStore.purge_expired`.*
 - **(B3 → B4)** Pas de `favicon.ico` (erreur 404 dans la console) ; les formulaires de mot de passe n'ont pas de champ
@@ -409,6 +426,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en C7 : résumé gardé dans `offer_summaries`, périmé quand la description change.*
 - **(C3 → C2, C6)** Import Hellowork : le CDI n'est que dans le titre de la page (le JSON-LD donne `FULL_TIME`) ; lire
   aussi le `<title>` ou un champ de la page si le contrat manque (3 écarts de la mesure C3).
+  *Placé en G2 (Nicolas, 05/10).*
 - **(C3 → `profil`)** `normalize_term` réduit « C++ » et « C# » à « c » : une compétence de ce nom répondrait à la
   lettre « C » d'une annonce. À traiter si un compte déclare ces langages.
 - **(C3 → Nicolas)** Résumé réel à essayer : ajouter `ROCKY_GEMINI_API_KEY` au `.env`, relancer l'application
@@ -436,10 +454,12 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C5 → `profil`)** L'écran de profil laisse créer deux compétences qui ne diffèrent que par un espace ou la casse
   (« ML Flow » / « MLFlow », « HuggingFace » / « hugging face », vus le 28/09 et fusionnés à la main par Nicolas) :
   une annonce ne répond qu'à l'une des deux. Proposer l'alias quand le nom replié correspond à une compétence existante.
+  *Placé en G5 (Nicolas, 05/10).*
 - **(C5 → `profil`)** Le champ « Mots exclus » (et les autres listes des pistes) attend une valeur par ligne, sans le
   dire : « senior, lead, staff… » saisi sur une ligne devient un seul terme, qui ne se trouve dans aucun intitulé
   (29/09). Son aide dit « les annonces qui les contiennent sont écartées », faux depuis C4 : un mot exclu dans
   l'intitulé plafonne le score, dans la description il est seulement signalé.
+  *Placé en G5 (Nicolas, 05/10).*
 - **(C5 → `profil`)** Séniorité : un réglage « niveau visé » (junior, confirmé, senior) serait la bonne forme ; en C5,
   Nicolas passe par les mots exclus de chaque piste (décision C5, Q23).
 - **(C5 → `offres`, analyse)** Secteur ou domaine de l'annonce (« Financement structuré », « Cash management ») : aucune
@@ -515,9 +535,11 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   LinkedIn, C1 Q7) et les banlieues resteraient hors zone. Correction : un référentiel (communes, départements →
   région) pour qu'une région couvre ses villes dans le score ; nouvelle `RULES_VERSION`, mesures C4/C5 relancées.
   Suite des constats (B5 → après C6) et (C4 → après C6). À trancher à la revue de cette section.
+  *Placé en G2 (Nicolas, 05/10), avant le cockpit qui suggère les meilleurs scores.*
 - **(C7, à trancher à la revue)** Motif « autre » de l'essai : « date de candidature dépassée ». Une annonce dont la date
   limite est passée pourrait être signalée à l'écran (la date limite est déjà lue par l'analyse C3), voire écartée par
   une règle (auteur `rule`, Q2) ; ou un motif « date limite dépassée » ajouté à « Écarté ».
+  *Placé en G2 (Nicolas, 05/10).*
 - **(D1 → `offres`)** La touche `u` de l'écran Offres annule la dernière décision du compte, y compris l'« Intéressé »
   écrit par « Préparer la candidature » : le dossier reste alors ouvert sur une offre revenue à sa décision d'avant.
   Pas d'état contradictoire (le dossier ne dépend pas de la décision après sa création), mais le signal D14 est
@@ -534,6 +556,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `automatic_transition_allowed` (jamais en arrière, jamais hors d'une issue).
 - **(D2 → D3)** La **stack** d'un projet est stockée une seule fois, sans version anglaise (B5) : le CV anglais montre
   « analyse de sentiment », « base vectorielle »… À traiter avec la traduction champ par champ.
+  *Résolu en D3 (Q12) : version anglaise de la stack, traduite champ par champ.*
 - **(D2 → Nicolas)** Compétences du Canva classées « métier » dans le profil (HuggingFace, MLFlow, Transformers,
   IA générative, Architecture engineering) : un groupe de compétences techniques ne peut pas les contenir (Q9). Harness
   n'est pas au profil. Les passer en « techniques » (effet sur le score) ou les laisser hors du CV : à trancher.
@@ -547,6 +570,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   rangement des lignes par le modèle variable d'un appel à l'autre (règles déterministes à éprouver sur d'autres CV) ;
   gabarit neutre trop court pour un parcours long (CV anglais de Nicolas sans CV anglais importé : 77 mm de trop).
   À affiner proprement dans une étape dédiée.
+  *Placé en G5 (Nicolas, 05/10).*
 - **(D2 → Nicolas)** Ordre des projets du CV maître (Water Potability avant Pilotage, inverse du Canva) : à vérifier.
 - **(D3 → D6 ou F1)** Les gabarits ne se suppriment pas : le compte de Nicolas en a 19 (dont 13 essais de mise au point
   de D2). Ils sont repliés sous « Autres gabarits » dans Profil & kit (D3) ; prévoir de retirer un gabarit inactif.
@@ -713,6 +737,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   10 s en séquentiel. Sur GitHub : **1 min 49** (passage `37295850878`), sous la limite des 2 min mais sans marge (constat E4 → B1, toujours ouvert).
   *F1 : **2 min 01** sur GitHub (passage `37361566948`, 1 556 tests), limite dépassée ; 49 s en local. À trancher avec
   Nicolas : partager les fixtures SQL lourdes, ou mesurer la limite sur le poste plutôt que sur GitHub.*
+  *Tranché par Nicolas (05/10) : partager les fixtures lourdes, limite toujours mesurée sur GitHub ; étape G1.*
 - **(E3 → plus tard, Nicolas 05/10)** E3 close **sans le critère Indeed** (aucune alerte Indeed reçue). Dès la première
   alerte Indeed : la capturer (`docs/procedures/e3-captures/`), écrire son lecteur (`alerts.rules.READERS`, Indeed jamais
   lu par son lien : refus constaté en C2), puis constater une offre Indeed par jour sur 3 jours.
@@ -738,6 +763,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   délai sous une charge de 13, `uv run pytest` hors Docker) ; vert seul et dans le service `check`. À surveiller si
   cela se répète.
 - **(F1 → F2)** Le tiroir 🐾 est déterministe (Q2) : un assistant conversationnel (Gemini) reste hors refonte.
+  *Révisé par Nicolas (05/10) : l'assistant Gemini, branché sur les données du compte, entre dans la refonte (G4).*
 - **(F1 → étape à placer, Nicolas 05/10)** **Refonte de l'UX et de l'UI de tout Rocky**, dans une étape dédiée (hors F1) :
   les écrans transverses de F1 en font partie, avec les constats d'interface déjà notés (parcours du dossier D4 → D6,
   frappes perdues B4 → C7). À placer dans le plan avec Nicolas.
+  *Placé par Nicolas (05/10) : G3 (cockpit), G6 (passe UX des écrans), G7 (identité graphique), avant F2.*
