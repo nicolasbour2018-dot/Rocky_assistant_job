@@ -51,6 +51,23 @@ Critère de sortie (plan) : « Aucun changement de statut ne passe inaperçu ».
 | Navigation | `add_badge(app, key, provider)` dans `rocky/system/shell.py`, sur le modèle d'`add_notice` | Le compteur ne fait pas importer `messages` par la coque |
 | Jeu étiqueté | `rocky-admin messages-etiquettes <email>` : CSV des décisions `user` et de la décision revue, sur la sortie standard, jamais versionné | Plan v2 (« corrections conservées comme jeu étiqueté ») |
 
+## Mesures et essai (05/10)
+
+| Contrôle | Résultat |
+|---|---|
+| **Critère, par les tests** (`tests/messages/test_decisions_usecases.py`, PostgreSQL, par le service comme l'écran) | Chaque changement d'étape d'auteur `rule` a sa ligne `mail_transitions` ; chaque transition appliquée ou proposée reste dans « Ce qui a bougé » jusqu'à un geste, et le compteur de la navigation en est le nombre. **Panne injectée** après chacune des 5 écritures du suivi d'une décision et des 7 écritures d'une correction : l'état relu (étape, prochaine action, décisions, transitions, règlements, changements, règles, journal) est identique à l'avant ; un test vérifie qu'aucune écriture n'est hors de ces points |
+| Idempotence | Un reclassement (`--reclasser`) ou un crochet rejoué n'ajoute ni transition ni changement ; « Créer la candidature » rejouée rend la même offre et le même dossier |
+| Q3 | Correction d'un refus appliqué : dossier revenu à « Envoyée », décision `user` avec `reviews_id`, nouveau changement proposé ; si la candidature a changé depuis, la transition reste et l'écran le dit |
+| Q7 | InMail par `messages-noreply@linkedin.com` corrigée en « Approche » avec « Toujours » : les autres messages de l'adresse reclassés, les suivants classés par la règle `account.sender` ; aucune règle pour un relais, une adresse d'alerte, un ATS ni une catégorie d'employeur ; domaine jamais retenu pour une messagerie publique |
+| Tests | Règles pures (`test_decisions_rules.py`, 22), cas d'usage (`test_decisions_usecases.py`, 32), écran (`test_decisions_web.py`, 10), chronologie, commande `messages-etiquettes` |
+| Vérification globale | `docker compose run --rm --build check` : **1 409 tests**, verte ; 1 min 30 (1 min 37 au total) sur une machine calme, 1 min 52 puis 2 min 12 sous une charge de 12 (autres applications du poste) : voir plan §8 |
+| Essai dans Chromium (instance à part : schéma jetable de `test-db`, compte et messages fictifs, règles seules) | Compteur « 2 » sur 📬 ; refus French bee (domaine exact) appliqué « par une règle », refus Covéa (ATS) proposé → « Appliquer » : 2 → 1 ; « Corriger le message » French bee en « Message de l'employeur » : refus défait, « Envoyée → En discussion » proposé, domaine `frenchbee.com` retenu ; accusé Hellowork « arrivée chez ATHEIA » → « Créer la candidature » : dossier « Envoyée », l'autre accusé ATHEIA rattaché par les règles ; InMail LinkedIn → « Approche » + règle ; dossier : bloc « Messages » et chronologie « Étape : Envoyée → Refusée, d'après un message · par une règle ». Console sans erreur |
+
+Corrigé pendant l'essai : un geste rendait la vue par défaut au lieu de la vue affichée (lue dans `HX-Current-URL`) ; le
+compteur de la navigation, hors du fragment, gardait son ancienne valeur (mis à jour hors bande, `hx-swap-oob`) ;
+« Créer la candidature » n'était que dans « Corriger » (offert sur la ligne d'un message dont la plateforme cite un
+employeur sans candidature).
+
 ## Hors E4
 
 « Sans réponse » après un délai (Q11, F1 ou après) ; offres tirées des alertes (E3) ; reprise des étiquettes de

@@ -655,3 +655,21 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   rien ; les corrections et transitions (E4) d'abord, les alertes comme source (E3) ensuite. E4 reprend aussi le
   rattachement aux candidatures faites hors de Rocky (employeur cité, `employer.cited`, décision E2 Q22) et le
   regroupement des messages d'une même candidature (Q21).
+- **(E4 → F1)** 🏠 Aujourd'hui reprend « Ce qui a bougé » : `MessagesService.state(...).moved` et `pending_count` (le
+  compteur de 📬 passe par `system.shell.add_badge`, hors bande après un geste).
+- **(E4 → F1 ou après, décision E4 Q11)** Passage à « Sans réponse » après un délai sans message : hors E4, par
+  `automatic_transition_allowed`, une fois les rattachements fiables (constat D1 → E4, F1).
+- **(E4 → Nicolas)** Étiquettes de l'échantillon de l'archive (`tests/messages/data/archive_sample.csv`, colonne `checked`
+  vide, recette d'E2) : à reprendre avec les corrections réelles de Nicolas, exportées par
+  `rocky-admin messages-etiquettes <email>` (jamais versionnées telles quelles).
+- **(E4)** Les décisions d'E2 déjà en base n'ont pas de transition (aucune rétroactivité) : seuls les messages décidés
+  depuis E4, ou corrigés et confirmés, font bouger un dossier.
+- **(E4)** Après « Créer la candidature », les autres messages qui citent l'employeur sont rattachés par les règles en
+  « À vérifier » (nom sans l'intitulé de l'offre, décision E2) : un « Juste » suffit, mais si ces accusés encombrent
+  « À regarder », reconnaître aussi l'intitulé saisi à la création.
+- **(E4 → D5)** Une transition « Préremplie → Envoyée » tirée d'un accusé (Q2) n'écrit pas de ligne `application_sendings`
+  (ni canal ni révision), comme les envois confirmés de D3.
+- **(E4 → B1, vérification, à décider avec Nicolas)** 1 409 tests (65 de plus pour E4) : 1 min 30 (1 min 37 au total)
+  sur une machine calme, mais 1 min 52 puis **2 min 12** le même jour sous une charge de 12 (autres applications du
+  poste, pas Rocky) ; 1 min 10 à E2. La limite des 2 min n'a plus de marge. Leviers : partager le compte et la boîte des
+  tests SQL de `messages` (une fixture par module), ou mesurer la limite sur le passage GitHub plutôt que sur le poste.
