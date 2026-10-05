@@ -328,8 +328,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Complété en C3 (Nicolas, Q4) : dans une annonce, « X (Y) » répond aussi à X et à Y ; la comparaison des noms du
   profil (Q9) ne change pas.*
 - **(C1 → E3)** Indeed/TheirStack n'est pas porté (quota épuisé, API payante) : Indeed arrive par ses alertes e-mail.
-  *E3 : aucune alerte Indeed reçue sur les deux boîtes de Nicolas depuis le 29/08 ; alerte quotidienne créée par Nicolas
-  le 05/10, lecteur Indeed à écrire sur la première reçue (décision E3, Q1, Q6).*
+  *E3 : aucune alerte Indeed reçue sur les deux boîtes de Nicolas depuis le 29/08 ; alerte quotidienne à créer par Nicolas
+  (05/10), lecteur Indeed à écrire sur la première reçue (décision E3, Q1, Q6).*
 - **(C1 → C2, C7)** **Enrichissement** d'une offre incomplète (APEC refuse son détail, LinkedIn n'en donne pas, Adzuna
   un extrait). *Tranché par Nicolas (25/09)* : deux voies **coexistantes**, (1) **lecture assistée** : sur son geste,
   Rocky ouvre la fiche dans un navigateur visible, l'utilisateur passe lui-même un éventuel défi, Rocky lit le texte
