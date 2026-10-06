@@ -476,12 +476,13 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(C5 → `profil`)** L'écran de profil laisse créer deux compétences qui ne diffèrent que par un espace ou la casse
   (« ML Flow » / « MLFlow », « HuggingFace » / « hugging face », vus le 28/09 et fusionnés à la main par Nicolas) :
   une annonce ne répond qu'à l'une des deux. Proposer l'alias quand le nom replié correspond à une compétence existante.
-  *Placé en G5 (Nicolas, 05/10).*
+  *Placé en G5 (Nicolas, 05/10).* *Résolu en G5 (Q4) : refus avec le geste « L'ajouter comme autre nom de X » ;
+  l'onboarding le range seul comme autre nom.*
 - **(C5 → `profil`)** Le champ « Mots exclus » (et les autres listes des pistes) attend une valeur par ligne, sans le
   dire : « senior, lead, staff… » saisi sur une ligne devient un seul terme, qui ne se trouve dans aucun intitulé
   (29/09). Son aide dit « les annonces qui les contiennent sont écartées », faux depuis C4 : un mot exclu dans
   l'intitulé plafonne le score, dans la description il est seulement signalé.
-  *Placé en G5 (Nicolas, 05/10).*
+  *Placé en G5 (Nicolas, 05/10).* *Résolu en G5 : aides justes ; mots-clés et mots exclus découpés aussi aux virgules.*
 - **(C5 → `profil`)** Séniorité : un réglage « niveau visé » (junior, confirmé, senior) serait la bonne forme ; en C5,
   Nicolas passe par les mots exclus de chaque piste (décision C5, Q23).
 - **(C5 → `offres`, analyse)** Secteur ou domaine de l'annonce (« Financement structuré », « Cash management ») : aucune
@@ -588,6 +589,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D2 → Nicolas)** « 37 ans » : l'âge demande la date de naissance, absente du profil ; rien n'a été inventé.
 - **(D2)** Une zone du gabarit déduit a une ligne d'air sous elle : un texte un peu plus long que celui du Canva peut
   toucher l'élément dessiné juste en dessous (bord d'une carte projet) sans être signalé comme débordement.
+  *Résolu en G5 (Q2) : plus de ligne d'air ; une zone s'étend jusqu'à la carte dessinée qui l'entoure.*
 - **(D2 → D3, D4)** Le rendu d'un gabarit déduit reprend les conventions du Canva de Nicolas (« période : intitulé
   - employeur - », école soulignée, puces à amorce en gras) : un autre design peut demander d'autres recettes.
 - **(D2 → à reprendre, avant F2)** Étape validée avec des limites (décision D2, clôture) : rendu des blocs projets
@@ -595,7 +597,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   rangement des lignes par le modèle variable d'un appel à l'autre (règles déterministes à éprouver sur d'autres CV) ;
   gabarit neutre trop court pour un parcours long (CV anglais de Nicolas sans CV anglais importé : 77 mm de trop).
   À affiner proprement dans une étape dédiée.
-  *Placé en G5 (Nicolas, 05/10).*
+  *Placé en G5 (Nicolas, 05/10).* *Traité en G5 : gabarit neutre dense avec coupes signalées (Q1), zone bornée par la
+  carte dessinée (Q2), règles éprouvées sur un second design (Q3) ; rendu réel du Canva à valider par Nicolas (recette,
+  décision G5).*
 - **(D2 → Nicolas)** Ordre des projets du CV maître (Water Potability avant Pilotage, inverse du Canva) : à vérifier.
 - **(D3 → D6 ou F1)** Les gabarits ne se suppriment pas : le compte de Nicolas en a 19 (dont 13 essais de mise au point
   de D2). Ils sont repliés sous « Autres gabarits » dans Profil & kit (D3) ; prévoir de retirer un gabarit inactif.
@@ -603,6 +607,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D3 → plus tard, remarque de Nicolas)** CV français d'une candidature : le texte du bloc projet « Pilotage
   d'association sportive » sort visuellement de sa carte sans être signalé. Même famille que les limites des blocs
   projets notées à la clôture de D2 (zone mesurée plus large que la carte dessinée).
+  *Traité en G5 (Q2) : la zone d'un projet est bornée par sa carte ; à constater sur le CV réel (recette).*
 - **(D3 → D4, D5, D6)** Parcours du dossier (décision D3, Q25, Q26) : « Prête à envoyer » veut dire « CV prêt » tant
   que la lettre n'existe pas (D4 tranchera) ; les envois confirmés en D3 n'ont ni canal ni révision (D5 les accepte tels
   quels) ; raccourci « Intéressé et préparer » depuis le mode tri, 4e étape « Suivi » : D6.
@@ -826,6 +831,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   reprendre si un compte nomme une ville et manque ses banlieues (il faudrait les coordonnées des communes).
 - **(G2 → G5)** L'aide du champ « Lieux » des pistes propose « ville, région, « France », « Télétravail complet » » : y
   citer le département (nom ou numéro), que le score comprend désormais.
+  *Résolu en G5.*
 - **(G2 → recette)** Communes renommées : « Saint-Ouen » (Saint-Ouen-sur-Seine depuis 2018) est un alias ; d'autres
   noms anciens peuvent tomber « hors zone » à tort. À surveiller dans le « Pourquoi ? » du lieu ; un alias se loge dans
   `rocky/profil/places.py` (nouvelle `RULES_VERSION`).
@@ -848,3 +854,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   côté GitHub, très variable d'un runner à l'autre. Relevé à chaque clôture d'étape (premier : H3, voir sa section
   dans `docs/decisions/H-revue-code.md`) ; si deux passages GitHub d'affilée dépassent 100 s de pytest, Nicolas
   arbitre : revoir la vérification (méthode de G1) ou relever la limite.
+- **(G5 → recette, Nicolas)** Espace sous les compétences (D2 Q32) : avec la règle Q2 de G5, une zone du gabarit déduit
+  sans carte dessinée n'a plus de ligne d'air ; une compétence de plus qui passe à la ligne est refusée. À trancher à la
+  recette de G5 sur le Canva réel (décision G5, recette).
+- **(G5 → B1, vérification)** 1 680 tests : 78 s sur une machine calme, 142 s sous une charge de 12 (agents G et H en
+  parallèle sur le même Docker). Le second design ajoute deux imports (11 s dans un seul processus). Mesure de référence :
+  le passage GitHub.

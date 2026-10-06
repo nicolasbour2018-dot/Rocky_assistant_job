@@ -482,6 +482,20 @@ def test_two_readings_of_a_second_design_give_the_same_blocks(
     assert slots_of(careful).projects == 2
 
 
+def test_each_design_writes_its_skills_its_own_way(
+    shared: Shared,
+    listed_imports: tuple[Mapping[str, bytes], Mapping[str, bytes]],
+) -> None:
+    """Step G5, Q3: a group's name on its own line and one soft skill per line was the only way (Nicolas's Canva)."""
+    first = json.loads(shared.files()[TEMPLATE_FILE])
+    second = json.loads(listed_imports[0][TEMPLATE_FILE])
+
+    assert _region(first, "groups")["inline"] is False
+    assert _region(first, "transversal")["separator"] is None
+    assert _region(second, "groups")["inline"] is True
+    assert _region(second, "transversal")["separator"] == " · "
+
+
 def test_a_second_design_renders_each_project_in_its_own_card(
     listed_imports: tuple[Mapping[str, bytes], Mapping[str, bytes]],
 ) -> None:

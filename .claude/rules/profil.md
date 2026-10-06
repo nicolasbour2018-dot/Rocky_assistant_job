@@ -35,6 +35,13 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   rubriques (`semantics.py`) ; une ligne sans rubrique refuse le gabarit, les propositions restent.
 - Propositions (`proposals.py`) : une section à la fois, dans une transaction ; rien de rempli n'est remplacé.
 - Rendu : le gabarit actif du compte (`derived.py`), sinon le gabarit neutre ; les plafonds viennent du gabarit actif.
+- Gabarit neutre (décision G5, Q1) : un paragraphe au-delà de sa limite (`NeutralLimits`) est coupé dans `neutral_html`
+  seulement, et chaque coupe est dite (`CvPdf.notices`, `profil/cv_cuts.html`) ; trop d'entrées restent une erreur.
+- Gabarit déduit (décision G5, Q2–Q3) : la place d'une zone = ses lignes, ou la carte dessinée qui l'entoure ; toute
+  convention d'écriture (groupes en ligne, séparateur des transversales, « : » des noms) se lit sur le design, jamais
+  supposée ; un changement de mesure des zones change `FORMAT` (réimport sans appel au modèle).
+- Compétences : une ressemblance de casse ou d'espaces (`fold_term`) se propose comme autre nom (`SimilarSkillError`,
+  `add_aliases`) ; seule l'égalité des termes est garantie par la base.
 - Un gabarit **inactif** se supprime (décision D6, Q8) : la ligne `cv_templates` disparaît, son dossier immuable reste
   dans le stockage, événement `profil.cv_template_deleted` ; le gabarit en service est refusé (`TEMPLATE_IN_SERVICE`).
 

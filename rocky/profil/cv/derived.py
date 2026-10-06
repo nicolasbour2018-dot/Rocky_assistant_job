@@ -62,7 +62,8 @@ LAYER_DPI = 300  # the resolution of the design's own images
 # The old texts' decorations (bullets, underlines) are erased down to one line below them (D2).
 ERASED_BELOW = 1.0
 # How a design may join items written on one line (« Rigueur · Écoute »), in the order they are looked for (G5, Q3).
-LIST_SEPARATORS = (" · ", " | ", " • ", " / ", ", ")
+# Never a comma nor a slash: one skill may hold them (« Gestion de projet / produit »).
+LIST_SEPARATORS = (" · ", " | ", " • ")
 # A shape around a text is a card, not the page's background, below this share of the page (G5, Q2).
 CARD_MAX_SHARE = 0.5
 VARIABLE = frozenset({Role.GROUPS, Role.TRANSVERSAL}) | PROJECT_ROLES
