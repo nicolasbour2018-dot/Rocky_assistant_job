@@ -231,7 +231,9 @@ def _collect(
                         now=clock(),
                     )
             except AccessLostError:
-                # The mailbox's access, not this message: the collection stops and the mailbox is to reconnect.
+                # The mailbox's access, not this message: the collection stops and the mailbox is to reconnect,
+                # with the counts of what came in before.
+                result.counts = counts
                 raise
             except (GmailError, MessageUnreadableError) as error:
                 counts = replace(counts, not_written=counts.not_written + 1)

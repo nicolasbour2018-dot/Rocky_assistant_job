@@ -848,8 +848,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   côté GitHub, très variable d'un runner à l'autre. Relevé à chaque clôture d'étape (premier : H3, voir sa section
   dans `docs/decisions/H-revue-code.md`) ; si deux passages GitHub d'affilée dépassent 100 s de pytest, Nicolas
   arbitre : revoir la vérification (méthode de G1) ou relever la limite.
-  Relevé de H3 (1 661 tests) : GitHub, pytest **94 s** (job complet 164 s, PR #39) ; poste, pytest 77 s (1 min 24
-  au total) puis 69 s : sous les limites.
+  Relevé de H3 (1 661 → 1 662 tests) : GitHub, pytest **94 s** (job complet 164 s, PR #39) ; poste, pytest 77 s
+  (1 min 24 au total) puis 69 s, mais 137 s puis 97 s (1 min 43 au total) le poste chargé (charge moyenne 22, un
+  autre agent au travail) : la limite locale tient au repos, pas sous forte charge.
 - **(H3 → G3)** Une offre d'alerte dont la carte ne donne pas de lien a pour adresse celle de l'alerte dans Gmail
   (propre à la carte, `messages.alerts.rules.message_link`), avec la raison « remplace l'adresse Gmail par celle de
   l'annonce ». Décision de Nicolas : une ligne du fil du Cockpit, « N offres d'alerte sans adresse à compléter ».

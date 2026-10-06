@@ -259,6 +259,19 @@ def test_access_lost_while_downloading_a_message_asks_to_reconnect(box: Box) -> 
     assert reader.gets == [REPLY_ID]
 
 
+def test_access_lost_after_a_message_keeps_the_counts_of_what_came_in(box: Box) -> None:
+    """H3: the messages written before the refusal are counted with the collection, which is partial."""
+    reader = FakeReader(failures={LATIN_ID: AccessLostError(ACCESS_LOST_REASON)})
+
+    result = run(box, FakeGmail(reader))
+
+    assert (result.status, result.reason) == (SyncStatus.PARTIAL, ACCESS_LOST_REASON)
+    assert result.counts.new == 1 and len(result.written) == 1
+    with box.storage.transaction() as store:
+        mailbox = store.mailbox(box.mailbox_id)
+    assert mailbox is not None and mailbox.status is MailboxStatus.ACCESS_LOST
+
+
 def test_a_token_sealed_with_another_key_asks_to_reconnect(box: Box) -> None:
     other = TokenCipher(Fernet.generate_key().decode())
     with box.storage.transaction() as store:

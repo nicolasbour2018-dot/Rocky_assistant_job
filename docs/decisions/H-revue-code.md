@@ -155,7 +155,7 @@ la veille en retard).
 `efinancialcareers.fr` dans `ALERT_DOMAINS`, `QUERIES_VERSION = "mail-2026-10-06.1"` (test : chaque adresse de
 `READERS` est couverte par la requête des alertes) ; `TOO_OLD_REASON` formatée depuis `max_age`, la limite du collage
 depuis `MAX_PASTED_CHARACTERS` ; `AccessLostError` relancée pendant le téléchargement d'un message (la collecte
-échouait en « partielle » et la boîte restait connectée) ; `find_bundle` journalise un paquet abîmé qu'il saute ;
+échouait en « partielle » et la boîte restait connectée ; les messages déjà entrés gardent leurs comptes) ; `find_bundle` journalise un paquet abîmé qu'il saute ;
 `message_link(message, card_id)` donne `…/?carte=<identifiant>#all/<id>`, raison `NotTried.NO_LINK` réécrite et dite
 même lors d'un passage sans lecture des fiches (test : deux cartes sans lien donnent deux offres, avant fusionnées en
 une). Geste et ligne du Cockpit notés en §8 du plan (→ G6, → G3).
