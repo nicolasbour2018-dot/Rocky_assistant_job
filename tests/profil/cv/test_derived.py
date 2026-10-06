@@ -21,6 +21,7 @@ from rocky.profil.cv.derived import (
     TEMPLATE_FILE,
     _by_column,
     _continued,
+    _regions,
     derived_facts,
     draw_derived,
     render_derived,
@@ -368,6 +369,48 @@ def test_a_project_line_opening_with_another_part_label_is_that_part() -> None:
         (Role.PROJECT_STACK, "Stack"),
         (Role.PROJECT_STACK, "Stack"),
     ]
+
+
+def test_a_centred_project_name_stands_over_its_card_and_nowhere_else() -> None:
+    """Recette of G5: the name of the middle card grew to a large shape of the design and, centred, slid right; a
+    longer name in the narrow zone of another card fell on the card's frame."""
+    style = Style("Poppins-Regular", 7.0, "#000000")
+
+    def block(i: int, text: str, x: float, y: float, width: float) -> Block:
+        box = Box(x, y, width, 7)
+        return Block(i, box, (Line(box, y + 6, (Run(text, style),), 0.0),))
+
+    layout = PageLayout(
+        595,
+        842,
+        (
+            block(0, "Pilotage d'association", 240, 100, 80),
+            block(1, "sportive :", 260, 109, 40),
+            block(2, "Problème : combiner des", 215, 140, 110),
+            block(3, "données sportives", 235, 149, 70),
+        ),
+        (),
+        "#ffffff",
+    )
+    roles = [
+        BlockRole(0, Role.PROJECT_NAME, 0),
+        BlockRole(1, Role.PROJECT_NAME, 0),
+        BlockRole(2, Role.PROJECT_PROBLEM, 0, "Problème"),
+        BlockRole(3, Role.PROJECT_PROBLEM, 0, "Problème"),
+    ]
+    card = Box(205, 130, 130, 100)
+    large_shape = Box(
+        150, 80, 420, 300
+    )  # a background panel around both: not the name's card
+
+    regions = {r["kind"]: r for r in _regions(layout, roles, [card, large_shape])}
+
+    name = regions["project_name"]["room"]
+    assert name.x >= card.x and name.right <= card.right
+    assert (
+        abs((name.x + name.right) / 2 - (card.x + card.right) / 2) < 2
+    )  # centred over its card
+    assert name.bottom <= 140  # its height kept, above the body
 
 
 def test_a_title_spaced_letter_by_letter_reads_as_words() -> None:

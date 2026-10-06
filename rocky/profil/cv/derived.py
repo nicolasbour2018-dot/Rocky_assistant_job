@@ -50,10 +50,11 @@ from rocky.profil.cv.semantics import PROJECT_ROLES, BlockRole, Role
 from rocky.profil.cv.template import Slots
 from rocky.system.render import Rendered, render_image, render_pdf
 
+# 6: a project name keeps its zone, a centred one may take its card's width (G5, recette);
 # 5: a block's room is its own lines, or the card drawn around it (G5, Q2), and a project name keeps its colon;
 # 4: also the page without any text and the kept texts in units, for its English version (D3, Q24);
 # 3: only the variable blocks are regions (2: every rubric was; 1: the layer was an SVG, drawn black by Preview).
-FORMAT = "rocky-cv-gabarit/5"
+FORMAT = "rocky-cv-gabarit/6"
 READABLE_FORMATS = frozenset({FORMAT})
 TEMPLATE_FILE = "template.json"
 LAYER = "calque.png"
@@ -354,6 +355,7 @@ def _regions(
 ) -> list[dict[str, Any]]:
     """Skill groups, soft skills, and for each project its name and its body."""
     blocks = {block.id: block for block in layout.blocks}
+    body_rooms: dict[int, Box] = {}  # the bodies come before the names (sorted by kind)
     grouped: dict[tuple[str, int], list[tuple[BlockRole, Block]]] = defaultdict(list)
     for item in roles:
         if item.role not in VARIABLE:
@@ -400,7 +402,8 @@ def _regions(
         if kind == "project_name":
             # « Tri des messages : » keeps its colon, written the way of the CV's language.
             region["colon"] = lines[-1].text.rstrip().endswith(":")
-        card = _card_around(box, cards)
+        # A project's name keeps its zone (D2, Q31): only its body grows in the card around it.
+        card = None if kind == "project_name" else _card_around(box, cards)
         own = {id(block) for _, block in members}
         below = min(
             (
@@ -414,6 +417,17 @@ def _regions(
             default=None,
         )
         region["room"] = _room(box, measure, card, below)
+        if kind == "project_body" and card is not None:
+            body_rooms[index] = region["room"]
+        if (
+            kind == "project_name"
+            and measure["align"] == "center"
+            and index in body_rooms
+        ):
+            # A centred name stands over its card: it may take the card's width, both sides alike (G5, recette).
+            room, body = region["room"], body_rooms[index]
+            left, right = min(room.x, body.x), max(room.right, body.right)
+            region["room"] = Box(left, room.y, right - left, room.height)
         half = max((measure["line_height"] - measure["ink"]) / 2, 0)
         region["erased"] = Box(
             box.x - 1,
