@@ -131,7 +131,6 @@ from rocky.candidatures.web_common import (
     now_of,
     owns,
     render_fragment,
-    today_of,
 )
 from rocky.offres import web as offres_web
 from rocky.offres.analysis.model import IMPORTANCE_LABELS, Importance, PostingAnalysis
@@ -149,6 +148,7 @@ from rocky.profil.model import CvLayout, Profile, SkillCategory
 from rocky.profil.rules import ProfileInputError
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.clock import today_of
 from rocky.system.events import JsonValue, StoredEvent, events_about
 from rocky.system.files import FileError, FileStore
 from rocky.system.render import RenderError, rasterize

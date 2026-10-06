@@ -110,6 +110,13 @@ vérification globale verte.
 **Critère de sortie** : un test à 00 h 30 heure de Paris (22 h 30 UTC la veille) donne le même jour à la veille, à
 l'import, aux alertes et à l'affichage ; vérification globale verte.
 
+*Réalisé (06/10)* : `rocky/system/clock.py` porte `PARIS`, `utc_now`, `paris_day`, `paris_time` (filtre Jinja posé
+par `system/web.py`) et `today_of(request)`. `app.state.import_today` (un second « aujourd'hui » injectable, en UTC)
+est retiré : tout jour se lit dans l'horloge unique `app.state.auth.clock`, que les tests règlent (`clock.now`). Le
+filtre `age` devient `age(day, today)`, branché sur cette horloge. Même correction, pour le même bug, dans `profil`
+(âge du CV, nom « CV importé le … »). Un test par lieu à 00 h 30 (veille et recalcul, aperçu d'import, alertes, âge
+affiché, envoi, `import_profile`) ; `unix_date` (Wellfound) noté en §8 du plan.
+
 ## H3 — Veille, Gmail et alertes
 
 *Grill me court (Q1, Q2), décisions ajoutées ici, puis direct.* **Fenêtre : avant le code de G3** (le cockpit montre

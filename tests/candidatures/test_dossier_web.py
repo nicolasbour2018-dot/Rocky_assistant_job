@@ -10,14 +10,14 @@ from rocky.profil.model import CvLayout, SkillGroup, Text
 from rocky.profil.rules import make_identity, make_project, make_skill
 from rocky.system.events import events
 from tests.candidatures.test_web import Desk, desk_with
-from tests.offres.fakes import TODAY
+from tests.offres.fakes import NOW, TODAY
 from tests.system.web_support import HTMX, make_app
 
 
 @pytest.fixture
 def app(migrated_engine: Engine) -> FastAPI:
     app = make_app(migrated_engine)
-    app.state.import_today = lambda: TODAY
+    app.state.auth.clock.now = NOW
     return app
 
 

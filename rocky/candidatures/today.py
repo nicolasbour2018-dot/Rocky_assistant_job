@@ -21,8 +21,9 @@ from rocky.candidatures.model import (
 )
 from rocky.candidatures.rules import Tab
 from rocky.candidatures.web import Row, rows_of
-from rocky.candidatures.web_common import engine_of, today_of
+from rocky.candidatures.web_common import engine_of
 from rocky.system.auth.model import Account
+from rocky.system.clock import today_of
 from rocky.system.shell import Action, Card, Drawer, add_drawer, add_today_cards
 
 # The applications named in a block; the others are counted.

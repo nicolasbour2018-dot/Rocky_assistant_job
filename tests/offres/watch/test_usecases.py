@@ -4,6 +4,7 @@ without its tracks or its score."""
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import date, datetime
 
 import pytest
 from sqlalchemy import Engine, select
@@ -33,7 +34,14 @@ from rocky.offres.watch.usecases import (
 )
 from rocky.profil.rules import make_track
 from rocky.system.events import events
-from tests.offres.fakes import NOW, Seeker, new_seeker, posting
+from tests.offres.fakes import (
+    HALF_PAST_MIDNIGHT,
+    NOW,
+    TODAY,
+    Seeker,
+    new_seeker,
+    posting,
+)
 from tests.offres.sources.fakes import FakeDetailSource, FakeSource
 
 
@@ -75,6 +83,7 @@ def watch(
     seeker: Seeker,
     *sources: FakeSource,
     trigger: Trigger = Trigger.MANUAL,
+    now: datetime = NOW,
 ) -> WatchResult:
     return run_watch(
         SqlStorage(engine),
@@ -83,7 +92,7 @@ def watch(
         account_id=seeker.account_id,
         trigger=trigger,
         limit=20,
-        clock=lambda: NOW,
+        clock=lambda: now,
     )
 
 
@@ -395,3 +404,30 @@ def test_a_changed_profile_rescores_every_offer_once(
             )
         ).all()
     assert event.payload["rescored"] == 3
+
+
+def test_at_half_past_midnight_in_paris_the_watch_scores_on_the_paris_day(
+    migrated_engine: Engine, seeker: Seeker, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    days: list[date] = []
+
+    def score(analysis, offer, profile, *, today):  # type: ignore[no-untyped-def]
+        days.append(today)
+        return real_score(analysis, offer, profile, today=today)
+
+    monkeypatch.setattr("rocky.offres.usecases.score", score)
+
+    watch(migrated_engine, seeker, apec(), now=HALF_PAST_MIDNIGHT)
+    with migrated_engine.begin() as connection:
+        seeker.editor(connection).update_track(
+            seeker.tracks["IA"],
+            make_track(name="IA", titles=["Data analyst"], locations=["Paris"]),
+        )
+    rescore_account(
+        SqlStorage(migrated_engine),
+        DatabaseProfiles(migrated_engine),
+        account_id=seeker.account_id,
+        clock=lambda: HALF_PAST_MIDNIGHT,
+    )
+
+    assert len(days) > 3 and set(days) == {TODAY}  # recorded, then rescored

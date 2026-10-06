@@ -104,6 +104,7 @@ from rocky.profil.sql import SqlProfileStore
 from rocky.profil.usecases import Clock, ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.clock import paris_day
 from rocky.system.files import FileError, FileStore
 from rocky.system.render import RenderError
 from rocky.system.shell import (
@@ -364,7 +365,7 @@ def _render(
         "missing": missing_for_ready(profile),
         "cv_templates": _templates_of(request, profile),
         "cv_missing_en": cv_content(
-            profile, "en", request.app.state.auth.clock().date()
+            profile, "en", paris_day(request.app.state.auth.clock())
         ).missing,
         "onboarding_open": needs_onboarding(profile.onboarding),
         "unknown_places": {
@@ -1229,7 +1230,7 @@ def cv_document(
     The account's active template in that language renders it (Q16, Q33); without one, the neutral template does.
     """
     clock: Clock = request.app.state.auth.clock
-    content = cv_content(profile, language, clock().date())
+    content = cv_content(profile, language, paris_day(clock()))
     active = _active_template(request, account, language)
     if active is None:
         document = render_neutral(content, _photo_of(request, profile))
@@ -1244,7 +1245,7 @@ def cv_drawing(
     """The CV of ``profile`` drawn whatever its overflows, and its problems: what a preview shows (decision D6,
     recette). Raises ``CvRefusedError`` when it cannot be drawn at all (English missing, template unreadable)."""
     clock: Clock = request.app.state.auth.clock
-    content = cv_content(profile, language, clock().date())
+    content = cv_content(profile, language, paris_day(clock()))
     active = _active_template(request, account, language)
     if active is None:
         rendered, _, reasons = draw_neutral(content, _photo_of(request, profile))
@@ -1263,7 +1264,7 @@ def cv_fingerprint(
     whether a CV kept earlier is still the one Rocky would make. None: the CV cannot be made (its reasons are given
     by ``cv_document``)."""
     clock: Clock = request.app.state.auth.clock
-    content = cv_content(profile, language, clock().date())
+    content = cv_content(profile, language, paris_day(clock()))
     try:
         active = _active_template(request, account, language)
     except CvRefusedError:
@@ -1381,7 +1382,7 @@ def import_my_cv(request: Request, account: CurrentAccount, form: Form) -> Respo
             model=request.app.state.llm_model,
             files=_files(request),
             account_id=account.id,
-            today=clock().date(),
+            today=paris_day(clock()),
             language="en" if _text(form, "langue") == "en" else "fr",
         )
     except ImportRefusedError as error:

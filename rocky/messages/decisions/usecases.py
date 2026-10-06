@@ -33,13 +33,13 @@ from rocky.messages.decisions.rules import (
     ATTACHABLE,
     domain_offered,
     gmail_link,
-    paris_day,
     plan_transition,
     quoted,
     rule_offered,
 )
 from rocky.offres.decisions import Author
 from rocky.offres.imports.rules import check_link
+from rocky.system.clock import paris_day
 from rocky.system.events import Actor, JsonValue, NewEvent
 
 # The rules of the user's decisions (Q6): their proof names the gesture.

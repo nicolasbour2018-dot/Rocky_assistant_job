@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import io
 import json
+from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, select
 
-from rocky.profil.sql import SqlProfileStore
+from rocky.profil.sql import SqlProfileStore, profiles
 from rocky.system.admin import export_profile, import_profile
 from rocky.system.auth.sql import SqlAuthStore
 from tests.system.auth.fakes import FakeClock
@@ -76,6 +77,25 @@ def test_a_reviewed_file_is_imported_once(
     assert second[0] == 1
     assert "déjà un contenu" in second[1]
     assert skill_count(migrated_engine, email) == 2
+
+
+def test_the_import_dates_the_profile_on_the_clock_it_is_given(
+    migrated_engine: Engine, tmp_path: Path
+) -> None:
+    email, path = account(migrated_engine), write(tmp_path, PROFILE)
+    clock = FakeClock()
+    clock.advance(timedelta(days=3))
+
+    out = io.StringIO()
+    import_profile(migrated_engine, path=path, email=email, out=out, clock=clock)
+
+    with migrated_engine.connect() as connection:
+        found = SqlAuthStore(connection).find_account(email)
+        assert found is not None
+        updated_at = connection.execute(
+            select(profiles.c.updated_at).where(profiles.c.account_id == found.id)
+        ).scalar_one()
+    assert updated_at == clock.now
 
 
 def test_a_refused_import_writes_nothing(

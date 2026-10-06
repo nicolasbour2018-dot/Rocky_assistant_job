@@ -22,7 +22,6 @@ from rocky.messages.decisions.rules import (
     domain_offered,
     gmail_link,
     grouped,
-    paris_day,
     plan_transition,
     rule_offered,
     rule_possible,
@@ -155,12 +154,6 @@ def test_the_offer_of_a_message_points_to_the_message_in_gmail() -> None:
     assert (
         gmail_link(_ref())
         == "https://mail.google.com/mail/u/camille%40example.com/#all/18f0a1"
-    )
-
-
-def test_the_day_is_the_users_in_paris() -> None:
-    assert (
-        paris_day(datetime(2026, 10, 5, 22, 30, tzinfo=UTC)).isoformat() == "2026-10-06"
     )
 
 

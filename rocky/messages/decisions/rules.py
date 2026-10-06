@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
-from datetime import date, datetime
 from urllib.parse import quote
 
 from rocky.candidatures.model import ISSUES, Stage
@@ -38,7 +37,6 @@ from rocky.messages.decisions.model import (
     TransitionPlan,
 )
 from rocky.offres.decisions import Author
-from rocky.system.scheduler import PARIS
 
 # Q2: the stage a category gives; an acknowledgement only proves the sending of an application « Préremplie ».
 STAGE_BY_CATEGORY = {
@@ -157,11 +155,6 @@ def domain_offered(address: str | None) -> str | None:
     ):
         return None
     return domain
-
-
-def paris_day(moment: datetime) -> date:
-    """The day of ``moment`` in Paris (the user's day, D12)."""
-    return moment.astimezone(PARIS).date()
 
 
 def gmail_link(message: MessageRef) -> str:

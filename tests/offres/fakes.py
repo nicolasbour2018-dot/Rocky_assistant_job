@@ -26,6 +26,8 @@ from rocky.system.workstation import (
 
 NOW = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
 TODAY = date(2026, 9, 29)
+# 00:30 in Paris on TODAY (summer time): 22:30 UTC the day before (step H2).
+HALF_PAST_MIDNIGHT = datetime(2026, 9, 28, 22, 30, tzinfo=UTC)
 DESCRIPTION = (
     "Nous recherchons un Data analyst en CDI à Paris.\n"
     "Compétences requises : Python et SQL.\n"

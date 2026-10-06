@@ -62,7 +62,6 @@ from rocky.candidatures.web_common import (
     now_of,
     owns,
     render_fragment,
-    today_of,
 )
 from rocky.offres import web as offres_web
 from rocky.offres.decisions import (
@@ -75,6 +74,7 @@ from rocky.offres.decisions import (
 from rocky.offres.model import OfferHeading
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.clock import today_of
 from rocky.system.shell import page, wants_fragment
 
 TEMPLATES = Path(__file__).parent / "templates"

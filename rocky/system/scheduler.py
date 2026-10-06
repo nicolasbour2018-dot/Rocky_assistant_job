@@ -16,18 +16,15 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from rocky.system.clock import PARIS, utc_now
+
 logger = logging.getLogger(__name__)
 
-PARIS = ZoneInfo("Europe/Paris")
 # Longest sleep between two looks at the tasks.
 IDLE = timedelta(seconds=30)
 
 type Task = Callable[[], object]
 type Clock = Callable[[], datetime]
-
-
-def utc_now() -> datetime:
-    return datetime.now(UTC)
 
 
 @dataclass(frozen=True)

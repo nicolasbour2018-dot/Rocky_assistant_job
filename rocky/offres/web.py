@@ -7,7 +7,7 @@ whole pages or a redirection. Decision ``docs/decisions/C7-ecran-offres.md``.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from functools import cached_property
 from typing import Annotated
 from urllib.parse import urlencode
@@ -79,6 +79,7 @@ from rocky.profil.model import Profile
 from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.clock import paris_day, today_of
 from rocky.system.llm import JsonModel
 from rocky.system.shell import (
     Action,
@@ -112,7 +113,10 @@ def install(app: FastAPI) -> None:
         list_query=list_query,
         offer_shortcuts=SHORTCUTS,
     )
-    templates.env.filters["age"] = age
+    # The age on the application's clock, read at each rendering (step H2).
+    templates.env.filters["age"] = lambda day: age(
+        day, paris_day(app.state.auth.clock())
+    )
     imports_web.install(app)
     watch_web.install(app)
     add_today_cards(app, "offres", _today_cards)
@@ -196,10 +200,10 @@ def review_card(found: Counts) -> Card | None:
     )
 
 
-def age(day: date | None) -> str:
+def age(day: date | None, today: date) -> str:
     if day is None:
         return "date inconnue"
-    days = (datetime.now(UTC).date() - day).days
+    days = (today - day).days
     if days <= 0:
         return "aujourd'hui"
     if days == 1:
@@ -283,14 +287,14 @@ class Screen:
         return offer_card(
             stored,
             score=score,
-            analysis=analyze(stored.offer, inputs.skills, today=_today(self.request)),
+            analysis=analyze(stored.offer, inputs.skills, today=today_of(self.request)),
             profile=inputs.profile,
             track_names=self.track_names,
             linked=linked,
             same_posting=same,
             decision=self.decisions.get(offer_id),
             summary=summary,
-            today=_today(self.request),
+            today=today_of(self.request),
             track_id=track_id,
         )
 
@@ -319,7 +323,7 @@ class Screen:
             "counts": counts(self.offers, self.decisions),
             "has_offers": bool(self.offers),
             "can_undo": self.can_undo,
-            "past_deadlines": past_deadlines(self.offers, _today(self.request)),
+            "past_deadlines": past_deadlines(self.offers, today_of(self.request)),
         }
         return page(
             self.request,
@@ -350,11 +354,6 @@ def _fragment(
 ) -> HTMLResponse:
     templates: Jinja2Templates = request.app.state.templates
     return templates.TemplateResponse(request, name, dict(context))
-
-
-def _today(request: Request) -> date:
-    today: Callable[[], date] = request.app.state.import_today
-    return today()
 
 
 def _now(request: Request) -> datetime:
@@ -650,7 +649,7 @@ def paste_description(
                 texte,
                 inputs=inputs,
                 now=_now(request),
-                today=_today(request),
+                today=today_of(request),
             )
     except InvalidPasteError as invalid:
         error = str(invalid)
@@ -736,7 +735,7 @@ def read_shown_page(
                 shown.html,
                 inputs=scoring_inputs(screen.profile),
                 now=_now(request),
-                today=_today(request),
+                today=today_of(request),
             )
         message = _reading_message(reading)
     return _after_change(

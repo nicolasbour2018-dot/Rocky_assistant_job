@@ -18,7 +18,7 @@ from rocky.profil.rules import make_identity
 from rocky.system.events import events
 from tests.candidatures.test_dossier_web import dossier_with
 from tests.candidatures.test_web import Desk, desk_with
-from tests.offres.fakes import TODAY
+from tests.offres.fakes import NOW
 from tests.system.web_support import HTMX, make_app
 
 WHY_YOU = (
@@ -63,7 +63,7 @@ class LetterModel:
 @pytest.fixture
 def app(migrated_engine: Engine, tmp_path: Path) -> FastAPI:
     app = make_app(migrated_engine, storage_root=tmp_path)
-    app.state.import_today = lambda: TODAY
+    app.state.auth.clock.now = NOW
     app.state.llm_model = LetterModel()
     return app
 
