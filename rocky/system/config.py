@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import Path
 
 from rocky.system.crypto import is_valid_key
@@ -23,8 +25,12 @@ FRANCE_TRAVAIL_ENABLED_VAR = "ROCKY_FRANCE_TRAVAIL_ENABLED"
 FRANCE_TRAVAIL_CLIENT_ID_VAR = "ROCKY_FRANCE_TRAVAIL_CLIENT_ID"
 FRANCE_TRAVAIL_CLIENT_SECRET_VAR = "ROCKY_FRANCE_TRAVAIL_CLIENT_SECRET"  # noqa: S105  (variable name)
 RESULTS_PER_QUERY_VAR = "ROCKY_SOURCES_RESULTS_PER_QUERY"
-GEMINI_API_KEY_VAR = "ROCKY_GEMINI_API_KEY"
+# The model of each call type (decision G4, Q24, Q28): a provider and a model name, by default and per call type.
+MODEL_PROVIDER_VAR = "ROCKY_MODEL_PROVIDER"
+MODEL_NAME_VAR = "ROCKY_MODEL_NAME"
+# Before G4, the only model was Gemini's: still read when ``ROCKY_MODEL_NAME`` is missing, with a warning.
 GEMINI_MODEL_VAR = "ROCKY_GEMINI_MODEL"
+ASSISTANT_DAY_LIMIT_VAR = "ROCKY_ASSISTANT_DAY_LIMIT"
 MAIL_MODEL_HOUR_LIMIT_VAR = "ROCKY_LLM_MAIL_HOUR_LIMIT"
 MAIL_MODEL_DAY_LIMIT_VAR = "ROCKY_LLM_MAIL_DAY_LIMIT"
 SCHEDULER_ENABLED_VAR = "ROCKY_SCHEDULER_ENABLED"
@@ -36,6 +42,8 @@ SECRET_KEY_VAR = "ROCKY_SECRET_KEY"  # noqa: S105  (variable name, not a key)
 # The workstation runs on the user's computer (decision D5, Q1); Docker reaches it under this name.
 DEFAULT_WORKSTATION_URL = "http://host.docker.internal:8765"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+# The questions to the assistant per account and per Paris day (decision G4, Q8).
+DEFAULT_ASSISTANT_DAY_LIMIT = 5
 # The calls to the model per account for the classification of the messages (decision E2, Q18).
 DEFAULT_MAIL_MODEL_HOUR_LIMIT = 20
 DEFAULT_MAIL_MODEL_DAY_LIMIT = 60
@@ -52,8 +60,55 @@ BOOLEANS = {
 }
 
 
+logger = logging.getLogger(__name__)
+
+
 class ConfigError(Exception):
     """Raised when a required setting is missing or invalid."""
+
+
+class Provider(StrEnum):
+    """The providers of language models Rocky can call (decision G4, Q23)."""
+
+    GEMINI = "gemini"
+    ANTHROPIC = "anthropic"
+    OPENAI = "openai"
+    MISTRAL = "mistral"
+
+
+class CallType(StrEnum):
+    """What a call to the model is for (decision G4, Q18): each type may have its own model and is counted apart."""
+
+    ASSISTANT = "assistant"
+    SUMMARY = "summary"
+    CV = "cv"
+    TRANSLATION = "translation"
+    LETTER = "letter"
+    RECRUITER_MESSAGE = "recruiter_message"
+    MAIL_CLASSIFICATION = "mail_classification"
+
+
+def api_key_var(provider: Provider) -> str:
+    """``ROCKY_GEMINI_API_KEY``, ``ROCKY_ANTHROPIC_API_KEY``…"""
+    return f"ROCKY_{provider.upper()}_API_KEY"
+
+
+def provider_var(call_type: CallType) -> str:
+    """``ROCKY_ASSISTANT_MODEL_PROVIDER``, ``ROCKY_LETTER_MODEL_PROVIDER``…"""
+    return f"ROCKY_{call_type.upper()}_MODEL_PROVIDER"
+
+
+def name_var(call_type: CallType) -> str:
+    """``ROCKY_ASSISTANT_MODEL_NAME``, ``ROCKY_LETTER_MODEL_NAME``…"""
+    return f"ROCKY_{call_type.upper()}_MODEL_NAME"
+
+
+@dataclass(frozen=True)
+class ModelChoice:
+    """A model: its provider and its name at that provider."""
+
+    provider: Provider
+    name: str
 
 
 @dataclass(frozen=True)
@@ -81,13 +136,21 @@ class SourcesSettings:
 
 @dataclass(frozen=True)
 class LlmSettings:
-    """The language model (C3: summaries; E2: the messages the rules leave). Without a key, the features that need it
-    say so."""
+    """The language models (decision G4, Q24, Q25): one by default, another per call type when set, a key per
+    provider. Without the key of its provider, a call type says it is not configured; the start never fails for it."""
 
-    api_key: str | None = None
-    model: str = DEFAULT_GEMINI_MODEL
+    default: ModelChoice = ModelChoice(Provider.GEMINI, DEFAULT_GEMINI_MODEL)
+    overrides: Mapping[CallType, ModelChoice] = field(default_factory=dict)
+    keys: Mapping[Provider, str] = field(default_factory=dict)
     mail_per_hour: int = DEFAULT_MAIL_MODEL_HOUR_LIMIT
     mail_per_day: int = DEFAULT_MAIL_MODEL_DAY_LIMIT
+    assistant_per_day: int = DEFAULT_ASSISTANT_DAY_LIMIT
+
+    def choice(self, call_type: CallType) -> ModelChoice:
+        return self.overrides.get(call_type, self.default)
+
+    def key(self, provider: Provider) -> str | None:
+        return self.keys.get(provider)
 
 
 @dataclass(frozen=True)
@@ -134,21 +197,84 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         public_url=_public_url(env),
         smtp=_smtp(env),
         sources=load_sources_settings(env),
-        llm=LlmSettings(
-            api_key=_value(env, GEMINI_API_KEY_VAR) or None,
-            model=_value(env, GEMINI_MODEL_VAR) or DEFAULT_GEMINI_MODEL,
-            mail_per_hour=_count(
-                env, MAIL_MODEL_HOUR_LIMIT_VAR, DEFAULT_MAIL_MODEL_HOUR_LIMIT
-            ),
-            mail_per_day=_count(
-                env, MAIL_MODEL_DAY_LIMIT_VAR, DEFAULT_MAIL_MODEL_DAY_LIMIT
-            ),
-        ),
+        llm=load_llm_settings(env),
         gmail=_gmail(env),
         scheduler_enabled=_boolean(env, SCHEDULER_ENABLED_VAR, default=True),
         storage_root=_storage_root(env),
         workstation_url=_workstation_url(env),
     )
+
+
+def load_llm_settings(env: Mapping[str, str]) -> LlmSettings:
+    """The models (decision G4, Q28). A provider without a model name, or the reverse, stops the start; a missing key
+    does not."""
+    keys = {
+        provider: key
+        for provider in Provider
+        if (key := _value(env, api_key_var(provider)))
+    }
+    overrides = {
+        call_type: choice
+        for call_type in CallType
+        if (choice := _override(env, call_type)) is not None
+    }
+    return LlmSettings(
+        default=_default_model(env),
+        overrides=overrides,
+        keys=keys,
+        mail_per_hour=_count(
+            env, MAIL_MODEL_HOUR_LIMIT_VAR, DEFAULT_MAIL_MODEL_HOUR_LIMIT
+        ),
+        mail_per_day=_count(
+            env, MAIL_MODEL_DAY_LIMIT_VAR, DEFAULT_MAIL_MODEL_DAY_LIMIT
+        ),
+        assistant_per_day=_count(
+            env, ASSISTANT_DAY_LIMIT_VAR, DEFAULT_ASSISTANT_DAY_LIMIT
+        ),
+    )
+
+
+def _default_model(env: Mapping[str, str]) -> ModelChoice:
+    provider = _provider(env, MODEL_PROVIDER_VAR) or Provider.GEMINI
+    name = _value(env, MODEL_NAME_VAR)
+    if name:
+        return ModelChoice(provider, name)
+    if provider is not Provider.GEMINI:
+        raise ConfigError(
+            f"{MODEL_PROVIDER_VAR} is set: {MODEL_NAME_VAR} is needed too"
+        )
+    legacy = _value(env, GEMINI_MODEL_VAR)
+    if legacy:
+        logger.warning(
+            "%s is deprecated: rename it %s (with %s=gemini)",
+            GEMINI_MODEL_VAR,
+            MODEL_NAME_VAR,
+            MODEL_PROVIDER_VAR,
+        )
+    return ModelChoice(provider, legacy or DEFAULT_GEMINI_MODEL)
+
+
+def _override(env: Mapping[str, str], call_type: CallType) -> ModelChoice | None:
+    provider = _provider(env, provider_var(call_type))
+    name = _value(env, name_var(call_type))
+    if provider is None and not name:
+        return None
+    if provider is None or not name:
+        raise ConfigError(
+            f"{provider_var(call_type)} and {name_var(call_type)} go together"
+        )
+    return ModelChoice(provider, name)
+
+
+def _provider(env: Mapping[str, str], name: str) -> Provider | None:
+    raw = _value(env, name).lower()
+    if not raw:
+        return None
+    try:
+        return Provider(raw)
+    except ValueError:
+        known = ", ".join(provider.value for provider in Provider)
+        raise ConfigError(f"{name} must be one of: {known}") from None
 
 
 def _gmail(env: Mapping[str, str]) -> GmailSettings:

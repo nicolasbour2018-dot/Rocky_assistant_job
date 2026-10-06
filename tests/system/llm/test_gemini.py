@@ -9,8 +9,7 @@ from collections.abc import Callable
 import httpx2
 import pytest
 
-from rocky.system.config import LlmSettings
-from rocky.system.llm import GeminiModel, LlmUnavailableError
+from rocky.system.llm import GeminiModel, LlmUnavailableError, Usage
 
 KEY = "AIza-test-secret-123"
 SCHEMA = {"type": "object", "properties": {"missions": {"type": "string"}}}
@@ -20,8 +19,7 @@ def model(
     handler: Callable[[httpx2.Request], httpx2.Response], key: str | None = KEY
 ) -> GeminiModel:
     return GeminiModel(
-        LlmSettings(api_key=key, model="gemini-3.5-flash-lite"),
-        transport=httpx2.MockTransport(handler),
+        "gemini-3.5-flash-lite", key, transport=httpx2.MockTransport(handler)
     )
 
 
@@ -179,3 +177,25 @@ def test_a_timeout_or_a_network_error_is_a_reason_and_never_logs_the_key(
     assert error.value.reason == "Gemini est injoignable (erreur réseau)."
     assert "ConnectError" in caplog.text
     assert KEY not in caplog.text
+
+
+def test_the_tokens_used_are_read_with_the_thinking_ones_as_output() -> None:
+    payload = {
+        **answer('{"missions": "A"}'),
+        "usageMetadata": {
+            "promptTokenCount": 120,
+            "candidatesTokenCount": 30,
+            "thoughtsTokenCount": 12,
+        },
+    }
+
+    completion = model(reply(payload)).complete("c", "a", SCHEMA)
+
+    assert completion.value == {"missions": "A"}
+    assert completion.usage == Usage(input_tokens=120, output_tokens=42)
+
+
+def test_tokens_not_given_are_unknown() -> None:
+    completion = model(reply(answer('{"missions": "A"}'))).complete("c", "a", SCHEMA)
+
+    assert completion.usage == Usage()

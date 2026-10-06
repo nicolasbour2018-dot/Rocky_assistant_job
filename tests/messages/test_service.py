@@ -12,7 +12,7 @@ from rocky.messages.model import SyncStatus, Trigger
 from rocky.messages.service import MessagesService, messages_service
 from rocky.messages.sql import email_messages
 from rocky.messages.usecases import connect_mailbox
-from rocky.system.config import GmailSettings, LlmSettings, Settings
+from rocky.system.config import GmailSettings, LlmSettings, Provider, Settings
 from rocky.system.llm import GeminiModel
 from tests.messages.fakes import GMAIL, NOW, FakeGmail, FakeReader, cipher, new_account
 
@@ -156,7 +156,7 @@ def test_the_factory_gives_the_model_only_to_what_classifies(
         database_url="",
         public_url="",
         gmail=GMAIL,
-        llm=LlmSettings(api_key="clé", mail_per_hour=1),
+        llm=LlmSettings(keys={Provider.GEMINI: "clé"}, mail_per_hour=1),
     )
 
     def built(*, classify: bool) -> MessagesService:

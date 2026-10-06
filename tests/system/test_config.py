@@ -3,9 +3,12 @@ from __future__ import annotations
 import pytest
 
 from rocky.system.config import (
+    CallType,
     ConfigError,
     GmailSettings,
     LlmSettings,
+    ModelChoice,
+    Provider,
     Settings,
     SmtpSettings,
     SourcesSettings,
@@ -35,14 +38,73 @@ def test_load_settings_without_smtp() -> None:
 
 def test_the_language_model_is_optional_with_a_default_model() -> None:
     assert load_settings(BASE).llm == LlmSettings(
-        api_key=None, model="gemini-3.5-flash-lite"
+        default=ModelChoice(Provider.GEMINI, "gemini-3.5-flash-lite")
     )
 
     settings = load_settings(
-        {**BASE, "ROCKY_GEMINI_API_KEY": " k-1 ", "ROCKY_GEMINI_MODEL": "gemini-autre"}
+        {
+            **BASE,
+            "ROCKY_MODEL_PROVIDER": "Anthropic",
+            "ROCKY_MODEL_NAME": " claude-sonnet-5-5 ",
+            "ROCKY_ANTHROPIC_API_KEY": " k-1 ",
+            "ROCKY_ASSISTANT_DAY_LIMIT": "8",
+        }
     )
 
-    assert settings.llm == LlmSettings(api_key="k-1", model="gemini-autre")
+    assert settings.llm.default == ModelChoice(Provider.ANTHROPIC, "claude-sonnet-5-5")
+    assert settings.llm.key(Provider.ANTHROPIC) == "k-1"
+    assert settings.llm.key(Provider.GEMINI) is None
+    assert settings.llm.assistant_per_day == 8
+
+
+def test_each_call_type_may_have_its_own_model() -> None:
+    settings = load_settings(
+        {
+            **BASE,
+            "ROCKY_ASSISTANT_MODEL_PROVIDER": "mistral",
+            "ROCKY_ASSISTANT_MODEL_NAME": "mistral-medium",
+        }
+    )
+
+    assert settings.llm.choice(CallType.ASSISTANT) == ModelChoice(
+        Provider.MISTRAL, "mistral-medium"
+    )
+    assert settings.llm.choice(CallType.LETTER) == settings.llm.default
+
+
+@pytest.mark.parametrize(
+    "half",
+    [
+        {"ROCKY_LETTER_MODEL_PROVIDER": "openai"},
+        {"ROCKY_LETTER_MODEL_NAME": "gpt-autre"},
+    ],
+)
+def test_a_half_given_override_stops_the_start(half: dict[str, str]) -> None:
+    with pytest.raises(ConfigError, match="ROCKY_LETTER_MODEL_PROVIDER and"):
+        load_settings({**BASE, **half})
+
+
+def test_an_unknown_provider_stops_the_start() -> None:
+    with pytest.raises(ConfigError, match="ROCKY_MODEL_PROVIDER must be one of"):
+        load_settings({**BASE, "ROCKY_MODEL_PROVIDER": "ollama"})
+
+
+def test_another_default_provider_needs_its_model_name() -> None:
+    with pytest.raises(ConfigError, match="ROCKY_MODEL_NAME is needed"):
+        load_settings({**BASE, "ROCKY_MODEL_PROVIDER": "openai"})
+
+
+def test_the_former_gemini_model_is_still_read_with_a_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    settings = load_settings(
+        {**BASE, "ROCKY_GEMINI_API_KEY": "k-1", "ROCKY_GEMINI_MODEL": "gemini-autre"}
+    )
+
+    assert settings.llm.default == ModelChoice(Provider.GEMINI, "gemini-autre")
+    assert settings.llm.key(Provider.GEMINI) == "k-1"
+    assert "ROCKY_GEMINI_MODEL is deprecated" in caplog.text
+    assert "k-1" not in caplog.text
 
 
 def test_gmail_is_not_configured_until_the_client_and_the_key_are_given() -> None:

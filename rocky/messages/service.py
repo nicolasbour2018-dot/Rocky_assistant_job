@@ -89,9 +89,9 @@ from rocky.messages.usecases import (
 from rocky.offres.api import posting_pages
 from rocky.offres.sources.http import PublicHttp
 from rocky.profil.model import Profile
-from rocky.system.config import GmailSettings, LlmSettings, Settings
+from rocky.system.config import CallType, GmailSettings, LlmSettings, Settings
 from rocky.system.crypto import TokenCipher
-from rocky.system.llm import GeminiModel, JsonModel
+from rocky.system.llm import JsonModel, adapter_for
 
 logger = logging.getLogger(__name__)
 
@@ -659,6 +659,12 @@ def messages_service(
         clock=clock,
         on_collected=on_collected,
         llm=settings.llm if classify else None,
-        model=GeminiModel(settings.llm) if classify and settings.llm.api_key else None,
+        model=adapter_for(settings.llm, CallType.MAIL_CLASSIFICATION)
+        if classify and _has_key(settings, CallType.MAIL_CLASSIFICATION)
+        else None,
         pages=None if new_http is None else posting_pages(new_http, settings.sources),
     )
+
+
+def _has_key(settings: Settings, call_type: CallType) -> bool:
+    return settings.llm.key(settings.llm.choice(call_type).provider) is not None
