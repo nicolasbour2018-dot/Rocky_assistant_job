@@ -135,6 +135,21 @@ def test_onboarding_reports_skills_already_there(newcomer: TestClient) -> None:
     assert "Déjà dans ton profil, non ajoutées : python." in again.text
 
 
+def test_onboarding_keeps_a_name_like_a_skill_as_its_other_name(
+    newcomer: TestClient,
+) -> None:
+    newcomer.post("/profil/demarrage/competences", data={"technical": "MLFlow"})
+
+    again = newcomer.post(
+        "/profil/demarrage/competences", data={"technical": "ML Flow"}
+    )
+
+    assert (
+        "Ajoutées comme autre nom d&#39;une compétence : ML Flow → MLFlow."
+        in again.text
+    )
+
+
 def test_onboarding_skips_the_empty_lines_of_a_list(newcomer: TestClient) -> None:
     response = newcomer.post(
         "/profil/demarrage/competences", data={"technical": "Python\n\n  \nSQL\n"}
@@ -785,3 +800,61 @@ def test_a_template_no_longer_used_is_deleted_after_confirmation(
     assert "CV en service" in section(deleted.text, "kit")
     refused = browser.post(f"/profil/gabarit/{used}/supprimer", headers=HTMX)
     assert "celui de ton CV" in refused.text
+
+
+def test_a_skill_like_another_is_offered_as_its_other_name_in_one_gesture(
+    client: TestClient,
+) -> None:
+    """Step G5: « ML Flow » typed next to « MLFlow » is refused with a button that keeps it as an alias."""
+    client.post(
+        "/profil/competences", data={"label_fr": "MLFlow", "category": "technical"}
+    )
+
+    refused = client.post(
+        "/profil/competences",
+        data={
+            "label_fr": "ML Flow",
+            "aliases": "MLflow Tracking",
+            "category": "technical",
+        },
+        headers=HTMX,
+    )
+
+    assert "« ML Flow » ressemble à « MLFlow »" in refused.text
+    action = re.search(r'hx-post="(/profil/competences/\d+/autre-nom)"', refused.text)
+    assert action, "no alias gesture"
+    names = re.findall(r'type="hidden" name="names" value="([^"]*)"', refused.text)
+    assert names == ["ML Flow", "MLflow Tracking"]
+
+    saved = client.post(action.group(1), data={"names": names}, headers=HTMX)
+
+    page = section(saved.text, "competences")
+    assert page.count('class="skill"') == 1
+    assert "ressemble" not in page
+    skill_id = action.group(1).split("/")[3]
+    edit = client.get(f"/profil/competences?modifier={skill_id}")
+    assert re.findall(r'name="aliases"[^>]*>([^<]*)<', edit.text) == [
+        "ML Flow\nMLflow Tracking"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("who", "path"),
+    [
+        ("client", "/profil/pistes?modifier=nouveau"),
+        ("newcomer", "/profil/demarrage?etape=3"),
+    ],
+)
+def test_the_track_lists_say_one_per_line_and_what_an_excluded_word_does(
+    request: pytest.FixtureRequest, who: str, path: str
+) -> None:
+    """Step G5: the help said excluded words discard adverts (false since C4) and not that a list is one per line."""
+    page = request.getfixturevalue(who).get(path).text
+
+    assert (
+        "un mot exclu plafonne son score ; dans sa description, il est seulement signalé"
+        in page
+    )
+    assert "un par ligne ou séparés par des virgules" in page
+    assert "département (nom ou numéro)" in page
+    assert "sont écartées" not in page

@@ -59,7 +59,14 @@
 {% endif %}
 {% endfor %}
 {% if state.editing == "nouveau" %}
-<div class="item item-new">{{ skill_form("/profil/competences", state.values, state) }}</div>
+<div class="item item-new">{{ skill_form("/profil/competences", state.values, state) }}
+{% if state.alias_of %}{% set alias_id, alias_label = state.alias_of %}
+{# A name that differs only by case or spaces: one gesture keeps it as another name of the skill (decision G5, Q4). #}
+{{ m.form_open(key, "/profil/competences/" ~ alias_id ~ "/autre-nom", "inline-form") }}
+  {% for name in [state.values.get("label_fr"), state.values.get("label_en")] + state.values.get("aliases").splitlines() %}{% if name.strip() %}<input type="hidden" name="names" value="{{ name }}">{% endif %}{% endfor %}
+  <button type="submit" class="btn btn-primary">L'ajouter comme autre nom de « {{ alias_label }} »</button>
+</form>
+{% endif %}</div>
 {% else %}
 {{ m.link(key, "+ Ajouter une compétence", "?modifier=nouveau", "btn") }}
 {% endif %}

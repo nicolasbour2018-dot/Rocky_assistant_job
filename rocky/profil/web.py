@@ -89,6 +89,7 @@ from rocky.profil.model import (
 from rocky.profil.places import unknown_locations
 from rocky.profil.rules import (
     ProfileInputError,
+    SimilarSkillError,
     make_experience,
     make_identity,
     make_language,
@@ -341,6 +342,8 @@ class SectionState:
     editing: str | None = None
     values: Values = field(default_factory=lambda: Values({}))
     error: str | None = None
+    # A new skill that differs from another only by case or spaces: (its id, its name), offered as an alias (G5, Q4).
+    alias_of: tuple[int, str] | None = None
     # Result of « Vérifier mon CV » (section « kit »), shown once, never stored.
     check: CvCheck | None = None
 
@@ -405,7 +408,14 @@ def _refused(
     form: FormData,
     error: ProfileInputError,
 ) -> Response:
-    state = SectionState(editing=editing, values=Values({}, form), error=str(error))
+    state = SectionState(
+        editing=editing,
+        values=Values({}, form),
+        error=str(error),
+        alias_of=(error.skill_id, error.label)
+        if isinstance(error, SimilarSkillError) and editing == NEW
+        else None,
+    )
     return _render(
         request, profile, key=key, state=state, status_code=_error_status(request)
     )
@@ -649,15 +659,21 @@ def onboarding_skills(
             }
         )
         profile = editor.profile()
-    if result.already_there:
-        return _onboarding_page(
-            request,
-            profile,
-            2,
-            message="Déjà dans ton profil, non ajoutées : "
-            + ", ".join(result.already_there)
-            + ".",
-        )
+    if result.already_there or result.as_alias:
+        notes = []
+        if result.already_there:
+            notes.append(
+                "Déjà dans ton profil, non ajoutées : "
+                + ", ".join(result.already_there)
+                + "."
+            )
+        if result.as_alias:
+            notes.append(
+                "Ajoutées comme autre nom d'une compétence : "
+                + ", ".join(f"{name} → {label}" for name, label in result.as_alias)
+                + "."
+            )
+        return _onboarding_page(request, profile, 2, message=" ".join(notes))
     return RedirectResponse(f"{ONBOARDING_PATH}?etape=3", status_code=303)
 
 
@@ -828,6 +844,23 @@ def update_skill(
         "competences",
         str(skill_id),
         lambda e, f: e.update_skill(skill_id, _skill_from(f)),
+    )
+
+
+@router.post("/competences/{skill_id}/autre-nom", response_class=HTMLResponse)
+def add_skill_aliases(
+    request: Request, account: CurrentAccount, form: Form, skill_id: int
+) -> Response:
+    """The names typed for a refused new skill become other names of the one it resembles (decision G5, Q4)."""
+    return _write(
+        request,
+        account,
+        form,
+        "competences",
+        NEW,
+        lambda e, f: e.add_aliases(
+            skill_id, [name for name in f.getlist("names") if isinstance(name, str)]
+        ),
     )
 
 

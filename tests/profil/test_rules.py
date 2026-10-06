@@ -9,6 +9,7 @@ from rocky.profil.model import (
     Link,
     OnboardingState,
     RemoteMode,
+    Skill,
     SkillCategory,
     SkillLevel,
     Track,
@@ -19,6 +20,7 @@ from rocky.profil.rules import (
     ProfileInputError,
     age_on,
     clean_lines,
+    fold_term,
     is_ready,
     link_icon,
     make_experience,
@@ -30,6 +32,7 @@ from rocky.profil.rules import (
     make_track,
     needs_onboarding,
     normalize_term,
+    similar_skill,
     skill_terms,
 )
 
@@ -103,6 +106,22 @@ def test_a_track_keeps_clean_lists() -> None:
         excluded_keywords=("stage", "alternance"),
         locations=("Paris", "Télétravail complet"),
     )
+
+
+def test_keywords_and_excluded_words_split_on_commas_titles_and_places_do_not() -> None:
+    """Step G5: « senior, lead, staff » typed on one line was a single excluded word, found in no title."""
+    track = make_track(
+        name="IA",
+        titles="Data Analyst, Finance",
+        keywords="SQL, Power BI",
+        excluded_keywords="senior, lead,staff\nstage",
+        locations="Paris, 8e",
+    )
+
+    assert track.excluded_keywords == ("senior", "lead", "staff", "stage")
+    assert track.keywords == ("SQL", "Power BI")
+    assert track.titles == ("Data Analyst, Finance",)
+    assert track.locations == ("Paris, 8e",)
 
 
 def test_a_keyword_cannot_be_wanted_and_excluded() -> None:
@@ -258,3 +277,24 @@ def test_languages_are_known_codes_with_a_cefr_level() -> None:
         make_language(code_value="klingon", level="c1")
     with pytest.raises(ProfileInputError, match="Niveau de langue"):
         make_language(code_value="es", level="fluent")
+
+
+def test_a_folded_name_ignores_case_and_spaces() -> None:
+    assert fold_term("ML Flow") == fold_term("MLFlow") == "mlflow"
+    assert fold_term("Hugging-Face") == fold_term("huggingface")
+
+
+def test_a_skill_named_like_another_but_for_case_or_spaces_is_found() -> None:
+    """Step G5: « ML Flow » and « MLFlow » were two skills; an advert answered to one of them only."""
+    mlflow = Skill(3, make_skill(label_fr="MLFlow", category="technical"))
+    python = Skill(4, make_skill(label_fr="Python", category="technical"))
+
+    found = similar_skill(
+        make_skill(label_fr="ML Flow", category="technical"), [python, mlflow]
+    )
+
+    assert found == mlflow
+    assert (
+        similar_skill(make_skill(label_fr="SQL", category="technical"), [mlflow])
+        is None
+    )

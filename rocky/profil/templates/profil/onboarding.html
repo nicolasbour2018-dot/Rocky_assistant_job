@@ -58,9 +58,9 @@
     {{ m.input("name", "Nom de la piste", values, required=True, hint="ex. Data analyst") }}
     <div class="form-grid">
       {{ m.lines("titles", "Intitulés recherchés", values, "Un par ligne, en français ou en anglais") }}
-      {{ m.lines("locations", "Lieux", values, "Un par ligne : ville, région, « France », « Télétravail complet »") }}
-      {{ m.lines("keywords", "Mots-clés", values, "Facultatif") }}
-      {{ m.lines("excluded_keywords", "Mots exclus", values, "Facultatif") }}
+      {{ m.lines("locations", "Lieux", values, "Un par ligne : ville, département (nom ou numéro), région, « France », « Télétravail complet »") }}
+      {{ m.lines("keywords", "Mots-clés", values, "Facultatif, un par ligne ou séparés par des virgules") }}
+      {{ m.lines("excluded_keywords", "Mots exclus", values, "Facultatif, un par ligne ou séparés par des virgules. Dans l'intitulé d'une annonce, un mot exclu plafonne son score ; dans sa description, il est seulement signalé") }}
     </div>
     <div class="form-actions"><button type="submit" class="btn btn-primary">Terminer</button></div>
   </form>

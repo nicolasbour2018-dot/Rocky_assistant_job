@@ -10,6 +10,7 @@ from rocky.profil.model import (
 )
 from rocky.profil.rules import (
     ProfileInputError,
+    SimilarSkillError,
     make_experience,
     make_identity,
     make_language,
@@ -133,6 +134,43 @@ def test_a_skill_already_known_under_another_name_is_refused() -> None:
     assert len(profile_editor.profile().skills) == 1
 
 
+def test_a_skill_differing_only_by_case_or_spaces_is_offered_as_an_alias() -> None:
+    """Step G5: « ML Flow » next to « MLFlow » is refused, the existing skill named; one gesture keeps it as
+    another name."""
+    store = InMemoryProfileStore()
+    profile_editor = editor(store)
+    mlflow = profile_editor.add_skill(
+        make_skill(label_fr="MLFlow", category="technical")
+    )
+
+    with pytest.raises(SimilarSkillError, match="ressemble à « MLFlow »") as refused:
+        profile_editor.add_skill(make_skill(label_fr="ML Flow", category="technical"))
+    assert refused.value.skill_id == mlflow
+
+    assert profile_editor.add_aliases(mlflow, ["ML Flow", "mlflow", ""])
+    skill = profile_editor.profile().skill(mlflow)
+    assert skill is not None
+    assert skill.content.aliases == ("ML Flow",)
+    assert len(profile_editor.profile().skills) == 1
+    assert store.event_types() == ["profil.skill_added", "profil.skill_updated"]
+
+
+def test_an_edited_skill_cannot_take_a_name_like_another() -> None:
+    profile_editor = editor(InMemoryProfileStore())
+    profile_editor.add_skill(make_skill(label_fr="HuggingFace", category="technical"))
+    sql = profile_editor.add_skill(make_skill(label_fr="SQL", category="technical"))
+
+    with pytest.raises(SimilarSkillError, match="ressemble à « HuggingFace »"):
+        profile_editor.update_skill(
+            sql,
+            make_skill(label_fr="SQL", aliases="hugging face", category="technical"),
+        )
+
+
+def test_aliases_of_an_unknown_skill_are_not_added() -> None:
+    assert not editor(InMemoryProfileStore()).add_aliases(99, ["ML Flow"])
+
+
 def test_a_skill_can_keep_its_own_names_when_edited() -> None:
     store = InMemoryProfileStore()
     profile_editor = editor(store)
@@ -159,6 +197,20 @@ def test_quick_entry_reports_the_skills_already_there() -> None:
 
     assert result.added == ("SQL", "Curiosité")
     assert result.already_there == ("python",)
+
+
+def test_quick_entry_keeps_a_name_like_another_skill_as_its_alias() -> None:
+    profile_editor = editor(InMemoryProfileStore())
+    mlflow = profile_editor.add_skill(
+        make_skill(label_fr="MLFlow", category="technical")
+    )
+
+    result = profile_editor.add_skills({SkillCategory.TECHNICAL: ["ML Flow", "SQL"]})
+
+    assert result.added == ("SQL",)
+    assert result.as_alias == (("ML Flow", "MLFlow"),)
+    skill = profile_editor.profile().skill(mlflow)
+    assert skill is not None and skill.content.aliases == ("ML Flow",)
 
 
 def test_quick_entry_skips_blank_lines() -> None:

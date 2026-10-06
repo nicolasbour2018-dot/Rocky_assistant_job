@@ -47,11 +47,14 @@ from rocky.profil.model import (
 )
 from rocky.profil.rules import (
     ProfileInputError,
+    SimilarSkillError,
+    clean_lines,
     has_content,
     is_ready,
     make_skill,
     needs_onboarding,
     normalize_term,
+    similar_skill,
     skill_terms,
 )
 from rocky.profil.translation import segments_of
@@ -67,6 +70,8 @@ TEMPLATE_IN_SERVICE = "Ce gabarit est celui de ton CV : utilise d'abord un autre
 class SkillsAdded:
     added: tuple[str, ...]
     already_there: tuple[str, ...]
+    # (name typed, skill it became another name of): « ML Flow » next to « MLFlow » (decision G5, Q4).
+    as_alias: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -308,9 +313,10 @@ class ProfileEditor:
     # Skills
 
     def add_skill(self, skill: SkillDraft) -> int:
-        profile_id = self._id()
-        terms = self._free_terms(profile_id, skill, except_skill=None)
-        skill_id = self._store.add_skill(profile_id, skill, terms)
+        profile = self.profile()
+        terms = self._free_terms(profile.id, skill, except_skill=None)
+        _refuse_similar(profile, skill, except_skill=None)
+        skill_id = self._store.add_skill(profile.id, skill, terms)
         self._event("profil.skill_added", "skill", skill_id, _skill(skill))
         return skill_id
 
@@ -320,6 +326,7 @@ class ProfileEditor:
         if current is None:
             return False
         terms = self._free_terms(profile.id, skill, except_skill=skill_id)
+        _refuse_similar(profile, skill, except_skill=skill_id)
         if skill == current.content:
             return True
         if skill.category is not current.content.category:
@@ -328,6 +335,17 @@ class ProfileEditor:
         self._store.update_skill(profile.id, skill_id, skill, terms)
         self._event("profil.skill_updated", "skill", skill_id, _skill(skill))
         return True
+
+    def add_aliases(self, skill_id: int, names: Iterable[str]) -> bool:
+        """``names`` become other names of the skill (the gesture offered by ``SimilarSkillError``); a name it
+        already answers to is skipped."""
+        current = self.profile().skill(skill_id)
+        if current is None:
+            return False
+        known = skill_terms(current.content)
+        new = [name for name in clean_lines(names) if normalize_term(name) not in known]
+        aliases = (*current.content.aliases, *new)
+        return self.update_skill(skill_id, replace(current.content, aliases=aliases))
 
     def delete_skill(self, skill_id: int) -> bool:
         profile = self.profile()
@@ -341,9 +359,10 @@ class ProfileEditor:
         self, names_by_category: Mapping[SkillCategory, Iterable[str]]
     ) -> SkillsAdded:
         """Quick entry of the onboarding: one name per line, empty lines skipped; a name already known is reported,
-        not added."""
+        not added; a name that differs from a skill's only by case or spaces becomes another name of it (G5, Q4)."""
         added: list[str] = []
         already_there: list[str] = []
+        as_alias: list[tuple[str, str]] = []
         for category, names in names_by_category.items():
             for name in names:
                 if not name.strip():
@@ -351,11 +370,14 @@ class ProfileEditor:
                 skill = make_skill(label_fr=name, category=category.value)
                 try:
                     self.add_skill(skill)
+                except SimilarSkillError as similar:
+                    self.add_aliases(similar.skill_id, [skill.label.fr])
+                    as_alias.append((skill.label.fr, similar.label))
                 except ProfileInputError:
                     already_there.append(skill.label.fr)
                 else:
                     added.append(skill.label.fr)
-        return SkillsAdded(tuple(added), tuple(already_there))
+        return SkillsAdded(tuple(added), tuple(already_there), tuple(as_alias))
 
     def _free_terms(
         self, profile_id: int, skill: SkillDraft, *, except_skill: int | None
@@ -691,6 +713,17 @@ def _imported_layout(
         projects=tuple(projects),
         hobbies=cv.hobbies,
     )
+
+
+def _refuse_similar(
+    profile: Profile, skill: SkillDraft, *, except_skill: int | None
+) -> None:
+    """A name typed on screen that differs from another skill's only by case or spaces is offered as an alias
+    (decision G5, Q4); an imported file keeps the exact comparison alone (Q9)."""
+    others = (other for other in profile.skills if other.id != except_skill)
+    similar = similar_skill(skill, others)
+    if similar is not None:
+        raise SimilarSkillError(skill.label.fr, similar.id, similar.label.fr)
 
 
 def _resolve(skill_ids: Mapping[str, int], names: Iterable[str]) -> tuple[int, ...]:

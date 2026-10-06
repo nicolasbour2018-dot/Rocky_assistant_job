@@ -27,6 +27,7 @@ from rocky.profil.model import (
     Profile,
     ProjectDraft,
     RemoteMode,
+    Skill,
     SkillCategory,
     SkillDraft,
     SkillLevel,
@@ -48,6 +49,19 @@ class ProfileInputError(UserFacingError, ValueError):
     """Input that cannot become part of a profile; the message is shown as is."""
 
 
+class SimilarSkillError(ProfileInputError):
+    """A skill name that differs from another skill's only by case or spaces (« ML Flow », « MLFlow »): an advert
+    would answer to one of them only, so it is offered as another name of that skill (decision G5, Q4)."""
+
+    def __init__(self, name: str, skill_id: int, label: str) -> None:
+        super().__init__(
+            f"« {name} » ressemble à « {label} » : même nom, à la casse ou aux espaces près."
+        )
+        self.name = name
+        self.skill_id = skill_id
+        self.label = label
+
+
 def text_sha256(value: str) -> str:
     """The key of a French text in the translation memory (decision D3, Q19)."""
     return hashlib.sha256(value.encode()).hexdigest()
@@ -63,6 +77,11 @@ def normalize_term(value: str) -> str:
     return _NOT_ALPHANUMERIC.sub(" ", without_accents).strip()
 
 
+def fold_term(value: str) -> str:
+    """A term without its spaces: « ML Flow » and « MLFlow » fold alike (decision G5, Q4)."""
+    return normalize_term(value).replace(" ", "")
+
+
 def clean_lines(values: str | Iterable[str]) -> tuple[str, ...]:
     """Non-empty trimmed entries, one per line, without repeats (compared as terms)."""
     lines = values.splitlines() if isinstance(values, str) else values
@@ -75,6 +94,13 @@ def clean_lines(values: str | Iterable[str]) -> tuple[str, ...]:
             seen.add(term)
             kept.append(entry)
     return tuple(kept)
+
+
+def comma_lines(values: str | Iterable[str]) -> tuple[str, ...]:
+    """``clean_lines`` where a comma separates entries too: « senior, lead » typed on one line is two words
+    (decision G5)."""
+    lines = values.splitlines() if isinstance(values, str) else values
+    return clean_lines(part for line in lines for part in line.split(","))
 
 
 def optional(value: str | None) -> str | None:
@@ -255,8 +281,9 @@ def make_track(
         raise ProfileInputError(
             f"Le nom de la piste dépasse {NAME_MAX_LENGTH} caractères."
         )
-    wanted = clean_lines(keywords)
-    excluded = clean_lines(excluded_keywords)
+    # A keyword or an excluded word never holds a comma; a title or a place may (« Paris, 8e »).
+    wanted = comma_lines(keywords)
+    excluded = comma_lines(excluded_keywords)
     both = {normalize_term(k) for k in wanted} & {normalize_term(k) for k in excluded}
     if both:
         clash = next(k for k in wanted if normalize_term(k) in both)
@@ -339,6 +366,16 @@ def skill_terms(skill: SkillDraft) -> frozenset[str]:
     """Every name the skill answers to; two skills of a profile never share one."""
     names = [skill.label.fr, skill.label.en or "", *skill.aliases]
     return frozenset(term for name in names if (term := normalize_term(name)))
+
+
+def similar_skill(skill: SkillDraft, others: Iterable[Skill]) -> Skill | None:
+    """The first of ``others`` with a name that folds like one of ``skill``'s (case and spaces aside); a name they
+    share exactly is refused before (Q9)."""
+    folded = {fold_term(term) for term in skill_terms(skill)}
+    for other in others:
+        if folded & {fold_term(term) for term in skill_terms(other.content)}:
+            return other
+    return None
 
 
 def make_language(*, code_value: str, level: str) -> LanguageDraft:
