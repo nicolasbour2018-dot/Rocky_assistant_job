@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{# A business refusal answered to a whole page (step H1): 409 without HTMX, 200 for a boosted navigation. #}
+{% block title %}Action impossible · Rocky{% endblock %}
+{% block content %}
+<header class="page-header"><h1>Action impossible</h1></header>
+<div class="alert alert-error" role="alert">
+  <ul class="error-lines">{% for line in lines %}<li>{{ line }}</li>{% endfor %}</ul>
+</div>
+<p><a class="btn" href="{{ entry.path }}">Revenir à {{ entry.label }}</a></p>
+{% endblock %}

@@ -31,6 +31,7 @@ from rocky.system.auth.usecases import Argon2Hasher, Clock, PasswordHasher
 from rocky.system.auth.web import AuthServices, install
 from rocky.system.config import Settings, load_settings
 from rocky.system.db import create_db_engine
+from rocky.system.errors import UserFacingError
 from rocky.system.scheduler import PARIS, DailyTask, PeriodicTask, Scheduler
 from rocky.system.shell import Card, add_system_cards
 from rocky.system.workstation import WorkstationClient
@@ -108,6 +109,8 @@ def create_app(
     # The Rocky workstation (decisions D5, E5): the lecture assistée of the offers, the dormant prefilling of the
     # applications. Building the client contacts nothing; the tests replace it with a fake.
     app.state.workstation = WorkstationClient(settings.workstation_url)
+    # Step H1: a business refusal that a route forgot to catch is shown, never a 500.
+    app.add_exception_handler(UserFacingError, shell.show_user_error)
     app.include_router(shell.router)
     offres_web.install(app)
     profil_web.install(app)

@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from sqlalchemy import Engine, select
 
 from rocky.profil.model import CvLayout, SkillGroup, Text
-from rocky.profil.rules import make_project, make_skill
+from rocky.profil.rules import make_identity, make_project, make_skill
 from rocky.system.events import events
 from tests.candidatures.test_web import Desk, desk_with
 from tests.offres.fakes import TODAY
@@ -150,6 +150,23 @@ def test_the_french_cv_of_the_application_is_a_pdf(desk: Desk) -> None:
     assert response.content.startswith(b"%PDF")
 
 
+def test_a_name_outside_latin_1_downloads_the_cv_of_the_application(
+    desk: Desk, migrated_engine: Engine
+) -> None:
+    """Step H1: the raw name in ``Content-Disposition`` was a UnicodeEncodeError."""
+    with migrated_engine.begin() as connection:
+        desk.seeker.editor(connection).save_identity(
+            make_identity(full_name="Łukasz Ñandú")
+        )
+
+    response = desk.client.get(f"/candidatures/{desk.application_id()}/cv.pdf")
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"].endswith(
+        "filename*=UTF-8''CV_%C5%81ukasz_%C3%91and%C3%BA_FR.pdf"
+    )
+
+
 def test_an_english_cv_still_in_french_is_refused_with_what_is_missing(
     desk: Desk,
 ) -> None:
@@ -275,6 +292,38 @@ def test_the_application_of_another_account_is_not_found(
         ).status_code
         == 404
     )
+
+
+def test_a_kept_selection_survives_the_removal_of_its_skill_and_project(
+    desk: Desk, migrated_engine: Engine
+) -> None:
+    """Step H1: a kept selection naming a removed skill or project was a KeyError at the page, preview and PDF."""
+    base = f"/candidatures/{desk.application_id()}"
+    kept = desk.client.post(
+        f"{base}/cv",
+        data={
+            "geste": "competence-ajouter",
+            "element": _skill(desk, "SQL"),
+            "groupe": "0",
+        },
+        headers=HTMX,
+    )
+    assert "Revenir à la proposition de Rocky" in kept.text
+    with migrated_engine.begin() as connection:
+        editor = desk.seeker.editor(connection)
+        profile = editor.profile()
+        python = next(s.id for s in profile.skills if s.label.fr == "Python")
+        forecast = next(
+            p.id for p in profile.projects if p.content.name.fr == "Prévision"
+        )
+        assert editor.delete_skill(python)
+        assert editor.delete_project(forecast)
+
+    html = page(desk)
+    assert 'Python<span class="chip-x"' not in html
+    assert 'SQL<span class="chip-x"' in html
+    assert desk.client.get(f"{base}/cv/apercu", headers=HTMX).status_code == 200
+    assert desk.client.get(f"{base}/cv.pdf").status_code == 200
 
 
 def _skill(desk: Desk, label: str) -> str:

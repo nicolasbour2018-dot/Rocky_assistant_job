@@ -182,7 +182,7 @@ def test_load_settings_reads_the_sources() -> None:
     )
 
 
-@pytest.mark.parametrize("value", ["0", "-3", "vingt"])
+@pytest.mark.parametrize("value", ["0", "-3", "vingt", "²"])
 def test_results_per_query_must_be_positive(value: str) -> None:
     with pytest.raises(ConfigError, match="ROCKY_SOURCES_RESULTS_PER_QUERY"):
         load_settings({**BASE, "ROCKY_SOURCES_RESULTS_PER_QUERY": value})

@@ -31,6 +31,8 @@
     </nav>
 
     <main id="main" class="main">
+      {# Step H1: a business refusal answered to an HTMX fragment lands here (shell.show_user_error). #}
+      <div id="erreur" class="error-area" aria-live="assertive"></div>
       {% block content %}{% endblock %}
     </main>
   </div>

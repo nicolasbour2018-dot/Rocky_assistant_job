@@ -668,7 +668,9 @@ def correct(
         return _content(
             request, account.id, status_code=400, error="Catégorie inconnue."
         )
-    application_id = int(candidature) if candidature.isdigit() else None
+    application_id = (
+        int(candidature) if candidature.isascii() and candidature.isdigit() else None
+    )
     try:
         result = _service(request).correct(
             account.id,

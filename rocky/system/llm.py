@@ -117,11 +117,8 @@ def _answer(response: httpx2.Response) -> Any:
         data = response.json()
     except ValueError as error:
         raise LlmUnavailableError("Gemini a renvoyé une réponse illisible.") from error
-    blocked = (
-        (data.get("promptFeedback") or {}).get("blockReason")
-        if isinstance(data, dict)
-        else None
-    )
+    feedback = data.get("promptFeedback") if isinstance(data, dict) else None
+    blocked = feedback.get("blockReason") if isinstance(feedback, dict) else None
     if blocked:
         raise LlmUnavailableError(f"Gemini a bloqué la demande ({blocked}).")
     candidates = data.get("candidates") if isinstance(data, dict) else None
@@ -135,7 +132,10 @@ def _answer(response: httpx2.Response) -> Any:
     finish = candidate.get("finishReason")
     if finish not in (None, "STOP"):
         raise LlmUnavailableError(f"Gemini s'est arrêté avant la fin ({finish}).")
-    parts = (candidate.get("content") or {}).get("parts") or []
+    content = candidate.get("content")
+    parts = content.get("parts") if isinstance(content, dict) else None
+    if not isinstance(parts, list):
+        raise LlmUnavailableError("Gemini n'a donné aucune réponse.")
     # Thinking models may add their reasoning as parts marked "thought": only the answer is read.
     text = "".join(
         part.get("text", "")

@@ -113,7 +113,7 @@ def make_filters(
 ) -> ListFilters:
     """The filters of the list from the words of the URL; an unknown value falls back to the default."""
     return ListFilters(
-        track_id=int(track) if track and track.isdigit() else None,
+        track_id=int(track) if track and track.isascii() and track.isdigit() else None,
         decision=decision if decision in DECISION_FILTERS else TO_EXAMINE,
         below_threshold=bool(below_threshold),
         incomplete=bool(incomplete),

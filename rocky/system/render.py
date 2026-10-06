@@ -21,6 +21,8 @@ from PIL import Image, ImageChops
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Route, sync_playwright
 
+from rocky.system.errors import UserFacingError
+
 ORIGIN = "http://rocky.cv/"
 PAGE = "index.html"
 TOLERANCE_PX = 1  # sub-pixel rounding of the layout
@@ -40,7 +42,7 @@ _LOAD_FONTS = (
 )
 
 
-class RenderError(Exception):
+class RenderError(UserFacingError):
     """The browser could not render the page; ``reason`` is shown as is (French)."""
 
     def __init__(self, reason: str) -> None:

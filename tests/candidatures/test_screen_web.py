@@ -12,10 +12,10 @@ from datetime import date
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, select
 
 from rocky.candidatures.model import NextAction, Stage
-from rocky.candidatures.sql import SqlApplicationStore
+from rocky.candidatures.sql import SqlApplicationStore, applications
 from rocky.candidatures.usecases import change_stage, prepare_application
 from rocky.candidatures.web_common import OffresDecisions
 from rocky.offres import web as offres_web
@@ -208,6 +208,30 @@ def test_the_deadline_bounds_the_proposal_and_shows(board: Board) -> None:
     assert "⏰ limite le 30/09/2026" in dossier
     assert "⏰ limite le 30/09" in html(board, "/candidatures?vue=preparation")
     assert "⏰" not in html(board, f"/candidatures/{board.preparing}")
+
+
+@pytest.mark.parametrize("gesture", ["sans", "prete"])
+def test_the_letter_gestures_stop_the_sending_at_the_deadline(
+    board: Board, migrated_engine: Engine, gesture: str
+) -> None:
+    """Step H1: « Pas de lettre » and « Lettre prête » proposed the sending at J+2, past the deadline."""
+    base = f"/candidatures/{board.closing}"
+    if gesture == "prete":
+        # A letter set aside: « Lettre prête » may move on.
+        with migrated_engine.begin() as connection:
+            account_id = connection.execute(
+                select(applications.c.account_id).where(
+                    applications.c.id == board.closing
+                )
+            ).scalar_one()
+            SqlApplicationStore(connection).insert_letter(
+                account_id, board.closing, None, NOW
+            )
+
+    response = board.client.post(f"{base}/lettre/{gesture}")
+
+    assert response.status_code == 303
+    assert "Envoyer la candidature le 30/09/2026" in html(board, base)  # J+2: 01/10
 
 
 def test_the_language_is_chosen_once_for_the_application(board: Board) -> None:

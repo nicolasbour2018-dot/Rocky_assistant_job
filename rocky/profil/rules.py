@@ -35,6 +35,7 @@ from rocky.profil.model import (
     TrackDraft,
     TrackStatus,
 )
+from rocky.system.errors import UserFacingError
 
 NAME_MAX_LENGTH = 80
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -43,7 +44,7 @@ MIN_BIRTH_YEAR = 1900
 _NOT_ALPHANUMERIC = re.compile(r"[^0-9a-z]+")
 
 
-class ProfileInputError(ValueError):
+class ProfileInputError(UserFacingError, ValueError):
     """Input that cannot become part of a profile; the message is shown as is."""
 
 

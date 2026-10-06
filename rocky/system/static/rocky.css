@@ -126,6 +126,11 @@ label { font-weight: 550; }
 .alert-done p { margin: 0; }
 .alert-done strong { color: var(--good); }
 .alert-info { background: var(--accent-soft); color: var(--text); }
+/* Step H1: the error area of the layout, empty until a refusal is swapped in; it stays in view while scrolling. */
+.error-area { position: sticky; top: var(--space-3); z-index: 10; }
+.error-area:empty { display: none; }
+.error-toast { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); box-shadow: 0 2px 8px rgb(0 0 0 / 0.15); }
+.error-lines { margin: 0; padding-left: var(--space-4); }
 textarea {
   width: 100%;
   padding: var(--space-2) var(--space-3);

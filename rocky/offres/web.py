@@ -140,7 +140,7 @@ SHORTCUTS: tuple[tuple[Markup, Markup | str], ...] = (
     (_kbd("r"), "Résumer l'annonce"),
     (_kbd("c"), "Coller la description d'une annonce incomplète"),
     (
-        _kbd("e"),
+        _kbd("n"),
         "Ouvrir une annonce incomplète dans le navigateur, puis lire la page affichée",
     ),
     (_kbd("o"), "Ouvrir l'annonce d'origine"),
@@ -221,7 +221,7 @@ def list_query(filters: ListFilters, start: int = 0) -> str:
 
 
 def _track(value: str | None) -> int | None:
-    return int(value) if value and value.isdigit() else None
+    return int(value) if value and value.isascii() and value.isdigit() else None
 
 
 class Screen:
