@@ -94,5 +94,12 @@ Garde-fou : 34 cas sur 34.
 
 ## Recette
 
+Premier retour de Nicolas (06/10) : « c'est pas mal comme base », mais un clic affichait une miniature de la page dans
+la page. Cause : le conteneur du cockpit (et la ligne d'état pendant une veille) portait `hx-target="this"` et
+`hx-swap="outerHTML"`, hérités par les liens et formulaires boostés qu'il contient : la page suivante remplaçait le
+cockpit au lieu du `<body>`. Corrigé : les relectures sont demandées par des éléments vides et cachés
+(`test_no_gesture_of_the_cockpit_inherits_a_target`) ; vérifié dans Chromium (« Trier les offres », « Lancer la veille »,
+« Revenir »).
+
 À faire par Nicolas sur son compte (critère 5) : `docker compose run --rm --build migrate` puis
 `docker compose up -d --build --wait app`, http://127.0.0.1:8000/.

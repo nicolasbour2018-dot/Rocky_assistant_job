@@ -887,3 +887,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   au cockpit est à revoir avec l'assistant (G4).
 - **(G3 → G7)** Couleurs, typographie, icônes (🧭 provisoire) et animations du cockpit (célébration sans effet en G3).
 - **(G3 → plus tard)** L'onboarding lui-même (Q12, Nicolas) : la liste de démarrage du cockpit n'en est que le rappel.
+- **(G3 → G6)** ⚙️ Système (F1) relit ses cartes pendant une veille par `#cards` avec `hx-target="this"` et
+  `hx-swap="outerHTML"`, hérités par les liens et formulaires boostés des cartes (« Reconnecter la boîte »…) : la page
+  suivante s'afficherait dans l'écran, comme au cockpit avant sa correction (recette de G3). Même parade : un élément
+  vide qui demande la relecture.
