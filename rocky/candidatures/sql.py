@@ -349,6 +349,16 @@ class SqlApplicationStore:
         ).one_or_none()
         return None if row is None else _application(row)
 
+    def application(self, account_id: int, application_id: int) -> Application | None:
+        """The application of the account (read only, not locked: the assistant, step G4)."""
+        row = self._conn.execute(
+            select(applications).where(
+                applications.c.id == application_id,
+                applications.c.account_id == account_id,
+            )
+        ).one_or_none()
+        return None if row is None else _application(row)
+
     def application_of_offer(
         self, account_id: int, offer_id: int
     ) -> Application | None:

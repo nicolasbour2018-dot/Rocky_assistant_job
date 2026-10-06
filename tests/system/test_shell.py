@@ -5,17 +5,14 @@ import re
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from markupsafe import Markup, escape
+from markupsafe import escape
 from sqlalchemy import Engine
 
-from rocky.system.auth.model import Account
 from rocky.system.shell import (
     HTMX_SCRIPT,
     NAVIGATION,
     Action,
     Card,
-    Drawer,
-    add_drawer,
     main_action,
 )
 from tests.system.web_support import HTMX, invitation_token, logged_in, make_app
@@ -149,40 +146,3 @@ def test_the_main_action_is_the_first_problem_else_the_first_action(
     cards: list[Card], main: int | None
 ) -> None:
     assert main_action(cards) == main
-
-
-def test_the_drawer_shows_the_screen_s_actions_and_shortcuts(
-    app: FastAPI, migrated_engine: Engine
-) -> None:
-    client, _ = logged_in(app, migrated_engine)
-
-    def drawer(request: object, account: Account) -> Drawer:
-        return Drawer(
-            actions=(LINK, FIX, LINK, Action("De trop", "/trop")),
-            shortcuts=((Markup("<kbd>j</kbd>"), "Offre suivante"),),
-        )
-
-    add_drawer(app, "offers", drawer)
-
-    fragment = client.get("/tiroir?ecran=offers", headers=HTMX).text
-    other = client.get("/tiroir?ecran=inconnu", headers=HTMX).text
-    whole = client.get("/tiroir?ecran=offers").text
-
-    assert "À faire ici" in fragment
-    assert '<a class="btn card-action" href="/offres">Voir</a>' in fragment
-    assert "<dt><kbd>j</kbd></dt><dd>Offre suivante</dd>" in fragment
-    assert "De trop" not in fragment  # three actions at most
-    assert "<html" not in fragment
-    assert "Rien de particulier à faire sur cet écran" in other
-    assert 'class="sidebar"' in whole
-
-
-def test_the_drawer_is_loaded_when_it_opens_for_the_active_screen(
-    app: FastAPI, migrated_engine: Engine
-) -> None:
-    client, _ = logged_in(app, migrated_engine)
-
-    page = client.get("/candidatures").text
-
-    assert 'hx-get="/tiroir?ecran=applications"' in page
-    assert "hx-trigger=\"toggle[newState=='open']\"" in page

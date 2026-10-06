@@ -153,7 +153,7 @@ def test_a_mailbox_is_connected_through_google_then_collected(
     assert [request.method for request in fake_google.requests] == ["POST", "GET"]
 
 
-def test_system_and_the_drawer_show_the_connected_mailbox(
+def test_system_shows_the_connected_mailbox(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
     """Decision F1, Q11, Q12: ⚙️ Système tells the mailbox and its last collection; « Relever maintenant » from there
@@ -163,7 +163,6 @@ def test_system_and_the_drawer_show_the_connected_mailbox(
     connected(app, client)
 
     system = client.get("/systeme").text
-    drawer = client.get("/tiroir?ecran=messages", headers=HTMX).text
     collected = client.post("/messages/relever?retour=systeme")
 
     assert "<dt>camille.dupont@example.com</dt>" in system
@@ -171,7 +170,6 @@ def test_system_and_the_drawer_show_the_connected_mailbox(
     assert "3 nouveaux messages" in system
     assert '<form method="post" action="/messages/relever?retour=systeme"' in system
     assert "🔔 Alertes emploi · 7 derniers jours" in system
-    assert "Relever maintenant" in drawer
     assert collected.headers["location"] == "/systeme"
 
 

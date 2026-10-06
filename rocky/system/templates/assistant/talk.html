@@ -1,0 +1,45 @@
+{# The drawer 🐾 (decision G4): the conversation about what the screen shows, the questions left today. #}
+<p class="assistant-about"><span class="muted">À propos de :</span> {{ talk.title }}</p>
+{% if unavailable %}
+<p class="assistant-notice" role="status">{{ unavailable }}</p>
+{% elif limit_reached %}
+<p class="assistant-notice" role="status">{{ limit_reason }}</p>
+{% endif %}
+{% if turns %}
+<ol class="assistant-turns">
+  {% for turn in turns %}
+  <li class="assistant-turn">
+    <p class="assistant-question">{{ turn.question }}</p>
+    <p class="assistant-answer">{{ turn.answer }}</p>
+    {% if turn.cited %}
+    <p class="assistant-facts"><span class="muted">D'après :</span>
+      {% for fact in turn.cited %}{% if fact.link %}<a href="{{ fact.link }}">{{ fact.label }}</a>{% else %}{{ fact.label }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<p class="muted">Pose une question sur {{ "tes données" if talk.subject is none else "ce que tu regardes" }} : Rocky répond d'après ce qu'il sait, en citant ses sources.</p>
+{% endif %}
+{% if notice %}<p class="assistant-notice" role="status">{{ notice }}</p>{% endif %}
+{% if not unavailable and not limit_reached and talk.suggestions %}
+<div class="assistant-suggestions">
+  {% for suggestion in talk.suggestions %}
+  <button type="button" class="btn btn-mini" hx-post="/tiroir/question" hx-target="#drawer-content" hx-swap="innerHTML"
+    hx-include="[form='rocky-question'][name='objet']" hx-vals='{{ {"question": suggestion} | tojson }}'
+    hx-disabled-elt="#rocky-question button, .assistant-suggestions button" hx-indicator="#rocky-thinking">{{ suggestion }}</button>
+  {% endfor %}
+</div>
+{% endif %}
+<p class="assistant-left muted">
+  {% if left > 0 %}Il te reste {{ left }} question{{ "s" if left > 1 }} aujourd'hui.{% else %}Plus de question aujourd'hui.{% endif %}
+  {% if turns %}
+  <button type="button" class="btn btn-link" hx-post="/tiroir/nouvelle" hx-target="#drawer-content" hx-swap="innerHTML"
+    hx-include="[form='rocky-question'][name='objet']">Nouvelle conversation</button>
+  {% endif %}
+</p>
+{% if answered %}
+{# The question was answered: the field is emptied (out of band); on a refusal it keeps what was typed. #}
+<textarea id="rocky-question-text" name="question" form="rocky-question" rows="3" maxlength="{{ question_max }}"
+  placeholder="Pose ta question à Rocky…" hx-swap-oob="true"></textarea>
+{% endif %}

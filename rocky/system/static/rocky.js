@@ -28,7 +28,15 @@
       return;
     }
     const key = keyOf(event);
-    const target = [...document.querySelectorAll(`[data-key="${CSS.escape(key)}"]`)].find(isVisible);
+    const selector = `[data-key="${CSS.escape(key)}"]`;
+    // An open drawer (a manual popover, decision G4) takes the keys: Escape closes it, nothing behind it moves.
+    const open = [...document.querySelectorAll("[popover='manual']")].filter((element) =>
+      element.matches(":popover-open"),
+    );
+    const scope = open.length ? open : [document];
+    const target = scope
+      .flatMap((root) => [...root.querySelectorAll(selector)])
+      .find(isVisible);
     if (!target) {
       return;
     }

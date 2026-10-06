@@ -18,6 +18,8 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 
+from rocky.system.assistant.model import Fact
+from rocky.system.assistant.registry import add_summary
 from rocky.system.auth.model import Account
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.web import CurrentAccount
@@ -28,8 +30,6 @@ from rocky.system.shell import (
     POLL_EVERY,
     Action,
     Card,
-    Drawer,
-    add_drawer,
     page,
     wants_fragment,
 )
@@ -333,7 +333,8 @@ type NameOf = Callable[[Request, Account], str | None]
 
 def install(app: FastAPI, name_of: NameOf) -> None:
     app.state.cockpit_name = name_of
-    add_drawer(app, "today", _drawer)
+    # Decision G4 (Q11): what the cockpit shows is part of every question to the assistant.
+    add_summary(app, "cockpit", cockpit_facts)
     app.include_router(router)
 
 
@@ -504,16 +505,111 @@ def reload(account: CurrentAccount) -> Response:
     return changed()
 
 
-def _drawer(request: Request, account: Account) -> Drawer:
-    """The drawer of the cockpit: the hero's gestures that are links or forms, then the problems' (F1, Q12)."""
-    context = _cockpit_context(request, account, None)
-    hero: Hero | None = context["hero"]  # type: ignore[assignment]
-    problems: list[Card] = context["problems"]  # type: ignore[assignment]
-    actions: list[Action] = [c.action for c in problems if c.action is not None]
+def cockpit_facts(request: Request, account: Account) -> list[Fact]:
+    """What the cockpit shows, as facts for the assistant (decision G4, Q11): the problems, the priority of the moment
+    (the hero), the instruments, the state of Rocky, the streaks and the feed of the last 7 days."""
+    parts = _parts(request)
+    now: datetime = request.app.state.auth.clock()
+    facts: list[Fact] = []
+    problems = [c for p in parts if p.problems for c in p.problems(request, account)]
+    for index, card in enumerate(problems, start=1):
+        facts.append(
+            Fact(
+                f"cockpit.probleme_{index}",
+                "Problème",
+                _joined(card.title, *card.lines),
+                "/",
+            )
+        )
+    hero = pick_hero([h for p in parts if p.heroes for h in p.heroes(request, account)])
     if hero is not None:
-        actions += [
-            a
-            for a in (hero.primary, *hero.others)
-            if a is not None and not a.panel and a not in actions
+        steps = [
+            f"{step.label} ({'fait' if step.done else 'à faire'})"
+            for step in hero.steps
         ]
-    return Drawer(actions=tuple(actions))
+        facts.append(
+            Fact(
+                "cockpit.priorite",
+                "Priorité du moment",
+                _joined(hero.title, *hero.lines, *steps),
+                hero.primary.url if hero.primary is not None else "/",
+            )
+        )
+    for instrument in (
+        i for p in parts if p.instruments for i in p.instruments(request, account)
+    ):
+        facts.append(_instrument_fact(instrument))
+    for index, line in enumerate(
+        (s for p in parts if p.status for s in p.status(request, account)), start=1
+    ):
+        facts.append(
+            Fact(f"cockpit.etat_{index}", "État de Rocky", line.text, "/systeme")
+        )
+    progress = next(
+        (
+            found
+            for p in parts
+            if p.progress and (found := p.progress(request, account))
+        ),
+        None,
+    )
+    if progress is not None:
+        text = (
+            f"{progress.day_streak} jour(s) actif(s) d'affilée ; "
+            f"{progress.week_streak} semaine(s) d'affilée à l'objectif"
+        )
+        if progress.last is not None:
+            text += f" ; dernier jalon : {progress.last.label}"
+        if progress.next is not None:
+            text += f" ; prochain jalon : {progress.next.label}"
+            if progress.next.remaining:
+                text += f" ({progress.next.remaining})"
+        facts.append(Fact("cockpit.progression", "Progression", text, "/"))
+    feed = sorted(
+        (
+            line
+            for p in parts
+            if p.feed
+            for line in p.feed(request, account, now - timedelta(days=FEED_DAYS))
+        ),
+        key=lambda line: line.at,
+        reverse=True,
+    )[:FEED_LINES]
+    if feed:
+        facts.append(
+            Fact(
+                "cockpit.fil",
+                f"Ce qui s'est passé ces {FEED_DAYS} derniers jours",
+                " ; ".join(
+                    f"{paris_day(line.at):%d/%m}{' (toi)' if line.mine else ''} : {line.text}"
+                    for line in feed
+                ),
+                "/",
+                cut_first=True,
+            )
+        )
+    return facts
+
+
+def _instrument_fact(instrument: Instrument) -> Fact:
+    texts = [f"{instrument.figure}", instrument.detail, *instrument.lines]
+    if instrument.ring is not None:
+        texts.append(
+            f"{instrument.ring.done} envoyée(s) sur un objectif de {instrument.ring.goal}"
+        )
+    if instrument.delta is not None:
+        unit = f" {instrument.delta_unit}" if instrument.delta_unit else ""
+        texts.append(
+            f"cette semaine {instrument.delta.now}{unit}, la semaine dernière au même jour "
+            f"{instrument.delta.before}"
+        )
+    return Fact(
+        f"cockpit.{instrument.key}",
+        instrument.title,
+        _joined(*texts),
+        instrument.link.url if instrument.link is not None else "/",
+    )
+
+
+def _joined(*texts: str) -> str:
+    return " ; ".join(text for text in texts if text)

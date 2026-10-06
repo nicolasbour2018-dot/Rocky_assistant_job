@@ -73,7 +73,7 @@ from rocky.system.periods import (
     counts_by_bucket,
     week_delta,
 )
-from rocky.system.shell import Action, Drawer, add_drawer
+from rocky.system.shell import Action
 
 # When the account's first mailbox was connected (``messages``, given by the composition), None without one.
 type GmailSince = Callable[[int], datetime | None]
@@ -102,7 +102,6 @@ def install(app: FastAPI, gmail_since: GmailSince) -> None:
             celebrations=_celebrations,
         ),
     )
-    add_drawer(app, "applications", _drawer)
 
 
 @dataclass(frozen=True)
@@ -575,20 +574,3 @@ def _sentences(request: Request, account: Account) -> list[Sentence]:
 def _news(request: Request, account: Account, since: datetime) -> list[str]:
     count = sum(1 for m in _reading(request, account).moments.answered if m > since)
     return [f"{count} réponse{'s' if count > 1 else ''}"] if count else []
-
-
-# The drawer of 📝 Candidatures (decision F1, Q12)
-
-
-def _drawer(request: Request, account: Account) -> Drawer:
-    return Drawer(actions=due_actions(_rows(request, account)))
-
-
-def due_actions(rows: Sequence[Row]) -> tuple[Action, ...]:
-    """The applications whose next action is due, the most overdue first, each to its page."""
-    due = sorted((row for row in rows if Tab.TO_DO in row.tabs), key=_by_due)
-    return tuple(
-        Action(f"{_label(row)} : {row.next_action.label}", dossier_url(row.id, None))
-        for row in due
-        if row.next_action is not None
-    )

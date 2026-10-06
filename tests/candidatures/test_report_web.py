@@ -8,7 +8,7 @@ from sqlalchemy import Engine
 
 from tests.candidatures.test_web import desk_with
 from tests.offres.fakes import NOW
-from tests.system.web_support import HTMX, logged_in, make_app
+from tests.system.web_support import logged_in, make_app
 
 
 @pytest.fixture
@@ -50,13 +50,3 @@ def test_the_report_shows_each_figure_with_its_denominator(
         'href="/candidatures?vue=suivi">Voir les candidatures en attente de réponse'
         in page
     )
-
-
-def test_the_drawer_of_the_report_gives_its_main_action(
-    app: FastAPI, migrated_engine: Engine
-) -> None:
-    client, _ = logged_in(app, migrated_engine)
-
-    drawer = client.get("/tiroir?ecran=report", headers=HTMX).text
-
-    assert 'href="/candidatures">Voir les candidatures</a>' in drawer

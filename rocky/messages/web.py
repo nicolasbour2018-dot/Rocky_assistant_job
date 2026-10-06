@@ -81,9 +81,7 @@ from rocky.system.scheduler import Scheduler
 from rocky.system.shell import (
     Action,
     Card,
-    Drawer,
     add_badge,
-    add_drawer,
     add_system_cards,
     is_htmx,
     page,
@@ -175,31 +173,7 @@ def install(app: FastAPI) -> None:
     # Decision F1, Q11: the mailboxes and the alerts in ⚙️ Système.
     add_system_cards(app, "boites", _mailbox_cards)
     add_system_cards(app, "alertes", _alert_cards)
-    add_drawer(app, "messages", _drawer)
     app.include_router(router)
-
-
-def _drawer(request: Request, account: Account) -> Drawer:
-    """What to do on 📬 Messages (decision F1, Q12): what moved, the decisions to check, a collection."""
-    service = _service(request)
-    attention = service.attention(account.id)
-    actions: list[Action] = []
-    if attention.moved:
-        count = len(attention.moved)
-        actions.append(Action(f"Regarder ce qui a bougé ({count})", "/messages"))
-    if attention.to_check:
-        actions.append(
-            Action(
-                f"Vérifier les messages incertains ({attention.to_check})",
-                f"/messages?vue={View.TO_CHECK.value}",
-            )
-        )
-    if service.configured and any(
-        view.mailbox.status is MailboxStatus.CONNECTED
-        for view in service.mailbox_views(account.id)
-    ):
-        actions.append(Action("Relever maintenant", "/messages/relever", post=True))
-    return Drawer(actions=tuple(actions))
 
 
 # ⚙️ Système (decision F1, Q11): the mailboxes and what the alerts gave over the last days.

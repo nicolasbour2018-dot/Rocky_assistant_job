@@ -2,6 +2,8 @@
    correction may teach. #}
 {% set message = view.message %}
 {% set decision = view.decision %}
+{# Decision G4 (Q31): the message whose panel is open is the one the drawer 🐾 talks about. #}
+{% with subject = "message:" ~ message.id %}{% include "assistant/subject.html" %}{% endwith %}
 <form method="post" action="/messages/{{ message.id }}/corriger" class="stack correct-panel"
   hx-post="/messages/{{ message.id }}/corriger" hx-target="#messages-contenu" hx-swap="outerHTML">
   <label>Catégorie

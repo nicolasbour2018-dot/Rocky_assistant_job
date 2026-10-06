@@ -60,12 +60,27 @@
     <form method="post" action="/deconnexion"><button type="submit" class="btn btn-link">Se déconnecter</button></form>
   </div>
 
-  {# Decision F1, Q12: the drawer reads what to do on this screen each time it opens, never before. #}
-  <aside id="rocky-drawer" class="drawer" popover aria-label="Rocky"
-    hx-get="/tiroir?ecran={{ active }}" hx-trigger="toggle[newState=='open']" hx-target="#drawer-content" hx-swap="innerHTML">
-    <h2><span aria-hidden="true">🐾</span> Rocky</h2>
-    <div id="drawer-content"><p class="muted">Un instant…</p></div>
-    <button type="button" class="btn" popovertarget="rocky-drawer" popovertargetaction="hide">Fermer</button>
+  {# Decision G4: the drawer is the assistant. It reads its conversation each time it opens, never before, about the
+     object the screen names (a hidden field ``objet`` attached to the form below); it closes only by « Fermer » or
+     Escape, and what is typed stays while the page does (Q27). #}
+  <aside id="rocky-drawer" class="drawer" popover="manual" aria-label="Rocky"
+    hx-get="/tiroir" hx-include="[form='rocky-question'][name='objet']" hx-trigger="toggle[newState=='open']"
+    hx-target="#drawer-content" hx-swap="innerHTML">
+    <div class="drawer-head">
+      <h2><span aria-hidden="true">🐾</span> Rocky</h2>
+      <button type="button" class="btn btn-ghost" popovertarget="rocky-drawer" popovertargetaction="hide" data-key="Escape">Fermer</button>
+    </div>
+    <div id="drawer-content" class="drawer-content" aria-live="polite"><p class="muted">Un instant…</p></div>
+    <form id="rocky-question" class="assistant-form" hx-post="/tiroir/question" hx-target="#drawer-content" hx-swap="innerHTML"
+      hx-disabled-elt="#rocky-question button, .assistant-suggestions button" hx-indicator="#rocky-thinking">
+      <label for="rocky-question-text" class="visually-hidden">Ta question à Rocky</label>
+      <textarea id="rocky-question-text" name="question" form="rocky-question" rows="3" maxlength="1000"
+        placeholder="Pose ta question à Rocky…"></textarea>
+      <div class="assistant-send">
+        <span id="rocky-thinking" class="htmx-indicator muted">Rocky réfléchit…</span>
+        <button type="submit" class="btn">Envoyer</button>
+      </div>
+    </form>
   </aside>
 
   {% block overlays %}{% endblock %}

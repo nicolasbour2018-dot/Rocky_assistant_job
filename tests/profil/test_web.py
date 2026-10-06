@@ -75,16 +75,6 @@ def test_the_profile_and_fragments_are_never_redirected(newcomer: TestClient) ->
     assert newcomer.get("/offres/liste", headers=HTMX).status_code == 200
 
 
-def test_the_drawer_of_the_profile_asks_for_a_track_first(client: TestClient) -> None:
-    """Decision F1, Q12: without an active track the watch finds nothing."""
-    before = client.get("/tiroir?ecran=profile", headers=HTMX).text
-    client.post("/profil/pistes", data=TRACK)
-    after = client.get("/tiroir?ecran=profile", headers=HTMX).text
-
-    assert 'href="/profil/pistes">Définir une piste</a>' in before
-    assert 'href="/profil/kit">Voir le CV et le kit</a>' in after
-
-
 def test_the_guided_onboarding_ends_when_a_track_can_run(newcomer: TestClient) -> None:
     step1 = newcomer.post(
         "/profil/demarrage/identite",

@@ -4,6 +4,7 @@
 {% set piste = "" if shown.track_id is none else shown.track_id %}
 {% set offer_id = card.id %}
 {% set chosen = card.decision.decision if card.decision else none %}
+{% with subject = "offre:" ~ card.id %}{% include "assistant/subject.html" %}{% endwith %}
 <header class="offer-head">
   <div class="offer-heading">
     <h2 class="offer-title">{{ offer.title }}</h2>

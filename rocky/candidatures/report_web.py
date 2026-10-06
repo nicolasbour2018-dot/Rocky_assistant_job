@@ -12,7 +12,7 @@ from rocky.candidatures.sql import SqlApplicationStore
 from rocky.candidatures.web_common import engine_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
-from rocky.system.shell import ENTRIES, Action, Drawer, add_drawer, page
+from rocky.system.shell import ENTRIES, Action, page
 
 PAGE = "candidatures/report.html"
 # Q10: the main action, the applications waiting for an answer (the tab « Suivi » of 📝 Candidatures).
@@ -28,14 +28,7 @@ router = APIRouter()
 
 def install(app: FastAPI, acknowledged: Acknowledged) -> None:
     app.state.acknowledged_applications = acknowledged
-    add_drawer(app, "report", _drawer)
     app.include_router(router)
-
-
-def _drawer(request: Request, account: Account) -> Drawer:
-    return Drawer(
-        actions=(FOLLOW_UP if _report(request, account).sent else APPLICATIONS,)
-    )
 
 
 def _report(request: Request, account: Account) -> Report:

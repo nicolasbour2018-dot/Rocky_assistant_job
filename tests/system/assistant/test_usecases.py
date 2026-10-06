@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from datetime import UTC, date, datetime
-from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -29,6 +27,7 @@ from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.config import CallType, LlmSettings, ModelChoice, Provider
 from rocky.system.llm import LlmUnavailableError
 from rocky.system.llm.calls import Models, model_calls
+from tests.system.assistant.fakes import Assistant
 
 TODAY = date(2026, 10, 7)
 NOW = datetime(2026, 10, 7, 8, 0, tzinfo=UTC)
@@ -39,23 +38,6 @@ ANSWER = {
     "faits": ["offre.score"],
     "sans_reponse": False,
 }
-
-
-class Assistant:
-    """A fake model: its answers in order, an exception raised; the prompts it was given."""
-
-    def __init__(self, *answers: Any) -> None:
-        self.answers = list(answers)
-        self.prompts: list[str] = []
-
-    def complete_json(
-        self, instructions: str, prompt: str, schema: Mapping[str, Any]
-    ) -> Any:
-        self.prompts.append(prompt)
-        answer = self.answers.pop(0) if len(self.answers) > 1 else self.answers[0]
-        if isinstance(answer, Exception):
-            raise answer
-        return answer
 
 
 @pytest.fixture

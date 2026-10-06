@@ -13,18 +13,23 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Engine
 
+from rocky.candidatures import assistant as candidatures_assistant
 from rocky.candidatures import cockpit as candidatures_cockpit
 from rocky.candidatures import report_web as candidatures_report
 from rocky.candidatures import web as candidatures_web
+from rocky.messages import assistant as messages_assistant
 from rocky.messages import web as messages_web
 from rocky.messages.model import COLLECT_EVERY
 from rocky.messages.service import MessagesService
+from rocky.offres import assistant as offres_assistant
 from rocky.offres import web as offres_web
 from rocky.offres.watch.model import RESCORE_EVERY, WATCH_HOUR
 from rocky.offres.watch.service import WatchService
 from rocky.profil import api as profil_api
+from rocky.profil import assistant as profil_assistant
 from rocky.profil import web as profil_web
 from rocky.system import cockpit, shell
+from rocky.system.assistant import web as assistant_web
 from rocky.system.auth.mail import Mailer, SmtpMailer
 from rocky.system.auth.model import Account
 from rocky.system.auth.sql import SqlAuthStore
@@ -123,6 +128,7 @@ def create_app(
     # Step H1: a business refusal that a route forgot to catch is shown, never a 500.
     app.add_exception_handler(UserFacingError, shell.show_user_error)
     app.include_router(shell.router)
+    assistant_web.install(app)
     # 🧭 Cockpit (decision G3): the greeting reads the name of the profile (Q18).
     cockpit.install(app, _name_of)
     offres_web.install(app)
@@ -134,6 +140,11 @@ def create_app(
     candidatures_cockpit.install(app, _gmail_since(app.state.messages))
     # 📈 Bilan reads the acknowledgements of ``messages`` through a port (decision F1, Q13): no import of the module.
     candidatures_report.install(app, app.state.messages.acknowledged_applications)
+    # 🐾 The assistant (decision G4): each module gives the facts of its objects and of the account.
+    offres_assistant.install(app)
+    candidatures_assistant.install(app)
+    messages_assistant.install(app)
+    profil_assistant.install(app)
     _plan(app, engine, clock)
     add_system_cards(app, "couts", _costs_cards)
 

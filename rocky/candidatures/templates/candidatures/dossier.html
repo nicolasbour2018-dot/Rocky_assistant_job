@@ -6,6 +6,7 @@
 {% set journey = dossier.journey %}
 {% set base = "/candidatures/" ~ dossier.application_id %}
 <header class="dossier-header">
+  {% with subject = "candidature:" ~ dossier.application_id %}{% include "assistant/subject.html" %}{% endwith %}
   <p class="small"><a href="/candidatures">← Mes candidatures</a></p>
   <h1><span aria-hidden="true">📝</span> {{ dossier.offer.title }}</h1>
   <p class="muted">{{ dossier.offer.company or "Employeur inconnu" }}{% if dossier.offer.location %} · {{ dossier.offer.location }}{% endif %}

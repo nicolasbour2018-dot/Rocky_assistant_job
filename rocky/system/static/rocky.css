@@ -196,7 +196,6 @@ textarea {
 [popover]::backdrop { background: rgb(0 0 0 / 25%); }
 .drawer { position: fixed; inset: 0 0 0 auto; width: min(380px, 100vw); height: 100vh; margin: 0; padding: var(--space-5); }
 .drawer h2 { margin-bottom: var(--space-3); }
-.drawer p { margin-bottom: var(--space-4); }
 .sheet { width: min(420px, calc(100vw - 32px)); padding: var(--space-4); }
 .shortcuts dl { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); margin: var(--space-3) 0 var(--space-4); }
 .shortcuts dd { margin: 0; }
@@ -480,10 +479,23 @@ body.auth { display: grid; place-items: center; min-height: 100vh; padding: var(
 .screen-details { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-4); margin: 0; }
 .screen-details dt { color: var(--muted); }
 .screen-details dd { margin: 0; }
-.drawer h3 { margin: var(--space-4) 0 var(--space-2); font-size: 14px; }
-.drawer-actions { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.drawer-shortcuts { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); margin: 0 0 var(--space-4); }
-.drawer-shortcuts dd { margin: 0; }
+/* The drawer 🐾 is the assistant (G4): the conversation scrolls, the question stays at the bottom. */
+.drawer[popover]:popover-open { display: flex; flex-direction: column; gap: var(--space-3); }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.drawer-head h2 { margin: 0; }
+.drawer-content { flex: 1; min-height: 0; overflow-y: auto; }
+.drawer-content p { margin: 0 0 var(--space-3); }
+.assistant-turns { display: grid; gap: var(--space-4); margin: 0 0 var(--space-4); padding: 0; list-style: none; }
+.assistant-turn { display: grid; gap: var(--space-2); }
+.assistant-question { justify-self: end; max-width: 90%; padding: var(--space-2) var(--space-3); border-radius: var(--radius); background: var(--surface-2); }
+.assistant-answer { white-space: pre-line; }
+.assistant-facts { font-size: 12px; }
+.assistant-notice { padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-small); }
+.assistant-suggestions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3); }
+.assistant-left { font-size: 12px; }
+.assistant-form { display: grid; gap: var(--space-2); }
+.assistant-form textarea { width: 100%; resize: vertical; }
+.assistant-send { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
 
 /* Master CV (profile, section « kit », D2): ordered lists with small gesture buttons. */
 .btn-mini { padding: 0 var(--space-2); min-height: 1.75rem; font-size: 0.85em; }

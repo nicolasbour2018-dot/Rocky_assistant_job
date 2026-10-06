@@ -80,8 +80,6 @@ from rocky.system.llm import JsonModel
 from rocky.system.llm.calls import model_for
 from rocky.system.shell import (
     Action,
-    Drawer,
-    add_drawer,
     page,
     wants_fragment,
 )
@@ -116,7 +114,6 @@ def install(app: FastAPI) -> None:
     imports_web.install(app)
     watch_web.install(app)
     offres_cockpit.install(app)
-    add_drawer(app, "offers", _drawer)
     app.include_router(router)
 
 
@@ -148,32 +145,6 @@ SHORTCUTS: tuple[tuple[Markup, Markup | str], ...] = (
     (_kbd("?"), "Cette aide"),
 )
 IMPORT = Action("Importer une annonce", "/offres/importer")
-
-
-def _drawer(request: Request, account: Account) -> Drawer:
-    """What to do on 🔎 Offres: the triage, the incomplete offers to complete, an import."""
-    screen = Screen(request, account)
-    actions: list[Action] = []
-    to_review = len(screen.queue)
-    if to_review:
-        actions.append(
-            Action(
-                f"Trier les {to_review} offres à examiner"
-                if to_review > 1
-                else "Trier l'offre à examiner",
-                f"/offres?vue={TRIAGE}",
-            )
-        )
-    incomplete = listed(screen.offers, screen.decisions, ListFilters(incomplete=True))
-    if incomplete:
-        actions.append(
-            Action(
-                f"Compléter les offres incomplètes ({len(incomplete)})",
-                f"/offres?vue={LIST}&{list_query(ListFilters(incomplete=True))}",
-            )
-        )
-    actions.append(IMPORT)
-    return Drawer(actions=tuple(actions), shortcuts=SHORTCUTS)
 
 
 def age(day: date | None, today: date) -> str:

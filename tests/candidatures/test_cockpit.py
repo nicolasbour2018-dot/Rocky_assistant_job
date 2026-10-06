@@ -11,7 +11,6 @@ from rocky.candidatures.cockpit import (
     application_instruments,
     application_sentences,
     application_series,
-    due_actions,
     start_hero,
     state_lines,
 )
@@ -185,19 +184,4 @@ def test_the_heaviest_sentence_is_the_follow_up_then_the_ready_dossier() -> None
     one_left = application_sentences(reading([], goal=1))
     assert [s.text for s in one_left] == [
         "Plus qu'une candidature pour ton objectif de la semaine."
-    ]
-
-
-def test_the_drawer_leads_to_each_application_whose_action_is_due() -> None:
-    actions = due_actions(
-        [
-            row(1, Stage.SENT, due_in=0),
-            row(2, Stage.SENT, due_in=3),
-            row(3, Stage.PREPARING, due_in=-1, company="Covéa"),
-        ]
-    )
-
-    assert [(action.label, action.url) for action in actions] == [
-        ("Data analyst 3 chez Covéa : Relancer", "/candidatures/3"),
-        ("Data analyst 1 chez Acme : Relancer", "/candidatures/1"),
     ]

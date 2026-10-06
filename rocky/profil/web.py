@@ -118,9 +118,6 @@ from rocky.system.llm.calls import model_for
 from rocky.system.render import RenderError
 from rocky.system.shell import (
     NAVIGATION,
-    Action,
-    Drawer,
-    add_drawer,
     content_disposition,
     is_htmx,
     page,
@@ -200,15 +197,6 @@ def install(app: FastAPI) -> None:
     app.include_router(translation_web.router)
     app.include_router(letter_web.router)
     app.include_router(router)
-    add_drawer(app, "profile", _drawer)
-
-
-def _drawer(request: Request, account: Account) -> Drawer:
-    """What to do on 👤 Profil & kit (decision F1, Q12): an active track first, without it the watch finds nothing."""
-    profile = profile_of(request, account)
-    if any(track.status is TrackStatus.ACTIVE for track in profile.tracks):
-        return Drawer(actions=(Action("Voir le CV et le kit", "/profil/kit"),))
-    return Drawer(actions=(Action("Définir une piste", "/profil/pistes"),))
 
 
 def onboarding_gate(

@@ -362,23 +362,6 @@ def test_the_line_of_a_running_watch_is_read_again_until_it_stops(
     assert "every 15s" not in done.text
 
 
-def test_the_drawer_of_the_cockpit_gives_the_problem_first_and_no_main_button(
-    app: FastAPI, migrated_engine: Engine
-) -> None:
-    client, _ = logged_in(app, migrated_engine)
-    _parts(
-        app,
-        veille=Parts(problems=_given(Card("⚠️ Veille", action=FIX, problem=True))),
-        offres=Parts(heroes=_given(OFFER)),
-    )
-
-    fragment = client.get("/tiroir?ecran=today", headers=HTMX).text
-
-    assert fragment.index("Relancer la veille") < fragment.index("Voir l&#39;offre")
-    assert "Préparer la candidature" not in fragment  # a panel opens in the hero only
-    assert "btn-primary" not in fragment
-
-
 def _celebrate(found: Sequence[str]) -> Callable[[object, object, object], list[str]]:
     return lambda request, account, since: list(found)
 
