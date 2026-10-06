@@ -43,14 +43,15 @@ from rocky.offres.watch.model import (
 )
 from rocky.offres.watch.service import WatchService, public_sources
 from rocky.offres.watch.usecases import active_tracks
+from rocky.profil.api import stored_profile
 from rocky.profil.import_file import ImportFileError, read_import_file
 from rocky.profil.import_file import export_profile as export_file
-from rocky.profil.model import TrackStatus
 from rocky.profil.rules import ProfileInputError
 from rocky.profil.sql import SqlProfileStore
 from rocky.profil.usecases import AlreadyFilled, ProfileEditor
 from rocky.system.auth.admin import invite
 from rocky.system.auth.mail import SmtpMailer
+from rocky.system.auth.model import Account
 from rocky.system.auth.rules import InvalidEmailError, normalize_email
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import Clock
@@ -65,6 +66,21 @@ COUNT_LABELS = {
     "projects": "projets",
     "tracks": "pistes",
 }
+
+
+def _account(engine: Engine, email: str, out: TextIO) -> Account | int:
+    """The account of ``email``; otherwise the exit code, its reason written (2: not an address, 1: no account)."""
+    try:
+        address = normalize_email(email)
+    except InvalidEmailError as error:
+        out.write(f"{error}\n")
+        return 2
+    with engine.connect() as connection:
+        account = SqlAuthStore(connection).find_account(address)
+    if account is None:
+        out.write(f"Aucun compte pour {address}.\n")
+        return 1
+    return account
 
 
 def import_profile(
@@ -145,28 +161,15 @@ def check_sources(
 
     Nothing is written: the profile is only read.
     """
-    try:
-        address = normalize_email(email)
-    except InvalidEmailError as error:
-        out.write(f"{error}\n")
-        return 2
+    account = _account(engine, email, out)
+    if isinstance(account, int):
+        return account
     with engine.connect() as connection:
-        account = SqlAuthStore(connection).find_account(address)
-        if account is None:
-            out.write(f"Aucun compte pour {address}.\n")
-            return 1
-        store = SqlProfileStore(connection)
-        profile_id = store.find_profile_id(account.id)
-        profile = None if profile_id is None else store.load(profile_id)
-    tracks = [
-        track
-        for track in (profile.tracks if profile else ())
-        if track.status is TrackStatus.ACTIVE
-        and (track_name is None or track.name.casefold() == track_name.casefold())
-    ]
+        profile = stored_profile(connection, account.id)
+    tracks = active_tracks(profile, track_name)
     if not tracks:
         wanted = f"nommée « {track_name} »" if track_name else "active"
-        out.write(f"Aucune piste {wanted} pour {address}.\n")
+        out.write(f"Aucune piste {wanted} pour {account.email}.\n")
         return 1
     queries = [
         query
@@ -192,24 +195,19 @@ def watch_account(
     out: TextIO,
 ) -> int:
     """Run a real watch for ``email`` (its offers are written), then tell its status and, source by source, why."""
-    try:
-        address = normalize_email(email)
-    except InvalidEmailError as error:
-        out.write(f"{error}\n")
-        return 2
-    with engine.connect() as connection:
-        account = SqlAuthStore(connection).find_account(address)
-    if account is None:
-        out.write(f"Aucun compte pour {address}.\n")
-        return 1
+    account = _account(engine, email, out)
+    if isinstance(account, int):
+        return account
     if not active_tracks(service.profiles.profile(account.id), track_name):
         wanted = f"nommée « {track_name} »" if track_name else "active"
-        out.write(f"Aucune piste {wanted} pour {address}.\n")
+        out.write(f"Aucune piste {wanted} pour {account.email}.\n")
         return 1
     try:
         result = service.run(account.id, Trigger.MANUAL, track_name=track_name)
     except WatchBusyError:
-        out.write(f"Une veille de {address} est déjà en cours : rien n'a été lancé.\n")
+        out.write(
+            f"Une veille de {account.email} est déjà en cours : rien n'a été lancé.\n"
+        )
         return 1
     counts = result.counts
     out.write(
@@ -237,25 +235,18 @@ def collect_messages(
     engine: Engine, *, email: str, service: MessagesService, out: TextIO
 ) -> int:
     """Collect every connected Gmail mailbox of ``email`` for real (decision E1), then tell each collection."""
-    try:
-        address = normalize_email(email)
-    except InvalidEmailError as error:
-        out.write(f"{error}\n")
-        return 2
     if not service.configured:
         out.write(
             "Gmail n'est pas configuré : il manque le client Google ou ROCKY_SECRET_KEY "
             "(docs/procedures/e1-gmail/).\n"
         )
         return 1
-    with engine.connect() as connection:
-        account = SqlAuthStore(connection).find_account(address)
-    if account is None:
-        out.write(f"Aucun compte pour {address}.\n")
-        return 1
+    account = _account(engine, email, out)
+    if isinstance(account, int):
+        return account
     results = service.collect_account(account.id, MailTrigger.MANUAL)
     if not results:
-        out.write(f"Aucune boîte Gmail connectée ou libre pour {address}.\n")
+        out.write(f"Aucune boîte Gmail connectée ou libre pour {account.email}.\n")
         return 1
     with service.storage.transaction() as store:
         addresses = {
@@ -289,16 +280,9 @@ def classify_account_messages(
 ) -> int:
     """Classify the messages of ``email`` (decision E2): those without a decision, or all of them again; the language
     model is called within the account's limits and ``max_calls`` (network: with Nicolas's agreement)."""
-    try:
-        address = normalize_email(email)
-    except InvalidEmailError as error:
-        out.write(f"{error}\n")
-        return 2
-    with engine.connect() as connection:
-        account = SqlAuthStore(connection).find_account(address)
-    if account is None:
-        out.write(f"Aucun compte pour {address}.\n")
-        return 1
+    account = _account(engine, email, out)
+    if isinstance(account, int):
+        return account
     try:
         report = service.classify(
             account.id, use_model=use_model, max_calls=max_calls, again=again
@@ -342,16 +326,9 @@ def read_account_alerts(
 ) -> int:
     """Turn the job alerts of ``email`` never read into offers (decision E3); the postings of their links are read for
     real unless ``links`` is False (network: with Nicolas's agreement)."""
-    try:
-        address = normalize_email(email)
-    except InvalidEmailError as error:
-        out.write(f"{error}\n")
-        return 2
-    with engine.connect() as connection:
-        account = SqlAuthStore(connection).find_account(address)
-    if account is None:
-        out.write(f"Aucun compte pour {address}.\n")
-        return 1
+    account = _account(engine, email, out)
+    if isinstance(account, int):
+        return account
     try:
         report = service.read_alerts(account.id, links=links)
     except AlertsBusyError:
@@ -399,16 +376,9 @@ def export_mail_labels(
 ) -> int:
     """The labels of ``email`` (decision E4, Q6, D14): each decision of the user about a message with the decision of
     Rocky it reviewed, as CSV. Personal data: never kept in the repository."""
-    try:
-        address = normalize_email(email)
-    except InvalidEmailError as error:
-        out.write(f"{error}\n")
-        return 2
-    with engine.connect() as connection:
-        account = SqlAuthStore(connection).find_account(address)
-    if account is None:
-        out.write(f"Aucun compte pour {address}.\n")
-        return 1
+    account = _account(engine, email, out)
+    if isinstance(account, int):
+        return account
     writer = csv.writer(out)
     writer.writerow(LABEL_COLUMNS)
     for label in service.labels(account.id):
