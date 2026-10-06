@@ -211,6 +211,20 @@ lecture seule).
 `system/web.py`, et les imports internes d'un module) ; fabrique unique de `MessagesService` ; vérification globale
 verte.
 
+*Réalisé (06/10)* : `rocky/offres/api.py` (les treize fonctions pour les autres modules, `OFFERS_CHANGED`, et
+`posting_pages` venu d'`offres/imports/web.py`), `rocky/candidatures/api.py` (les fonctions pour `messages`,
+`MAIL_STAGES`, et l'adaptateur `OffresDecisions` venu de `web_common.py`, qui importe FastAPI) et
+`rocky/profil/api.py` (`stored_profile`). Déplacement seul : mêmes signatures, aucun réexport ; `tests/offres/test_public.py`
+devient `test_api.py`. `candidatures/dossier_web.py` importe les aides d'écran du profil par leur nom ; un test qui
+remplaçait `profil.web.cv_drawing` remplace désormais le nom lu par `dossier_web`. `messages.service.messages_service`
+construit le service pour l'application et les **quatre** commandes de la CLI (cinq constructions en tout, et non
+5 + 1) : `classify` donne les plafonds et le modèle, `new_http` la lecture des fiches des alertes ; un test fixe ces
+options. `system/admin.py` : `_account` remplace six recherches identiques (`import_profile` et `export_profile`
+gardent leurs messages propres) ; `check_sources` lit le profil par `profil.api.stored_profile` et ses pistes par
+`active_tracks`. Seul changement visible : sans Gmail configuré, `rocky-admin messages` le dit avant de refuser une
+adresse invalide. `tests/system/test_architecture.py` échouait avant le déplacement (12 imports) et passe après.
+Règles d'agent, AGENTS §4 et plan §3 : « ce qu'un module donne aux autres est dans son `api.py` ».
+
 ## H5 — Petites dettes et code mort
 
 *Direct.* **Fenêtre : avant le code de G6** (G6 reprend écrans et gabarits).

@@ -32,8 +32,10 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Une décision suit dans **sa** transaction : `SqlStore.follow` → `decisions.usecases.follow_decision` (crochet donné à
   `SqlStorage` par `MessagesService`). Une transition appliquée, son changement d'étape et leurs événements sont validés
   avec la décision, ou rien.
-- `messages` n'écrit chez `candidatures` et `offres` que par leurs fonctions publiques sur la connexion en cours
-  (`messages/links.py`), jamais par leur SQL.
+- `messages` n'écrit chez `candidatures` et `offres` que par leurs fonctions publiques (`candidatures.api`,
+  `offres.api`) sur la connexion en cours (`messages/links.py`), jamais par leur SQL ni leurs routes.
+- Le service se construit par `service.messages_service` (application et CLI), jamais `MessagesService(…)` à la main
+  hors des tests.
 - « Ce qui a bougé » = `mail_transitions` sans ligne de `mail_transition_settlements` : rien n'en sort sans geste ; tout
   est en ajout seul. Un nouveau type d'écriture dans un cas d'usage s'ajoute aux points de panne de
   `test_decisions_usecases.py`.
@@ -47,11 +49,11 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Une alerte = un message dont la décision en vigueur est `job_alert`, lu **une fois** (`alert_readings`,
   `UNIQUE(message_id)`). Le lecteur se choisit par **adresse exacte** (`alerts.rules.READERS`) et s'écrit sur une vraie
   alerte anonymisée (`docs/procedures/e3-captures/`) ; changer un lecteur change `ALERTS_VERSION`.
-- **Chaque carte donne une offre** (`offres.web.record_alert_offer`, origine `alert`, meilleure piste) ; identité
+- **Chaque carte donne une offre** (`offres.api.record_alert_offer`, origine `alert`, meilleure piste) ; identité
   stable d'une alerte à l'autre (numéro de la plateforme, sinon `card_key`), jamais le lien de suivi.
 - **Limite (Q8)** : au plus `ALERTS_PER_DAY` (10) alertes donnent leurs offres par jour de Paris, les plus récentes
   d'abord ; les autres attendent. Une alerte de plus de `ALERT_MAX_AGE` (3 jours) ne donne rien (lecture `too_old`).
-- Fiche lue **hors transaction** par `import_link` (fabrique `offres.imports.web.posting_pages`) ; jamais pour une offre
+- Fiche lue **hors transaction** par `import_link` (fabrique `offres.api.posting_pages`) ; jamais pour une offre
   connue complète ni une plateforme qui a refusé pendant le passage (règle d'arrêt C1).
   Chaque fiche non lue garde sa raison (`alert_offers`) ; un lien n'est jamais journalisé ni mis dans un événement.
 - Une alerte s'écrit **en une transaction** (lecture, offres, lignes, `messages.alert_read`), sous le verrou des offres

@@ -20,7 +20,7 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
 - Notes (`application_notes`) et langue (`application_languages`) sont en ajout seul **hors** des changements : « Annuler »
   ne les touche jamais. Une note se retire par une ligne `removes_id` (unique) ; la langue en vigueur est la dernière,
   français sans ligne (`language_in_force`). Toutes les routes du dossier lisent la langue du dossier, jamais un paramètre.
-- Avant l'envoi (`BEFORE_SENDING`), l'échéance proposée s'arrête à la date limite de l'offre (`offres.web.offer_deadlines`).
+- Avant l'envoi (`BEFORE_SENDING`), l'échéance proposée s'arrête à la date limite de l'offre (`offres.api.offer_deadlines`).
 
 ## Transactions
 - Un cas d'usage = une transaction ouverte par la route ; il verrouille d'abord le dossier
@@ -32,8 +32,10 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   `automatic_transition_allowed` (jamais en arrière, jamais hors d'une issue).
 
 ## Lien avec `offres`
-- Aucune lecture des tables d'`offres` : le port `OfferDecisions` (adaptateur `OffresDecisions`) et `offer_headings`
-  passent par les fonctions publiques d'`offres/web.py`, dans la transaction de l'appelant.
+- Aucune lecture des tables d'`offres` : le port `OfferDecisions` (adaptateur `OffresDecisions`, dans `api.py`) et
+  `offer_headings` passent par `offres/api.py`, dans la transaction de l'appelant.
+- Ce que `candidatures` donne aux autres modules (`messages`) est dans `api.py` (`mail_targets`, `mail_stage`,
+  `move_application_by_message`…), jamais dans `web.py`.
 - « Préparer » sur une offre sans décision ou « Plus tard » enregistre « Intéressé » avec `application_started` en tête et
   au moins un motif choisi (`application_decision`) ; refusé sur une offre écartée.
 - `offres` ne connaît `candidatures` que par des URL : l'encart (`/candidatures/offre/{id}`, chargé par la fiche) et
@@ -70,7 +72,7 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   l'étape ; « À préparer » liste les offres « Intéressé » sans dossier. Chaque geste de la liste renvoie son onglet
   (`vue`, champ caché) et se fait en un clic (le menu d'étape part au `change`).
 - Routes : `web.py` (liste, gestes, encart de la fiche, « Préparer »), `dossier_web.py` (page du dossier par étape),
-  `web_common.py` (moteur, horloge, fragment, port vers `offres`). `dossier_web` ne doit pas importer `web`.
+  `web_common.py` (moteur, horloge, fragment). `dossier_web` ne doit pas importer `web`.
 - Page du dossier : une étape à la fois, `/candidatures/{id}?etape=cv|lettre|envoi|suivi` (`dossier_url`), par défaut
   `rules.journey(...).current` (Suivi une fois envoyée ou close). Un geste fait depuis le dossier envoie `retour` = une
   étape (`Step`) ou `dossier`, valeur fixe et jamais une URL (pas de redirection ouverte).
