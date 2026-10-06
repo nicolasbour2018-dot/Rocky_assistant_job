@@ -1,7 +1,8 @@
-"""A fictional designed CV, made on the spot as a PDF, and a fake model that reads it (no network, no real person).
+"""Fictional designed CVs, made on the spot as PDFs, and a fake model that reads them (no network, no real person).
 
-The page mimics what a design tool exports: a coloured background, shapes, a photo clipped to a circle, spaced
-section titles, bullets and fixed texts.
+The first page mimics what a design tool exports: a coloured background, shapes, a photo clipped to a circle, spaced
+section titles, bullets and fixed texts. The second one is another design (decision G5, Q3): one column, project
+cards stacked one above the other, names ending with a colon, a part running over two lines.
 """
 
 from __future__ import annotations
@@ -170,12 +171,26 @@ PROFILE: Mapping[str, Any] = {
 }
 
 
-class ReaderModel:
-    """Fake language model: names each line of the prompt from ``ROLES``; ``skip`` leaves lines unnamed."""
+# A line's start, its role, and when the model gives them, its project number and its label.
+type Reading = tuple[str, str] | tuple[str, str, int, str | None]
 
-    def __init__(self, *, skip: int = 0) -> None:
+
+class ReaderModel:
+    """Fake language model: names each line of the prompt from ``roles``; ``skip`` leaves lines unnamed."""
+
+    def __init__(
+        self,
+        *,
+        skip: int = 0,
+        roles: tuple[Reading, ...] = ROLES,
+        labels: Mapping[str, str] = LABELS,
+        profile: Mapping[str, Any] = PROFILE,
+    ) -> None:
         self.prompts: list[str] = []
         self.skip = skip
+        self.roles = roles
+        self.labels = labels
+        self.profile = profile
 
     def complete_json(
         self, instructions: str, prompt: str, schema: Mapping[str, Any]
@@ -184,14 +199,151 @@ class ReaderModel:
         roles = []
         for number, raw in re.findall(r"^\[(\d+)\][^:]*: (.*)$", prompt, re.MULTILINE):
             text = " ".join(raw.split())
-            role = next((r for start, r in ROLES if text.startswith(start)), None)
-            if role is None:
+            reading = next((r for r in self.roles if text.startswith(r[0])), None)
+            if reading is None:
                 continue
+            role = reading[1]
             item: dict[str, Any] = {"id": int(number), "role": role}
-            if role in LABELS:
-                item["label"] = LABELS[role]
+            label = reading[3] if len(reading) == 4 else self.labels.get(role)
+            if label is not None:
+                item["label"] = label
+            if len(reading) == 4:
+                item["index"] = reading[2]
             roles.append(item)
-        return {"roles": roles[self.skip :], "profile": dict(PROFILE)}
+        return {"roles": roles[self.skip :], "profile": dict(self.profile)}
+
+
+# The second design (decision G5, Q3): one column, two project cards stacked, names ending with a colon.
+
+LISTED_PAGE = """<!doctype html><html><head><meta charset="utf-8"><style>
+{faces}
+@page {{ size: 595pt 842pt; margin: 0; }}
+body {{ margin: 0; font-family: "Poppins", sans-serif; }}
+.page {{ position: relative; width: 595pt; height: 842pt; background: #ffffff; overflow: hidden; }}
+.t {{ position: absolute; margin: 0; white-space: nowrap; font-size: 8pt; }}
+.h {{ font-size: 11pt; font-weight: bold; color: #8a3b12; }}
+</style></head><body><div class="page">
+<svg style="position:absolute;left:0;top:0" width="595pt" height="842pt" viewBox="0 0 595 842">
+  <rect x="0" y="0" width="595" height="90" fill="#f3e3d3"/>
+  <rect x="40" y="300" width="515" height="100" rx="8" fill="#faf6f1" stroke="#8a3b12" stroke-width="1"/>
+  <rect x="40" y="415" width="515" height="100" rx="8" fill="#faf6f1" stroke="#8a3b12" stroke-width="1"/>
+  <path d="M40 532 L555 532" stroke="#8a3b12" stroke-width="1"/>
+</svg>
+<p class="t" style="left:40pt;top:30pt;font-size:22pt;font-weight:bold">LÉA DUPONT</p>
+<p class="t" style="left:40pt;top:62pt;font-size:11pt">ANALYSTE DE DONNÉES</p>
+<p class="t" style="left:40pt;top:110pt">lea.dupont@example.org</p>
+<p class="t" style="left:300pt;top:110pt">07 00 00 00 00</p>
+<p class="t h" style="left:40pt;top:150pt">COMPÉTENCES</p>
+<p class="t" style="left:40pt;top:170pt"><b>Langages :</b> Python, SQL</p>
+<p class="t" style="left:40pt;top:182pt"><b>Outils :</b> Docker, Airflow</p>
+<p class="t" style="left:40pt;top:210pt">Rigueur · Écoute</p>
+<p class="t h" style="left:40pt;top:275pt">PROJETS</p>
+<p class="t" style="left:55pt;top:312pt;font-weight:bold">Prévision des stocks :</p>
+<p class="t" style="left:55pt;top:328pt">Problème : Ruptures fréquentes en fin de mois dans</p>
+<p class="t" style="left:55pt;top:340pt">les entrepôts régionaux.</p>
+<p class="t" style="left:55pt;top:358pt">Stack : Python, Pandas</p>
+<p class="t" style="left:55pt;top:374pt">Résultats : 30 % de ruptures en moins.</p>
+<p class="t" style="left:55pt;top:427pt;font-weight:bold">Tri des messages :</p>
+<p class="t" style="left:55pt;top:443pt">Problème : Des milliers de messages par jour.</p>
+<p class="t" style="left:55pt;top:459pt">Stack : Python, FastAPI</p>
+<p class="t" style="left:55pt;top:475pt">Résultats : 85 % des messages orientés.</p>
+<p class="t h" style="left:40pt;top:545pt">EXPÉRIENCES</p>
+<p class="t" style="left:40pt;top:565pt"><b>Analyste de données</b> · Commerce Exemple · 2022 – 2026</p>
+</div></body></html>"""
+
+LISTED_LABELS = {
+    "project_problem": "Problème",
+    "project_stack": "Stack",
+    "project_results": "Résultats",
+}
+
+# A careful reading: the projects numbered from the top, each line with its own part.
+LISTED_ROLES: tuple[Reading, ...] = (
+    ("LÉA DUPONT", "name"),
+    ("ANALYSTE", "title"),
+    ("lea.dupont", "email"),
+    ("07 00", "phone"),
+    ("COMPÉTENCES", "heading"),
+    ("Langages", "groups"),
+    ("Outils", "groups"),
+    ("Rigueur", "transversal"),
+    ("PROJETS", "heading"),
+    ("Prévision des stocks", "project_name", 0, None),
+    ("Problème : Ruptures", "project_problem", 0, "Problème"),
+    ("les entrepôts", "project_problem", 0, "Problème"),
+    ("Stack : Python, Pandas", "project_stack", 0, "Stack"),
+    ("Résultats : 30", "project_results", 0, "Résultats"),
+    ("Tri des messages", "project_name", 1, None),
+    ("Problème : Des milliers", "project_problem", 1, "Problème"),
+    ("Stack : Python, FastAPI", "project_stack", 1, "Stack"),
+    ("Résultats : 85", "project_results", 1, "Résultats"),
+    ("EXPÉRIENCES", "heading"),
+    ("Analyste de données", "experiences"),
+)
+
+# Another call on the same lines (D2: two calls never sorted them alike): projects numbered the other way, the second
+# line of a part taken for a name, a part given the label of another.
+LISTED_ROLES_OTHERWISE: tuple[Reading, ...] = (
+    *LISTED_ROLES[:9],
+    ("Prévision des stocks", "project_name", 1, None),
+    ("Problème : Ruptures", "project_problem", 1, "Problème"),
+    ("les entrepôts", "project_name", 1, None),
+    ("Stack : Python, Pandas", "project_stack", 1, "Stack"),
+    ("Résultats : 30", "project_problem", 1, "Problème"),
+    ("Tri des messages", "project_name", 0, None),
+    ("Problème : Des milliers", "project_problem", 0, "Problème"),
+    ("Stack : Python, FastAPI", "project_problem", 0, "Problème"),
+    ("Résultats : 85", "project_results", 0, "Résultats"),
+    *LISTED_ROLES[18:],
+)
+
+LISTED_PROFILE: Mapping[str, Any] = {
+    "full_name": "Léa Dupont",
+    "title": "Analyste de données",
+    "email": "lea.dupont@example.org",
+    "phone": "07 00 00 00 00",
+    "skill_groups": [
+        {"name": "Langages", "skills": ["Python", "SQL"]},
+        {"name": "Outils", "skills": ["Docker", "Airflow"]},
+    ],
+    "transversal": ["Rigueur", "Écoute"],
+    "experiences": [
+        {
+            "kind": "job",
+            "title": "Analyste de données",
+            "organisation": "Commerce Exemple",
+            "start_year": 2022,
+            "end_year": 2026,
+            "bullets": [],
+        }
+    ],
+    "projects": [
+        {
+            "name": "Prévision des stocks",
+            "problem": "Ruptures fréquentes en fin de mois dans les entrepôts régionaux.",
+            "stack": ["Python", "Pandas"],
+            "results": "30 % de ruptures en moins.",
+        },
+        {
+            "name": "Tri des messages",
+            "problem": "Des milliers de messages par jour.",
+            "stack": ["Python", "FastAPI"],
+            "results": "85 % des messages orientés.",
+        },
+    ],
+}
+
+
+def listed_cv() -> bytes:
+    return render_pdf(LISTED_PAGE.format(faces=font_faces()), dict(font_assets())).pdf
+
+
+def listed_reader(*, otherwise: bool = False) -> ReaderModel:
+    return ReaderModel(
+        roles=LISTED_ROLES_OTHERWISE if otherwise else LISTED_ROLES,
+        labels=LISTED_LABELS,
+        profile=LISTED_PROFILE,
+    )
 
 
 TODAY = date(2026, 9, 29)

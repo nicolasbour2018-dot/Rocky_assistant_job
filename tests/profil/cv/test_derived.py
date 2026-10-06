@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 import json
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -50,12 +51,15 @@ from rocky.system.files import FileStore
 from rocky.system.pdf_read import read_pdf
 from rocky.system.render import compare, rasterize
 from tests.profil.cv.fixtures import (
+    LISTED_PROFILE,
     PROFILE,
     TODAY,
     ReaderModel,
     Shared,
     image_only_cv,
     imported,
+    listed_cv,
+    listed_reader,
     scanned_cv,
 )
 
@@ -324,6 +328,48 @@ def test_projects_are_numbered_by_their_column_whatever_the_model_says() -> None
     assert [role.index for role in _by_column(layout, roles)] == [0, 1, 0, 1]
 
 
+def test_stacked_projects_are_numbered_from_the_top_whatever_the_model_says() -> None:
+    """Step G5, Q3: cards stacked in one column were one project (their names overlap horizontally)."""
+    layout = _layout(
+        ("Projet du haut", 10, 100),
+        ("Problème : en haut", 10, 112),
+        ("suite du problème", 10, 122),  # right under a part: not a name
+        ("Projet du bas", 10, 200),
+        ("Problème : en bas", 10, 212),
+    )
+    roles = [
+        BlockRole(0, Role.PROJECT_NAME, 1),
+        BlockRole(1, Role.PROJECT_PROBLEM, 1, "Problème"),
+        BlockRole(2, Role.PROJECT_NAME, 1),
+        BlockRole(3, Role.PROJECT_NAME, 0),
+        BlockRole(4, Role.PROJECT_PROBLEM, 0, "Problème"),
+    ]
+
+    assert [role.index for role in _by_column(layout, roles)] == [0, 0, 0, 1, 1]
+
+
+def test_a_project_line_opening_with_another_part_label_is_that_part() -> None:
+    """Step G5, Q3: « Stack : … » given the problem's label went into the problem."""
+    layout = _layout(
+        ("Problème : des milliers", 10, 100),
+        ("Stack : Python, FastAPI", 10, 112),
+        ("Stack : Pandas", 300, 112),
+    )
+    roles = [
+        BlockRole(0, Role.PROJECT_PROBLEM, 0, "Problème"),
+        BlockRole(1, Role.PROJECT_PROBLEM, 0, "Problème"),
+        BlockRole(2, Role.PROJECT_STACK, 1, "Stack"),
+    ]
+
+    fixed = _continued(layout, roles)
+
+    assert [(role.role, role.label) for role in fixed] == [
+        (Role.PROJECT_PROBLEM, "Problème"),
+        (Role.PROJECT_STACK, "Stack"),
+        (Role.PROJECT_STACK, "Stack"),
+    ]
+
+
 def test_a_title_spaced_letter_by_letter_reads_as_words() -> None:
     assert unspaced("P R O J E T S") == "PROJETS"
     assert unspaced("T E C H N I C A L   S K I L L S") == "TECHNICAL SKILLS"
@@ -395,3 +441,71 @@ def test_a_template_of_an_older_format_asks_for_a_new_import(shared: Shared) -> 
         draw_derived(
             files, cv_content(preview_profile(shared.proposals()), "fr", TODAY)
         )
+
+
+# A second design (decision G5, Q3): one column, project cards stacked, read two ways by the model
+
+
+@pytest.fixture(scope="module")
+def listed_imports(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> tuple[Mapping[str, bytes], Mapping[str, bytes]]:
+    """The second design imported twice, read carefully then otherwise by the model."""
+    pdf = listed_cv()
+    bundles = []
+    for otherwise in (False, True):
+        root = tmp_path_factory.mktemp("listed")
+        result = imported(pdf, root, listed_reader(otherwise=otherwise))
+        assert result.template is not None, result.template_refusal
+        bundles.append(
+            FileStore(root).read_bundle(result.template.path, result.template.sha256)
+        )
+    return bundles[0], bundles[1]
+
+
+def test_two_readings_of_a_second_design_give_the_same_blocks(
+    listed_imports: tuple[Mapping[str, bytes], Mapping[str, bytes]],
+) -> None:
+    """Step G5: the rules after the model (numbers by geometry, lines that continue a part) were set on one design,
+    project cards side by side."""
+    careful, otherwise = (json.loads(files[TEMPLATE_FILE]) for files in listed_imports)
+
+    assert careful["regions"] == otherwise["regions"]
+    bodies = [r for r in careful["regions"] if r["kind"] == "project_body"]
+    assert [[part["role"] for part in body["parts"]] for body in bodies] == [
+        ["project_problem", "project_stack", "project_results"]
+    ] * 2
+    assert [body["count"] for body in bodies] == [
+        4,
+        3,
+    ]  # the problem's second line kept
+    assert slots_of(careful).projects == 2
+
+
+def test_a_second_design_renders_each_project_in_its_own_card(
+    listed_imports: tuple[Mapping[str, bytes], Mapping[str, bytes]],
+) -> None:
+    content = cv_content(preview_profile(LISTED_PROFILE), "fr", TODAY)
+
+    texts = []
+    for files in listed_imports:
+        rendered, _, reasons = draw_derived(files, content)
+        assert reasons == ()
+        texts.append(text_of(rendered.pdf))
+
+    assert texts[0] == texts[1]
+    # Names keep the design's colon; skills are written on one line, as the design does.
+    for expected in (
+        "Prévision des stocks :",
+        "Tri des messages :",
+        "Résultats : 30 % de ruptures en moins.",
+        "Langages : Python, SQL",
+        "Rigueur · Écoute",
+    ):
+        assert expected in texts[0]
+    # Each project stays in its own card (300–400 and 415–515 pt), the first one on top.
+    template = json.loads(listed_imports[0][TEMPLATE_FILE])
+    for region in template["regions"]:
+        if region["kind"].startswith("project"):
+            top = 300 + 115 * region["index"]
+            assert top < region["room"]["y"] < _bottom(region["room"]) < top + 100

@@ -61,6 +61,8 @@ LAYER_BARE = "calque-sans-texte.png"  # the design without any text: the layer o
 LAYER_DPI = 300  # the resolution of the design's own images
 # The old texts' decorations (bullets, underlines) are erased down to one line below them (D2).
 ERASED_BELOW = 1.0
+# How a design may join items written on one line (« Rigueur · Écoute »), in the order they are looked for (G5, Q3).
+LIST_SEPARATORS = (" · ", " | ", " • ", " / ", ", ")
 # A shape around a text is a card, not the page's background, below this share of the page (G5, Q2).
 CARD_MAX_SHARE = 0.5
 VARIABLE = frozenset({Role.GROUPS, Role.TRANSVERSAL}) | PROJECT_ROLES
@@ -176,21 +178,59 @@ def derive(
 
 
 def _by_column(layout: PageLayout, roles: Sequence[BlockRole]) -> list[BlockRole]:
-    """Projects numbered by geometry, left to right: each project line belongs to the project whose name stands
-    nearest horizontally (the model's numbers are not reliable across calls)."""
+    """Projects numbered by geometry, in reading order: columns left to right, then top to bottom within a column
+    (cards side by side or stacked, G5, Q3); each project line belongs to the nearest name above it in its column
+    (the model's numbers are not reliable across calls)."""
     boxes = {block.id: block.box for block in layout.blocks}
-    # Columns: the project names' lines, joined when they overlap horizontally (a name may take two lines).
-    columns: list[Box] = []
+    parts = [
+        boxes[item.block_id]
+        for item in roles
+        if item.role in PROJECT_ROLES and item.role is not Role.PROJECT_NAME
+    ]
+
+    def follows_a_part(box: Box) -> bool:
+        """Right under a part's line, in its column: the part going on, taken for a name (``_continued``)."""
+        return any(
+            part.x < box.right
+            and box.x < part.right
+            and 0 <= box.y - part.bottom < box.height
+            for part in parts
+        )
+
+    # Names: name lines joined when they overlap horizontally and follow each other (a name may take two lines).
+    names: list[Box] = []
     for box in sorted(
-        (boxes[item.block_id] for item in roles if item.role is Role.PROJECT_NAME),
-        key=lambda box: box.x,
+        (
+            boxes[item.block_id]
+            for item in roles
+            if item.role is Role.PROJECT_NAME
+            and not follows_a_part(boxes[item.block_id])
+        ),
+        key=lambda box: (box.y, box.x),
     ):
-        if columns and box.x < columns[-1].right:
-            columns[-1] = columns[-1].union(box)
+        joined = next(
+            (
+                k
+                for k, name in enumerate(names)
+                if box.x < name.right
+                and name.x < box.right
+                and box.y - name.bottom < box.height
+            ),
+            None,
+        )
+        if joined is None:
+            names.append(box)
         else:
-            columns.append(box)
-    if not columns:
+            names[joined] = names[joined].union(box)
+    if not names:
         return list(roles)
+    # Columns: the names overlapping horizontally.
+    columns: list[Box] = []
+    for name in sorted(names, key=lambda box: box.x):
+        if columns and name.x < columns[-1].right:
+            columns[-1] = columns[-1].union(name)
+        else:
+            columns.append(name)
 
     def column(box: Box) -> int:
         middle = box.x + box.width / 2
@@ -199,8 +239,15 @@ def _by_column(layout: PageLayout, roles: Sequence[BlockRole]) -> list[BlockRole
             key=lambda i: abs(columns[i].x + columns[i].width / 2 - middle),
         )
 
+    ordered = sorted(names, key=lambda name: (column(name), name.y))
+
+    def project(box: Box) -> int:
+        in_column = [k for k, name in enumerate(ordered) if column(name) == column(box)]
+        above = [k for k in in_column if ordered[k].y <= box.y + 1]
+        return above[-1] if above else in_column[0]
+
     return [
-        replace(item, index=column(boxes[item.block_id]))
+        replace(item, index=project(boxes[item.block_id]))
         if item.role in PROJECT_ROLES
         else item
         for item in roles
@@ -208,11 +255,20 @@ def _by_column(layout: PageLayout, roles: Sequence[BlockRole]) -> list[BlockRole
 
 
 def _continued(layout: PageLayout, roles: Sequence[BlockRole]) -> list[BlockRole]:
-    """A project line that does not open with its own label continues the part above it, in the same project
-    (the model may give it another part, or take it for the project's name)."""
+    """A project line that opens with a label the answer attests elsewhere is that label's part (G5, Q3: the model
+    may give it another part's label); any other line continues the part above it, in the same project (the model
+    may give it another part, or take it for the project's name)."""
     boxes = {block.id: block.box for block in layout.blocks}
     texts = {block.id: block.text for block in layout.blocks}
     fixed = list(roles)
+    attested = {
+        item.label: item.role
+        for item in fixed
+        if item.role in PROJECT_ROLES
+        and item.role is not Role.PROJECT_NAME
+        and item.label
+        and _starts_with(texts[item.block_id], item.label)
+    }
     order = sorted(
         range(len(fixed)),
         key=lambda i: (boxes[fixed[i].block_id].y, boxes[fixed[i].block_id].x),
@@ -222,6 +278,19 @@ def _continued(layout: PageLayout, roles: Sequence[BlockRole]) -> list[BlockRole
         item = fixed[i]
         if item.role not in PROJECT_ROLES:
             continue
+        if item.role is not Role.PROJECT_NAME and not (
+            item.label and _starts_with(texts[item.block_id], item.label)
+        ):
+            opened = next(
+                (
+                    label
+                    for label in attested
+                    if _starts_with(texts[item.block_id], label)
+                ),
+                None,
+            )
+            if opened is not None:
+                item = fixed[i] = replace(item, role=attested[opened], label=opened)
         starts = item.label and _starts_with(texts[item.block_id], item.label)
         if item.role is not Role.PROJECT_NAME and starts:
             current[item.index] = item.role
@@ -309,6 +378,24 @@ def _regions(
         }
         if kind == "project_body":
             region["parts"] = _parts(members, measure["line_height"])
+        if kind == "groups":
+            # « Langages : Python, SQL » on one line (a bold name, then plain text), or the group's name on a line
+            # of its own, its skills below (Nicolas's Canva): as the design writes it (G5, Q3).
+            region["inline"] = any(
+                any(run.style.bold and run.text.strip() for run in line.runs)
+                and any(not run.style.bold and run.text.strip() for run in line.runs)
+                for line in lines
+            )
+        if kind == "transversal":
+            # « Rigueur · Écoute » on one line, or one skill per line (Nicolas's Canva): as the design writes it.
+            region["separator"] = next(
+                (
+                    mark
+                    for mark in LIST_SEPARATORS
+                    if any(mark in line.text.strip() for line in lines)
+                ),
+                None,
+            )
         if kind == "project_name":
             # « Tri des messages : » keeps its colon, written the way of the CV's language.
             region["colon"] = lines[-1].text.rstrip().endswith(":")
@@ -797,12 +884,16 @@ def _region_html(
 ) -> str | None:
     kind, index = region["kind"], int(region["index"])
     if kind == "groups":
+        between = " " if region.get("inline") else "</p><p>"
         return "".join(
-            f"<p>{_strong(region, group.name + colon)}</p><p>{escape(', '.join(group.skills))}</p>"
+            f"<p>{_strong(region, group.name + colon)}{between}{escape(', '.join(group.skills))}</p>"
             for group in content.groups
             if group.skills
         )
     if kind == "transversal":
+        separator = region.get("separator")
+        if separator:
+            return f"<p>{escape(separator.join(content.transversal))}</p>"
         return _lines(content.transversal)
     if index >= len(content.projects):
         return None
