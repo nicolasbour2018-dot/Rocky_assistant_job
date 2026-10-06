@@ -834,3 +834,14 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   veille. Hors du périmètre de H2 (lecture d'une source, pas « aujourd'hui ») ; à reprendre si l'écart gêne.
 - **(H2 → au fil de l'eau)** L'alias `type Clock = Callable[[], datetime]` est redéfini dans sept modules (`profil`,
   `messages` ×3, `offres.watch`, `system.auth`, `system.scheduler`) : sans bug, laissé tel quel (arbitrage H).
+- **(H2 → suivi de la vérification, Nicolas 06/10)** Durée de la vérification à surveiller ; la règle des **2 min**
+  (AGENTS §8) est maintenue pour l'instant, **à arbitrer plus tard** avec Nicolas si elle ne tient plus. Mesures du
+  06/10 (1 556 → 1 654 tests depuis G1) :
+  - GitHub, pytest : 56 à 90 s sur les 9 derniers passages (limite de G1 : 100 s ; 86 s à la clôture de G1) ; job
+    complet : 115 à 163 s (installation, ruff et mypy compris) ;
+  - poste, `docker compose run --rm --build check` : 59 s de pytest et 1 min 05 au total au repos, mais 112 s de
+    pytest et 2 min 00 au total pendant H2, le poste chargé (un autre agent au travail) : la limite locale
+    tient seulement au repos.
+
+  À relever à chaque étape qui ajoute beaucoup de tests ; si GitHub dépasse 100 s de pytest, revoir la vérification
+  (méthode de G1) ou relever la limite, au choix de Nicolas.
