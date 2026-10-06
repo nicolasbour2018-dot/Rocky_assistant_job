@@ -163,6 +163,12 @@ une). Geste et ligne du Cockpit notés en §8 du plan (→ G6, → G3).
 **Critère de sortie** : Q1 et Q2 consignées ici ; chaque point a son test ; `ALERTS_VERSION` / `QUERIES_VERSION`
 changées si un lecteur ou une requête change ; vérification globale verte.
 
+**Point à surveiller (Nicolas, 06/10)** : durée de la vérification (plan §8, « H2 → suivi de la vérification »). À la
+clôture, relever le temps de pytest de la vérification locale (au repos) et des passages GitHub de l'étape, et les
+ajouter à la note du §8. Si deux passages GitHub d'affilée dépassent **100 s de pytest**, le signaler à Nicolas, qui
+arbitre (revoir la vérification ou relever la limite) ; la règle des 2 min de la vérification locale ne change pas
+d'ici là.
+
 ## H4 — API publique des modules
 
 *Mode plan* (questions de départ : Q3, test d'architecture). **Fenêtre : après H1 (mêmes fichiers) ; avant le code de
