@@ -63,6 +63,8 @@ HEAD_TABLES = {
     "mail_sender_rules",
     "alert_readings",
     "alert_offers",
+    # G4: every call to a language model.
+    "model_calls",
 }
 
 

@@ -23,6 +23,7 @@ from rocky.offres.web import READ_NOTE
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.events import events
 from rocky.system.llm import LlmUnavailableError
+from rocky.system.llm.calls import model_calls
 from rocky.system.workstation import NOT_RUNNING, ShownPage
 from tests.offres.fakes import (
     HALF_PAST_MIDNIGHT,
@@ -35,7 +36,7 @@ from tests.offres.fakes import (
     equip,
     posting,
 )
-from tests.system.web_support import HTMX, logged_in, make_app
+from tests.system.web_support import HTMX, logged_in, make_app, use_model, used_model
 
 # Current scores (best track): four offers at 75, an incomplete one at 53, two under the threshold.
 POSTINGS = {
@@ -115,7 +116,7 @@ def seed(engine: Engine, email: str) -> tuple[Seeker, dict[str, int]]:
 def app(migrated_engine: Engine) -> FastAPI:
     app = make_app(migrated_engine)
     app.state.auth.clock.now = NOW
-    app.state.llm_model = FakeModel(SUMMARY)
+    use_model(app, FakeModel(SUMMARY))
     app.state.workstation = FakeBrowser(SHOWN)
     return app
 
@@ -754,7 +755,7 @@ def test_the_reading_works_without_javascript(board: Board, app: FastAPI) -> Non
 
 def test_the_summary_is_asked_once_then_kept(board: Board, app: FastAPI) -> None:
     offer = board.id("analyst")
-    model: FakeModel = app.state.llm_model
+    model: FakeModel = used_model(app)
 
     first = board.client.post(f"/offres/{offer}/resume", headers=HTMX).text
     card = card_of(board.client.get(f"/offres/tri/{offer}").text)
@@ -763,10 +764,18 @@ def test_the_summary_is_asked_once_then_kept(board: Board, app: FastAPI) -> None
     assert "Analyser les données de vente." in card
     assert 'data-key="r"' not in card
     assert model.calls == 1
+    # Decision G4 (Q9): the call is recorded for the account, as a summary.
+    with board.engine.connect() as connection:
+        recorded = connection.execute(
+            select(model_calls.c.call_type, model_calls.c.outcome).where(
+                model_calls.c.account_id == board.seeker.account_id
+            )
+        ).all()
+    assert [tuple(row) for row in recorded] == [("summary", "ok")]
 
 
 def test_a_failed_summary_is_shown_and_not_kept(board: Board, app: FastAPI) -> None:
-    app.state.llm_model = FakeModel(error=LlmUnavailableError("délai dépassé"))
+    use_model(app, FakeModel(error=LlmUnavailableError("délai dépassé")))
     offer = board.id("analyst")
 
     html = board.client.post(f"/offres/{offer}/resume", headers=HTMX).text

@@ -34,7 +34,7 @@ from tests.candidatures.test_letter_web import (
 )
 from tests.candidatures.test_web import Desk, desk_with
 from tests.offres.fakes import NOW, TODAY
-from tests.system.web_support import make_app
+from tests.system.web_support import make_app, use_model
 
 REPORT = PrefillReport(
     ("Nom complet", "CV", "Lettre"), ("Téléphone : champ introuvable",)
@@ -59,7 +59,7 @@ class FakeWorkstation:
 def app(migrated_engine: Engine, tmp_path: Path) -> FastAPI:
     app = make_app(migrated_engine, storage_root=tmp_path)
     app.state.auth.clock.now = NOW
-    app.state.llm_model = LetterModel()
+    use_model(app, LetterModel())
     app.state.workstation = FakeWorkstation()
     return app
 

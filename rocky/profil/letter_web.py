@@ -53,7 +53,9 @@ from rocky.profil.translation_web import review_row
 from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.config import CallType
 from rocky.system.docx_read import MAX_BYTES
+from rocky.system.llm.calls import model_for
 from rocky.system.shell import is_htmx, page, wants_fragment
 
 router = APIRouter(prefix="/profil")
@@ -253,7 +255,7 @@ def import_letter(
             raise LetterImportError(
                 "Choisis le fichier de ta lettre (DOCX ou PDF), ou colle son texte."
             )
-        split = split_letter(text, request.app.state.llm_model)
+        split = split_letter(text, model_for(request, CallType.LETTER, account))
     except LetterImportError as error:
         return _refused(request, account, error.reason)
     return _screen(
@@ -363,7 +365,7 @@ def translate_letter(
             memory=memory,
             pairs=glossary_pairs(profile, glossary),
             protected=(*protected_names(profile), JOB, COMPANY),
-            model=request.app.state.llm_model,
+            model=model_for(request, CallType.LETTER, account),
             instructions=TRANSLATION_INSTRUCTIONS,
         )
     except TranslationError as error:

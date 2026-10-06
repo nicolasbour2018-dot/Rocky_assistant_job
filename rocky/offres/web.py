@@ -75,7 +75,9 @@ from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import paris_day, today_of
 from rocky.system.cockpit import changed
+from rocky.system.config import CallType
 from rocky.system.llm import JsonModel
+from rocky.system.llm.calls import model_for
 from rocky.system.shell import (
     Action,
     Drawer,
@@ -757,7 +759,7 @@ def summary(request: Request, account: CurrentAccount, offer_id: int) -> Respons
     if kept is not None:
         result = SummaryResult(summary=kept)
     else:
-        model: JsonModel = request.app.state.llm_model
+        model: JsonModel = model_for(request, CallType.SUMMARY, account)
         # The model is called outside any transaction (a network call never holds one, C6).
         result = summarize(
             stored.offer.title, formatted_description(stored.offer.description), model

@@ -19,7 +19,7 @@ from rocky.system.events import events
 from tests.candidatures.test_dossier_web import dossier_with
 from tests.candidatures.test_web import Desk, desk_with
 from tests.offres.fakes import NOW
-from tests.system.web_support import HTMX, make_app
+from tests.system.web_support import HTMX, make_app, use_model, used_model
 
 WHY_YOU = (
     "Exemple analyse les ventes de ses magasins avec Python et SQL : c'est le travail que je veux faire, "
@@ -64,7 +64,7 @@ class LetterModel:
 def app(migrated_engine: Engine, tmp_path: Path) -> FastAPI:
     app = make_app(migrated_engine, storage_root=tmp_path)
     app.state.auth.clock.now = NOW
-    app.state.llm_model = LetterModel()
+    use_model(app, LetterModel())
     return app
 
 
@@ -172,11 +172,11 @@ def test_adapting_asks_consent_and_sends_neither_name_nor_contact(
 ) -> None:
     refused = desk.client.post(f"{base(desk)}/lettre/adapter", headers=HTMX).text
     assert "Coche l&#39;accord d&#39;envoi" in refused
-    assert app.state.llm_model.prompts == []
+    assert used_model(app).prompts == []
 
     html = adapted(desk)
 
-    (prompt,) = app.state.llm_model.prompts
+    (prompt,) = used_model(app).prompts
     assert "Exemple" in prompt and "Data analyst" in prompt
     assert "Camille" not in prompt and desk.seeker.email not in prompt
     assert 'id="lettre"' in html  # the step is swapped whole

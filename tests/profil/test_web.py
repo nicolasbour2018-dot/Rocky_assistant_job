@@ -23,7 +23,7 @@ from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.pdf_read import read_pdf
 from tests.offres.fakes import NOW, TODAY, Seeker, posting
 from tests.profil.cv.fixtures import ReaderModel, designed_cv, image_only_cv
-from tests.system.web_support import HTMX, logged_in, make_app
+from tests.system.web_support import HTMX, logged_in, make_app, use_model
 
 TRACK = {
     "name": "Data analyst",
@@ -689,7 +689,7 @@ def test_checking_the_cv_shows_what_each_reader_finds(client: TestClient) -> Non
 @pytest.fixture
 def importer(migrated_engine: Engine, tmp_path: Path) -> TestClient:
     app = make_app(migrated_engine, storage_root=tmp_path)
-    app.state.llm_model = ReaderModel()
+    use_model(app, ReaderModel())
     return logged_in(app, migrated_engine)[0]
 
 
@@ -892,7 +892,7 @@ def test_a_project_spilling_out_of_its_card_is_named_to_shorten(
 ) -> None:
     """Recette of G5: the CV preview of an application links to the project to shorten in the profile."""
     app = make_app(migrated_engine, storage_root=tmp_path)
-    app.state.llm_model = ReaderModel()
+    use_model(app, ReaderModel())
     browser, email = logged_in(app, migrated_engine)
     page = browser.post(
         "/profil/import-cv",

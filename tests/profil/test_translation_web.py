@@ -15,7 +15,7 @@ from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.sql import SqlAuthStore
 from tests.profil.test_translation import EchoModel
 from tests.system.auth.fakes import FakeClock
-from tests.system.web_support import HTMX, logged_in, make_app
+from tests.system.web_support import HTMX, logged_in, make_app, use_model, used_model
 
 TRANSLATIONS = {
     "Tri des messages": "Message triage",
@@ -26,7 +26,7 @@ TRANSLATIONS = {
 @pytest.fixture
 def app(migrated_engine: Engine) -> FastAPI:
     app = make_app(migrated_engine)
-    app.state.llm_model = EchoModel(TRANSLATIONS)
+    use_model(app, EchoModel(TRANSLATIONS))
     return app
 
 
@@ -68,7 +68,7 @@ def test_proposals_are_reviewed_then_accepted_field_by_field(
     ).text
     assert "Message triage" in html
     assert "Python\nVector database" in html
-    model: EchoModel = app.state.llm_model
+    model: EchoModel = used_model(app)
     assert len(model.prompts) == 1
 
     key = re.search(r'name="cle" value="(project:\d+:stack)"', html)

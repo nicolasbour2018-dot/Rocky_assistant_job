@@ -34,6 +34,7 @@ from rocky.system.clock import paris_hour, paris_time, utc_now
 from rocky.system.config import Settings, load_settings
 from rocky.system.db import create_db_engine
 from rocky.system.errors import UserFacingError
+from rocky.system.llm.calls import Models
 from rocky.system.scheduler import DailyTask, PeriodicTask, Scheduler
 from rocky.system.shell import Card, add_system_cards
 from rocky.system.workstation import WorkstationClient
@@ -91,6 +92,8 @@ def create_app(
     app.state.templates.env.filters["paris_hour"] = paris_hour
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.state.engine = engine = engine or create_db_engine(settings.database_url)
+    # Decision G4: the model of each call type, every call recorded (Q9, Q25).
+    app.state.models = Models(engine, settings.llm, clock)
     # Starlette runs the middleware added last first: the onboarding gate, added before the session
     # middleware, sees the account that the session middleware found.
     app.middleware("http")(profil_web.onboarding_gate(profil_web.MAIN_PATHS))

@@ -60,6 +60,7 @@ from rocky.profil.sql import (
 )
 from rocky.system.auth.sql import account_tokens, accounts, sessions
 from rocky.system.events import events
+from rocky.system.llm.calls import model_calls
 
 __all__ = [
     "account_tokens",
@@ -95,6 +96,7 @@ __all__ = [
     "mail_transitions",
     "mailboxes",
     "message_decisions",
+    "model_calls",
     "offer_scores",
     "offer_summaries",
     "offer_tracks",

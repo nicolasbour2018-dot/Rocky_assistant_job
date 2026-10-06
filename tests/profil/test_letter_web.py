@@ -19,7 +19,7 @@ from rocky.system.events import events
 from tests.profil.test_letter import ANSWER, LETTER
 from tests.profil.test_translation import EchoModel
 from tests.system.test_docx_read import docx, paragraph, run
-from tests.system.web_support import HTMX, logged_in, make_app
+from tests.system.web_support import HTMX, logged_in, make_app, use_model, used_model
 
 TRANSLATIONS = {
     "Data analyste en reconversion, je souhaite rejoindre {entreprise} comme {poste}.": (
@@ -54,7 +54,7 @@ class LetterModel:
 @pytest.fixture
 def app(migrated_engine: Engine) -> FastAPI:
     app = make_app(migrated_engine)
-    app.state.llm_model = LetterModel()
+    use_model(app, LetterModel())
     return app
 
 
@@ -111,7 +111,7 @@ def test_a_pasted_letter_is_cut_reviewed_then_saved(
         "/profil/lettre/importer", data={"texte": LETTER}, headers=HTMX
     ).text
     assert "Coche l&#39;accord" in refused
-    assert app.state.llm_model.calls == 0
+    assert used_model(app).calls == 0
 
     review = client.post(
         "/profil/lettre/importer",

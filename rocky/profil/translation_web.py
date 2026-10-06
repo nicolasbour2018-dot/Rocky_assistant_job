@@ -46,7 +46,9 @@ from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import paris_day
+from rocky.system.config import CallType
 from rocky.system.files import FileError, FileStore
+from rocky.system.llm.calls import model_for
 from rocky.system.render import RenderError, rasterize
 from rocky.system.shell import page, wants_fragment
 
@@ -145,7 +147,7 @@ def translate(
             memory=memory,
             pairs=glossary_pairs(profile, glossary),
             protected=protected_names(profile),
-            model=request.app.state.llm_model,
+            model=model_for(request, CallType.TRANSLATION, account),
         )
     except TranslationError as error:
         return _screen(request, account, retour, error=error.reason)
@@ -418,7 +420,7 @@ def translate_cv(
             memory=memory,
             pairs=glossary_pairs(profile, glossary),
             protected=protected_names(profile),
-            model=request.app.state.llm_model,
+            model=model_for(request, CallType.TRANSLATION, account),
         )
     except TranslationError as error:
         return _english_screen(request, account, error=error.reason)

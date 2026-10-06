@@ -91,7 +91,8 @@ from rocky.offres.sources.http import PublicHttp
 from rocky.profil.model import Profile
 from rocky.system.config import CallType, GmailSettings, LlmSettings, Settings
 from rocky.system.crypto import TokenCipher
-from rocky.system.llm import JsonModel, adapter_for
+from rocky.system.llm import JsonModel
+from rocky.system.llm.calls import Models
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,9 @@ logger = logging.getLogger(__name__)
 type CollectedHook = Callable[[int, Sequence[int]], None]
 # Decision E3: what reads the postings of the alerts' links during one pass (a public HTTP client, closed after it).
 type PagesFactory = Callable[[], AbstractContextManager[PageReading]]
+# Decision G4 (Q17): the model of the classification for one account, its calls recorded.
+type Recorder = Callable[[JsonModel, int], JsonModel]
+MAIL_CLASSIFICATION = CallType.MAIL_CLASSIFICATION
 SHOWN_MESSAGES = 50
 NEXT_ROUND_REASON = "Classement au prochain passage (toutes les heures)."
 
@@ -181,6 +185,7 @@ class MessagesService:
         gmail: Gmail | None = None,
         llm: LlmSettings | None = None,
         model: JsonModel | None = None,
+        record: Recorder | None = None,
         pages: PagesFactory | None = None,
     ) -> None:
         self.engine = engine
@@ -188,6 +193,9 @@ class MessagesService:
         self.storage = SqlStorage(engine, follow=decisions.follow_decision)
         # The language model of the classification (E2); None: the rules only, the others wait for a key.
         self.model = model
+        # Decision G4 (Q17): every call of the classification is also recorded with its tokens, for its cost; its
+        # limits stay on its own calls (``mail_model_calls``).
+        self._record = record
         settings_llm = llm or LlmSettings()
         self.limits = Limits(
             per_hour=settings_llm.mail_per_hour, per_day=settings_llm.mail_per_day
@@ -311,7 +319,7 @@ class MessagesService:
             self.storage,
             account_id=account_id,
             targets=self.targets,
-            model=self.model if use_model else None,
+            model=self.model_of(account_id) if use_model else None,
             clock=self._clock,
             limits=self.limits,
             max_calls=max_calls,
@@ -626,6 +634,12 @@ class MessagesService:
                 len(message_ids),
             )
 
+    def model_of(self, account_id: int) -> JsonModel | None:
+        """The model of the classification of ``account_id``, its calls recorded (G4, Q17); None: the rules only."""
+        if self.model is None or self._record is None:
+            return self.model
+        return self._record(self.model, account_id)
+
     def _waiting_reason(self, store: SqlStore, account_id: int) -> str:
         if self.model is None:
             return NOT_CONFIGURED_REASON
@@ -653,18 +667,18 @@ def messages_service(
     for what a command leaves out on purpose. ``classify``: the limits and, when a key is set, the language model of
     the classification (E2). ``new_http``: the public client the postings of the alerts' links are read with, one per
     pass (E3); None: the alerts give their offers from their cards alone."""
+    models = Models(engine, settings.llm, clock)
     return MessagesService(
         engine,
         settings=settings.gmail,
         clock=clock,
         on_collected=on_collected,
         llm=settings.llm if classify else None,
-        model=adapter_for(settings.llm, CallType.MAIL_CLASSIFICATION)
-        if classify and _has_key(settings, CallType.MAIL_CLASSIFICATION)
+        model=models.model(MAIL_CLASSIFICATION)
+        if classify and models.unavailable_reason(MAIL_CLASSIFICATION) is None
         else None,
+        record=lambda model, account_id: models.recorded(
+            model, MAIL_CLASSIFICATION, account_id
+        ),
         pages=None if new_http is None else posting_pages(new_http, settings.sources),
     )
-
-
-def _has_key(settings: Settings, call_type: CallType) -> bool:
-    return settings.llm.key(settings.llm.choice(call_type).provider) is not None

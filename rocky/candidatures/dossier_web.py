@@ -155,8 +155,10 @@ from rocky.profil.web import (
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import today_of
+from rocky.system.config import CallType
 from rocky.system.events import JsonValue, StoredEvent, events_about
 from rocky.system.files import FileError, FileStore
+from rocky.system.llm.calls import model_for
 from rocky.system.render import RenderError, rasterize
 from rocky.system.shell import content_disposition, page, wants_fragment
 from rocky.system.workstation import (
@@ -941,7 +943,7 @@ def adapt_letter(
     if letter.view.refusal is not None:
         return again(letter_error=letter.view.refusal)
     try:
-        adaptation = adapt(letter.brief, request.app.state.llm_model)
+        adaptation = adapt(letter.brief, model_for(request, CallType.LETTER, account))
     except LetterError as error:
         return again(letter_error=error.reason)
     return again(adaptation=adaptation)
@@ -1369,7 +1371,9 @@ def propose_accompanying_message(
     letter = _letter(request, account, found, language)
     try:
         text = propose_message(
-            letter.brief, letter.view.why_you, request.app.state.llm_model
+            letter.brief,
+            letter.view.why_you,
+            model_for(request, CallType.RECRUITER_MESSAGE, account),
         )
     except LetterError as error:
         return again(message_error=error.reason)

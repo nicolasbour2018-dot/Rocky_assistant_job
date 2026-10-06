@@ -61,7 +61,9 @@ from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import today_of
-from rocky.system.llm import JsonModel, adapter_of
+from rocky.system.config import CallType
+from rocky.system.llm import JsonModel
+from rocky.system.llm.calls import model_for
 from rocky.system.shell import page, wants_fragment
 
 PAGE = "offres/import.html"
@@ -76,10 +78,8 @@ router = APIRouter(prefix="/offres/importer")
 
 
 def install(app: FastAPI) -> None:
-    # Replaced by the tests: the recorded pages, a fake language model.
+    # Replaced by the tests: the recorded pages.
     app.state.import_http = PublicHttp
-    llm = app.state.settings.llm
-    app.state.llm_model = adapter_of(llm.default, llm.key(llm.default.provider))
     templates: Jinja2Templates = app.state.templates
     templates.env.globals.update(
         method_labels=METHOD_LABELS,
@@ -215,7 +215,7 @@ def summarize_posting(
     texte: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
     """The summary of the posting shown in the preview; one call to the language model, on demand (Q7)."""
-    model: JsonModel = request.app.state.llm_model
+    model: JsonModel = model_for(request, CallType.SUMMARY, account)
     context = {"summary_result": summarize(intitule, texte, model)}
     if wants_fragment(request):
         templates: Jinja2Templates = request.app.state.templates

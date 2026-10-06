@@ -112,7 +112,9 @@ from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import paris_day
 from rocky.system.cockpit import changed
+from rocky.system.config import CallType
 from rocky.system.files import FileError, FileStore
+from rocky.system.llm.calls import model_for
 from rocky.system.render import RenderError
 from rocky.system.shell import (
     NAVIGATION,
@@ -1461,7 +1463,7 @@ def import_my_cv(request: Request, account: CurrentAccount, form: Form) -> Respo
     try:
         imported = import_cv(
             content,
-            model=request.app.state.llm_model,
+            model=model_for(request, CallType.CV, account),
             files=_files(request),
             account_id=account.id,
             today=paris_day(clock()),

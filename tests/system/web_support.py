@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
@@ -14,7 +15,9 @@ from sqlalchemy import Engine
 
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import Auth, Invited
-from rocky.system.config import Settings
+from rocky.system.config import CallType, Settings
+from rocky.system.llm import JsonModel
+from rocky.system.llm.calls import Models
 from rocky.system.web import create_app
 from tests.system.auth.fakes import FakeClock, FakeHasher, RecordingMailer
 
@@ -101,3 +104,19 @@ def logged_in(
 
 
 HTMX = {"HX-Request": "true"}
+
+
+def use_model(app: FastAPI, model: JsonModel) -> None:
+    """Every call type of ``app`` calls ``model`` (a fake), its calls recorded like the real ones (decision G4)."""
+    app.state.models = Models(
+        app.state.engine,
+        app.state.settings.llm,
+        app.state.auth.clock,
+        model_of=lambda call_type: model,
+    )
+
+
+def used_model(app: FastAPI) -> Any:
+    """The fake given by ``use_model``."""
+    models: Models = app.state.models
+    return models.model(CallType.ASSISTANT)

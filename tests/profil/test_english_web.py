@@ -22,7 +22,7 @@ from rocky.system.render import RenderError
 from tests.profil.cv.fixtures import ReaderModel, designed_cv
 from tests.profil.cv.test_english import ENGLISH
 from tests.profil.test_translation import EchoModel
-from tests.system.web_support import HTMX, logged_in, make_app
+from tests.system.web_support import HTMX, logged_in, make_app, use_model, used_model
 
 ROW = re.compile(
     r'name="cle" value="([^"]+)">\s*<input type="hidden" name="empreinte" value="(\w+)">.*?'
@@ -34,7 +34,7 @@ ROW = re.compile(
 @pytest.fixture
 def app(migrated_engine: Engine, tmp_path: Path) -> FastAPI:
     app = make_app(migrated_engine, storage_root=tmp_path)
-    app.state.llm_model = ReaderModel()
+    use_model(app, ReaderModel())
     return app
 
 
@@ -50,7 +50,7 @@ def client(app: FastAPI, migrated_engine: Engine) -> TestClient:
     template = re.search(r'action="(/profil/gabarit/\d+/activer)"', page.text)
     assert template
     client.post(template.group(1), headers=HTMX)
-    app.state.llm_model = EchoModel(ENGLISH)
+    use_model(app, EchoModel(ENGLISH))
     return client
 
 
@@ -99,7 +99,7 @@ def test_the_english_cv_is_made_from_the_validated_texts(
     ).text
     rows = ROW.findall(proposed)
     assert len(rows) == 10
-    model: EchoModel = app.state.llm_model
+    model: EchoModel = used_model(app)
     assert "camille.martin@example.org" not in model.prompts[0]
     refused = client.post("/profil/cv-anglais/creer", headers=HTMX).text
     assert "Il reste 10 texte(s) à valider" in refused

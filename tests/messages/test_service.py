@@ -14,6 +14,7 @@ from rocky.messages.sql import email_messages
 from rocky.messages.usecases import connect_mailbox
 from rocky.system.config import GmailSettings, LlmSettings, Provider, Settings
 from rocky.system.llm import GeminiModel
+from rocky.system.llm.calls import RecordedModel
 from tests.messages.fakes import GMAIL, NOW, FakeGmail, FakeReader, cipher, new_account
 
 
@@ -171,5 +172,7 @@ def test_the_factory_gives_the_model_only_to_what_classifies(
     classifying, collecting = built(classify=True), built(classify=False)
 
     assert isinstance(classifying.model, GeminiModel)
+    # Decision G4 (Q17): its calls are recorded per account, for their cost.
+    assert isinstance(classifying.model_of(1), RecordedModel)
     assert classifying.limits.per_hour == 1
     assert collecting.model is None

@@ -28,7 +28,7 @@ from rocky.system.events import events
 from rocky.system.llm import LlmUnavailableError
 from tests.offres.fakes import HALF_PAST_MIDNIGHT, TODAY
 from tests.offres.sources.replay import Answer, Replay, answer
-from tests.system.web_support import HTMX, logged_in, make_app
+from tests.system.web_support import HTMX, logged_in, make_app, use_model
 
 DATA = Path(__file__).parent / "data"
 HELLOWORK = "https://www.hellowork.com/fr-fr/emplois/77695894.html"
@@ -64,7 +64,7 @@ def app(migrated_engine: Engine, replay: Replay) -> FastAPI:
     app = make_app(migrated_engine)
     app.state.import_http = replay.http
     app.state.auth.clock.now = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
-    app.state.llm_model = FakeModel(SUMMARY)
+    use_model(app, FakeModel(SUMMARY))
     return app
 
 
@@ -365,10 +365,13 @@ def test_a_summary_is_asked_on_demand(client: TestClient, htmx: bool) -> None:
 def test_an_unavailable_summary_gives_its_reason(
     app: FastAPI, client: TestClient
 ) -> None:
-    app.state.llm_model = FakeModel(
-        error=LlmUnavailableError(
-            "Le modèle de langage n'est pas configuré (clé Gemini absente)."
-        )
+    use_model(
+        app,
+        FakeModel(
+            error=LlmUnavailableError(
+                "Le modèle de langage n'est pas configuré (clé Gemini absente)."
+            )
+        ),
     )
 
     page = text_of(
