@@ -53,13 +53,17 @@ G3 et de G5.**
    `offres/templates/offres/browser_reading.html:14,24` donne aussi `data-key="e"` à « Lire la page affichée » et
    « Ouvrir dans le navigateur ». `rocky.js` clique le premier élément visible, et `#decision-area`
    (`offer_body.html:52`) précède la lecture assistée (`:69`) : sur une offre incomplète, `e` ouvre « Écarté ».
-   → Autre touche pour la lecture assistée (proposition `n`, **à confirmer par Nicolas**), aide `SHORTCUTS`
+   → Autre touche pour la lecture assistée : **`n`, choisie par Nicolas le 06/10**, aide `SHORTCUTS`
    (`offres/web.py:127-145`) et décision E5 corrigées ; un test : aucune touche `data-key` en double dans une page
    rendue de la fiche incomplète.
 2. **Gestionnaire global des erreurs métier.** Seul `LoginRequiredError` a un gestionnaire (`system/auth/web.py:167`) ;
    plusieurs routes laissent passer une erreur métier en 500. → Une classe de base dans `system` dont héritent
    `InvalidChangeError`, `ProfileInputError`, `CvRefusedError` (et `RenderError` pour sa raison) ; un
-   `add_exception_handler` qui rend le message (fragment HTMX en 200, page en 409) et le journalise. Les traitements
+   `add_exception_handler` qui rend le message (fragment HTMX en 200, page en 409) et le journalise.
+   *Réalisé (06/10)* : `system/errors.py` (`UserFacingError`), gestionnaire `shell.show_user_error` : un fragment
+   HTMX est reciblé sur la zone `#erreur` du layout (`HX-Retarget`), sans écraser la cible ; une navigation boostée
+   reçoit la page entière en **200** (HTMX n'échange pas une réponse 4xx : un 409 resterait invisible) ; seule une
+   requête sans HTMX reçoit le 409. Les traitements
    locaux existants restent : le gestionnaire ne couvre que les oublis. L'erreur est rendue visible, jamais avalée
    (AGENTS §4).
 3. **Onboarding : une ligne vide donne une 500.** `profil/usecases.py:338` (`add_skills`) appelle `make_skill` hors

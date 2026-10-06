@@ -7,21 +7,28 @@ the shell orders them, chooses the one main action of the screen and renders the
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from urllib.parse import quote
 
 from fastapi import APIRouter, FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup
 
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.errors import UserFacingError
 
 # A counter beside an entry of the navigation (decision E4, Q5: what moved in 📬 Messages); 0 shows nothing.
 type BadgeProvider = Callable[[Request, Account], int]
 
 HTMX_SCRIPT = "htmx-2.0.11.min.js"
+# Where the layout shows a business refusal answered to an HTMX fragment (step H1).
+ERROR_AREA = "#erreur"
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -131,6 +138,62 @@ def page(
             **(context or {}),
         },
         status_code=status_code,
+    )
+
+
+def content_disposition(kind: str, filename: str) -> str:
+    """``Content-Disposition`` for any name (``inline`` or ``attachment``): an ASCII fallback and the exact name
+    (RFC 6266); a raw name outside latin-1 cannot be a header (step H1)."""
+    fallback = filename.encode("ascii", "replace").decode().replace("?", "_")
+    return f"{kind}; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename)}"
+
+
+def entry_of(path: str) -> NavEntry:
+    """The navigation entry a path belongs to; 🏠 Aujourd'hui for any other."""
+    return next(
+        (
+            entry
+            for entry in NAVIGATION
+            if entry.path != "/"
+            and (path == entry.path or path.startswith(f"{entry.path}/"))
+        ),
+        ENTRIES["today"],
+    )
+
+
+def show_user_error(request: Request, error: Exception) -> Response:
+    """A business refusal that no route caught (step H1): logged, then shown, never a 500.
+
+    An HTMX fragment puts it in the error area of the page (``ERROR_AREA``), whatever the target of the request; any
+    other request gets a whole page: 409 without HTMX, 200 for a boosted navigation (HTMX swaps no 4xx answer).
+    """
+    assert isinstance(error, UserFacingError)  # noqa: S101  (handler registered for this type)
+    logger.warning(
+        "%s on %s %s: %s",
+        type(error).__name__,
+        request.method,
+        request.url.path,
+        error,
+    )
+    if wants_fragment(request):
+        templates: Jinja2Templates = request.app.state.templates
+        response = templates.TemplateResponse(
+            request, "user_error.html", {"lines": error.lines}
+        )
+        response.headers["HX-Retarget"] = ERROR_AREA
+        response.headers["HX-Reswap"] = "innerHTML"
+        return response
+    status_code = 200 if is_htmx(request) else 409
+    if getattr(request.state, "account", None) is None:
+        # No layout without an account: the reasons alone.
+        return PlainTextResponse(str(error), status_code=status_code)
+    entry = entry_of(request.url.path)
+    return page(
+        request,
+        "user_error_page.html",
+        active=entry.key,
+        status_code=status_code,
+        context={"lines": error.lines, "entry": entry},
     )
 
 

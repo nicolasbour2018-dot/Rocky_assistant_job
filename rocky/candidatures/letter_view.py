@@ -225,7 +225,7 @@ SWITCHES = (ORIGINAL, ADAPTED, MINE)
 def read_switch(value: str) -> tuple[int, str] | None:
     """``"3:adapte"`` → (3, ADAPTED); None for anything else."""
     index, _, version = value.partition(":")
-    if not index.isdigit() or version not in SWITCHES:
+    if not (index.isascii() and index.isdigit()) or version not in SWITCHES:
         return None
     return int(index), version
 

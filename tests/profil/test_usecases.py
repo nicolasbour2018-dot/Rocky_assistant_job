@@ -161,6 +161,16 @@ def test_quick_entry_reports_the_skills_already_there() -> None:
     assert result.already_there == ("python",)
 
 
+def test_quick_entry_skips_blank_lines() -> None:
+    """Step H1: an empty line of the onboarding was a refused skill, then a 500."""
+    result = editor(InMemoryProfileStore()).add_skills(
+        {SkillCategory.TECHNICAL: ["Python", "", "   ", "SQL"]}
+    )
+
+    assert result.added == ("Python", "SQL")
+    assert result.already_there == ()
+
+
 def test_removing_a_skill_is_journaled() -> None:
     store = InMemoryProfileStore()
     profile_editor = editor(store)

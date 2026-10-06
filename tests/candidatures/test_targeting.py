@@ -212,7 +212,7 @@ def test_a_kept_selection_is_placed_on_the_master_cv() -> None:
         MASTER, profile(), analysis(("SQL", Importance.PREFERRED)), SLOTS
     ).layout
 
-    assert selection_of(selection_json(adjusted), MASTER) == adjusted
+    assert selection_of(selection_json(adjusted), profile()) == adjusted
 
 
 def test_a_kept_selection_is_dropped_when_the_master_groups_changed() -> None:
@@ -222,4 +222,22 @@ def test_a_kept_selection_is_dropped_when_the_master_groups_changed() -> None:
         groups=(replace(MASTER.groups[0], name=Text("Code")), MASTER.groups[1]),
     )
 
-    assert selection_of(kept, renamed) is None
+    assert selection_of(kept, profile(renamed)) is None
+
+
+def test_a_kept_selection_leaves_out_what_the_profile_lost() -> None:
+    """Step H1: a removed skill or project is no longer placed (it was a KeyError when rendering)."""
+    kept = selection_json(MASTER)
+    full = profile()
+    reduced = replace(
+        full,
+        skills=tuple(s for s in full.skills if s.id not in (SQL, RIGOUR)),
+        projects=tuple(p for p in full.projects if p.id != FORECAST),
+    )
+
+    placed = selection_of(kept, reduced)
+
+    assert placed is not None
+    assert [group.skill_ids for group in placed.groups] == [(PYTHON,), (DOCKER,)]
+    assert placed.transversal == (CURIOSITY,)
+    assert placed.projects == (SORTING,)

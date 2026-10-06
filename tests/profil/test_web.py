@@ -135,6 +135,15 @@ def test_onboarding_reports_skills_already_there(newcomer: TestClient) -> None:
     assert "Déjà dans ton profil, non ajoutées : python." in again.text
 
 
+def test_onboarding_skips_the_empty_lines_of_a_list(newcomer: TestClient) -> None:
+    response = newcomer.post(
+        "/profil/demarrage/competences", data={"technical": "Python\n\n  \nSQL\n"}
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("etape=3")
+
+
 def test_putting_off_leaves_a_reminder_on_the_profile(newcomer: TestClient) -> None:
     later = newcomer.post("/profil/demarrage/plus-tard")
 
@@ -586,11 +595,33 @@ def test_the_cv_is_downloaded_as_one_pdf_page(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
-    assert (
-        response.headers["content-disposition"]
-        == 'attachment; filename="CV_Camille_Martin_FR.pdf"'
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="CV_Camille_Martin_FR.pdf"; '
+        "filename*=UTF-8''CV_Camille_Martin_FR.pdf"
     )
     assert response.content.startswith(b"%PDF")
+
+
+def test_a_name_outside_latin_1_downloads_its_cv(client: TestClient) -> None:
+    """Step H1: the raw name in ``Content-Disposition`` was a UnicodeEncodeError."""
+    client.post("/profil/identite", data={"full_name": "Łukasz Ñandú"}, headers=HTMX)
+
+    response = client.get("/profil/cv/pdf?langue=fr")
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"].endswith(
+        "filename*=UTF-8''CV_%C5%81ukasz_%C3%91and%C3%BA_FR.pdf"
+    )
+
+
+def test_a_superscript_digit_is_no_number(client: TestClient) -> None:
+    """Step H1: ``"²".isdigit()`` is true, ``int("²")`` fails: it was a 500."""
+    assert client.get("/profil/competences?modifier=²").status_code == 404
+    assert client.get("/profil/kit?modifier=groupe-²").status_code == 404
+    removed = client.post(
+        "/profil/cv/groupe-retirer", data={"index": "²"}, headers=HTMX
+    )
+    assert removed.status_code == 200
 
 
 def test_a_cv_download_link_is_a_plain_navigation(client: TestClient) -> None:
@@ -689,6 +720,30 @@ def test_an_imported_cv_proposes_its_content_and_its_template(
     cv = importer.get("/profil/cv/pdf?langue=fr")
     assert cv.headers["content-type"] == "application/pdf"
     assert "Camille Martin" in " ".join(read_pdf(cv.content)[0].text.split()).title()
+
+
+def test_an_altered_template_refuses_a_cv_gesture_with_its_reason(
+    importer: TestClient, tmp_path: Path
+) -> None:
+    """Step H1: the room of an altered template (``_slots``) was a FileError, then a 500."""
+    page = importer.post(
+        "/profil/import-cv",
+        data={"consentement": "1"},
+        files={"fichier": ("cv.pdf", designed_cv(), "application/pdf")},
+    )
+    template = re.search(r'action="(/profil/gabarit/\d+/activer)"', page.text)
+    assert template
+    importer.post(template.group(1), headers=HTMX)
+    for manifest in tmp_path.rglob("SHA256SUMS"):
+        manifest.write_text(manifest.read_text() + "altéré\n")
+
+    response = importer.post(
+        "/profil/cv/groupe-ajouter", data={"name_fr": "Outils"}, headers=HTMX
+    )
+
+    assert response.status_code == 200
+    assert response.headers["HX-Retarget"] == "#erreur"
+    assert "Ton gabarit de CV est illisible" in response.text
 
 
 def test_an_image_pdf_is_refused_and_the_neutral_template_stays(

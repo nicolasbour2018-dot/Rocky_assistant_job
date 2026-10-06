@@ -138,6 +138,19 @@ def test_a_refusal_gives_its_reason(status: int, payload: object, reason: str) -
             "Gemini s'est arrêté avant la fin (MAX_TOKENS).",
         ),
         (answer("pas du JSON"), "Gemini a renvoyé une réponse illisible."),
+        # Step H1: a malformed answer was an AttributeError or a TypeError.
+        (
+            {"promptFeedback": "SAFETY", "candidates": []},
+            "Gemini n'a donné aucune réponse.",
+        ),
+        (
+            {"candidates": [{"content": ["texte"], "finishReason": "STOP"}]},
+            "Gemini n'a donné aucune réponse.",
+        ),
+        (
+            {"candidates": [{"content": {"parts": 3}, "finishReason": "STOP"}]},
+            "Gemini n'a donné aucune réponse.",
+        ),
     ],
 )
 def test_an_unusable_answer_gives_its_reason(payload: object, reason: str) -> None:

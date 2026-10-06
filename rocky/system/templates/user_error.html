@@ -1,0 +1,5 @@
+{# A business refusal answered to an HTMX fragment (step H1), swapped into the error area of the layout. #}
+<div class="alert alert-error error-toast" role="alert">
+  <ul class="error-lines">{% for line in lines %}<li>{{ line }}</li>{% endfor %}</ul>
+  <button type="button" class="btn btn-ghost" hx-on:click="this.closest('.error-toast').remove()">Fermer</button>
+</div>

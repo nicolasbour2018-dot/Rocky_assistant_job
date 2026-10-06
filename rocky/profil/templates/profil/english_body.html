@@ -48,6 +48,10 @@
   {% for problem in problems %}<p class="alert alert-error">{{ problem }}</p>{% endfor %}
   <p class="muted small">Les textes pas encore validés apparaissent en français.</p>
   <img class="cv-preview" src="data:image/png;base64,{{ preview }}" alt="Aperçu du CV anglais" width="476">
+  {% elif preview_refusal %}
+  <h2>Aperçu</h2>
+  <p class="alert alert-error" role="alert">L'aperçu n'a pas pu être dessiné :
+    {% for line in preview_refusal %}{{ line }}{{ " " if not loop.last }}{% endfor %}</p>
   {% endif %}
 
   {% if state.validated %}

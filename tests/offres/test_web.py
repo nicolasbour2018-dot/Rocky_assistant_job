@@ -523,6 +523,15 @@ def test_decisions_and_offers_belong_to_their_account(
     assert event_types(board) == ["offres.decision_recorded"]
 
 
+def test_a_superscript_digit_is_no_track(board: Board) -> None:
+    """Step H1: ``"²".isdigit()`` is true, ``int("²")`` fails: it was a 500."""
+    offer = board.id("analyst")
+
+    assert board.client.get("/offres?vue=liste&piste=²").status_code == 200
+    sheet = board.client.get(f"/offres/{offer}/fiche?piste=²", headers=HTMX)
+    assert sheet.status_code == 200
+
+
 def test_unknown_offers_are_not_found(board: Board) -> None:
     assert (
         board.client.get("/offres/999999999/pourquoi", headers=HTMX).status_code == 404
@@ -598,8 +607,31 @@ def test_only_an_incomplete_offer_offers_to_open_its_posting(board: Board) -> No
     complete = board.client.get(f"/offres/{board.id('analyst')}/fiche", headers=HTMX)
 
     assert "Ouvrir dans le navigateur" in incomplete.text
-    assert 'data-key="e"' in incomplete.text
+    assert 'data-key="n"' in incomplete.text
     assert "Ouvrir dans le navigateur" not in complete.text
+
+
+def data_keys(html: str) -> list[str]:
+    return re.findall(r'data-key="([^"]+)"', html)
+
+
+def test_each_key_of_an_incomplete_offer_does_one_thing(board: Board) -> None:
+    """« e » is « Écarté »; the lecture assistée has its own key, before and after the tab is opened (H1)."""
+    offer = board.id("manager")
+    triage = board.client.get(f"/offres/tri/{offer}").text
+    sheet = board.client.get(f"/offres/{offer}/fiche").text
+    opened = board.client.post(
+        f"/offres/{offer}/navigateur",
+        data={"contexte": "tri", "piste": ""},
+        headers=HTMX,
+    ).text
+
+    for page in (triage, sheet):
+        keys = data_keys(page)
+        assert "Ouvrir dans le navigateur" in page
+        assert len(keys) == len(set(keys)), keys
+        assert keys.count("n") == 1
+    assert data_keys(opened) == ["n"]
 
 
 def test_a_posting_is_opened_then_its_page_completes_the_offer(

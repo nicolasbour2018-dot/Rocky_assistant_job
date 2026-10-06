@@ -11,10 +11,14 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from markupsafe import escape
 from sqlalchemy import Engine
 
+from rocky.profil import translation_web
+from rocky.profil.cv.rendering import CvRefusedError
 from rocky.profil.translation_web import html_id
 from rocky.system.pdf_read import read_pdf
+from rocky.system.render import RenderError
 from tests.profil.cv.fixtures import ReaderModel, designed_cv
 from tests.profil.cv.test_english import ENGLISH
 from tests.profil.test_translation import EchoModel
@@ -56,6 +60,31 @@ def test_without_a_french_template_the_screen_says_what_to_do(
     client = logged_in(app, migrated_engine)[0]
 
     assert "importe-le d&#39;abord" in client.get("/profil/cv-anglais").text
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        RenderError("Le navigateur n'a pas pu dessiner la page."),
+        CvRefusedError(("Le CV dépasse une page.",)),
+    ],
+)
+def test_a_preview_that_cannot_be_drawn_leaves_the_screen_with_its_reason(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, failure: Exception
+) -> None:
+    """Step H1: a refused drawing of the preview was a 500 instead of the screen."""
+
+    def refused(*_: object, **__: object) -> object:
+        raise failure
+
+    monkeypatch.setattr(translation_web, "draw_derived", refused)
+
+    response = client.get("/profil/cv-anglais")
+
+    assert response.status_code == 200
+    assert "0 texte validé sur 10" in response.text
+    assert str(escape(str(failure))) in response.text
+    assert "data:image/png;base64," not in response.text
 
 
 def test_the_english_cv_is_made_from_the_validated_texts(

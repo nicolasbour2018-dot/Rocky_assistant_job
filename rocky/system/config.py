@@ -237,7 +237,7 @@ def _positive(env: Mapping[str, str], name: str, *, default: int) -> int:
     raw = _value(env, name)
     if not raw:
         return default
-    if not raw.isdigit() or int(raw) == 0:
+    if not (raw.isascii() and raw.isdigit()) or int(raw) == 0:
         raise ConfigError(f"{name} must be a positive number")
     return int(raw)
 
@@ -246,7 +246,7 @@ def _port(env: Mapping[str, str]) -> int:
     raw = _value(env, SMTP_PORT_VAR)
     if not raw:
         return DEFAULT_SMTP_PORT
-    if not raw.isdigit():
+    if not (raw.isascii() and raw.isdigit()):
         raise ConfigError(f"{SMTP_PORT_VAR} must be a number")
     return int(raw)
 
@@ -255,7 +255,7 @@ def _count(env: Mapping[str, str], name: str, default: int) -> int:
     raw = _value(env, name)
     if not raw:
         return default
-    if not raw.isdigit():
+    if not (raw.isascii() and raw.isdigit()):
         raise ConfigError(f"{name} must be a whole number")
     return int(raw)
 
