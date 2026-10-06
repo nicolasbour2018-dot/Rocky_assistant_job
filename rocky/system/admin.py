@@ -27,8 +27,7 @@ from rocky.messages.classification.model import (
 from rocky.messages.classification.usecases import ClassifyBusyError
 from rocky.messages.model import SYNC_STATUS_LABELS, SyncStatus
 from rocky.messages.model import Trigger as MailTrigger
-from rocky.messages.service import MessagesService
-from rocky.offres.api import posting_pages
+from rocky.messages.service import MessagesService, messages_service
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import JobSource
 from rocky.offres.sources.registry import build_sources
@@ -58,7 +57,6 @@ from rocky.system.auth.usecases import Clock
 from rocky.system.clock import utc_now
 from rocky.system.config import load_settings
 from rocky.system.db import create_db_engine
-from rocky.system.llm import GeminiModel
 
 COUNT_LABELS = {
     "skills": "compétences",
@@ -542,18 +540,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             return collect_messages(
                 engine,
                 email=arguments.email,
-                service=MessagesService(engine, settings=settings.gmail, clock=utc_now),
+                service=messages_service(
+                    engine, settings, clock=utc_now, classify=False, new_http=None
+                ),
                 out=sys.stdout,
             )
         if arguments.command == "alertes":
             return read_account_alerts(
                 engine,
                 email=arguments.email,
-                service=MessagesService(
-                    engine,
-                    settings=settings.gmail,
-                    clock=utc_now,
-                    pages=posting_pages(PublicHttp, settings.sources),
+                service=messages_service(
+                    engine, settings, clock=utc_now, classify=False, new_http=PublicHttp
                 ),
                 links=not arguments.sans_liens,
                 out=sys.stdout,
@@ -562,19 +559,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             return export_mail_labels(
                 engine,
                 email=arguments.email,
-                service=MessagesService(engine, settings=settings.gmail, clock=utc_now),
+                service=messages_service(
+                    engine, settings, clock=utc_now, classify=False, new_http=None
+                ),
                 out=sys.stdout,
             )
         if arguments.command == "messages-classer":
             return classify_account_messages(
                 engine,
                 email=arguments.email,
-                service=MessagesService(
-                    engine,
-                    settings=settings.gmail,
-                    clock=utc_now,
-                    llm=settings.llm,
-                    model=GeminiModel(settings.llm) if settings.llm.api_key else None,
+                service=messages_service(
+                    engine, settings, clock=utc_now, classify=True, new_http=None
                 ),
                 use_model=not arguments.sans_llm,
                 max_calls=arguments.limite,

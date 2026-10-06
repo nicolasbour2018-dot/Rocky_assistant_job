@@ -9,10 +9,11 @@ import pytest
 from sqlalchemy import Engine, select
 
 from rocky.messages.model import SyncStatus, Trigger
-from rocky.messages.service import MessagesService
+from rocky.messages.service import MessagesService, messages_service
 from rocky.messages.sql import email_messages
 from rocky.messages.usecases import connect_mailbox
-from rocky.system.config import GmailSettings
+from rocky.system.config import GmailSettings, LlmSettings, Settings
+from rocky.system.llm import GeminiModel
 from tests.messages.fakes import GMAIL, NOW, FakeGmail, FakeReader, cipher, new_account
 
 
@@ -145,3 +146,30 @@ def test_the_hourly_collection_skips_a_mailbox_being_collected(
         results = messages.collect_all()
 
     assert mailbox_id not in [result.mailbox_id for result in results]
+
+
+def test_the_factory_gives_the_model_only_to_what_classifies(
+    migrated_engine: Engine,
+) -> None:
+    """Step H4: one construction of the service; a command that does not classify leaves the model out on purpose."""
+    settings = Settings(
+        database_url="",
+        public_url="",
+        gmail=GMAIL,
+        llm=LlmSettings(api_key="clé", mail_per_hour=1),
+    )
+
+    def built(*, classify: bool) -> MessagesService:
+        return messages_service(
+            migrated_engine,
+            settings,
+            clock=lambda: NOW,
+            classify=classify,
+            new_http=None,
+        )
+
+    classifying, collecting = built(classify=True), built(classify=False)
+
+    assert isinstance(classifying.model, GeminiModel)
+    assert classifying.limits.per_hour == 1
+    assert collecting.model is None
