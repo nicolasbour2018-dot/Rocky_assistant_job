@@ -416,7 +416,10 @@ def model_costs(engine: Engine, *, today: date, out: TextIO) -> int:
             for account in [store.get_account(account_id)]
         }
     last = len(PERIODS) - 1
-    out.writelines(f"{label} : {summary(found.total(index))}\n" for index, (label, _) in enumerate(PERIODS))
+    out.writelines(
+        f"{label} : {summary(found.total(index))}\n"
+        for index, (label, _) in enumerate(PERIODS)
+    )
     for account_id, email in emails.items():
         out.write(
             f"\n{email} ({PERIODS[last][0]}) : {summary(found.of_account(last, account_id))}\n"

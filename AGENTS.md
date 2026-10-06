@@ -150,6 +150,9 @@ docs/
   alertes jamais lues donnent leurs offres, puis leurs fiches sont lues — réseau réel : avec l'accord de Nicolas ;
   `--sans-liens` marque définitivement les fiches comme non lues, à réserver au diagnostic). L'application lit aussi les
   alertes après chaque collecte.
+- Modèles de langage (décision G4) : fournisseur et modèle par défaut (`ROCKY_MODEL_PROVIDER`, `ROCKY_MODEL_NAME`), ou
+  par type d'appel (`ROCKY_<TYPE>_MODEL_PROVIDER` et `…_NAME`), une clé par fournisseur (`.env.example`). Coûts estimés
+  des appels de tous les comptes : `docker compose run --rm app rocky-admin couts` (ceux d'un compte : ⚙️ Système).
 - Jeu étiqueté des messages (décision E4) : `docker compose run --rm app rocky-admin messages-etiquettes <email>` (CSV
   des corrections et confirmations sur la sortie standard ; données personnelles, jamais versionnées).
 - Poste Rocky (navigateur visible sur l'ordinateur, hors Docker) : `uv run rocky-poste`, pour la lecture assistée d'une

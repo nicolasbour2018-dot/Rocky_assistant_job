@@ -67,7 +67,20 @@ Critère de sortie (fixé au grill, Q15 et Q26) :
 
 ## Décisions techniques
 
-*(complétées pendant l'implémentation)*
+### Bloc 1 — socle des modèles
+
+| Sujet | Décision | Raison |
+|---|---|---|
+| Port | `rocky/system/llm/` devient un paquet : `port.py` (`JsonModel`, `LlmUnavailableError`, `Usage`, `Completion`, `HttpAdapter` : clé, requête, raisons d'un refus), un module par fournisseur ; les imports `rocky.system.llm` restent valables | Q23 : un adaptateur par fournisseur derrière le même port, sans SDK (aucune dépendance ajoutée) |
+| Anthropic | `POST /v1/messages`, `output_config.format` (`json_schema`) ; ni température ni outil forcé (refusés par les modèles actuels) ; `max_tokens` 16 000 ; schéma adapté (`additionalProperties: false` sur chaque objet, bornes retirées) | Sorties structurées de l'API ; l'appelant vérifie toujours la forme |
+| OpenAI, Mistral | `chat/completions`, `response_format` `json_schema` en mode non strict ; température 0,2 pour Mistral seulement (les modèles de raisonnement d'OpenAI la refusent) | Les schémas de Rocky ne sont pas tous écrits pour le mode strict |
+| Jetons | Gemini : `promptTokenCount`, sortie = `candidatesTokenCount + thoughtsTokenCount` (la réflexion est facturée) ; Anthropic : entrée + jetons du cache ; OpenAI, Mistral : `prompt_tokens`, `completion_tokens` ; absents → inconnus | Q16 |
+| Configuration | `LlmSettings(default, overrides, keys, …)`, `CallType`, `Provider` dans `config.py` ; une paire incomplète, un fournisseur inconnu, un fournisseur sans nom de modèle arrêtent le démarrage ; `ROCKY_GEMINI_MODEL` lu en repli avec un avertissement | Q24, Q28 |
+| Inscription | Table `model_calls` (migration `0020`) ; `Models` sur `app.state.models` (posé par `create_app`) ; `model_for(request, type, account)` rend un `RecordedModel` qui inscrit chaque appel dans **sa propre** courte transaction ; sans clé, rien n'est envoyé ni écrit | Q9 ; un appel n'est jamais dans la transaction métier de la route |
+| Classement des messages | `MessagesService(record=…)` : le modèle de chaque compte est enveloppé à l'inscription (`model_of`) ; ses plafonds restent sur `mail_model_calls` | Q17 ; la migration des plafonds E2 se fera à part (§8) |
+| Tarifs | `prices.py` : dollars par million de jetons (pages officielles relevées le 07/10/2026 ; Mistral Medium et Small lus sur une source tierce, **à vérifier**), cours BCE du 06/10/2026 (1 € = 1,1269 $) | Q16, Q33 |
+| Coûts | `costs.py` : regroupement par compte, type et modèle depuis le minuit de Paris de chaque période ; un appel sans tarif ou sans jetons est compté « sans tarif » ; panneau « 🧮 Appels au modèle » en dernier dans ⚙️ Système (sans geste) ; `rocky-admin couts` | Q18, Q19 |
+| Tests | `tests/system/llm/` (adaptateurs sur `MockTransport`, inscription, coûts) ; `use_model(app, faux)` remplace `app.state.llm_model` dans les tests web | AGENTS §7 |
 
 ## Essai
 

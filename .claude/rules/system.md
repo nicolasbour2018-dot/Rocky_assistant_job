@@ -32,11 +32,21 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
   **après** la validation, et un échec d'envoi est affiché.
 - Pas d'inscription publique : un compte naît par `rocky-admin invite`.
 
-## Modèle de langage (`rocky/system/llm.py`, décision `docs/decisions/C3-analyse.md`)
-- Un seul adaptateur (`GeminiModel`, protocole `JsonModel`) : délai borné, aucun réessai, réponse JSON dont l'appelant
-  vérifie la forme ; toute panne est une `LlmUnavailableError` avec sa raison en français.
-- La clé ne figure jamais dans une raison, une URL ni un journal. Sans clé, les fonctions qui en dépendent le disent.
-- Tests : faux modèle ou `MockTransport`, jamais d'appel réel (AGENTS §7).
+## Modèles de langage (`rocky/system/llm/`, décisions `docs/decisions/C3-analyse.md`, `G4-assistant.md`)
+- Un port (`JsonModel`, `port.py`) et un adaptateur HTTP par fournisseur, sans SDK : `gemini.py`, `anthropic.py`,
+  `chat_completions.py` (OpenAI, Mistral). Délai borné, aucun réessai, réponse JSON contrainte par le schéma, dont
+  l'appelant vérifie la forme ; chaque réponse rend ses jetons (`Completion`). Toute panne est une
+  `LlmUnavailableError` avec sa raison en français.
+- Le modèle se choisit **par type d'appel** (`CallType`) : `ROCKY_MODEL_PROVIDER` / `ROCKY_MODEL_NAME` par défaut,
+  `ROCKY_<TYPE>_MODEL_PROVIDER` / `…_NAME` ensemble, une clé par fournisseur. Une route demande
+  `model_for(request, CallType.X, account)` ; jamais un adaptateur construit à la main.
+- **Tout appel est inscrit** dans `model_calls` (`calls.py`) : compte, type, fournisseur, modèle, issue, jetons, durée ;
+  un modèle sans clé n'envoie rien et n'écrit rien. Un nouveau type d'appel = une valeur de `CallType`, son libellé
+  dans `costs.py`, une migration de la contrainte.
+- Coûts : jetons mesurés, euros **estimés** par `prices.py` (tarifs datés, sources en commentaire) ; un modèle sans
+  tarif est « sans tarif », jamais 0 €.
+- La clé ne figure jamais dans une raison, une URL ni un journal. Tests : faux modèle (`use_model` des tests web) ou
+  `MockTransport`, jamais d'appel réel (AGENTS §7).
 
 ## Poste Rocky (`rocky/system/workstation.py`, `workstation_host.py`, décisions `docs/decisions/E5-lecture-assistee.md`, `D5-revisions-envoi.md`)
 - Trois demandes sous les mêmes gardes : `/ouvrir` et `/lire` (lecture assistée, E5), `/preremplir` (**en sommeil**
