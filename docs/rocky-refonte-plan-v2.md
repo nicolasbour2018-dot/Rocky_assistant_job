@@ -179,6 +179,23 @@ la vérification allégée plutôt que sa limite relevée ; une passe UX des aut
 | G6. Passe UX des écrans | *Grill me avec la skill de design, puis mode plan.* Offres, Candidatures (parcours du dossier), Messages, Bilan, Profil, Système : mécanismes, boutons, parcours ; frappes perdues (B4 → C7) | Fixé au grill | ⬜ |
 | G7. Identité graphique | *Grill me avec la skill de design.* Couche visuelle de tout Rocky, juste avant F2 | Fixé au grill | ⬜ |
 
+### H. Revue de code, en parallèle de G
+
+Ajoutée par Nicolas le 06/10, après la revue du code et de l'architecture : corriger ce qui cause un bug et lever
+l'ambiguïté « `web.py` = API publique du module », **sans suringénierie** (retenu et écarté :
+`docs/decisions/H-revue-code.md`). Les étapes H se font **l'une après l'autre, en parallèle de la file G**, chacune
+dans son worktree et sur sa branche `revue/hN-<sujet>`, fusionnée dans `refonte` par PR avec un commit de merge. Une
+étape H est fusionnée avant que l'étape G de sa fenêtre ne commence son code ; elle ne modifie que sa ligne de ce
+tableau et la section 8. Règles de travail en parallèle : même décision.
+
+| Étape | Contenu | Fenêtre | Critère de sortie | État |
+|---|---|---|---|---|
+| H1. Erreurs visibles et bugs bloquants | *Direct* (gestionnaire : *mode plan*). Touche `e` en double (« Écarté » / lecture assistée) ; gestionnaire global des erreurs métier ; 500 de l'onboarding (ligne vide), d'une candidature annulée, d'une sélection CV qui vise un élément supprimé, des noms hors latin‑1, des fichiers et rendus non convertis ; date limite oubliée par « Lettre prête » / « Pas de lettre » | Maintenant (pendant G2) ; avant le code de G3 et G5 | Un test par point, qui échouait avant ; vérification verte | ⬜ |
+| H2. Un seul jour de Paris | *Direct.* `paris_day`, `utc_now`, heure de Paris : une définition chacun dans `system`, utilisée partout (import, veille, filtre `age`, envois) ; horloge ignorée par `import_profile` | Après G2 ; avant le code de G3 | À 00 h 30 heure de Paris, même jour partout (test) ; vérification verte | ⬜ |
+| H3. Veille, Gmail et alertes | *Grill me court (marge du retard de veille, eFinancialCareers), puis direct.* Comptes des alertes reportées, raisons formatées depuis les constantes, `AccessLostError` pendant la collecte, paquet corrompu journalisé, repli « carte sans lien » | Avant le code de G3 | Décisions consignées ; un test par point ; versions changées si besoin ; vérification verte | ⬜ |
+| H4. API publique des modules | *Mode plan.* Fonctions publiques d'`offres/web.py` et `candidatures/web.py` (et `profil.web.stored_profile`) déplacées dans `<module>/api.py`, sans nouvelle abstraction ; fabrique unique de `MessagesService` ; aides de `admin.py` ; règles d'agent à jour ; test d'architecture si Nicolas le veut | Après H1 ; avant G4 | Aucun module n'importe le `web.py` d'un autre ; vérification verte | ⬜ |
+| H5. Petites dettes et code mort | *Direct.* Code mort, idempotence de « Pas de lettre », recalcul réveillé pour rien, routes « une offre » qui lisent la liste, doublon de formatage des sources, redirection `back_to`, noms, docstrings et textes | Avant le code de G6 | Chaque point traité ou noté en §8 ; vérification verte | ⬜ |
+
 ## 5. Hors refonte (plus tard)
 
 - 📈 Bilan complet : vues `analytics_*`, entonnoir par source, piste et langue, périodes et cohortes, export Parquet ; analyse de l'archive.
@@ -776,3 +793,26 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   les écrans transverses de F1 en font partie, avec les constats d'interface déjà notés (parcours du dossier D4 → D6,
   frappes perdues B4 → C7). À placer dans le plan avec Nicolas.
   *Placé par Nicolas (05/10) : G3 (cockpit), G6 (passe UX des écrans), G7 (identité graphique), avant F2.*
+- **(Revue H → G2)** Date limite sans année (`offres/analysis/rules.py:817`) : « avant le 15 janvier » lu le
+  20 décembre tombe dans l'année en cours. Prendre l'année suivante si la date est passée (nouvelle `RULES_VERSION`).
+  Détail : `docs/decisions/H-revue-code.md`.
+- **(Revue H → G6)** Calculs à sortir des gabarits (`kit.html` compétences libres, `offer_body.html` `FRANCE_NAMES`,
+  `messages/row.html` employeur cité) ; découpage de `candidatures/dossier_web.py` par étape ; « Envoyée » depuis une
+  candidature close mène à une étape sans formulaire (à vérifier en recette) ; `stage_labels` posé deux fois dans
+  les globales Jinja. Détail : `docs/decisions/H-revue-code.md`.
+- **(Revue H → au fil de l'eau)** Doublons sans bug (verrou consultatif, `_in`, `_editor`, `_png`, `LANGUAGES`…),
+  découpage de `messages/sql.py`, normalisations divergentes des noms d'employeur entre `offres` et `messages` : à
+  traiter seulement quand une étape touche le fichier. Détail : `docs/decisions/H-revue-code.md`.
+- **(Revue H → §5 VPS)** Avant tout utilisateur autre que Nicolas : HTTPS, sauvegardes **testées** (la base avec
+  `ROCKY_SECRET_KEY`). Le mode « Test » de Google OAuth retire l'accès Gmail tous les 7 jours (procédure E1) :
+  supportable pour une dizaine d'alpha-testeurs.
+- **(Revue H → §5, 50–100 utilisateurs)** Limites d'exploitation, pas d'architecture :
+  - un seul fil de planificateur : la veille, séquentielle par compte (`WatchService.run_scheduled`), bloque le relevé
+    Gmail horaire ;
+  - un Chromium lancé à chaque rendu (`system/render.py:83`), deux par page de dossier ;
+  - collecte depuis une seule IP sans réessai (ligne rouge C1) : mutualiser les requêtes identiques entre comptes et
+    s'appuyer sur les API officielles et les alertes e-mail ;
+  - publication et validation Google du scope restreint `gmail.readonly` ;
+  - quota et coût de la clé Gemini partagée.
+
+  Mesurer d'abord la durée réelle d'une veille par compte (`watch_runs`).
