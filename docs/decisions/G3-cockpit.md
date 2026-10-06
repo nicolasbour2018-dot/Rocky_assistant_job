@@ -101,5 +101,5 @@ cockpit au lieu du `<body>`. Corrigé : les relectures sont demandées par des �
 (`test_no_gesture_of_the_cockpit_inherits_a_target`) ; vérifié dans Chromium (« Trier les offres », « Lancer la veille »,
 « Revenir »).
 
-À faire par Nicolas sur son compte (critère 5) : `docker compose run --rm --build migrate` puis
-`docker compose up -d --build --wait app`, http://127.0.0.1:8000/.
+Sur son compte (critère 5) : `docker compose run --rm --build migrate` puis `docker compose up -d --build --wait app`,
+http://127.0.0.1:8000/. **Étape close par Nicolas le 07/10** : critère vérifié par les tests, l'essai et sa recette.
