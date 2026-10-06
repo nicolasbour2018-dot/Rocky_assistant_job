@@ -52,4 +52,47 @@ Critère de sortie (fixé au grill, Q26) : depuis le cockpit,
 
 ## Décisions techniques
 
-(complétées pendant l'implémentation)
+| Sujet | Décision | Raison |
+|---|---|---|
+| Coque | `rocky/system/cockpit.py` : formes (`Hero`, `Instrument`, `Series`, `FeedLine`, `Sentence`, `Suggestion`, `Progress`, `Status`), registre `add_cockpit(app, module, Parts(...))` sur `COCKPIT_KEYS` (veille, offres, candidatures, messages), choix purs (`pick_hero`, `main_gesture`, `merge_feed`, `pick_sentence`, `greeting`). Retirés de `shell.py` : `TODAY_ORDER`, `add_today_cards`, la route `/` d'Aujourd'hui ; `candidatures/today.py` disparaît | Q24 ; même modèle de registres qu'en F1 ; `system` n'importe aucun module métier (test d'architecture H4) |
+| Parties des modules | `offres/cockpit.py` (héros « offre », suggestions, instrument « Offres à examiner », veilles et tri du fil, offres d'alerte sans adresse), `offres/watch/web.py` (problème de veille, ligne d'état, héros « veille »), `candidatures/cockpit.py` (héros des dossiers et liste de démarrage, trois instruments, progression, envois et jalons du fil, phrases, célébrations, tiroir de 📝), `messages/cockpit.py` (boîte à reconnecter, état des boîtes, mouvements, à vérifier, alertes lues et messages classés par jour, phrase d'une réponse) | Chaque module calcule ses chiffres ; chaque lecture est faite une fois par requête (`request.state`) |
+| Progression | `candidatures/progress.py`, pur : `moments_of` (ouverture, envoi, réponse humaine, entretien, offre de chaque candidature : premier changement en vigueur, annulations respectées, mêmes `SENT_STAGES` et `HUMAN_ANSWERS` que le Bilan), `week_of`, `active_day_streak`, `goal_week_streak`, `week_days`, `milestones`, `celebrations` | Q2, Q9–Q11 ; rien n'est stocké |
+| Jours actifs | Union des jours (de Paris) des décisions d'offres en vigueur, des changements de candidature écrits par l'utilisateur et des événements `offres.*` / `candidatures.*` d'auteur `user` (`events.user_days`, sur 400 jours) | Q19 : un tri, une étape (lettre, CV), un envoi, une relance ; les tables gardent l'heure de l'horloge de l'application |
+| Série hebdomadaire | Calculée avec l'objectif **actuel** (pas l'historique des objectifs) | Simple et lisible ; noté au plan §8 |
+| Jalons de démarrage | Profil complété : `onboarding.completed_at` ; première piste et CV importé : premier `profil.track_created` / `profil.profile_imported` (`events.first_occurrences`), sinon « fait » sans date si le profil a une piste ou une expérience ; Gmail : plus ancienne `connected_at` des boîtes (port `cockpit_gmail` rempli par la composition) ; première veille : `offres.api.first_watch_at` | Un compte plus ancien que ses événements garde ses jalons |
+| Journal | `system/events.py` : `events_of`, `first_occurrences`, `user_days` (jour de Paris en SQL) | Lectures du journal par compte et par période, absentes jusqu'ici |
+| Objectif | Colonne `profiles.weekly_goal` (1–10, 3 par défaut, contrainte en base), `ProfileEditor.set_weekly_goal`, événement `profil.weekly_goal_changed` (pas `preferences_updated` : l'import d'un CV réécrit les préférences, il ne doit pas toucher l'objectif) ; route `POST /profil/objectif`, liste déroulante envoyée au changement | Q9 : un geste |
+| Repère de visite | Colonne `accounts.cockpit_seen_at`, `SqlAuthStore.swap_cockpit_visit` (lecture sous verrou puis écriture) ; seule une page entière de `/` l'écrit ; un fragment reçoit la visite précédente par `depuis` | Q14 ; la célébration « une fois » en découle : un jalon daté après la visite précédente |
+| Migration | `0019_cockpit` : les deux colonnes, descente complète | `.claude/rules/system.md` |
+| Héros « offre » | La meilleure offre de la file du tri **dont la date limite n'est pas passée** ; « Pourquoi » : les compétences du profil citées (caractéristiques du score) et le premier manque. Gestes en panneau (`Action.panel`) chargés à la place des gestes du héros : « Préparer » (`/candidatures/offre/{id}/preparer?contexte=cockpit`), « Pas pour moi » et « Plus tard » (`/offres/{id}/motifs?…&contexte=cockpit`, motifs obligatoires comme partout, D14) ; la décision répond `changed()` | Q15 ; critère 1 : 3 clics jusqu'au dossier ouvert ; une offre à date limite passée reste signalée, jamais proposée (G2, Q7) |
+| Ordre du héros | Relance due (la plus en retard), dossier prêt (date limite la plus proche), dossier en préparation (date limite la plus proche, puis échéance), meilleure offre, veille | Q27 ; « le plus avancé » parmi les dossiers en préparation : l'étape ne se lit pas sans la lettre, la date limite départage |
+| Veille jamais lancée | Pas de problème : l'étape « Première veille » de la liste de démarrage porte le geste ; la ligne d'état le dit | Vu à l'essai : trois fois le même message, et le bouton principal pris à la liste de démarrage |
+| Instruments | Recto rendu avec la page ; verso (`GET /cockpit/instrument/{clé}?periode=semaine|mois`) rendu par le serveur et remplacé par HTMX, animation de retournement en CSS, absente sous `prefers-reduced-motion` ; « Revenir » relit le recto | Q21 ; aucun JavaScript ajouté |
+| Graphique | Macro Jinja `chart` : barres SVG sur une seule échelle, `<title>` par barre, ligne d'objectif (semaines seulement), tableau `visually-hidden` | Q22 |
+| Veille en cours | Seule la ligne d'état se relit toutes les 15 s (`GET /cockpit/etat`) ; à l'arrêt, elle émet `cockpit-changed` et tout le cockpit se relit | Q13 ; le héros ne bouge pas pendant qu'on le lit |
+| Téléphone | Sous 760 px : le héros d'abord, puis les instruments, puis le reste (`display: contents` et `order`) | Vu à l'essai : l'action était sous quatre instruments |
+
+## Essai (06/10)
+
+Instance à part : schéma jetable de `test-db`, compte fictif « Camille Exemple », 60 offres sur 80 jours, 24 décisions,
+9 candidatures (envoyées, entretien, refus, prête, en préparation), veilles sur 7 jours ; Chromium (Playwright).
+
+| Contrôle | Résultat |
+|---|---|
+| État normal (relance due) | Héros « En retard depuis le 16/08 », instruments avec delta, progression, fil (états en tête, puis jours) ; un seul bouton principal |
+| État « offre » | « Préparer la candidature » (1) → panneau des raisons à la place des gestes (2 : un motif) → « Préparer la candidature » (3) → `/candidatures/1` : **3 clics** |
+| Carte retournée | « Cette semaine » en semaines : barres et ligne « objectif 3 » ; Mois ; Revenir |
+| Nouveau compte, téléphone (390 px), sombre | Liste de démarrage en tête, 2 étapes sur 5, « Importer ton CV » en bouton principal ; console sans erreur ni avertissement |
+
+Corrigé pendant l'essai : sélecteur d'objectif pleine largeur, série répétée dans « Cette semaine », delta sur trois
+lignes, « Évolution » sans allure de bouton, lien du fil à la ligne, point de l'anneau à 0, « Trier » sur chaque veille
+du fil, problème de veille jamais lancée, ordre sur téléphone.
+
+Vérification globale (`docker compose run --rm --build check`) : **1 735 tests**, verte, 73,6 s de pytest et 1 min 18
+au total (charge moyenne 6) ; un premier passage, le poste plus chargé, a pris 110 s de pytest et 2 min 00 au total.
+Garde-fou : 34 cas sur 34.
+
+## Recette
+
+À faire par Nicolas sur son compte (critère 5) : `docker compose run --rm --build migrate` puis
+`docker compose up -d --build --wait app`, http://127.0.0.1:8000/.
