@@ -38,4 +38,10 @@ GitHub (`1556 passed in 120.70s`). Image, ruff et mypy s'y ajoutent (environ 1 m
 | Docker limité à 4 processeurs (tests et `test-db`, `cpuset: "0-3"`, comme le runner GitHub) | 68 s | 44 à 46 s |
 | Rendus Chromium réels (séquentiel) | 92, dont 12 calques à 300 dpi | 68, dont 4 calques |
 | Vérification globale (`docker compose run --rm --build check`, 8 processeurs) | — | verte, 1 556 tests en 52 s |
-| GitHub | 116 à 121 s | *à relever au passage de clôture* |
+| GitHub (pytest ; job complet 3 min 06 → 2 min 40) | 116 à 121 s | **86 s**, `ubuntu-24.04` (passage `37372057971`, 06/10) |
+
+## Clôture (06/10)
+
+Critère vérifié : vérification GitHub verte, pytest en **86 s** (limite 100 s), passage `37372057971`. Le premier essai
+(05/10) n'avait pas démarré : panne de GitHub Actions de 19 h 11 à 21 h 54 UTC (attribution des runners hébergés),
+relancé une fois l'incident levé.
