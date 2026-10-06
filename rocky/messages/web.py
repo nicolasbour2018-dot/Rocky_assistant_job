@@ -65,8 +65,8 @@ from rocky.messages.usecases import (
     MailboxNotConnectedError,
     MailboxNotFoundError,
 )
+from rocky.offres.api import posting_pages
 from rocky.offres.decisions import Author
-from rocky.offres.imports.web import posting_pages
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import InvalidLinkError
 from rocky.profil.web import profile_of

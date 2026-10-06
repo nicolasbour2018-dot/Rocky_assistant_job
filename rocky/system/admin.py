@@ -28,7 +28,7 @@ from rocky.messages.classification.usecases import ClassifyBusyError
 from rocky.messages.model import SYNC_STATUS_LABELS, SyncStatus
 from rocky.messages.model import Trigger as MailTrigger
 from rocky.messages.service import MessagesService
-from rocky.offres.imports.web import posting_pages
+from rocky.offres.api import posting_pages
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import JobSource
 from rocky.offres.sources.registry import build_sources

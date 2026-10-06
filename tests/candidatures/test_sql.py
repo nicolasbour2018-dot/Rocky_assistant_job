@@ -14,7 +14,8 @@ import pytest
 from sqlalchemy import Connection, Engine, func, insert, select
 from sqlalchemy.exc import IntegrityError
 
-from rocky.candidatures import web as candidatures_web
+from rocky.candidatures import api as candidatures_api
+from rocky.candidatures.api import OffresDecisions
 from rocky.candidatures.model import (
     Change,
     ChangeKind,
@@ -57,8 +58,7 @@ from rocky.candidatures.usecases import (
     set_employer_domain,
     skip_letter,
 )
-from rocky.candidatures.web_common import OffresDecisions
-from rocky.offres import web as offres_web
+from rocky.offres import api as offres_api
 from rocky.offres.decisions import (
     Author,
     Decision,
@@ -159,7 +159,7 @@ class Case:
             ).scalars()
             return Snapshot(
                 dossier(rows),
-                offres_web.decision_in_force(
+                offres_api.decision_in_force(
                     connection, self.account_id, self.offer_id
                 ),
                 len(rows),
@@ -1005,7 +1005,7 @@ def test_the_mail_targets_are_the_applications_sent(migrated_engine: Engine) -> 
     """Decision E2, Q11: from « Préremplie » on; with the offer's links and the employer's domain (Q3)."""
     case = prepared(migrated_engine)
     with migrated_engine.connect() as connection:
-        assert candidatures_web.mail_targets(connection, case.seeker.account_id) == []
+        assert candidatures_api.mail_targets(connection, case.seeker.account_id) == []
     case.move(Stage.SENT, None)
     with migrated_engine.begin() as connection:
         set_employer_domain(
@@ -1017,8 +1017,8 @@ def test_the_mail_targets_are_the_applications_sent(migrated_engine: Engine) -> 
         )
 
     with migrated_engine.connect() as connection:
-        [found] = candidatures_web.mail_targets(connection, case.seeker.account_id)
-        labels = candidatures_web.application_labels(
+        [found] = candidatures_api.mail_targets(connection, case.seeker.account_id)
+        labels = candidatures_api.application_labels(
             connection, case.seeker.account_id, [case.application_id]
         )
 

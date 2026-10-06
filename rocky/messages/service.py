@@ -25,7 +25,7 @@ from datetime import timedelta
 import httpx2
 from sqlalchemy import Engine
 
-from rocky.candidatures import web as candidatures_web
+from rocky.candidatures import api as candidatures_api
 from rocky.candidatures.model import MailTarget
 from rocky.messages.alerts.model import (
     AlertsBusyError,
@@ -292,7 +292,7 @@ class MessagesService:
     def targets(self, account_id: int) -> list[MailTarget]:
         """The applications a message of the account may concern (the module ``candidatures``, Q11)."""
         with self.engine.connect() as connection:
-            return candidatures_web.mail_targets(connection, account_id)
+            return candidatures_api.mail_targets(connection, account_id)
 
     def classify(
         self,
@@ -442,7 +442,7 @@ class MessagesService:
 
     def _labels(self, account_id: int, application_ids: set[int]) -> dict[int, str]:
         with self.engine.connect() as connection:
-            return candidatures_web.application_labels(
+            return candidatures_api.application_labels(
                 connection, account_id, application_ids
             )
 
@@ -506,7 +506,7 @@ class MessagesService:
                 raise LookupError(decisions.UNKNOWN_MESSAGE)
             decision = store.current_decision(message_id)
         with self.engine.connect() as connection:
-            applications = candidatures_web.open_application_labels(
+            applications = candidatures_api.open_application_labels(
                 connection, account_id
             )
         return CorrectionView(

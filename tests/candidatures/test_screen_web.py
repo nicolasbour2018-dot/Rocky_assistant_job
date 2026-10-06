@@ -14,11 +14,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 
+from rocky.candidatures.api import OffresDecisions
 from rocky.candidatures.model import NextAction, Stage
 from rocky.candidatures.sql import SqlApplicationStore, applications
 from rocky.candidatures.usecases import change_stage, prepare_application
-from rocky.candidatures.web_common import OffresDecisions
-from rocky.offres import web as offres_web
+from rocky.offres import api as offres_api
 from rocky.offres.decisions import application_decision
 from rocky.offres.model import Origin
 from rocky.offres.rules import scoring_inputs
@@ -61,7 +61,7 @@ def board_with(app: FastAPI, engine: Engine) -> Board:
                 now=NOW,
                 today=TODAY,
             ).offer_id
-            deadline = offres_web.offer_deadlines(
+            deadline = offres_api.offer_deadlines(
                 connection, account.id, [offer_id], TODAY
             ).get(offer_id)
             return prepare_application(

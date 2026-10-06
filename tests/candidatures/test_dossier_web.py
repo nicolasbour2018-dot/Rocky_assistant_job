@@ -9,6 +9,7 @@ import pytest
 from fastapi import FastAPI
 from sqlalchemy import Engine, select
 
+from rocky.candidatures import dossier_web
 from rocky.profil import web as profil_web
 from rocky.profil.model import CvLayout, SkillGroup, Text
 from rocky.profil.rules import make_identity, make_project, make_skill
@@ -384,7 +385,7 @@ def test_the_cv_preview_links_each_project_to_shorten_with_the_way_back(
     def spilling(*args: Any) -> profil_web.CvDrawing:
         return replace(drawn(*args), projects_to_shorten=((42, "Prévision"),))
 
-    monkeypatch.setattr(profil_web, "cv_drawing", spilling)
+    monkeypatch.setattr(dossier_web, "cv_drawing", spilling)
 
     preview = desk.client.get(
         f"/candidatures/{application_id}/cv/apercu", headers=HTMX

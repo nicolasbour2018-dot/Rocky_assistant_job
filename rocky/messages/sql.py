@@ -98,7 +98,7 @@ from rocky.messages.model import (
 from rocky.messages.rules import QUERIES_VERSION
 from rocky.offres.analysis.text import fold
 from rocky.offres.decisions import Author
-from rocky.profil import web as profil_web
+from rocky.profil import api as profil_api
 from rocky.profil.model import Profile
 from rocky.system.db import metadata
 from rocky.system.events import NewEvent, append_event
@@ -1044,7 +1044,7 @@ class SqlStore:
         )
 
     def alert_offers(self, account_id: int) -> AlertOffersLink | None:
-        profile = profil_web.stored_profile(self._conn, account_id)
+        profile = profil_api.stored_profile(self._conn, account_id)
         return None if profile is None else AlertOffersLink(self._conn, profile)
 
     def add_reading(

@@ -17,10 +17,10 @@ import httpx2
 from cryptography.fernet import Fernet
 from sqlalchemy import Connection
 
+from rocky.candidatures.api import OffresDecisions
 from rocky.candidatures.model import Stage
 from rocky.candidatures.sql import SqlApplicationStore
 from rocky.candidatures.usecases import change_stage, prepare_application
-from rocky.candidatures.web_common import OffresDecisions
 from rocky.messages.model import (
     CollectedMessage,
     GmailError,

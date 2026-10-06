@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Annotated
 
@@ -20,13 +20,13 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import Connection
 
 from rocky.candidatures import dossier_web
+from rocky.candidatures.api import OffresDecisions
 from rocky.candidatures.model import (
     BEFORE_SENDING,
     DEFER_DAYS,
     FOLLOW_UP_STAGES,
     STAGE_LABELS,
     InvalidChangeError,
-    MailTarget,
     NextAction,
     Stage,
 )
@@ -39,34 +39,27 @@ from rocky.candidatures.rules import (
     is_overdue,
     make_next_action,
     proposal,
-    standing,
     tabs_of,
 )
 from rocky.candidatures.sql import SqlApplicationStore
 from rocky.candidatures.usecases import (
-    cancel_change_if_last,
     cancel_last_change,
     change_stage,
     defer_next_action,
     mark_action_done,
-    move_by_message,
     needs_reasons,
     prepare_application,
-    record_outside_application,
-    set_employer_domain,
     set_next_action,
 )
 from rocky.candidatures.web_common import (
-    OffresDecisions,
     engine_of,
     now_of,
     owns,
     render_fragment,
 )
-from rocky.offres import web as offres_web
+from rocky.offres import api as offres_api
 from rocky.offres.decisions import (
     REASONS,
-    Author,
     DecisionValue,
     InvalidDecisionError,
     application_decision,
@@ -78,8 +71,8 @@ from rocky.system.clock import today_of
 from rocky.system.shell import page, wants_fragment
 
 TEMPLATES = Path(__file__).parent / "templates"
-# Refreshes the offers list when « Préparer » records a decision (``offres.web.OFFERS_CHANGED``).
-OFFERS_CHANGED = offres_web.OFFERS_CHANGED
+# Refreshes the offers list when « Préparer » records a decision (``offres.api.OFFERS_CHANGED``).
+OFFERS_CHANGED = offres_api.OFFERS_CHANGED
 
 router = APIRouter(prefix="/candidatures")
 
@@ -128,8 +121,8 @@ def rows_of(connection: Connection, account_id: int, today: date) -> list[Row]:
     """The open applications of the account (a cancelled creation is not one)."""
     found = SqlApplicationStore(connection).applications_of(account_id)
     offer_ids = [application.offer_id for application, _ in found]
-    headings = offres_web.offer_headings(connection, account_id, offer_ids)
-    deadlines = offres_web.offer_deadlines(connection, account_id, offer_ids, today)
+    headings = offres_api.offer_headings(connection, account_id, offer_ids)
+    deadlines = offres_api.offer_deadlines(connection, account_id, offer_ids, today)
     return [
         Row(
             application.id,
@@ -145,205 +138,6 @@ def rows_of(connection: Connection, account_id: int, today: date) -> list[Row]:
     ]
 
 
-# The stages a received message may concern (decision E2, Q11): from « Préremplie » on, the outcomes included.
-MAIL_STAGES = frozenset(
-    {
-        Stage.PREFILLED,
-        Stage.SENT,
-        Stage.IN_DISCUSSION,
-        Stage.INTERVIEW,
-        Stage.OFFER,
-        Stage.REJECTED,
-        Stage.WITHDRAWN,
-        Stage.NO_RESPONSE,
-    }
-)
-
-
-def mail_targets(connection: Connection, account_id: int) -> list[MailTarget]:
-    """For the module ``messages`` (decision E2, Q3, Q11), on the caller's connection: the applications of the account
-    a received message may concern, with what recognises their employer."""
-    store = SqlApplicationStore(connection)
-    found = [
-        (application, state.stage)
-        for application, changes in store.applications_of(account_id)
-        if (state := dossier(changes)).stage in MAIL_STAGES
-    ]
-    headings = offres_web.offer_headings(
-        connection, account_id, [application.offer_id for application, _ in found]
-    )
-    targets: list[MailTarget] = []
-    for application, stage in found:
-        heading = headings.get(application.offer_id)
-        if heading is None or stage is None:
-            continue
-        sendings = store.sendings(application.id)
-        targets.append(
-            MailTarget(
-                application_id=application.id,
-                company=heading.company or "",
-                title=heading.title,
-                stage=stage,
-                sent_on=sendings[-1].sent_on if sendings else None,
-                employer_domain=store.employer_domain(application.id),
-                links=tuple(
-                    link for link in (heading.url, heading.application_url) if link
-                ),
-            )
-        )
-    return targets
-
-
-def application_labels(
-    connection: Connection, account_id: int, application_ids: Iterable[int]
-) -> dict[int, str]:
-    """« Employeur — intitulé » of the account's applications among ``application_ids`` (the module ``messages``)."""
-    wanted = set(application_ids)
-    if not wanted:
-        return {}
-    found = [
-        application
-        for application, _ in SqlApplicationStore(connection).applications_of(
-            account_id
-        )
-        if application.id in wanted
-    ]
-    headings = offres_web.offer_headings(
-        connection, account_id, [application.offer_id for application in found]
-    )
-    return {
-        application.id: " — ".join(
-            part for part in (heading.company, heading.title) if part
-        )
-        for application in found
-        if (heading := headings.get(application.offer_id)) is not None
-    }
-
-
-def open_application_labels(connection: Connection, account_id: int) -> dict[int, str]:
-    """« Employeur — intitulé » of every open application of the account (decision E4: the applications a correction
-    may attach a message to)."""
-    opened = [
-        application.id
-        for application, changes in SqlApplicationStore(connection).applications_of(
-            account_id
-        )
-        if dossier(changes).open
-    ]
-    return application_labels(connection, account_id, opened)
-
-
-# For the module ``messages`` (decision E4), on the caller's connection and inside its transaction: the transitions a
-# received message gives, written with the decision about the message, or not at all.
-
-
-def mail_stage(
-    connection: Connection, account_id: int, application_id: int
-) -> Stage | None:
-    """The stage of an open application of the account, its row held until the end of the transaction; None for a
-    cancelled application or one of another account."""
-    store = SqlApplicationStore(connection)
-    application = store.locked_application(account_id, application_id)
-    if application is None:
-        return None
-    state = dossier(store.changes(application.id))
-    return state.stage if state.open else None
-
-
-def change_in_force(
-    connection: Connection, account_id: int, application_id: int, change_id: int
-) -> bool:
-    """The change is still in force: neither cancelled nor a cancellation (Q3: what a correction may undo)."""
-    store = SqlApplicationStore(connection)
-    application = store.locked_application(account_id, application_id)
-    if application is None:
-        return False
-    return any(
-        change.id == change_id for change in standing(store.changes(application.id))
-    )
-
-
-def move_application_by_message(
-    connection: Connection,
-    *,
-    account_id: int,
-    application_id: int,
-    stage: Stage,
-    author: Author,
-    message_id: int,
-    now: datetime,
-    today: date,
-) -> int | None:
-    """The transition a message gave (Q1: by a rule; or applied by the user): the change's id, None when already at
-    ``stage``. Raises ``InvalidChangeError`` for a transition a rule may not make."""
-    return move_by_message(
-        SqlApplicationStore(connection),
-        account_id=account_id,
-        application_id=application_id,
-        stage=stage,
-        author=author,
-        message_id=message_id,
-        now=now,
-        today=today,
-    )
-
-
-def cancel_message_change(
-    connection: Connection,
-    *,
-    account_id: int,
-    application_id: int,
-    change_id: int,
-    now: datetime,
-) -> bool:
-    """Undo the transition a message gave while it is the application's latest change (Q3); False otherwise."""
-    return cancel_change_if_last(
-        SqlApplicationStore(connection),
-        OffresDecisions(connection),
-        account_id=account_id,
-        application_id=application_id,
-        change_id=change_id,
-        now=now,
-    )
-
-
-def learn_employer_domain(
-    connection: Connection,
-    *,
-    account_id: int,
-    application_id: int,
-    domain: str,
-    now: datetime,
-) -> bool:
-    """« Retenir le domaine » after a correction (Q7): the employer's e-mail domain of the application."""
-    return set_employer_domain(
-        SqlApplicationStore(connection),
-        account_id=account_id,
-        application_id=application_id,
-        typed=domain,
-        now=now,
-    )
-
-
-def open_outside_application(
-    connection: Connection,
-    *,
-    account_id: int,
-    offer_id: int,
-    sent_on: date,
-    now: datetime,
-) -> int:
-    """« Créer la candidature » from a message (Q4): the application made outside Rocky, at « Envoyée »."""
-    return record_outside_application(
-        SqlApplicationStore(connection),
-        OffresDecisions(connection),
-        account_id=account_id,
-        offer_id=offer_id,
-        sent_on=sent_on,
-        now=now,
-    )
-
-
 def to_prepare_of(
     connection: Connection, account_id: int, rows: Iterable[Row]
 ) -> list[OfferHeading]:
@@ -351,10 +145,10 @@ def to_prepare_of(
     opened = {row.offer.id for row in rows}
     ids = [
         offer_id
-        for offer_id in offres_web.interested_offers(connection, account_id)
+        for offer_id in offres_api.interested_offers(connection, account_id)
         if offer_id not in opened
     ]
-    headings = offres_web.offer_headings(connection, account_id, ids)
+    headings = offres_api.offer_headings(connection, account_id, ids)
     return [headings[offer_id] for offer_id in ids if offer_id in headings]
 
 
@@ -481,7 +275,7 @@ def _deadline(request: Request, account: Account, application_id: int) -> date |
         )
         if application is None:
             return None
-        return offres_web.offer_deadlines(
+        return offres_api.offer_deadlines(
             connection, account.id, [application.offer_id], today_of(request)
         ).get(application.offer_id)
 
@@ -703,7 +497,7 @@ def _box(
     error: str | None = None,
 ) -> Response:
     with engine_of(request).begin() as connection:
-        if not offres_web.offer_headings(connection, account.id, [offer_id]):
+        if not offres_api.offer_headings(connection, account.id, [offer_id]):
             return Response(status_code=404)
         application = SqlApplicationStore(connection).application_of_offer(
             account.id, offer_id
@@ -713,7 +507,7 @@ def _box(
             if application is None
             else dossier(SqlApplicationStore(connection).changes(application.id))
         )
-        in_force = offres_web.decision_in_force(connection, account.id, offer_id)
+        in_force = offres_api.decision_in_force(connection, account.id, offer_id)
     context = {
         "offer_id": offer_id,
         "application_id": None if application is None else application.id,
@@ -749,7 +543,7 @@ def _panel(
 ) -> Response:
     """``triage``: asked from the triage of the offers (D6, Q8), the panel takes the place of its decision."""
     with engine_of(request).begin() as connection:
-        if not offres_web.offer_headings(connection, account.id, [offer_id]):
+        if not offres_api.offer_headings(connection, account.id, [offer_id]):
             return Response(status_code=404)
     context = {
         "offer_id": offer_id,
@@ -784,10 +578,10 @@ def prepare(
     From the offer's sheet, or from the triage (« Intéressé et préparer », D6 Q8)."""
     engine = engine_of(request)
     with engine.begin() as connection:
-        if not offres_web.offer_headings(connection, account.id, [offer_id]):
+        if not offres_api.offer_headings(connection, account.id, [offer_id]):
             return Response(status_code=404)
-        in_force = offres_web.decision_in_force(connection, account.id, offer_id)
-        deadline = offres_web.offer_deadlines(
+        in_force = offres_api.decision_in_force(connection, account.id, offer_id)
+        deadline = offres_api.offer_deadlines(
             connection, account.id, [offer_id], today_of(request)
         ).get(offer_id)
     interest = None

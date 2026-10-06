@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import Engine, insert, select
 from sqlalchemy.exc import IntegrityError
 
-from rocky.candidatures import web as candidatures_web
+from rocky.candidatures import api as candidatures_api
 from rocky.candidatures.model import MailTarget
 from rocky.messages.classification import usecases
 from rocky.messages.classification.model import (
@@ -62,7 +62,7 @@ class Box:
 
     def targets(self, account_id: int) -> Sequence[MailTarget]:
         with self.engine.connect() as connection:
-            return candidatures_web.mail_targets(connection, account_id)
+            return candidatures_api.mail_targets(connection, account_id)
 
     def run(
         self,
