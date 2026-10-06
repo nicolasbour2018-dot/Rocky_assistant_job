@@ -28,7 +28,7 @@ from rocky.messages.model import (
 )
 
 # Changes whenever a query changes: kept with every message and every collection (D14).
-QUERIES_VERSION = "mail-2026-10-04.1"
+QUERIES_VERSION = "mail-2026-10-06.1"
 # Q4: the platforms whose job alerts step E3 turns into offers, read whatever their Gmail category.
 ALERT_DOMAINS = (
     "indeed.com",
@@ -37,6 +37,8 @@ ALERT_DOMAINS = (
     "welcometothejungle.com",
     "hellowork.com",
     "cadremploi.fr",
+    # H3, Q2: its alerts have a reader; filed in Promotions, the replies query leaves them out.
+    "efinancialcareers.fr",
 )
 # Only the messages received: never the user's own sendings, drafts or chats (spam and trash are left out by Gmail).
 RECEIVED_ONLY = "-in:sent -in:drafts -in:chats"

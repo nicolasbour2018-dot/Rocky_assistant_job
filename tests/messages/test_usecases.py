@@ -246,6 +246,19 @@ def test_google_refusing_the_token_asks_to_reconnect_the_mailbox(
         run(box, FakeGmail())
 
 
+def test_access_lost_while_downloading_a_message_asks_to_reconnect(box: Box) -> None:
+    """H3: a refusal met on a message (not on the token) is not counted as one unreadable message."""
+    reader = FakeReader(failures={REPLY_ID: AccessLostError(ACCESS_LOST_REASON)})
+
+    result = run(box, FakeGmail(reader))
+
+    assert (result.status, result.reason) == (SyncStatus.FAILED, ACCESS_LOST_REASON)
+    with box.storage.transaction() as store:
+        mailbox = store.mailbox(box.mailbox_id)
+    assert mailbox is not None and mailbox.status is MailboxStatus.ACCESS_LOST
+    assert reader.gets == [REPLY_ID]
+
+
 def test_a_token_sealed_with_another_key_asks_to_reconnect(box: Box) -> None:
     other = TokenCipher(Fernet.generate_key().decode())
     with box.storage.transaction() as store:

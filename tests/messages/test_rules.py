@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+from rocky.messages.alerts.rules import READERS
 from rocky.messages.model import (
     Attachment,
     MessageUnreadableError,
@@ -17,6 +18,7 @@ from rocky.messages.model import (
     SyncStatus,
 )
 from rocky.messages.rules import (
+    ALERT_DOMAINS,
     BODY_LIMIT,
     QUERIES,
     gmail_query,
@@ -40,6 +42,15 @@ def test_the_replies_leave_out_promotions_social_and_forums_but_alerts_keep_them
     assert "from:(indeed.com OR apec.fr OR linkedin.com" in alerts
     for query in (replies, alerts):
         assert "-in:sent -in:drafts -in:chats" in query
+
+
+def test_every_alert_with_a_reader_is_found_by_the_alerts_query() -> None:
+    # H3, Q2: an alert filed in Promotions is only found by the alerts query (eFinancialCareers was missing).
+    for address in READERS:
+        host = address.rpartition("@")[2]
+        assert any(
+            host == domain or host.endswith(f".{domain}") for domain in ALERT_DOMAINS
+        ), address
 
 
 def test_a_query_reads_from_the_start_of_the_window_to_the_second() -> None:

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from rocky.offres.imports import rules
 from rocky.offres.imports.model import ImportMethod, InvalidPasteError
 from rocky.offres.imports.rules import (
     EXCERPT_REASON,
@@ -420,6 +421,14 @@ def test_an_unusable_paste_says_why(value: str, reason: str) -> None:
         with_pasted_description(incomplete_offer(), value)
 
     assert str(error.value) == reason
+
+
+def test_the_paste_limit_says_its_own_number(monkeypatch: pytest.MonkeyPatch) -> None:
+    """H3: the reason follows ``MAX_PASTED_CHARACTERS``, never a number written apart."""
+    monkeypatch.setattr(rules, "MAX_PASTED_CHARACTERS", 12_000)
+
+    with pytest.raises(InvalidPasteError, match="12 000 caractères au plus"):
+        with_pasted_description(incomplete_offer(), "x" * 12_001)
 
 
 def test_an_offer_is_made_from_its_link_and_what_the_user_copied() -> None:
