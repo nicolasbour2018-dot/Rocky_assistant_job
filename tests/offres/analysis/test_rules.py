@@ -526,6 +526,26 @@ def test_a_closing_date_written_in_the_text(text: str, deadline: date | None) ->
     assert deadline_of(offer, today=TODAY) == deadline
 
 
+@pytest.mark.parametrize(
+    ("published", "today", "deadline"),
+    [
+        # Published in December, "15 January" is the next one, and stays so once passed (decision G2, Q8).
+        (date(2026, 12, 10), date(2026, 12, 20), date(2027, 1, 15)),
+        (date(2026, 12, 10), date(2027, 1, 20), date(2027, 1, 15)),
+        (date(2026, 1, 2), date(2026, 10, 6), date(2026, 1, 15)),
+        # Without a publication date, the day of reading (Q13).
+        (None, date(2026, 9, 25), date(2027, 1, 15)),
+    ],
+)
+def test_a_closing_date_without_a_year_follows_the_publication(
+    published: date | None, today: date, deadline: date
+) -> None:
+    offer = posting("Postulez avant le 15 janvier.", published_on=published)
+
+    assert analyze(offer, SKILLS, today=today).deadline == deadline
+    assert deadline_of(offer, today=today) == deadline
+
+
 def test_the_deadline_alone_prefers_the_source() -> None:
     offer = posting(
         "Date limite de candidature : 15/10/2026.", deadline=date(2026, 10, 20)

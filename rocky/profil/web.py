@@ -86,6 +86,7 @@ from rocky.profil.model import (
     Track,
     TrackStatus,
 )
+from rocky.profil.places import unknown_locations
 from rocky.profil.rules import (
     ProfileInputError,
     make_experience,
@@ -365,6 +366,10 @@ def _render(
             profile, "en", request.app.state.auth.clock().date()
         ).missing,
         "onboarding_open": needs_onboarding(profile.onboarding),
+        "unknown_places": {
+            track.id: unknown_locations(track.content.locations)
+            for track in profile.tracks
+        },
         "message": message,
     }
     if key is not None and wants_fragment(request):

@@ -16,7 +16,8 @@
 </header>
 
 <ul class="badges">
-  {% if card.analysis.deadline %}<li class="badge badge-warn">⏰ limite {{ card.analysis.deadline.strftime("%d/%m/%Y") }}</li>{% endif %}
+  {% if card.deadline_passed %}<li class="badge badge-warn">Date limite passée ({{ card.analysis.deadline.strftime("%d/%m/%Y") }})</li>
+  {% elif card.analysis.deadline %}<li class="badge badge-warn">⏰ limite {{ card.analysis.deadline.strftime("%d/%m/%Y") }}</li>{% endif %}
   {% for name in card.tracks %}<li class="badge badge-accent">{{ name }}</li>{% endfor %}
   {% if shown.track_name and card.score.tracks | length > 1 %}<li class="badge">score de la piste « {{ shown.track_name }} »</li>{% endif %}
   <li class="badge">{% if card.stored.origin == "alert" %}Tirée d'une alerte {% endif %}{{ source_label(offer.source) }} · {{ offer.published_on | age }}</li>

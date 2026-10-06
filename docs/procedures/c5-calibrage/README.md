@@ -136,6 +136,7 @@ au-dessus du seuil (≤ 9 visé) et 3 Non dans les 10 premières. Les 20 Non au-
 | `score-2026-09-29.1` + `analyse-2026-09-29.1` | Plafond « Hors de France » (connu, ou présumé pour une annonce Wellfound sans pays hors des lieux des pistes), levé si un lieu de la piste couvre le pays ou la ville (Q24) ; une phrase de langue n'est plus une exigence hors profil, « Anglais indispensable » devient un besoin de langue | condition − × 10 et lieu − × 8 sur les Non ; 21 exigences hors profil sur 118 étaient des phrases de langue |
 | Profil (exception Q23) | Mots exclus des deux pistes : senior, lead, staff, principal, head, chef, expert, directeur, manager (un par ligne ; « sénior » se confond avec « senior ») | séniorité − × 18 sur les Non |
 
+| `score-2026-10-06.1` (G2) | Lieux lus dans le référentiel COG INSEE : une région ou un département couvre ses communes (décision G2) | « Paris » seul : 590 scores hors zone sur la base de développement avec les pistes du 06/10 |
 | `score-2026-09-29.2` | Un savoir-être (catégorie « Savoir-être » du profil) compte ×0,5 dans les points de preuve (Q28) | compétences − × 18 sur les Non ; leurs compétences trouvées viennent à 55 % des catégories métier et savoir-être (39 % pour les pertinentes) ; 751 remplissait sa composante avec Autonomie, Pédagogie, Rigueur |
 
 Contrôle ajusté (Nicolas, 29/09) : 860 (New York) et 917 (Londres) en sortent, l'étranger étant désormais bloquant
@@ -228,6 +229,19 @@ du seuil ; 0,5 et 0,7 gardent toutes les mesures, 0,5 marque le plus l'écart en
 Mesure C4 relancée avec cette version : 1193 à **45** (< 50, critère de C4 tenu) ; 1 annonce à 100 parmi les 404 (23
 avant) ; 186 au-dessus de 50 ; 180 plafonnées (mots exclus du profil et étranger) ; confiance haute 61, moyenne 125,
 faible 218 ; corrélation de rang v1 / C4 : 0,00.
+
+### Mesure de G2 (06/10/2026) : `score-2026-10-06.1`, lieux lus dans le référentiel
+
+Pistes du jour : lieux « Ile de France », « Eure et Loir » (« Paris » retiré et « Loire » corrigé par Nicolas après
+le 29/09 ; profil sinon inchangé). Le point de départ est remesuré avec ces pistes, d'où l'écart avec la ligne du
+29/09 : sans « Paris », Paris était hors zone. Décision `docs/decisions/G2-lieux-date-limite.md`.
+
+| | `score-2026-09-29.3`, pistes du 06/10 | `score-2026-10-06.1` |
+|---|---|---|
+| AUC pertinente / Non | 0,93 | **0,94** |
+| Non dans les 10 premières | 1 | 1 |
+| Oui · pertinentes · Non au-dessus de 50 | 12 · 20 · 5 | **12 · 20 · 5** |
+| Contrôle (30) : rang médian · premier quart · au-dessus | 28 % · 14 · 27 | **27 % · 13 · 28** |
 
 ## 4. Relecture (Q21)
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import asdict
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -579,6 +579,7 @@ class SqlStore:
     def listed_offers(self, account_id: int) -> list[ListedOffer]:
         """Every offer of the account as the list and the triage need it: facts shown, tracks and current scores."""
         marks: dict[int, list[TrackMark]] = {}
+        deadlines: dict[int, date] = {}
         for row in self._conn.execute(
             select(
                 offer_scores.c.offer_id,
@@ -587,6 +588,7 @@ class SqlStore:
                 offer_scores.c.value,
                 offer_scores.c.display,
                 offer_scores.c.confidence,
+                offer_scores.c.detail["features"]["deadline"].astext.label("deadline"),
             )
             .join(job_offers, job_offers.c.id == offer_scores.c.offer_id)
             .where(job_offers.c.account_id == account_id)
@@ -601,6 +603,8 @@ class SqlStore:
                     confidence=ConfidenceLevel(row.confidence),
                 )
             )
+            if row.deadline:
+                deadlines[row.offer_id] = date.fromisoformat(row.deadline)
         linked: dict[int, set[int]] = {}
         for row in self._conn.execute(
             select(offer_tracks.c.offer_id, offer_tracks.c.track_id)
@@ -634,6 +638,7 @@ class SqlStore:
                 match_key=row.match_key,
                 track_ids=frozenset(linked.get(row.id, ())),
                 marks=tuple(marks[row.id]),
+                deadline=deadlines.get(row.id),
             )
             # An offer always has a score (C6); one being written right now is left for the next request.
             for row in rows

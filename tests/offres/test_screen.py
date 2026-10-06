@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from rocky.offres.analysis.model import Importance, PostingAnalysis, SkillMatch
 from rocky.offres.decisions import Decision, DecisionKind, DecisionRow, DecisionValue
@@ -27,6 +27,7 @@ from rocky.offres.screen import (
     neighbours,
     next_after,
     offer_card,
+    past_deadlines,
     queue,
 )
 from tests.offres.fakes import posting
@@ -175,6 +176,7 @@ def test_the_card_tells_proven_skills_and_shows_the_asked_track() -> None:
         same_posting=[(9, "wttj")],
         decision=None,
         summary=None,
+        today=date(2026, 10, 6),
     )
     asked = offer_card(
         stored,
@@ -186,6 +188,7 @@ def test_the_card_tells_proven_skills_and_shows_the_asked_track() -> None:
         same_posting=[],
         decision=None,
         summary=None,
+        today=date(2026, 10, 6),
         track_id=1,
     )
 
@@ -197,3 +200,16 @@ def test_the_card_tells_proven_skills_and_shows_the_asked_track() -> None:
     assert card.shown.track_id == 2  # the best
     assert asked.shown.track_id == 1
     assert replace(card, summary=None).summary_result is None
+
+
+def test_a_past_deadline_is_one_before_today() -> None:
+    today = date(2026, 10, 6)
+    offers = [
+        replace(offer(1, 70), deadline=date(2026, 10, 5)),
+        replace(offer(2, 70), deadline=today),
+        offer(3, 70),
+    ]
+
+    assert past_deadlines(offers, today) == {1}
+    # Signalled, never decided (decision G2, Q14): the offer stays in the queue.
+    assert [item.id for item in queue(offers, {})] == [1, 2, 3]

@@ -175,6 +175,26 @@ def test_a_track_is_added_in_place(client: TestClient) -> None:
     assert "<form" not in saved.text.split("Data analyst")[1].split("Modifier")[0]
 
 
+def test_a_track_location_the_reference_does_not_know_is_reported(
+    client: TestClient,
+) -> None:
+    track = {**TRACK, "locations": "Ile de France\nEure et Loire\nTélétravail complet"}
+
+    saved = client.post("/profil/pistes", data=track, headers=HTMX)
+
+    assert "Lieu non reconnu : « Eure et Loire »" in saved.text
+    assert "« Ile de France » ;" not in saved.text
+    assert "« Télétravail complet » ;" not in saved.text
+    track_id = re.search(r"/profil/pistes/(\d+)/pause", saved.text)
+    assert track_id
+    fixed = client.post(
+        f"/profil/pistes/{track_id.group(1)}",
+        data={**track, "locations": "Eure-et-Loir"},
+        headers=HTMX,
+    )
+    assert "Lieu non reconnu" not in fixed.text
+
+
 def test_a_refused_track_keeps_what_was_typed(client: TestClient) -> None:
     refused = client.post(
         "/profil/pistes",

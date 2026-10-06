@@ -432,7 +432,8 @@ def analyze(
         contracts=_contracts(offer, posting),
         remote=_remote(offer, posting),
         salary=_salary(offer, posting),
-        deadline=offer.deadline or _deadline(posting.folded.text, today),
+        deadline=offer.deadline
+        or _deadline(posting.folded.text, offer.published_on or today),
         experience=_experience(posting),
         languages=_languages(posting),
     )
@@ -804,16 +805,25 @@ def deadline_of(offer: CollectedOffer, *, today: date) -> date | None:
     description = formatted_description(offer.description)
     title = offer.title.strip()
     text = f"{title}\n{description}" if title else description
-    return _deadline(fold(text).text, today)
+    return _deadline(fold(text).text, offer.published_on or today)
 
 
-def _deadline(folded: str, today: date) -> date | None:
+def _deadline(folded: str, published: date) -> date | None:
+    """The closing date written in the text. Without a year, the first such date from ``published`` on (decision G2,
+    Q8): "avant le 15 janvier" published on 10/12/2026 is 15/01/2027, and stays so once passed."""
     match = _DEADLINE.search(folded)
     if match is None:
         return None
     day, month_raw, year_raw = match.groups()
     month = _MONTHS.get(month_raw) or (int(month_raw) if month_raw.isdigit() else 0)
     try:
-        return date(int(year_raw) if year_raw else today.year, month, int(day))
+        if year_raw:
+            return date(int(year_raw), month, int(day))
+        deadline = date(published.year, month, int(day))
+        return (
+            deadline
+            if deadline >= published
+            else date(published.year + 1, month, int(day))
+        )
     except ValueError:
         return None

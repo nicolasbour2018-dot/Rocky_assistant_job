@@ -20,6 +20,14 @@ Ses préférences diffèrent d'une mesure à l'autre (voir chaque section). Chaq
 donnerait la nouvelle collecte (conversion de `c3-mesure/measure.py`, plus le lieu et le pays). La date de référence
 reste le 25/09/2026 (`TODAY`) pour que les mesures restent comparables.
 
+## Résultats du 06/10/2026 (G2 : règles `score-2026-10-06.1`, lieux du référentiel)
+
+Pistes du jour : lieux « Ile de France », « Eure et Loir » (« Paris » retiré après le 29/09). Avant, avec les mêmes
+pistes et `score-2026-09-29.3` : 179 annonces ≥ 50, moyenne 48,2, 1193 à 38. Après : **187 ≥ 50, moyenne 50,7, 1193 à
+45** (< 50, critère tenu) ; corrélation de rang v1 / C4 −0,02 (inchangée) ; confiance haute 62, moyenne 126, faible
+216 ; 180 plafonnées. Dans les tableaux de l'échantillon C3, les annonces de Paris et d'Île-de-France gagnent jusqu'à 8
+points (451 : 89 → 96, 1245 : 73 → 80) ; aucune ne recule. Décision `docs/decisions/G2-lieux-date-limite.md`.
+
 ## Résultats du 28/09/2026 (règles `score-2026-09-25.1`, profil complété) — point de départ de C5
 
 Mêmes règles, même archive, même date de référence ; seules les préférences du profil ont changé (Nicolas, 25/09) :

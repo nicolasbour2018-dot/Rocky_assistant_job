@@ -76,6 +76,8 @@ class ListedOffer:
     track_ids: frozenset[int]
     # One per scored track, in the order of the profile.
     marks: tuple[TrackMark, ...]
+    # The deadline the analysis read when the offer was scored (decision G2, Q7).
+    deadline: date | None = None
 
     @property
     def best(self) -> TrackMark:
@@ -93,6 +95,15 @@ class ListedOffer:
                 if mark.track_id == track_id:
                     return mark
         return self.best
+
+
+def past_deadlines(offers: Iterable[ListedOffer], today: date) -> frozenset[int]:
+    """The offers whose deadline is past: signalled, never decided (decision G2, Q7, Q14)."""
+    return frozenset(
+        offer.id
+        for offer in offers
+        if offer.deadline is not None and offer.deadline < today
+    )
 
 
 @dataclass(frozen=True)
@@ -240,6 +251,7 @@ class OfferCard:
     same_posting: tuple[tuple[int, str], ...]
     decision: DecisionRow | None
     summary: Summary | None
+    deadline_passed: bool = False
 
     @property
     def id(self) -> int:
@@ -279,6 +291,7 @@ def offer_card(
     same_posting: Sequence[tuple[int, str]],
     decision: DecisionRow | None,
     summary: Summary | None,
+    today: date,
     track_id: int | None = None,
 ) -> OfferCard:
     proven = {skill.label for skill in profile.skills if skill.proven}
@@ -296,4 +309,5 @@ def offer_card(
         same_posting=tuple(same_posting),
         decision=decision,
         summary=summary,
+        deadline_passed=analysis.deadline is not None and analysis.deadline < today,
     )

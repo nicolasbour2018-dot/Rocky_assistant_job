@@ -56,6 +56,7 @@ from rocky.offres.screen import (
     neighbours,
     next_after,
     offer_card,
+    past_deadlines,
     queue,
 )
 from rocky.offres.sources.model import MESSAGE_SOURCE, CollectedOffer
@@ -289,6 +290,7 @@ class Screen:
             same_posting=same,
             decision=self.decisions.get(offer_id),
             summary=summary,
+            today=_today(self.request),
             track_id=track_id,
         )
 
@@ -317,6 +319,7 @@ class Screen:
             "counts": counts(self.offers, self.decisions),
             "has_offers": bool(self.offers),
             "can_undo": self.can_undo,
+            "past_deadlines": past_deadlines(self.offers, _today(self.request)),
         }
         return page(
             self.request,

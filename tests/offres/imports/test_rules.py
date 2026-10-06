@@ -615,3 +615,49 @@ def test_an_apec_offer_is_never_offered_to_the_workstation_s_browser() -> None:
     # Known by its address too (an offer named after another source, on apec.fr).
     assert not readable_in_browser(replace(APEC_EXCERPT, source="alerte"))
     assert readable_in_browser(linkedin)
+
+
+def test_hellowork_contract_is_read_in_the_page_title() -> None:
+    # JSON-LD ``FULL_TIME``; the page title says "Offre Emploi CDI Data Analyst…" (decision G2, Q9).
+    offer = recorded("hellowork.com/posting.html", HELLOWORK)
+
+    assert offer.contract == "CDI"
+
+
+def _page(employment_type: str | None, page_title: str) -> str:
+    posting: dict[str, object] = {
+        "@context": "https://schema.org",
+        "@type": "JobPosting",
+        "title": "Data analyst",
+        "description": "<p>" + "Analyse des données de vente. " * 10 + "</p>",
+    }
+    if employment_type is not None:
+        posting["employmentType"] = employment_type
+    return (
+        f"<html><head><title>{page_title}</title>"
+        f'<script type="application/ld+json">{json.dumps(posting)}</script>'
+        "</head><body></body></html>"
+    )
+
+
+@pytest.mark.parametrize(
+    ("employment_type", "page_title", "contract"),
+    [
+        ("FULL_TIME", "Data analyst en CDD - Lyon", "CDD"),
+        (None, "Stage Data analyst H/F", "Stage"),
+        ("PART_TIME", "Data analyst - Intérim", "Intérim"),
+        # A contract the JSON-LD names is kept; a title without one changes nothing.
+        ("CONTRACTOR", "Data analyst CDI", "CONTRACTOR"),
+        ("FULL_TIME", "Data analyst - Paris", "FULL_TIME"),
+        # "Cdiscount" is not a CDI.
+        (None, "Data analyst chez Cdiscount", None),
+    ],
+)
+def test_a_generic_contract_gives_way_to_the_page_title(
+    employment_type: str | None, page_title: str, contract: str | None
+) -> None:
+    page = _page(employment_type, page_title)
+
+    offer = parse_page(page, "https://jobs.example/offres/1", today=TODAY).offer
+
+    assert offer.contract == contract

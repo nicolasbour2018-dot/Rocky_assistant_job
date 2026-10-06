@@ -330,7 +330,9 @@ def test_a_component_with_nothing_to_compare_is_left_out() -> None:
     ("location", "country", "remote", "expected"),
     [
         ("8ème Arrondissement, Paris", "France", RemoteMode.HYBRID, 1.0),
-        ("Chartres", "FR", RemoteMode.ON_SITE, 0.3),
+        # Chartres is in Eure-et-Loir: a département covers its communes (decision G2).
+        ("Chartres", "FR", RemoteMode.ON_SITE, 1.0),
+        ("Orléans", "FR", RemoteMode.ON_SITE, 0.3),
         ("Lyon", "France", RemoteMode.HYBRID, 0.5),
         ("New York", "US", RemoteMode.HYBRID, 0.0),
         ("New York", "US", RemoteMode.FULL_REMOTE, 0.5),
@@ -381,6 +383,104 @@ def test_a_track_location_named_france_covers_the_whole_country() -> None:
     profile = replace(PROFILE, tracks=(replace(DATA, locations=("France",)),))
 
     assert value(scored(profile=profile), ComponentCode.LOCATION) == 1.0
+
+
+# Places of the reference (decision G2).
+
+NICOLAS_ZONES = replace(DATA, locations=("Ile de France", "Eure et Loir"))
+
+
+@pytest.mark.parametrize(
+    ("location", "detail"),
+    [
+        (
+            "Paris 01 - 75",
+            "Paris 01 - 75 : Paris (Paris), dans la zone « Ile de France »",
+        ),
+        (
+            "Courbevoie - 92",
+            "Courbevoie - 92 : Courbevoie (Hauts-de-Seine), dans la zone « Ile de France »",
+        ),
+        (
+            "Chartres - 28",
+            "Chartres - 28 : Chartres (Eure-et-Loir), dans la zone « Eure et Loir »",
+        ),
+    ],
+)
+def test_a_region_or_a_departement_covers_its_communes(
+    location: str, detail: str
+) -> None:
+    profile = replace(PROFILE, tracks=(NICOLAS_ZONES,))
+    result = scored(collected=offer(location=location, country=None), profile=profile)
+
+    assert value(result, ComponentCode.LOCATION) == 1.0
+    assert result.component(ComponentCode.LOCATION).detail == detail
+
+
+def test_a_commune_outside_the_zones_says_where_it_is() -> None:
+    profile = replace(PROFILE, tracks=(NICOLAS_ZONES,))
+    result = scored(
+        analysis(remote=RemoteMode.ON_SITE),
+        offer(location="Le Mans", country="France"),
+        profile,
+    )
+
+    assert value(result, ComponentCode.LOCATION) == 0.3
+    assert result.component(ComponentCode.LOCATION).detail == (
+        "Le Mans : Le Mans (Sarthe) : hors des lieux de la piste (Ile de France, Eure et Loir)"
+    )
+
+
+def test_a_homonym_is_in_the_zone_when_one_commune_of_that_name_is() -> None:
+    profile = replace(
+        PROFILE, tracks=(replace(DATA, locations=("Seine-Saint-Denis",)),)
+    )
+    result = scored(
+        collected=offer(location="Montreuil", country="FR"), profile=profile
+    )
+
+    assert value(result, ComponentCode.LOCATION) == 1.0
+    assert result.component(ComponentCode.LOCATION).detail == (
+        "Montreuil : une commune de ce nom, Montreuil (Seine-Saint-Denis), "
+        "est dans la zone « Seine-Saint-Denis »"
+    )
+
+
+def test_an_unknown_track_location_is_compared_word_for_word_and_said() -> None:
+    profile = replace(PROFILE, tracks=(replace(DATA, locations=("Eure et Loire",)),))
+    result = scored(
+        collected=offer(location="Chartres - 28", country=None), profile=profile
+    )
+
+    assert value(result, ComponentCode.LOCATION) == 0.5
+    assert (
+        "Lieu de piste non reconnu : « Eure et Loire » ; comparé mot à mot"
+        in result.notes
+    )
+
+
+def test_a_place_the_reference_does_not_know_is_compared_word_for_word() -> None:
+    profile = replace(PROFILE, tracks=(replace(DATA, locations=("Ile de France",)),))
+    result = scored(
+        collected=offer(location="Bureaux Ile de France", country="FR"), profile=profile
+    )
+
+    assert value(result, ComponentCode.LOCATION) == 1.0
+
+
+def test_a_posting_abroad_is_never_read_as_a_french_commune() -> None:
+    profile = replace(PROFILE, tracks=(replace(DATA, locations=("Ile de France",)),))
+    # Paris, Texas: the country is known, the place is not looked for in the reference.
+    result = scored(collected=offer(location="Paris", country="US"), profile=profile)
+
+    assert value(result, ComponentCode.LOCATION) == 0.0
+    assert [cap.kind for cap in result.caps] == [CapKind.ABROAD]
+
+
+def test_the_departements_of_the_place_are_kept_as_features() -> None:
+    result = scored(collected=offer(location="Montreuil", country="FR"))
+
+    assert result.features["place_departements"] == ["28", "85", "93"]
 
 
 # Abroad (C5, Q24).

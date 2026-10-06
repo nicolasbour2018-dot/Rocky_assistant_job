@@ -773,3 +773,35 @@ def test_offers_of_the_board_are_all_scored(board: Board) -> None:
             SqlStore(connection).unscored_or_orphan_offers(board.seeker.account_id)
             == []
         )
+
+
+def test_a_past_deadline_is_signalled_and_the_offer_stays_to_review(
+    board: Board,
+) -> None:
+    with board.engine.begin() as connection:
+        inputs = scoring_inputs(board.seeker.profile(connection))
+        passed = record_offer(
+            SqlStore(connection),
+            account_id=board.seeker.account_id,
+            offer=posting("passed", deadline=date(2026, 9, 1)),
+            inputs=inputs,
+            origin=Origin.WATCH,
+            track_ids=[board.seeker.tracks["Data"]],
+            now=NOW,
+            today=TODAY,
+        ).offer_id
+
+    listed = board.client.get("/offres/liste", headers=HTMX).text
+    sheet = board.client.get(f"/offres/{passed}/fiche", headers=HTMX).text
+    # Signalled, never decided (decision G2, Q7, Q14): still in the queue.
+    triage = board.client.get(f"/offres/tri/{passed}", headers=HTMX).text
+
+    row = listed.split(f'hx-get="/offres/{passed}/fiche')[1].split("</tr>")[0]
+    assert "date limite passée" in row
+    assert "Date limite passée (01/09/2026)" in sheet
+    assert "Date limite passée (01/09/2026)" in card_of(triage)
+    assert "à examiner" in row
+    others = listed.split(f'hx-get="/offres/{board.id("analyst")}/fiche')[1].split(
+        "</tr>"
+    )[0]
+    assert "date limite passée" not in others

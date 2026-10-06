@@ -172,7 +172,7 @@ la vérification allégée plutôt que sa limite relevée ; une passe UX des aut
 | Étape | Contenu | Critère de sortie | État |
 |---|---|---|---|
 | G1. Vérification | *Direct.* Partager les fixtures SQL lourdes (compte, boîte, rendus) par module ; fixer `runs-on: ubuntu-24.04` avant le passage de GitHub à Ubuntu 26 (19/10) | Vérification GitHub verte en 1 min 40 au plus | ✅ |
-| G2. Lieux et date limite | *Grill me, puis mode plan.* Référentiel versionné (communes, départements → région), sans réseau à l'exécution, pour qu'une région couvre ses villes dans le score ; nouvelle `RULES_VERSION` ; mesures C4/C5 relancées ; offre à date limite passée signalée ; contrat Hellowork lu dans le titre de la page | « Paris 01 - 75 », « Courbevoie - 92 » et « Chartres - 28 » répondent aux lieux des pistes de Nicolas ; écart de classement chiffré et documenté | ⬜ |
+| G2. Lieux et date limite | *Grill me, puis mode plan.* Référentiel versionné (communes, départements → région), sans réseau à l'exécution, pour qu'une région couvre ses villes dans le score ; nouvelle `RULES_VERSION` ; mesures C4/C5 relancées ; offre à date limite passée signalée ; contrat Hellowork lu dans le titre de la page | « Paris 01 - 75 », « Courbevoie - 92 » et « Chartres - 28 » répondent aux lieux des pistes de Nicolas ; écart de classement chiffré et documenté | ✅ |
 | G3. Cockpit | *Grill me avec la skill de design, puis mode plan.* 🏠 Aujourd'hui devient le **Cockpit** (libellé de D12 mis à jour, validé par Nicolas le 05/10) : cartes de métriques, fil défilant de ce que Rocky signale, suggestions d'offres (meilleurs scores pour commencer), veille manuelle ; mécanismes et parcours, sans identité graphique | Fixé au grill | ⬜ |
 | G4. Assistant Rocky | *Grill me, puis mode plan.* Le tiroir 🐾 devient un assistant Gemini (révise la décision F1, Q2) : contexte construit par les cas d'usage des modules (offre, candidature, message, profil), par compte et en lecture seule, jamais de SQL écrit par le modèle ; réponses qui citent les faits ; aucun geste à la place de l'utilisateur ; plafonds d'appels communs dans `system` ; place de « À faire ici » face au cockpit | Fixé au grill | ⬜ |
 | G5. Profil et CV | *Mode plan.* Blocs projets et gabarit neutre du CV (limites de D2) ; compétences qui ne diffèrent que par la casse ou un espace ; listes des pistes « une valeur par ligne » et aide des mots exclus | Fixé au plan | ⬜ |
@@ -447,7 +447,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en C7 : résumé gardé dans `offer_summaries`, périmé quand la description change.*
 - **(C3 → C2, C6)** Import Hellowork : le CDI n'est que dans le titre de la page (le JSON-LD donne `FULL_TIME`) ; lire
   aussi le `<title>` ou un champ de la page si le contrat manque (3 écarts de la mesure C3).
-  *Placé en G2 (Nicolas, 05/10).*
+  *Placé en G2 (Nicolas, 05/10).* *Résolu en G2 (Q9) : un `FULL_TIME` ou un contrat absent cède au contrat nommé par le
+  titre de la page, pour toute page importée ; les offres déjà enregistrées ne sont pas relues.*
 - **(C3 → `profil`)** `normalize_term` réduit « C++ » et « C# » à « c » : une compétence de ce nom répondrait à la
   lettre « C » d'une annonce. À traiter si un compte déclare ces langages.
 - **(C3 → Nicolas)** Résumé réel à essayer : ajouter `ROCKY_GEMINI_API_KEY` au `.env`, relancer l'application
@@ -557,10 +558,13 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   région) pour qu'une région couvre ses villes dans le score ; nouvelle `RULES_VERSION`, mesures C4/C5 relancées.
   Suite des constats (B5 → après C6) et (C4 → après C6). À trancher à la revue de cette section.
   *Placé en G2 (Nicolas, 05/10), avant le cockpit qui suggère les meilleurs scores.*
+  *Résolu en G2 : référentiel COG INSEE 2026 (`rocky/profil/places.py`), `score-2026-10-06.1` ; sur la base de
+  développement, 225 → 24 offres entre 40 et 49 hors zone, 211 → 324 au-dessus du seuil (décision G2, mesures).*
 - **(C7, à trancher à la revue)** Motif « autre » de l'essai : « date de candidature dépassée ». Une annonce dont la date
   limite est passée pourrait être signalée à l'écran (la date limite est déjà lue par l'analyse C3), voire écartée par
   une règle (auteur `rule`, Q2) ; ou un motif « date limite dépassée » ajouté à « Écarté ».
-  *Placé en G2 (Nicolas, 05/10).*
+  *Placé en G2 (Nicolas, 05/10).* *Résolu en G2 : badge « Date limite passée » dans la liste, la carte et la fiche ; ni
+  écart automatique ni nouveau motif (« Écarté » a déjà 9 motifs, Q16).*
 - **(D1 → `offres`)** La touche `u` de l'écran Offres annule la dernière décision du compte, y compris l'« Intéressé »
   écrit par « Préparer la candidature » : le dossier reste alors ouvert sur une offre revenue à sa décision d'avant.
   Pas d'état contradictoire (le dossier ne dépend pas de la décision après sa création), mais le signal D14 est
@@ -796,6 +800,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(Revue H → G2)** Date limite sans année (`offres/analysis/rules.py:817`) : « avant le 15 janvier » lu le
   20 décembre tombe dans l'année en cours. Prendre l'année suivante si la date est passée (nouvelle `RULES_VERSION`).
   Détail : `docs/decisions/H-revue-code.md`.
+  *Résolu en G2 (Q8) : l'année se lit depuis la date de publication (à défaut le jour d'affichage),
+  `analyse-2026-10-06.1`.*
 - **(Revue H → G6)** Calculs à sortir des gabarits (`kit.html` compétences libres, `offer_body.html` `FRANCE_NAMES`,
   `messages/row.html` employeur cité) ; découpage de `candidatures/dossier_web.py` par étape ; « Envoyée » depuis une
   candidature close mène à une étape sans formulaire (à vérifier en recette) ; `stage_labels` posé deux fois dans
@@ -816,3 +822,10 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   - quota et coût de la clé Gemini partagée.
 
   Mesurer d'abord la durée réelle d'une veille par compte (`watch_runs`).
+- **(G2 → plus tard)** Une commune dans une piste ne couvre qu'elle-même (Q2) : pas de rayon autour d'une ville. À
+  reprendre si un compte nomme une ville et manque ses banlieues (il faudrait les coordonnées des communes).
+- **(G2 → G5)** L'aide du champ « Lieux » des pistes propose « ville, région, « France », « Télétravail complet » » : y
+  citer le département (nom ou numéro), que le score comprend désormais.
+- **(G2 → recette)** Communes renommées : « Saint-Ouen » (Saint-Ouen-sur-Seine depuis 2018) est un alias ; d'autres
+  noms anciens peuvent tomber « hors zone » à tort. À surveiller dans le « Pourquoi ? » du lieu ; un alias se loge dans
+  `rocky/profil/places.py` (nouvelle `RULES_VERSION`).

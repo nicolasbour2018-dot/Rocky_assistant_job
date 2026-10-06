@@ -72,6 +72,13 @@ from rocky.profil.model import (
     SkillCategory,
     TrackStatus,
 )
+from rocky.profil.places import (
+    Place,
+    describe,
+    posting_place,
+    track_zone,
+    unknown_locations,
+)
 
 # Words a title comparison ignores (Q4), in comparison form.
 _STOP_WORDS = frozenset(
@@ -194,6 +201,10 @@ def _shared(
         "remote_wanted": [mode.value for mode in profile.preferences.remote_modes],
         "location": offer.location,
         "country": offer.country,
+        # Read with the score so that the list shows a past deadline without the analysis (decision G2, Q7).
+        "deadline": analysis.deadline.isoformat() if analysis.deadline else None,
+        # Where the reference reads the place (decision G2): départements, several for a homonym.
+        "place_departements": _place_departements(offer.location),
         "salary": None
         if salary is None
         else {
@@ -531,8 +542,14 @@ def _location(
     presumed = not country and offer.source in PRESUMED_ABROAD_SOURCES
     zone = _zone(
         track,
-        ", ".join(part for part in (place, offer.country or "") if part),
+        place,
+        offer.country or "",
         in_france=not (abroad or presumed),
+        abroad=abroad,
+    )
+    unknown = tuple(
+        f"Lieu de piste non reconnu : « {location} » ; comparé mot à mot"
+        for location in unknown_locations(track.locations)
     )
     if (abroad or presumed) and zone is None:
         where = ", ".join(part for part in (place, offer.country or "") if part)
@@ -607,44 +624,91 @@ def _location(
                 ComponentCode.LOCATION,
                 IN_ZONE,
                 weight,
-                f"{place} : dans la zone « {zone} »",
+                _in_zone_detail(place, zone),
             ),
             False,
-            (),
+            unknown,
             None,
         )
     hybrid = remote == RemoteMode.HYBRID
     notes = () if country else ("Pays non précisé : l'offre est lue comme en France",)
+    reading = None if abroad else posting_place(place)
+    read = (
+        f" : {describe(reading.places[0])}"
+        if reading is not None
+        and not reading.homonyms
+        and fold(describe(reading.places[0])).text != fold(place).text
+        else ""
+    )
     return (
         Component(
             ComponentCode.LOCATION,
             OUT_OF_ZONE_HYBRID if hybrid else OUT_OF_ZONE,
             weight,
-            f"{place} : hors des lieux de la piste ({', '.join(track.locations)})"
+            f"{place}{read} : hors des lieux de la piste ({', '.join(track.locations)})"
             + (", en hybride" if hybrid else ""),
         ),
         False,
-        notes,
+        (*notes, *unknown),
         None,
     )
 
 
-def _zone(track: ScoringTrack, place: str, *, in_france: bool) -> str | None:
-    """The track location that covers the place (a city, a region, a country), or None.
+def _place_departements(location: str | None) -> list[str]:
+    reading = posting_place(location or "")
+    if reading is None:
+        return []
+    return sorted({place.departement for place in reading.places if place.departement})
 
-    A location named "France" covers the whole country, never a posting abroad.
+
+@dataclass(frozen=True)
+class _InZone:
+    """The track location that covers the posting, and the places of the reference it covers (none: word for word)."""
+
+    location: str
+    places: tuple[Place, ...] = ()
+    homonym: bool = False
+
+
+def _zone(
+    track: ScoringTrack, place: str, country: str, *, in_france: bool, abroad: bool
+) -> _InZone | None:
+    """The track location that covers the posting's place, or None (decision G2, Q2–Q4).
+
+    "France" covers the whole country, never a posting abroad. A location and a place both read in the reference
+    compare as places (a région covers its communes); otherwise, or for a posting known to be abroad, the location's
+    words are looked for in the place (C5, Q24).
     """
-    folded_place = fold(place).text
+    folded_place = fold(", ".join(part for part in (place, country) if part)).text
+    reading = None if abroad else posting_place(place)
     for location in track.locations:
         folded = fold(location).text
         if not folded:
             continue
         if folded in FRANCE_NAMES:
             if in_france:
-                return location
+                return _InZone(location)
+            continue
+        zone = track_zone(location)
+        if zone is not None and reading is not None:
+            covered = tuple(item for item in reading.places if zone.covers(item))
+            if covered:
+                return _InZone(location, covered, reading.homonyms)
         elif folded_place and term_pattern(folded).search(folded_place):
-            return location
+            return _InZone(location)
     return None
+
+
+def _in_zone_detail(place: str, zone: _InZone) -> str:
+    """ "Courbevoie - 92 : Courbevoie (Hauts-de-Seine), dans la zone « Ile de France »"; a homonym says so (Q4)."""
+    if not zone.places:
+        return f"{place} : dans la zone « {zone.location} »"
+    shown = describe(zone.places[0])
+    if zone.homonym:
+        return f"{place} : une commune de ce nom, {shown}, est dans la zone « {zone.location} »"
+    if fold(shown).text == fold(place).text:
+        return f"{place} : dans la zone « {zone.location} »"
+    return f"{place} : {shown}, dans la zone « {zone.location} »"
 
 
 # Salary (Q8, Q24).

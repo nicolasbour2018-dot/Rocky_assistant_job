@@ -16,6 +16,12 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   refuse de lier la compétence d'un autre profil.
 - Pistes : pas de suppression définitive d'une piste à laquelle une offre est rattachée (garde à ajouter en C6).
 
+## Lieux (`places.py`, décision `docs/decisions/G2-lieux-date-limite.md`)
+- Référentiel `data/lieux-cog-<année>.csv`, produit seulement par `docs/procedures/g2-lieux/build.py`, jamais édité à la
+  main ; aucun réseau à l'exécution. Un nouveau millésime ou un nouvel alias change la `RULES_VERSION` du score.
+- Un nom n'est jamais corrigé (pas de correspondance approximative) : un lieu inconnu se compare mot à mot et se signale
+  (piste et « Pourquoi ? »).
+
 ## CV maître (décision `docs/decisions/D2-cv-rendu.md`)
 - Choix et ordre du CV : un seul objet `CvLayout`, réécrit en entier par `save_cv_layout` après `check_layout` ;
   chaque geste de l'écran est une fonction pure de `rocky/profil/cv/layout.py`. Pas d'événement (aucun score ne bouge).

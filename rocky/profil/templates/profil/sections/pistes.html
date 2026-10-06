@@ -33,6 +33,9 @@
     <dl class="facts">
       <div><dt>Intitulés</dt><dd>{{ track.content.titles | join(" · ") or "—" }}</dd></div>
       <div><dt>Lieux</dt><dd>{{ track.content.locations | join(" · ") or "—" }}</dd></div>
+      {% for location in unknown_places[track.id] %}
+      <p class="alert alert-info">Lieu non reconnu : « {{ location }} » ; comparé mot à mot dans le score. Écris une commune, un département ou une région (ex. « Eure-et-Loir », « Île-de-France »).</p>
+      {% endfor %}
       {% if track.content.keywords %}<div><dt>Mots-clés</dt><dd>{{ track.content.keywords | join(" · ") }}</dd></div>{% endif %}
       {% if track.content.excluded_keywords %}<div><dt>Mots exclus</dt><dd>{{ track.content.excluded_keywords | join(" · ") }}</dd></div>{% endif %}
     </dl>

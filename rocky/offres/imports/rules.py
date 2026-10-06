@@ -34,12 +34,20 @@ from rocky.offres.sources.rules import (
     source_for_url,
     text,
 )
+from rocky.profil.rules import normalize_term
 
 MAX_LINK_LENGTH = 2048
 # Ordinary web ports only: a link cannot be used to probe other services.
 ALLOWED_PORTS = {None, 80, 443}
 MAX_PASTED_CHARACTERS = 50_000
 VISIBLE_TEXT_LIMIT = 20_000
+# JSON-LD ``employmentType`` codes that give the working time, not the contract (decision G2, Q9).
+GENERIC_EMPLOYMENT_TYPES = frozenset({"FULL_TIME", "PART_TIME"})
+# French contracts a page title may name, as written there and in comparison form.
+TITLE_CONTRACTS = tuple(
+    (label, re.compile(rf"(?<![a-z0-9]){normalize_term(label)}(?![a-z0-9])"))
+    for label in ("CDI", "CDD", "Stage", "Alternance", "Intérim", "Freelance")
+)
 # Containers known to hold the whole posting (ported from the old importer).
 DESCRIPTION_SELECTORS = (
     "#jobDescriptionText",  # Indeed
@@ -211,7 +219,7 @@ def parse_page(page_html: str, url: str, *, today: date) -> ImportPreview:
         company=_plain(posting.get("hiringOrganization")),
         location=location,
         country=country,
-        contract=_plain(posting.get("employmentType")),
+        contract=_contract(_plain(posting.get("employmentType")), _title(soup)),
         remote=_plain(posting.get("jobLocationType")),
         salary_min=salary_min,
         salary_max=salary_max,
@@ -442,6 +450,19 @@ def _meta(soup: BeautifulSoup, name: str) -> str | None:
 
 def _title(soup: BeautifulSoup) -> str | None:
     return _plain(soup.title.get_text()) if soup.title else None
+
+
+def _contract(employment_type: str | None, page_title: str | None) -> str | None:
+    """The contract of the posting: the JSON-LD's, unless it only says the working time ("FULL_TIME") or nothing
+    while the page title names a French contract ("Offre Emploi CDI Data Analyst…" on Hellowork, decision G2, Q9)."""
+    if employment_type and employment_type.upper() not in GENERIC_EMPLOYMENT_TYPES:
+        return employment_type
+    named = [
+        label
+        for label, pattern in TITLE_CONTRACTS
+        if page_title and pattern.search(normalize_term(page_title))
+    ]
+    return ", ".join(named) if named else employment_type
 
 
 def _targeted_description(soup: BeautifulSoup) -> str:

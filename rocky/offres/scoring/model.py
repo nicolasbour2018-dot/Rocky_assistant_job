@@ -16,7 +16,7 @@ from typing import Any
 from rocky.offres.analysis.model import Importance
 from rocky.profil.model import LanguageLevel, Preferences, SkillLevel
 
-RULES_VERSION = "score-2026-09-29.3"
+RULES_VERSION = "score-2026-10-06.1"
 
 
 class ComponentCode(StrEnum):
