@@ -94,7 +94,7 @@ def board_with(app: FastAPI, engine: Engine) -> Board:
 @pytest.fixture
 def app(migrated_engine: Engine) -> FastAPI:
     app = make_app(migrated_engine)
-    app.state.import_today = lambda: TODAY
+    app.state.auth.clock.now = NOW
     return app
 
 

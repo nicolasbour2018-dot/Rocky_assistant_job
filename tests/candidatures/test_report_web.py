@@ -7,14 +7,14 @@ from fastapi import FastAPI
 from sqlalchemy import Engine
 
 from tests.candidatures.test_web import desk_with
-from tests.offres.fakes import TODAY
+from tests.offres.fakes import NOW
 from tests.system.web_support import HTMX, logged_in, make_app
 
 
 @pytest.fixture
 def app(migrated_engine: Engine) -> FastAPI:
     app = make_app(migrated_engine)
-    app.state.import_today = lambda: TODAY
+    app.state.auth.clock.now = NOW
     return app
 
 

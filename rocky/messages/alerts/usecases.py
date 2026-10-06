@@ -33,10 +33,9 @@ from rocky.messages.alerts.model import (
     ReadingStatus,
 )
 from rocky.messages.alerts.rules import card_offer, cards, merged, reader_of
-from rocky.messages.decisions.rules import paris_day
 from rocky.offres.imports.model import ImportOutcome
+from rocky.system.clock import PARIS, paris_day
 from rocky.system.events import Actor, NewEvent
-from rocky.system.scheduler import PARIS
 
 logger = logging.getLogger(__name__)
 

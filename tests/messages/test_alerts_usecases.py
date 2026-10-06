@@ -12,7 +12,7 @@ import logging
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -67,9 +67,11 @@ class FakePages:
 
     answers: dict[str, ImportResult] = field(default_factory=dict)
     calls: list[str] = field(default_factory=list)
+    days: list[date] = field(default_factory=list)
 
     def __call__(self, link: str, *, today: date) -> ImportResult:
         self.calls.append(link)
+        self.days.append(today)
         if link in self.answers:
             return self.answers[link]
         url = f"https://www.exemple-emplois.fr/annonce/{len(self.calls)}"
@@ -620,3 +622,16 @@ def _fail_at(monkeypatch: pytest.MonkeyPatch, n: int) -> None:
             return result
 
         monkeypatch.setattr(owner, name, wrapped)
+
+
+def test_at_half_past_midnight_in_paris_the_postings_are_read_on_the_paris_day(
+    inbox: Inbox,
+) -> None:
+    night = datetime(2026, 10, 4, 22, 30, tzinfo=UTC)  # 00:30 on 05/10 in Paris
+    service = _service(inbox.engine, inbox.pages, now=night)
+    inbox.alert("hellowork_alerte")
+
+    service.classify(inbox.account_id, use_model=False)
+    service.read_alerts(inbox.account_id, links=True)
+
+    assert inbox.pages.days and set(inbox.pages.days) == {date(2026, 10, 5)}

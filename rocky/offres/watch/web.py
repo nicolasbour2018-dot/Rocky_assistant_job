@@ -9,11 +9,9 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
-from datetime import datetime
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import RedirectResponse, Response
-from fastapi.templating import Jinja2Templates
 
 from rocky.offres.sources.model import SOURCE_LABELS, SourceCode
 from rocky.offres.sources.report import UNAVAILABLE_HINTS
@@ -31,7 +29,8 @@ from rocky.offres.watch.service import WatchService, WatchState, public_sources
 from rocky.offres.watch.usecases import active_tracks
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
-from rocky.system.scheduler import PARIS, Scheduler
+from rocky.system.clock import paris_time
+from rocky.system.scheduler import Scheduler
 from rocky.system.shell import (
     Action,
     Card,
@@ -66,16 +65,10 @@ def install(app: FastAPI) -> None:
         limit=settings.sources.results_per_query,
         clock=app.state.auth.clock,
     )
-    templates: Jinja2Templates = app.state.templates
-    templates.env.filters["paris_time"] = paris_time
     add_today_cards(app, "veille", today_cards)
     add_badge(app, "today", _late_or_failed)
     add_system_cards(app, "veille", system_cards)
     app.include_router(router)
-
-
-def paris_time(moment: datetime) -> str:
-    return moment.astimezone(PARIS).strftime("%d/%m à %H:%M")
 
 
 def _task_name(account_id: int) -> str:

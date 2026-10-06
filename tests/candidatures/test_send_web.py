@@ -33,7 +33,7 @@ from tests.candidatures.test_letter_web import (
     sent_form,
 )
 from tests.candidatures.test_web import Desk, desk_with
-from tests.offres.fakes import TODAY
+from tests.offres.fakes import NOW, TODAY
 from tests.system.web_support import make_app
 
 REPORT = PrefillReport(
@@ -58,7 +58,7 @@ class FakeWorkstation:
 @pytest.fixture
 def app(migrated_engine: Engine, tmp_path: Path) -> FastAPI:
     app = make_app(migrated_engine, storage_root=tmp_path)
-    app.state.import_today = lambda: TODAY
+    app.state.auth.clock.now = NOW
     app.state.llm_model = LetterModel()
     app.state.workstation = FakeWorkstation()
     return app

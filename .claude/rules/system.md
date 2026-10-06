@@ -59,6 +59,12 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Un module est prévenu d'un changement d'un autre par un crochet de `app.state` installé par la composition
   (`profile_changed`), jamais par un import de l'un dans l'autre.
 
+## Heure et jour (`rocky/system/clock.py`, étape H2, `docs/decisions/H-revue-code.md`)
+- Une seule horloge, `app.state.auth.clock` (instants UTC, réglée par les tests : `clock.now`) ; un seul jour, celui
+  de Paris : `paris_day(instant)`, et `today_of(request)` dans une route. Jamais de `.date()` sur un instant UTC ni de
+  `datetime.now(...)` hors de `utc_now` : entre minuit et 2 h, heure de Paris, le jour aurait un jour de retard.
+- Une heure affichée passe par `paris_time` (filtre Jinja `paris_time`, posé par `system/web.py`).
+
 ## Erreurs métier (`rocky/system/errors.py`, étape H1, `docs/decisions/H-revue-code.md`)
 - Une erreur dont le message (français) est pour l'utilisateur hérite de `UserFacingError` ; une route oubliée ne
   donne pas de 500 : `shell.show_user_error` la journalise et l'affiche (fragment reciblé sur `#erreur`, page entière

@@ -13,7 +13,7 @@ from datetime import date
 
 from rocky.candidatures.model import Change, Stage
 from rocky.candidatures.rules import standing
-from rocky.system.scheduler import PARIS
+from rocky.system.clock import paris_day
 
 # The applications of an account whose message in force is an acknowledgement (``messages``, given by the composition).
 type Acknowledged = Callable[[int], frozenset[int]]
@@ -64,7 +64,7 @@ def report_of(
         if not sendings:
             continue
         sent += 1
-        day = sendings[0].changed_at.astimezone(PARIS).date()
+        day = paris_day(sendings[0].changed_at)
         first = day if first is None else min(first, day)
         if stages & HUMAN_ANSWERS:
             answered += 1

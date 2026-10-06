@@ -33,6 +33,7 @@ from rocky.candidatures.rules import (
     sent_change,
 )
 from rocky.profil.model import Identity
+from rocky.system.clock import paris_day
 
 NONE = "aucun"  # the choice « without this document of Rocky » (Q5)
 _KIND_ORDER = (RevisionKind.CV, RevisionKind.LETTER)
@@ -181,7 +182,7 @@ def _sent(
         change = sent_change(changes)
         if change is None:
             return None
-        return Sent(change.changed_at.date(), None, None, None, None, linked=False)
+        return Sent(paris_day(change.changed_at), None, None, None, None, linked=False)
     channel = CHANNEL_LABELS[in_force.channel]
     if in_force.channel_detail:
         channel = (

@@ -69,10 +69,10 @@ from rocky.offres.decisions import Author
 from rocky.offres.imports.web import posting_pages
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import InvalidLinkError
-from rocky.offres.watch.web import paris_time
 from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.clock import paris_time
 from rocky.system.llm import GeminiModel
 from rocky.system.scheduler import Scheduler
 from rocky.system.shell import (

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import AbstractContextManager, contextmanager
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, FastAPI, Form, Request
@@ -61,6 +61,7 @@ from rocky.profil.model import (
 from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.clock import today_of
 from rocky.system.config import SourcesSettings
 from rocky.system.llm import GeminiModel, JsonModel
 from rocky.system.shell import page, wants_fragment
@@ -102,9 +103,8 @@ def posting_pages(
 
 
 def install(app: FastAPI) -> None:
-    # Replaced by the tests: the recorded pages, a fixed day, a fake language model.
+    # Replaced by the tests: the recorded pages, a fake language model.
     app.state.import_http = PublicHttp
-    app.state.import_today = lambda: datetime.now(UTC).date()
     app.state.llm_model = GeminiModel(app.state.settings.llm)
     templates: Jinja2Templates = app.state.templates
     templates.env.globals.update(
@@ -188,7 +188,7 @@ def import_posting(
     http = new_http()
     try:
         sources = link_sources(build_sources(request.app.state.settings.sources, http))
-        result = import_link(lien, http, sources, today=_today(request))
+        result = import_link(lien, http, sources, today=today_of(request))
     finally:
         http.close()
     context: dict[str, object] = {"link": lien, "result": result}
@@ -269,7 +269,7 @@ def add_offer(
             offer=offer,
             inputs=inputs,
             now=clock(),
-            today=_today(request),
+            today=today_of(request),
         )
     return _added(request, {"added": recorded, "added_title": offer.title})
 
@@ -290,18 +290,13 @@ def _analysis(
 ) -> dict[str, object]:
     profile = profile_of(request, account)
     skills = account_skills(skill.content for skill in profile.skills)
-    today = _today(request)
+    today = today_of(request)
     analysis = analyze(preview.offer, skills, today=today)
     return {
         "analysis": analysis,
         "has_skills": bool(skills),
         "score": score(analysis, preview.offer, scoring_profile(profile), today=today),
     }
-
-
-def _today(request: Request) -> date:
-    today: Callable[[], date] = request.app.state.import_today
-    return today()
 
 
 def _paste_error(request: Request, paste: dict[str, str], reason: str) -> HTMLResponse:

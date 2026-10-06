@@ -45,6 +45,7 @@ from rocky.profil.translation import (
 from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
+from rocky.system.clock import paris_day
 from rocky.system.files import FileError, FileStore
 from rocky.system.render import RenderError, rasterize
 from rocky.system.shell import page, wants_fragment
@@ -342,7 +343,7 @@ def _english_screen(
         )
         try:
             rendered, _, problems = draw_derived(
-                files, cv_content(profile, "en", clock().date())
+                files, cv_content(profile, "en", paris_day(clock()))
             )
             preview = base64.b64encode(
                 _png(rasterize(rendered.pdf, PREVIEW_DPI)[0])

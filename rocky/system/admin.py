@@ -11,7 +11,7 @@ import json
 import sys
 from collections import Counter
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import TextIO
 
@@ -55,6 +55,7 @@ from rocky.system.auth.mail import SmtpMailer
 from rocky.system.auth.rules import InvalidEmailError, normalize_email
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import Clock
+from rocky.system.clock import utc_now
 from rocky.system.config import load_settings
 from rocky.system.db import create_db_engine
 from rocky.system.llm import GeminiModel
@@ -90,7 +91,7 @@ def import_profile(
                 return 1
             editor = ProfileEditor(
                 SqlProfileStore(connection),
-                clock=utc_now,
+                clock=clock,
                 account_id=account.id,
                 email=account.email,
             )
@@ -426,10 +427,6 @@ def _csv_value(value: object) -> str:
     if isinstance(value, datetime):
         return value.isoformat()
     return str(value)
-
-
-def utc_now() -> datetime:
-    return datetime.now(UTC)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

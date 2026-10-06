@@ -41,6 +41,7 @@ from rocky.offres.watch.rules import (
     track_queries,
 )
 from rocky.profil.model import Profile, Track, TrackStatus
+from rocky.system.clock import paris_day
 from rocky.system.events import Actor, NewEvent
 
 logger = logging.getLogger(__name__)
@@ -177,7 +178,7 @@ def _search_and_record(
                         track_ids=track_ids,
                         run_id=result.run_id,
                         now=now,
-                        today=now.date(),
+                        today=paris_day(now),
                     )
             except Exception:
                 # One offer the analysis, the score or the database cannot handle: logged with its trace, counted,
@@ -306,7 +307,7 @@ def rescore_account(
             try:
                 with storage.transaction() as store:
                     rescore_offer(
-                        store, offer, inputs=inputs, now=now, today=now.date()
+                        store, offer, inputs=inputs, now=now, today=paris_day(now)
                     )
             except Exception:
                 # The offer keeps its previous score; logged with its trace, counted in the event.

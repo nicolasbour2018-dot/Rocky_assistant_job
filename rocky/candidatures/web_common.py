@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from datetime import date, datetime
+from datetime import datetime
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse
@@ -50,11 +50,6 @@ def engine_of(request: Request) -> Engine:
 def now_of(request: Request) -> datetime:
     clock: Callable[[], datetime] = request.app.state.auth.clock
     return clock()
-
-
-def today_of(request: Request) -> date:
-    today: Callable[[], date] = request.app.state.import_today
-    return today()
 
 
 def render_fragment(

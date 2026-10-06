@@ -5,7 +5,7 @@ from __future__ import annotations
 import html as html_lib
 import re
 from collections.abc import Mapping
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +16,7 @@ from markupsafe import escape
 from sqlalchemy import Engine, select
 
 from rocky.offres.analysis.model import RULES_VERSION, Salary, SalaryPeriod
+from rocky.offres.analysis.rules import analyze
 from rocky.offres.imports.rules import VISIBLE_TEXT_REASON
 from rocky.offres.imports.usecases import PASTE_HINT
 from rocky.offres.imports.web import offer_facts, salary_label
@@ -25,6 +26,7 @@ from rocky.offres.sql import SqlStore, job_offers
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.events import events
 from rocky.system.llm import LlmUnavailableError
+from tests.offres.fakes import HALF_PAST_MIDNIGHT, TODAY
 from tests.offres.sources.replay import Answer, Replay, answer
 from tests.system.web_support import HTMX, logged_in, make_app
 
@@ -61,7 +63,7 @@ def replay() -> Replay:
 def app(migrated_engine: Engine, replay: Replay) -> FastAPI:
     app = make_app(migrated_engine)
     app.state.import_http = replay.http
-    app.state.import_today = lambda: date(2026, 9, 25)
+    app.state.auth.clock.now = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
     app.state.llm_model = FakeModel(SUMMARY)
     return app
 
@@ -444,3 +446,21 @@ def test_an_altered_add_form_is_refused_with_its_reason(client: TestClient) -> N
     assert "L'offre à ajouter est illisible" in text_of(refused.text)
     assert whole_page.status_code == 400
     assert "L'offre à ajouter est illisible" in text_of(whole_page.text)
+
+
+def test_at_half_past_midnight_in_paris_the_preview_reads_the_paris_day(
+    app: FastAPI, migrated_engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app.state.auth.clock.now = HALF_PAST_MIDNIGHT
+    client = logged_in(app, migrated_engine)[0]
+    days: list[date] = []
+
+    def read(offer, skills, *, today):  # type: ignore[no-untyped-def]
+        days.append(today)
+        return analyze(offer, skills, today=today)
+
+    monkeypatch.setattr("rocky.offres.imports.web.analyze", read)
+
+    client.post("/offres/importer", data={"lien": HELLOWORK}, headers=HTMX)
+
+    assert days == [TODAY]

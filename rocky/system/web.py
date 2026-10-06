@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, time
+from datetime import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -29,10 +29,11 @@ from rocky.system.auth.model import Account
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import Argon2Hasher, Clock, PasswordHasher
 from rocky.system.auth.web import AuthServices, install
+from rocky.system.clock import paris_time, utc_now
 from rocky.system.config import Settings, load_settings
 from rocky.system.db import create_db_engine
 from rocky.system.errors import UserFacingError
-from rocky.system.scheduler import PARIS, DailyTask, PeriodicTask, Scheduler
+from rocky.system.scheduler import DailyTask, PeriodicTask, Scheduler
 from rocky.system.shell import Card, add_system_cards
 from rocky.system.workstation import WorkstationClient
 
@@ -69,10 +70,6 @@ STATIC_DIR = Path(__file__).parent / "static"
 logger = logging.getLogger(__name__)
 
 
-def utc_now() -> datetime:
-    return datetime.now(UTC)
-
-
 def create_app(
     settings: Settings | None = None,
     *,
@@ -89,6 +86,7 @@ def create_app(
     app = FastAPI(title="Rocky", lifespan=_lifespan)
     app.state.settings = settings
     app.state.templates = Jinja2Templates(directory=TEMPLATE_DIRS)
+    app.state.templates.env.filters["paris_time"] = paris_time
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.state.engine = engine = engine or create_db_engine(settings.database_url)
     # Starlette runs the middleware added last first: the onboarding gate, added before the session
@@ -161,7 +159,7 @@ def planner_card(scheduler: Scheduler, *, enabled: bool) -> Card:
     """The tasks of the planner and their next run (Q8: no table; the last runs are those of the watch and of the
     mailboxes, in their panels). A task failure is only in the log (plan §8)."""
     details = tuple(
-        (label, f"{when} · prochain passage le {_paris(scheduler.next_run(name))}")
+        (label, f"{when} · prochain passage le {paris_time(scheduler.next_run(name))}")
         if enabled and shows_next
         else (label, when)
         for name, label, when, shows_next in TASKS
@@ -171,10 +169,6 @@ def planner_card(scheduler: Scheduler, *, enabled: bool) -> Card:
     return Card(
         "🕒 Planification", ("Un seul planificateur, dans l'application.",), details
     )
-
-
-def _paris(moment: datetime) -> str:
-    return moment.astimezone(PARIS).strftime("%d/%m à %H:%M")
 
 
 @asynccontextmanager

@@ -24,6 +24,7 @@ from rocky.system.events import events
 from rocky.system.llm import LlmUnavailableError
 from rocky.system.workstation import NOT_RUNNING, ShownPage
 from tests.offres.fakes import (
+    HALF_PAST_MIDNIGHT,
     NOW,
     SUMMARY,
     TODAY,
@@ -112,7 +113,7 @@ def seed(engine: Engine, email: str) -> tuple[Seeker, dict[str, int]]:
 @pytest.fixture
 def app(migrated_engine: Engine) -> FastAPI:
     app = make_app(migrated_engine)
-    app.state.import_today = lambda: date(2026, 9, 29)
+    app.state.auth.clock.now = NOW
     app.state.llm_model = FakeModel(SUMMARY)
     app.state.workstation = FakeBrowser(SHOWN)
     return app
@@ -837,3 +838,13 @@ def test_a_past_deadline_is_signalled_and_the_offer_stays_to_review(
         "</tr>"
     )[0]
     assert "date limite passée" not in others
+
+
+def test_at_half_past_midnight_in_paris_the_age_counts_from_the_paris_day(
+    app: FastAPI,
+) -> None:
+    app.state.auth.clock.now = HALF_PAST_MIDNIGHT
+    age = app.state.templates.env.filters["age"]
+
+    assert age(TODAY) == "aujourd'hui"
+    assert age(date(2026, 9, 28)) == "hier"
