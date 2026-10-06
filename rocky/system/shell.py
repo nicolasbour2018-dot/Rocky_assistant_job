@@ -1,8 +1,9 @@
 """Web shell: the navigation, the page helper shared by every module, and the cross-cutting screens (step F1):
 🏠 Aujourd'hui, ⚙️ Système and the drawer 🐾, built from what each module registers here.
 
-``system`` imports no business module (decision F1, Q13): a module registers its cards and its drawer at install time,
-the shell orders them, chooses the one main action of the screen and renders them.
+The shell imports no business module (decision F1, Q13): a module registers its cards and its drawer at install time,
+the shell orders them, chooses the one main action of the screen and renders them. In ``system``, only the assembly
+imports the modules: the application (``web.py``), the command line (``admin.py``) and the tables (``tables.py``).
 """
 
 from __future__ import annotations

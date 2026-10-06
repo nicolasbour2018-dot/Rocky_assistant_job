@@ -87,7 +87,7 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Écran : `docs/decisi
   information garde `value=None`, jamais devinée (sa part dans le score : ci-dessous).
 - Tous les paramètres (poids, points, plafond, seuil, confiance) sont des constantes de `model.py`, calibrées en C5 ;
   toute modification change `RULES_VERSION`. Les `features` ne contiennent que des valeurs JSON (D14).
-- Le profil se lit par `profil.web.profile_of` (ou `stored_profile` hors requête) puis `scoring_profile`, jamais par le
+- Le profil se lit par `profil.web.profile_of` dans une route (ou `profil.api.stored_profile` hors requête) puis `scoring_profile`, jamais par le
   SQL de `profil`.
 - Composante `value=None` : l'annonce ne dit rien → compte `ABSENT_VALUE` ; rien à comparer (aucune préférence, rien
   demandé, télétravail complet) → `neutral=True`, retirée. Tout nouveau cas `None` choisit explicitement l'un des deux.
@@ -100,8 +100,8 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Écran : `docs/decisi
 - Une offre ne s'écrit que par `record_offer`, dans **une** transaction avec ses pistes et ses scores courants ; aucune
   autre écriture de `job_offers`, `offer_tracks` ou `offer_scores`. Offre connue : `enriched`, jamais écrasée.
 - Aucune offre n'est jetée : sous le seuil, elle est écrite, et son motif se calcule (`Score.threshold_reason`).
-- Tout le SQL du module est dans `sql.py` (`SqlStore`, `SqlStorage`) ; le profil se lit par `profil.web.stored_profile`
-  (hors requête) ou `profile_of`, jamais par le SQL de `profil`.
+- Tout le SQL du module est dans `sql.py` (`SqlStore`, `SqlStorage`) ; le profil se lit par `profil.api.stored_profile`
+  (hors requête) ou `profil.web.profile_of` (routes), jamais par le SQL de `profil`.
 - Une veille est **toujours close** : `run_watch` ferme la veille dans un `finally` (`interrupted` sur une
   `BaseException`) ; `recover_interrupted` ferme au démarrage celles d'un processus tué. Aucune requête réseau dans une
   transaction. Veille et recalcul d'un compte passent par son verrou (`SqlStorage.lock`).

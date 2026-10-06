@@ -27,8 +27,8 @@ from rocky.offres.watch.usecases import (
     rescore_account,
     run_watch,
 )
+from rocky.profil.api import stored_profile
 from rocky.profil.model import Profile
-from rocky.profil.web import stored_profile
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.config import SourcesSettings
 

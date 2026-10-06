@@ -8,9 +8,9 @@ from datetime import date, datetime
 
 from sqlalchemy import Connection
 
-from rocky.candidatures import web as candidatures_web
+from rocky.candidatures import api as candidatures_api
 from rocky.candidatures.model import Stage
-from rocky.offres import web as offres_web
+from rocky.offres import api as offres_api
 from rocky.offres.decisions import Author
 from rocky.offres.sources.model import CollectedOffer
 from rocky.profil.model import Profile
@@ -23,7 +23,7 @@ class CandidaturesLink:
         self._conn = connection
 
     def stage(self, account_id: int, application_id: int) -> Stage | None:
-        return candidatures_web.mail_stage(self._conn, account_id, application_id)
+        return candidatures_api.mail_stage(self._conn, account_id, application_id)
 
     def move(
         self,
@@ -36,7 +36,7 @@ class CandidaturesLink:
         now: datetime,
         today: date,
     ) -> int | None:
-        return candidatures_web.move_application_by_message(
+        return candidatures_api.move_application_by_message(
             self._conn,
             account_id=account_id,
             application_id=application_id,
@@ -48,14 +48,14 @@ class CandidaturesLink:
         )
 
     def in_force(self, account_id: int, application_id: int, change_id: int) -> bool:
-        return candidatures_web.change_in_force(
+        return candidatures_api.change_in_force(
             self._conn, account_id, application_id, change_id
         )
 
     def cancel(
         self, account_id: int, application_id: int, change_id: int, now: datetime
     ) -> bool:
-        return candidatures_web.cancel_message_change(
+        return candidatures_api.cancel_message_change(
             self._conn,
             account_id=account_id,
             application_id=application_id,
@@ -66,7 +66,7 @@ class CandidaturesLink:
     def learn_domain(
         self, account_id: int, application_id: int, domain: str, now: datetime
     ) -> bool:
-        return candidatures_web.learn_employer_domain(
+        return candidatures_api.learn_employer_domain(
             self._conn,
             account_id=account_id,
             application_id=application_id,
@@ -77,7 +77,7 @@ class CandidaturesLink:
     def open_outside(
         self, account_id: int, offer_id: int, sent_on: date, now: datetime
     ) -> int:
-        return candidatures_web.open_outside_application(
+        return candidatures_api.open_outside_application(
             self._conn,
             account_id=account_id,
             offer_id=offer_id,
@@ -104,7 +104,7 @@ class OffresLink:
         now: datetime,
         today: date,
     ) -> int:
-        return offres_web.record_message_offer(
+        return offres_api.record_message_offer(
             self._conn,
             account_id=account_id,
             message_id=message_id,
@@ -127,15 +127,15 @@ class AlertOffersLink:
     def complete_keys(
         self, account_id: int, keys: Iterable[tuple[str, str]]
     ) -> set[tuple[str, str]]:
-        return offres_web.complete_offer_keys(self._conn, account_id, keys)
+        return offres_api.complete_offer_keys(self._conn, account_id, keys)
 
     def try_lock(self, account_id: int) -> bool:
-        return offres_web.try_lock_offers(self._conn, account_id)
+        return offres_api.try_lock_offers(self._conn, account_id)
 
     def record(
         self, account_id: int, offer: CollectedOffer, *, now: datetime, today: date
     ) -> tuple[int, bool]:
-        return offres_web.record_alert_offer(
+        return offres_api.record_alert_offer(
             self._conn,
             account_id=account_id,
             offer=offer,

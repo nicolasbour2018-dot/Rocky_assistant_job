@@ -59,21 +59,24 @@ from rocky.messages.oauth import (
     redirect_uri,
     seal_pending,
 )
-from rocky.messages.service import Attention, MailboxView, MessagesService
+from rocky.messages.service import (
+    Attention,
+    MailboxView,
+    MessagesService,
+    messages_service,
+)
 from rocky.messages.usecases import (
     CollectBusyError,
     MailboxNotConnectedError,
     MailboxNotFoundError,
 )
 from rocky.offres.decisions import Author
-from rocky.offres.imports.web import posting_pages
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import InvalidLinkError
 from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import paris_time
-from rocky.system.llm import GeminiModel
 from rocky.system.scheduler import Scheduler
 from rocky.system.shell import (
     Action,
@@ -136,15 +139,14 @@ def install(app: FastAPI) -> None:
         http: PublicHttp = app.state.import_http()
         return http
 
-    service = MessagesService(
+    service = messages_service(
         app.state.engine,
-        settings=settings.gmail,
+        settings,
         clock=app.state.auth.clock,
-        on_collected=collected,
-        llm=settings.llm,
-        model=GeminiModel(settings.llm) if settings.llm.api_key else None,
+        classify=True,
         # E3: the postings of the alerts' links, on the client of the import.
-        pages=posting_pages(new_http, settings.sources),
+        new_http=new_http,
+        on_collected=collected,
     )
     app.state.messages = service
     # E2: what follows a collection is the classification of the account's messages without a decision.

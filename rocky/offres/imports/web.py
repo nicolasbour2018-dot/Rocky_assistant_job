@@ -7,8 +7,7 @@ under the form, and requests without HTMX get the whole page.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Mapping
-from contextlib import AbstractContextManager, contextmanager
+from collections.abc import Callable, Mapping
 from datetime import date, datetime
 from typing import Annotated
 
@@ -62,7 +61,6 @@ from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import today_of
-from rocky.system.config import SourcesSettings
 from rocky.system.llm import GeminiModel, JsonModel
 from rocky.system.shell import page, wants_fragment
 
@@ -75,31 +73,6 @@ PASTE_OUTCOMES = {ImportOutcome.REFUSED, ImportOutcome.FAILED}
 IMPORTANCE_ORDER = (Importance.ELIMINATORY, Importance.PREFERRED, Importance.DETECTED)
 
 router = APIRouter(prefix="/offres/importer")
-
-
-type PostingReading = Callable[..., ImportResult]
-
-
-def posting_pages(
-    new_http: Callable[[], PublicHttp], settings: SourcesSettings
-) -> Callable[[], AbstractContextManager[PostingReading]]:
-    """Read posting links outside any request, as the import does (decision E3: the links of the job alerts, read by
-    the planner): one public HTTP client per pass, closed after it. The reading is ``read(link, today=…)``."""
-
-    @contextmanager
-    def pages() -> Iterator[PostingReading]:
-        http = new_http()
-        try:
-            sources = link_sources(build_sources(settings, http))
-
-            def read(link: str, *, today: date) -> ImportResult:
-                return import_link(link, http, sources, today=today)
-
-            yield read
-        finally:
-            http.close()
-
-    return pages
 
 
 def install(app: FastAPI) -> None:

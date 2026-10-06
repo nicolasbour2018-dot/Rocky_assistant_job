@@ -74,7 +74,9 @@ docs/
 - Modules métier (`profil`, `offres`, `candidatures`, `messages`) sur un socle technique `system`.
   Un module utilise `system` ; il ne recopie pas ce qui s'y trouve et n'accède pas au SQL d'un autre module.
 - Forme interne d'un module : règles métier (fonctions pures, dataclasses) → cas d'usage → accès SQL du module
-  → routes FastAPI et gabarits HTMX.
+  → routes FastAPI et gabarits HTMX. Ce qu'un module donne aux autres est dans son `api.py` (fonctions sur la
+  connexion de l'appelant, sans route) : un module n'importe ni le `web.py` ni le `sql.py` d'un autre (test
+  `tests/system/test_architecture.py`).
 - Les cas d'usage sont testables avec de faux adaptateurs, sans FastAPI, SQL, Gmail ni LLM.
 - Pas d'interface par table, pas de hiérarchie de classes sans besoin démontré.
 - Toute opération qui écrit plusieurs choses liées le fait **dans une seule transaction** et de façon **idempotente**.

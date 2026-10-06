@@ -1,4 +1,5 @@
-"""The functions ``offres`` gives the other modules (D3: the analysis an application's CV is targeted with)."""
+"""The functions ``offres`` gives the other modules through ``offres.api`` (D3: the analysis an application's CV is
+targeted with)."""
 
 from __future__ import annotations
 
@@ -6,7 +7,7 @@ from datetime import date
 
 from sqlalchemy import Connection
 
-from rocky.offres import web as offres_web
+from rocky.offres import api as offres_api
 from rocky.offres.model import Origin
 from rocky.offres.rules import scoring_inputs
 from rocky.offres.sql import SqlStore
@@ -28,7 +29,7 @@ def test_the_analysis_of_an_offer_names_the_accounts_skills(db: Connection) -> N
         today=TODAY,
     ).offer_id
 
-    analysis = offres_web.offer_analysis(
+    analysis = offres_api.offer_analysis(
         db, seeker.account_id, offer_id, profile, TODAY
     )
 
@@ -51,7 +52,7 @@ def test_an_offer_of_another_account_has_no_analysis(db: Connection) -> None:
     ).offer_id
 
     assert (
-        offres_web.offer_analysis(
+        offres_api.offer_analysis(
             db, other.account_id, offer_id, other.profile(db), TODAY
         )
         is None
@@ -78,7 +79,7 @@ def test_the_heading_of_an_offer_says_where_to_apply(db: Connection) -> None:
         )
     ]
 
-    headings = offres_web.offer_headings(db, seeker.account_id, offer_ids)
+    headings = offres_api.offer_headings(db, seeker.account_id, offer_ids)
 
     with_form, plain = (headings[offer_id] for offer_id in offer_ids)
     assert with_form.apply_at == "https://employeur.example/postuler"
@@ -114,7 +115,7 @@ def test_the_deadlines_of_the_accounts_offers(db: Connection) -> None:
         "Date limite de candidature : 15/10/2026.",
     )
 
-    found = offres_web.offer_deadlines(
+    found = offres_api.offer_deadlines(
         db, owner.account_id, [with_deadline, without, elsewhere], TODAY
     )
 

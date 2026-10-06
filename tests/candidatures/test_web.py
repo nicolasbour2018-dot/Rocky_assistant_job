@@ -11,7 +11,7 @@ from sqlalchemy import Engine
 
 from rocky.candidatures.rules import dossier
 from rocky.candidatures.sql import SqlApplicationStore
-from rocky.offres import web as offres_web
+from rocky.offres import api as offres_api
 from rocky.offres.decisions import APPLICATION_STARTED, Decision, DecisionValue
 from rocky.offres.model import Origin
 from rocky.offres.rules import scoring_inputs
@@ -31,7 +31,7 @@ class Desk:
 
     def decision(self) -> DecisionValue | None:
         with self.engine.connect() as connection:
-            return offres_web.decision_in_force(
+            return offres_api.decision_in_force(
                 connection, self.seeker.account_id, self.offer_id
             )
 

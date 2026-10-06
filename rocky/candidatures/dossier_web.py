@@ -132,20 +132,26 @@ from rocky.candidatures.web_common import (
     owns,
     render_fragment,
 )
-from rocky.offres import web as offres_web
+from rocky.offres import api as offres_api
 from rocky.offres.analysis.model import IMPORTANCE_LABELS, Importance, PostingAnalysis
 from rocky.offres.analysis.usecases import Summary
 from rocky.offres.model import OfferHeading
-from rocky.profil import letter_web as profil_letters
-from rocky.profil import translation_web
-from rocky.profil import web as profil_web
 from rocky.profil.cv import layout as cv_layout
 from rocky.profil.cv.check import CvCheck, Fact, check_cv
 from rocky.profil.cv.layout import check_layout
 from rocky.profil.cv.rendering import MISSING_ENGLISH, CvRefusedError
 from rocky.profil.cv.template import Slots
+from rocky.profil.letter_web import generic_letters
 from rocky.profil.model import CvLayout, Profile, SkillCategory
 from rocky.profil.rules import ProfileInputError
+from rocky.profil.translation_web import english_cv_outdated, to_review
+from rocky.profil.web import (
+    cv_document,
+    cv_drawing,
+    cv_fingerprint,
+    cv_slots,
+    profile_of,
+)
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import today_of
@@ -253,25 +259,25 @@ def _dossier(
     request: Request, account: Account, application_id: int
 ) -> ApplicationFile | None:
     """The application of the account with its targeted CV; None for an unknown one or one of another account."""
-    profile = profil_web.profile_of(request, account)
-    slots = profil_web.cv_slots(request, account)
+    profile = profile_of(request, account)
+    slots = cv_slots(request, account)
     with engine_of(request).begin() as connection:
         store = SqlApplicationStore(connection)
         application = store.locked_application(account.id, application_id)
         if application is None:
             return None
         state = dossier(store.changes(application.id))
-        heading = offres_web.offer_headings(
+        heading = offres_api.offer_headings(
             connection, account.id, [application.offer_id]
         ).get(application.offer_id)
-        analysis = offres_web.offer_analysis(
+        analysis = offres_api.offer_analysis(
             connection, account.id, application.offer_id, profile, today_of(request)
         )
         stored = store.cv_selection(application.id)
         letters = tuple(store.letters(application.id))
         messages = tuple(store.messages(application.id))
-        summary = offres_web.offer_summary(connection, account.id, application.offer_id)
-        interest = offres_web.interested_reason(
+        summary = offres_api.offer_summary(connection, account.id, application.offer_id)
+        interest = offres_api.interested_reason(
             connection, account.id, application.offer_id
         )
         every_change = tuple(store.changes(application.id))
@@ -425,7 +431,7 @@ def _letter(
     submitted: Mapping[str, str] | None = None,
     switch: tuple[int, str] | None = None,
 ) -> LetterContext:
-    letters = profil_letters.generic_letters(request, account)
+    letters = generic_letters(request, account)
     generic = letters.of(language)
     brief = brief_of(
         language=language,
@@ -531,11 +537,8 @@ def _dossier_page(
         "language": language,
         # The English CV waits for texts in English: the translation screen is the way out.
         "missing_english": any(r.startswith(MISSING_ENGLISH) for r in cv_refusal),
-        "to_review": translation_web.to_review(request, account)
-        if language == "en"
-        else (),
-        "english_outdated": language == "en"
-        and translation_web.english_cv_outdated(request, account),
+        "to_review": to_review(request, account) if language == "en" else (),
+        "english_outdated": language == "en" and english_cv_outdated(request, account),
         "importance_labels": IMPORTANCE_LABELS,
         "coverage_labels": COVERAGE_LABELS,
         "apply_domain": urlsplit(found.offer.apply_at).hostname or "",
@@ -822,9 +825,7 @@ def check_application_cv(
         return Response(status_code=404)
     profile = replace(found.profile, cv=found.layout)
     try:
-        document, facts = profil_web.cv_document(
-            request, account, profile, found.language
-        )
+        document, facts = cv_document(request, account, profile, found.language)
     except CvRefusedError as error:
         return _dossier_page(
             request, account, application_id, step=Step.CV, cv_refusal=error.reasons
@@ -856,7 +857,7 @@ def cv_pdf(
     language = found.language
     profile = replace(found.profile, cv=found.layout)
     try:
-        document, _ = profil_web.cv_document(request, account, profile, language)
+        document, _ = cv_document(request, account, profile, language)
     except CvRefusedError as error:
         return _dossier_page(
             request,
@@ -1023,7 +1024,7 @@ def _letter_gesture(
             application = store.locked_application(account.id, application_id)
             assert application is not None  # noqa: S101  (owns() checked it)
             # The sending proposed by the gesture stops at the offer's deadline (decision D6, Q8; step H1).
-            deadline = offres_web.offer_deadlines(
+            deadline = offres_api.offer_deadlines(
                 connection, account.id, [application.offer_id], today
             ).get(application.offer_id)
             use_case(
@@ -1141,7 +1142,7 @@ def cv_preview(
     profile = replace(found.profile, cv=found.layout)
     pdf_url = f"/candidatures/{application_id}/cv.pdf?apercu=1"
     try:
-        drawing = profil_web.cv_drawing(request, account, profile, found.language)
+        drawing = cv_drawing(request, account, profile, found.language)
         back = quote(dossier_url(application_id, Step.CV), safe="")
         preview = _preview(
             drawing.pdf,
@@ -1445,9 +1446,7 @@ def _send(
     inputs: dict[RevisionKind, str | None] = {}
     if any(revision.language == language for revision in found.revisions):
         profile = replace(found.profile, cv=found.layout)
-        inputs[RevisionKind.CV] = profil_web.cv_fingerprint(
-            request, account, profile, language
-        )
+        inputs[RevisionKind.CV] = cv_fingerprint(request, account, profile, language)
         inputs[RevisionKind.LETTER] = (
             None
             if version is None
@@ -1487,8 +1486,8 @@ def _make(
     """The CV of the application and the letter in force in ``language``, both rendered before anything is written;
     raises ``CvRefusedError``, ``LetterRefusedError`` or ``RenderError`` with the reasons."""
     profile = replace(found.profile, cv=found.layout)
-    inputs = profil_web.cv_fingerprint(request, account, profile, language)
-    document, _ = profil_web.cv_document(request, account, profile, language)
+    inputs = cv_fingerprint(request, account, profile, language)
+    document, _ = cv_document(request, account, profile, language)
     if inputs is None:  # the CV rendered: its template is readable
         raise CvRefusedError(("Ton gabarit de CV est illisible.",))
     made = [Made(RevisionKind.CV, inputs, None, document.pdf)]
@@ -1583,7 +1582,7 @@ def revision_pdf(
     except InvalidChangeError as error:
         reason = str(error)
     else:
-        name = profil_web.profile_of(request, account).identity.full_name
+        name = profile_of(request, account).identity.full_name
         filename = revision_filename(revision.kind, name, revision.language)
         return Response(
             content,

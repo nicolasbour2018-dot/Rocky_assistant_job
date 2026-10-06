@@ -25,7 +25,7 @@ from datetime import timedelta
 import httpx2
 from sqlalchemy import Engine
 
-from rocky.candidatures import web as candidatures_web
+from rocky.candidatures import api as candidatures_api
 from rocky.candidatures.model import MailTarget
 from rocky.messages.alerts.model import (
     AlertsBusyError,
@@ -86,10 +86,12 @@ from rocky.messages.usecases import (
     disconnect_mailbox,
     recover_interrupted,
 )
+from rocky.offres.api import posting_pages
+from rocky.offres.sources.http import PublicHttp
 from rocky.profil.model import Profile
-from rocky.system.config import GmailSettings, LlmSettings
+from rocky.system.config import GmailSettings, LlmSettings, Settings
 from rocky.system.crypto import TokenCipher
-from rocky.system.llm import JsonModel
+from rocky.system.llm import GeminiModel, JsonModel
 
 logger = logging.getLogger(__name__)
 
@@ -292,7 +294,7 @@ class MessagesService:
     def targets(self, account_id: int) -> list[MailTarget]:
         """The applications a message of the account may concern (the module ``candidatures``, Q11)."""
         with self.engine.connect() as connection:
-            return candidatures_web.mail_targets(connection, account_id)
+            return candidatures_api.mail_targets(connection, account_id)
 
     def classify(
         self,
@@ -442,7 +444,7 @@ class MessagesService:
 
     def _labels(self, account_id: int, application_ids: set[int]) -> dict[int, str]:
         with self.engine.connect() as connection:
-            return candidatures_web.application_labels(
+            return candidatures_api.application_labels(
                 connection, account_id, application_ids
             )
 
@@ -506,7 +508,7 @@ class MessagesService:
                 raise LookupError(decisions.UNKNOWN_MESSAGE)
             decision = store.current_decision(message_id)
         with self.engine.connect() as connection:
-            applications = candidatures_web.open_application_labels(
+            applications = candidatures_api.open_application_labels(
                 connection, account_id
             )
         return CorrectionView(
@@ -636,3 +638,27 @@ class MessagesService:
         return (
             store.last_failure(account_id, now - timedelta(days=1)) or NEXT_ROUND_REASON
         )
+
+
+def messages_service(
+    engine: Engine,
+    settings: Settings,
+    *,
+    clock: Clock,
+    classify: bool,
+    new_http: Callable[[], PublicHttp] | None,
+    on_collected: CollectedHook = nothing_decided,
+) -> MessagesService:
+    """The service of the application and of the command line, built in one place (step H4), with explicit options
+    for what a command leaves out on purpose. ``classify``: the limits and, when a key is set, the language model of
+    the classification (E2). ``new_http``: the public client the postings of the alerts' links are read with, one per
+    pass (E3); None: the alerts give their offers from their cards alone."""
+    return MessagesService(
+        engine,
+        settings=settings.gmail,
+        clock=clock,
+        on_collected=on_collected,
+        llm=settings.llm if classify else None,
+        model=GeminiModel(settings.llm) if classify and settings.llm.api_key else None,
+        pages=None if new_http is None else posting_pages(new_http, settings.sources),
+    )

@@ -70,6 +70,10 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   marqué.
 
 ## Écran
+- Ce que `profil` donne aux autres modules hors requête est dans `api.py` (`stored_profile`). Les aides d'écran qui
+  prennent une `Request` restent avec les routes (décision H4, liste fermée de `tests/system/test_architecture.py`) :
+  `web.py` (`profile_of`, `cv_document`, `cv_drawing`, `cv_fingerprint`, `cv_slots`), `letter_web.generic_letters`,
+  `translation_web` (`to_review`, `english_cv_outdated`) ; les routes d'un autre module les importent par leur nom.
 - Chaque section est `#section-<clé>` et se remplace en entier (`outerHTML`). Tout lien ou formulaire d'une section
   déclare `hx-get`/`hx-post`, `hx-target` et `hx-swap` (macros de `templates/profil/macros.html`).
 - `wants_fragment` (`rocky/system/shell.py`) : une navigation boostée (`HX-Boosted`) reçoit une page entière,
