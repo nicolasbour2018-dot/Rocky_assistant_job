@@ -10,6 +10,7 @@ import base64
 import hashlib
 import json
 import mimetypes
+import re
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -33,6 +34,7 @@ from rocky.profil.cv.derived import (
     derived_facts,
     derived_html,
     draw_derived,
+    overflowing_projects,
     refuse_missing_variable_texts,
     render_derived,
     slots_of,
@@ -357,8 +359,10 @@ def _render(
     state: SectionState | None = None,
     status_code: int = 200,
     message: str | None = None,
+    back_to: str | None = None,
 ) -> HTMLResponse:
-    """One section (explicit HTMX request) or the whole page with that section in ``state``."""
+    """One section (explicit HTMX request) or the whole page with that section in ``state``; ``back_to``: the
+    application the user came from, offered on the page."""
     states = {section.key: SectionState() for section in SECTIONS}
     if key is not None and state is not None:
         states[key] = state
@@ -387,6 +391,7 @@ def _render(
             for track in profile.tracks
         },
         "message": message,
+        "back_to": back_to,
     }
     if key is not None and wants_fragment(request):
         return page(
@@ -711,6 +716,10 @@ def defer_onboarding(request: Request, account: CurrentAccount) -> Response:
     return RedirectResponse(PROFILE_PATH, status_code=303)
 
 
+# The only way back a profile page offers: to an application, from a text to shorten in its CV (G5, recette).
+_BACK_TO_APPLICATION = re.compile(r"/candidatures/\d+(\?etape=[a-z]+)?")
+
+
 @router.get("/{key}", response_class=HTMLResponse)
 def section(
     request: Request,
@@ -718,6 +727,7 @@ def section(
     key: str,
     langue: str = "fr",
     modifier: str | None = None,
+    retour: str | None = None,
 ) -> Response:
     if key not in SECTION_KEYS:
         return Response(status_code=404)
@@ -728,7 +738,8 @@ def section(
         if stored is None:
             return Response(status_code=404)
         state.editing, state.values = modifier, Values(stored)
-    return _render(request, profile, key=key, state=state)
+    back_to = retour if retour and _BACK_TO_APPLICATION.fullmatch(retour) else None
+    return _render(request, profile, key=key, state=state, back_to=back_to)
 
 
 # Writes: one form, one use case, one transaction
@@ -1283,22 +1294,43 @@ def cv_document(
     return render_derived(files, content), derived_facts(files, content)
 
 
+@dataclass(frozen=True)
+class CvDrawing:
+    """A CV drawn whatever its overflows: what a preview shows (decision D6, recette)."""
+
+    pdf: bytes
+    problems: tuple[str, ...]
+    # What the neutral template cut to hold one page (decision G5, Q1).
+    notices: tuple[str, ...] = ()
+    # The projects of the profile whose card or name spills over, (id, French name): to shorten (G5, recette).
+    projects_to_shorten: tuple[tuple[int, str], ...] = ()
+
+
 def cv_drawing(
     request: Request, account: Account, profile: Profile, language: str
-) -> tuple[bytes, tuple[str, ...], tuple[str, ...]]:
-    """The CV of ``profile`` drawn whatever its overflows, its problems, and what the neutral template cut to hold one
-    page (decision G5, Q1): what a preview shows (decision D6, recette). Raises ``CvRefusedError`` when it cannot be
-    drawn at all (English missing, template unreadable)."""
+) -> CvDrawing:
+    """The CV of ``profile`` drawn whatever its overflows, with them. Raises ``CvRefusedError`` when it cannot be drawn
+    at all (English missing, template unreadable)."""
     clock: Clock = request.app.state.auth.clock
     content = cv_content(profile, language, paris_day(clock()))
     active = _active_template(request, account, language)
     if active is None:
         rendered, _, reasons = draw_neutral(content, _photo_of(request, profile))
-        return rendered.pdf, reasons, fit_neutral(content)[1]
+        return CvDrawing(rendered.pdf, reasons, fit_neutral(content)[1])
     _, files = active
     refuse_missing_variable_texts(content)
     rendered, _, reasons = draw_derived(files, content)
-    return rendered.pdf, reasons, ()
+    projects = {project.id: project for project in profile.projects}
+    shown = [projects[i] for i in profile.cv.projects if i in projects]
+    return CvDrawing(
+        rendered.pdf,
+        reasons,
+        projects_to_shorten=tuple(
+            (shown[i].id, shown[i].content.name.fr)
+            for i in overflowing_projects(rendered)
+            if i < len(shown)
+        ),
+    )
 
 
 def cv_fingerprint(

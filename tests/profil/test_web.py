@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import io
 import re
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from PIL import Image
 from sqlalchemy import Engine
@@ -16,6 +17,8 @@ from rocky.offres.model import Origin
 from rocky.offres.rules import scoring_inputs
 from rocky.offres.sql import SqlStore
 from rocky.offres.usecases import record_offer
+from rocky.profil.rules import make_project
+from rocky.profil.web import cv_drawing
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.pdf_read import read_pdf
 from tests.offres.fakes import NOW, TODAY, Seeker, posting
@@ -882,3 +885,48 @@ def test_the_kit_says_what_the_neutral_template_cuts(client: TestClient) -> None
         in kit
     )
     assert "Expérience « Analyste de données », puce 1 : coupé à 140 caractères." in kit
+
+
+def test_a_project_spilling_out_of_its_card_is_named_to_shorten(
+    migrated_engine: Engine, tmp_path: Path
+) -> None:
+    """Recette of G5: the CV preview of an application links to the project to shorten in the profile."""
+    app = make_app(migrated_engine, storage_root=tmp_path)
+    app.state.llm_model = ReaderModel()
+    browser, email = logged_in(app, migrated_engine)
+    page = browser.post(
+        "/profil/import-cv",
+        data={"consentement": "1"},
+        files={"fichier": ("cv.pdf", designed_cv(), "application/pdf")},
+    )
+    template = re.search(r'action="(/profil/gabarit/\d+/activer)"', page.text)
+    assert template
+    browser.post(template.group(1), headers=HTMX)
+    with migrated_engine.begin() as connection:
+        account = SqlAuthStore(connection).find_account(email)
+        assert account is not None
+        editor = Seeker(account.id, email).editor(connection)
+        long = editor.add_project(
+            make_project(
+                name_fr="Trop long", problem_fr="Des milliers de messages. " * 30
+            )
+        )
+        profile = editor.profile()
+    profile = replace(profile, cv=replace(profile.cv, projects=(long,)))
+    request = Request({"type": "http", "app": app, "headers": []})
+
+    drawing = cv_drawing(request, account, profile, "fr")
+
+    assert drawing.projects_to_shorten == ((long, "Trop long"),)
+    assert any("carte du projet 1" in problem for problem in drawing.problems)
+
+
+def test_a_profile_page_offers_the_way_back_to_the_application(
+    client: TestClient,
+) -> None:
+    back = client.get("/profil/projets?retour=%2Fcandidatures%2F3%3Fetape%3Dcv").text
+
+    assert 'href="/candidatures/3?etape=cv">← Revenir à la candidature</a>' in back
+    for elsewhere in ("https://evil.example", "//evil.example", "/candidatures/3/../x"):
+        page = client.get("/profil/projets", params={"retour": elsewhere}).text
+        assert "Revenir à la candidature" not in page

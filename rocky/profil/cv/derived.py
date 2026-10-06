@@ -951,6 +951,15 @@ def _region_name(region: Mapping[str, Any]) -> str:
     return REGION_NAMES.get(kind, str(kind))
 
 
+_PROJECT_BOX = re.compile(r"^(?:zone du nom|carte) du projet (\d+)$")
+
+
+def overflowing_projects(rendered: Rendered) -> tuple[int, ...]:
+    """The positions (from 0) of the CV's projects whose card or name spills over: what to shorten (G5, recette)."""
+    found = (_PROJECT_BOX.match(overflow.box) for overflow in rendered.overflows)
+    return tuple(sorted({int(match.group(1)) - 1 for match in found if match}))
+
+
 def _box_css(box: Mapping[str, float]) -> str:
     return f"left:{box['x']}pt; top:{box['y']}pt; width:{box['width']}pt; height:{box['height']}pt; "
 

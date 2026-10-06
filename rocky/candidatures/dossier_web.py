@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Annotated
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -1086,18 +1086,23 @@ class LetterPreview:
     problems: tuple[str, ...]
     # What the neutral CV template cut to hold one page (decision G5, Q1): said, not a problem.
     notices: tuple[str, ...] = ()
+    # (project name, address of its form in the profile, back here after): a project to shorten (G5, recette).
+    fixes: tuple[tuple[str, str], ...] = ()
 
 
 PREVIEW_DPI = 110
 
 
 def _preview(
-    pdf: bytes, problems: tuple[str, ...], notices: tuple[str, ...] = ()
+    pdf: bytes,
+    problems: tuple[str, ...],
+    notices: tuple[str, ...] = (),
+    fixes: tuple[tuple[str, str], ...] = (),
 ) -> LetterPreview:
     buffer = io.BytesIO()
     rasterize(pdf, PREVIEW_DPI)[0].save(buffer, format="PNG", optimize=True)
     return LetterPreview(
-        base64.b64encode(buffer.getvalue()).decode(), problems, notices
+        base64.b64encode(buffer.getvalue()).decode(), problems, notices, fixes
     )
 
 
@@ -1136,10 +1141,20 @@ def cv_preview(
     profile = replace(found.profile, cv=found.layout)
     pdf_url = f"/candidatures/{application_id}/cv.pdf?apercu=1"
     try:
-        pdf, problems, notices = profil_web.cv_drawing(
-            request, account, profile, found.language
+        drawing = profil_web.cv_drawing(request, account, profile, found.language)
+        back = quote(dossier_url(application_id, Step.CV), safe="")
+        preview = _preview(
+            drawing.pdf,
+            drawing.problems,
+            drawing.notices,
+            tuple(
+                (
+                    name,
+                    f"/profil/projets?modifier={project_id}&retour={back}#section-projets",
+                )
+                for project_id, name in drawing.projects_to_shorten
+            ),
         )
-        preview = _preview(pdf, problems, notices)
     except CvRefusedError as error:
         return _preview_fragment(
             request, None, document="CV", pdf_url=pdf_url, refusal=error.reasons

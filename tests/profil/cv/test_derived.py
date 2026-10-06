@@ -24,6 +24,7 @@ from rocky.profil.cv.derived import (
     _regions,
     derived_facts,
     draw_derived,
+    overflowing_projects,
     render_derived,
     slots_of,
     unspaced,
@@ -453,6 +454,20 @@ def test_a_block_without_a_card_has_no_line_of_air(shared: Shared) -> None:
     groups = _region(json.loads(shared.files()[TEMPLATE_FILE]), "groups")
 
     assert groups["room"]["height"] < (groups["count"] + 0.5) * groups["line_height"]
+
+
+def test_the_project_to_shorten_is_known_by_its_position(shared: Shared) -> None:
+    """Recette of G5: the preview of an application links to the project to shorten in the profile."""
+    project = {
+        "name": "Tri des messages clients",
+        "problem": "Des milliers de messages. " * 30,
+        "stack": ["Python"],
+    }
+    profile = preview_profile({**PROFILE, "projects": [project]})
+
+    rendered, _, _ = draw_derived(shared.files(), cv_content(profile, "fr", TODAY))
+
+    assert overflowing_projects(rendered) == (0,)
 
 
 def test_a_project_text_beyond_its_card_is_named(shared: Shared) -> None:

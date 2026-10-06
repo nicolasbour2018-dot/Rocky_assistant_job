@@ -8,6 +8,7 @@
     {% if preview.problems %}{% for problem in preview.problems %}<span class="badge badge-warn">{{ problem }}</span>{% endfor %}
     {% else %}<span class="line-good small">✓ {{ "Le CV" if document == "CV" else "La lettre" }} tient sur une page.</span>{% endif %}
     <a class="small" href="{{ pdf_url }}" target="_blank" rel="noopener" hx-boost="false">Ouvrir le PDF ↗</a>
+    {% for name, url in preview.fixes %}<a class="small" href="{{ url }}">Raccourcir « {{ name }} » dans mon profil →</a>{% endfor %}
     {% if preview.notices %}{% with cuts = preview.notices %}{% include "profil/cv_cuts.html" %}{% endwith %}{% endif %}
   </figcaption>
   {% else %}

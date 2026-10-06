@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Any
 
 import pytest
 from fastapi import FastAPI
 from sqlalchemy import Engine, select
 
+from rocky.profil import web as profil_web
 from rocky.profil.model import CvLayout, SkillGroup, Text
 from rocky.profil.rules import make_identity, make_project, make_skill
 from rocky.system.events import events
@@ -369,6 +371,30 @@ def test_the_cv_preview_says_what_the_neutral_template_cut(
     assert '<img src="data:image/png;base64,' in preview
     assert "le gabarit neutre a coupé 1 texte" in preview
     assert "Projet « Prévision », problème : coupé à 140 caractères." in preview
+
+
+def test_the_cv_preview_links_each_project_to_shorten_with_the_way_back(
+    desk: Desk, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Recette of G5: « Ouvrir le PDF » only opened the PDF; a spilling project now leads to its form in the profile,
+    which offers the way back to this step."""
+    application_id = desk.application_id()
+    drawn = profil_web.cv_drawing
+
+    def spilling(*args: Any) -> profil_web.CvDrawing:
+        return replace(drawn(*args), projects_to_shorten=((42, "Prévision"),))
+
+    monkeypatch.setattr(profil_web, "cv_drawing", spilling)
+
+    preview = desk.client.get(
+        f"/candidatures/{application_id}/cv/apercu", headers=HTMX
+    ).text
+
+    back = f"%2Fcandidatures%2F{application_id}%3Fetape%3Dcv"
+    assert (
+        f'href="/profil/projets?modifier=42&amp;retour={back}#section-projets">'
+        "Raccourcir « Prévision » dans mon profil →</a>"
+    ) in preview
 
 
 def test_the_employer_domain_is_typed_in_the_follow_up(desk: Desk) -> None:

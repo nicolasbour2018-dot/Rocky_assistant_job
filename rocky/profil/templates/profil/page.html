@@ -7,6 +7,9 @@
     {% for section in profile_sections %}<a href="#section-{{ section.key }}">{{ section.title }}</a>{% endfor %}
   </nav>
 </header>
+{% if back_to %}
+<p class="alert alert-info banner"><a class="btn btn-primary" href="{{ back_to }}">← Revenir à la candidature</a> Une fois le texte raccourci et enregistré, le CV de la candidature est recalculé.</p>
+{% endif %}
 {% if missing %}
 <p class="alert alert-info banner">
   Pour que la veille puisse tourner, il manque : {{ missing | join(", ") }}.

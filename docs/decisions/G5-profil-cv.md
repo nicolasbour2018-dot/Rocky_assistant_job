@@ -71,3 +71,14 @@ du compte (FR et sa version anglaise) sont au format 4 : le CV demande un réimp
    sans carte n'a plus de ligne d'air : si les compétences du Canva ne sont pas dans une forme dessinée, une compétence
    de plus qui passe à la ligne est refusée. Même effet pour les paragraphes traduits de la version anglaise.
 4. Aperçu du CV anglais par le gabarit neutre (gabarit anglais désactivé, ou compte sans CV importé) : une page.
+
+### Premier passage de la recette (Nicolas, 06/10)
+
+| Constat de Nicolas | Cause | Suite |
+|---|---|---|
+| Le titre du projet 2 (carte du centre) part à droite, non centré | La zone du nom s'était agrandie jusqu'à une grande forme du design (pas la carte) ; centré, le titre y glissait | **Corrigé** : un nom garde sa zone (D2, Q31) ; centré, il peut prendre la largeur de la carte de son projet, des deux côtés (`rocky-cv-gabarit/6`) |
+| « Pilotage d'association sportive » dans la carte 1 : titre dans le cadre, presque invisible | Zone du nom de la carte 1 étroite (67 pt, celle de « Finance connectée (DemoDay) : ») : 3 lignes, la 3ᵉ sur le cadre | **Corrigé** par la même règle : le nom tient sur une ligne au-dessus de la carte |
+| « Le contenu dépasse la carte du projet 1 d'environ 2 mm » (projets Finance et Association en carte 1) | Vrai dépassement : la carte 1 du Canva a une police plus grande (interligne 9,6 pt contre 8,8 en carte 3) ; la dernière ligne du livrable est coupée par le cadre. C'est le défaut de D3 désormais signalé | Raccourcir le texte du projet (ou le placer dans une autre carte) |
+| « Ouvrir le PDF » ne fait qu'ouvrir la page entière | Le PDF ne se modifie jamais : les textes viennent du profil | **Ajouté (Nicolas, Q5)** : sous l'aperçu du CV d'une candidature, « Raccourcir « X » dans mon profil → » pour chaque projet dont la carte ou le nom déborde (`overflowing_projects`, `CvDrawing.projects_to_shorten`) ; le formulaire du projet s'ouvre, avec « ← Revenir à la candidature » (seule adresse de retour admise : `/candidatures/<n>[?etape=…]`) ; au retour, le CV est recalculé |
+
+Q5 (Nicolas, 06/10) : le lien et le retour se font dans G5, plutôt qu'en G6.
