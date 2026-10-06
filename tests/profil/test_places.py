@@ -142,3 +142,18 @@ def test_an_alias_gives_way_to_the_departement_written() -> None:
     assert [describe(place) for place in elsewhere.places] == [
         "Saint-Ouen (Loir-et-Cher)"
     ]
+
+
+@pytest.mark.parametrize("label", ["²", "٩٢"])
+def test_only_ascii_digits_name_a_departement(label: str) -> None:
+    assert track_zone(label) is None
+    assert unknown_locations([label]) == (label,)
+
+
+def test_a_code_in_other_digits_is_not_read() -> None:
+    reading = posting_place("Courbevoie - ٩٢")
+
+    assert reading is not None
+    assert [describe(place) for place in reading.places] == [
+        "Courbevoie (Hauts-de-Seine)"
+    ]

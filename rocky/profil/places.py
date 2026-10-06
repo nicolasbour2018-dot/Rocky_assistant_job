@@ -109,11 +109,11 @@ _ALIASES: dict[str, tuple[tuple[PlaceKind, str], ...]] = {
 _ABBREVIATIONS = {"st": "saint", "ste": "sainte"}
 # A département code ("92", "2A", "971") after a dash or in brackets, at the end; or a postal code.
 _DEPARTEMENT_CODE = re.compile(
-    r"(?:\s-\s*|\()\s*(\d{2,3}|2[abAB])\s*\)?\s*$|\b(\d{5})\b"
+    r"(?:\s-\s*|\()\s*(\d{2,3}|2[abAB])\s*\)?\s*$|\b(\d{5})\b", re.ASCII
 )
 # "Paris 08", "Lyon 1er", "Paris 8ème arrondissement": the commune without its arrondissement.
 _ARRONDISSEMENT = re.compile(
-    r"\s+\d{1,2}(?:\s*(?:er|e|eme|em))?(?:\s+arrondissement)?$"
+    r"\s+\d{1,2}(?:\s*(?:er|e|eme|em))?(?:\s+arrondissement)?$", re.ASCII
 )
 
 
@@ -209,7 +209,7 @@ def track_zone(label: str) -> Zone | None:
     if aliased := _aliased(key):
         return Zone(label, aliased)
     reference = _reference()
-    if code := _departement_code(key):
+    if code := _departement_code(label):
         return Zone(label, (reference.departements[code],))
     places = reference.by_name.get(key, ())
     if not places:
@@ -289,8 +289,11 @@ def _postal_departement(postal: str) -> str | None:
 
 
 def _departement_code(value: str) -> str | None:
-    """The reference code of a département written as a number ("92", "2a", "971"), or None."""
+    """The reference code of a département written as a number ("92", "2a", "971"), or None; ASCII digits only
+    ("²" is not 2)."""
     code = value.strip().upper()
+    if not code.isascii():
+        return None
     if code.isdigit() and len(code) == 1:
         code = f"0{code}"
     return code if code in _reference().departements else None
