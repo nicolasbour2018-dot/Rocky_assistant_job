@@ -82,13 +82,51 @@ Critère de sortie (fixé au grill, Q15 et Q26) :
 | Coûts | `costs.py` : regroupement par compte, type et modèle depuis le minuit de Paris de chaque période ; un appel sans tarif ou sans jetons est compté « sans tarif » ; panneau « 🧮 Appels au modèle » en dernier dans ⚙️ Système (sans geste) ; `rocky-admin couts` | Q18, Q19 |
 | Tests | `tests/system/llm/` (adaptateurs sur `MockTransport`, inscription, coûts) ; `use_model(app, faux)` remplace `app.state.llm_model` dans les tests web | AGENTS §7 |
 
-## Essai
+### Bloc 2 — l'assistant
 
-*(à venir)*
+| Sujet | Décision | Raison |
+|---|---|---|
+| Place | `rocky/system/assistant/` : `model.py` (pur : `Fact`, `FactSheet`, `Subject`, budget `fit`, consignes, `prompt`, `checked`), `registry.py`, `sql.py`, `usecases.py`, `web.py` | D13 : pas de cinquième module ; `system` n'importe aucun module métier |
+| Faits | Registres `add_facts(app, type, lecteur)` (plusieurs lecteurs par type : `messages` ajoute les messages d'un dossier) et `add_summary(app, clé, lecteur)` (`profil`, `cockpit`, `candidatures`) ; branchés par la composition (`system/web.py`) ; chaque module a son `assistant.py` | Q2, Q4, Q11 ; même forme que les parties du cockpit (lecteurs sur la requête et le compte) |
+| Fiche d'une offre | Construite comme l'écran (`offer_card`) sur les seules lectures de l'offre (jamais la liste) ; composantes du score avec leur valeur, leur poids, leur détail et leurs preuves | Règle de l'écran Offres : une route qui vise une offre ne lit pas la liste |
+| Fiche d'un dossier | Lecture **sans verrou** (`SqlApplicationStore.application`), étape et prochaine action calculées, envoi, documents, notes, chronologie du dossier (`timeline`, 20 dernières lignes) | Q11 ; un lecteur ne verrouille rien |
+| Résumé du compte | Pistes, compétences (clés d'abord), objectif ; candidatures ouvertes (relances en retard d'abord) ; ce que montre le cockpit (problèmes, priorité, instruments, état, progression, fil de 7 jours) | Q11 |
+| Identifiants | `<type>.<champ>` : `offre.score.skills`, `candidature.etape`, `message.justification`, `compte.candidature_12`, `cockpit.offres` ; jamais `candidatures.…` (réservé aux événements, test de la chronologie) | Q5 |
+| Lecture seule | Garantie par un test qui écoute toutes les requêtes SQL d'une suite de questions : seules `model_calls`, `assistant_conversations`, `assistant_turns` (et la session renouvelée par l'authentification) sont écrites ; aucun `FOR UPDATE` | Critère 3 ; la transaction `READ ONLY` prévue au plan ne convenait pas aux lecteurs du cockpit, qui ouvrent leurs connexions |
+| Conversations | Migration `0021` : `assistant_conversations` (sujet nul = générale ; la plus récente est en cours) et `assistant_turns` (question, réponse montrée, faits cités, réponse brute, issue, appel) ; ajout seul tenu par le code, pour permettre l'effacement RGPD (§8) | Q3, Q10, Q20, Q22 |
+| Question | `ask` : question vide ou trop longue (1 000 caractères), modèle sans clé, plafond (jour de Paris, appels `ok` et `rejected`) ; faits lus seulement si la question part ; appel hors transaction ; appel et tour écrits ensemble | Q8, Q12 |
+| Tiroir | `popover="manual"` ; ouverture : `GET /tiroir` avec le formulaire `#rocky-question` (le champ caché `objet` y est rattaché) ; suggestions et « Nouvelle conversation » portent leur sujet ; champ vidé par un échange hors bande après une réponse, gardé sinon ; « Envoyer » et suggestions désactivés pendant l'appel ; Échap : `rocky.js` cherche d'abord dans un tiroir ouvert (les raccourcis de l'écran ne bougent pas derrière lui) | Q27 ; vu à l'essai : un `hx-include` sans correspondance écrit une erreur en console |
+| Retrait | « À faire ici », `Drawer`, `add_drawer`, les six `_drawer` des modules, `due_actions` et leurs tests | Q6 |
+
+## Essai (07/10)
+
+Instance à part : schéma jetable de `test-db`, compte fictif (une offre « Data analyst », son dossier préparé), faux
+modèle qui cite les deux premiers faits reçus ; Chromium sans fenêtre (Playwright), 1 280 px puis 390 px.
+
+| Contrôle | Résultat |
+|---|---|
+| Cockpit | « À propos de : Conversation générale », deux suggestions, « Il te reste 5 questions aujourd'hui » ; une suggestion → réponse, « D'après : Piste de recherche · … » en liens, « Il te reste 4 » |
+| Saisie | Échap quitte le champ puis ferme le tiroir ; la question tapée est gardée à la réouverture ; un clic à côté ne ferme pas ; après une réponse, le champ est vidé |
+| Fiche d'une offre | « À propos de : Data analyst (H/F) chez Exemple », les trois suggestions de l'offre ; réponse citant « Intitulé · Entreprise » |
+| Règles resserrées | Réponse citant un fait inconnu → « Je ne trouve pas de quoi répondre dans tes données. » ; `sans_reponse` → « Tes données ne le disent pas. » |
+| Plafond | La 6ᵉ question : « Assistant indisponible : plafond du jour atteint, il revient demain. », la question tapée gardée |
+| Dossier, téléphone | « À propos de » le dossier ; tiroir plein écran à 390 px, ouvert par « Plus » → « Rocky » |
+| Console | Sans erreur ni avertissement (après correction) |
+
+Corrigé pendant l'essai : le message du plafond affiché deux fois ; l'erreur de console de `hx-include` sur les pages
+sans objet.
 
 ## Questions de référence
 
-*(à venir)*
+À poser sur les vraies données de Nicolas (critère 1), à au moins deux fournisseurs (critère 6). Le plafond de 5
+questions par jour se relève pour la recette (`ROCKY_ASSISTANT_DAY_LIMIT`).
+
+| Objet | Question |
+|---|---|
+| Une offre (sa fiche ou le tri) | « Pourquoi ce score ? » ; « Qu'est-ce qui me manque pour ce poste ? » |
+| Un dossier | « Où j'en suis ? » ; « Quand relancer ? » |
+| Un message (panneau « Corriger ») | « Qu'est-ce que ce message change pour moi ? » |
+| Le cockpit | « Par quoi je commence aujourd'hui ? » ; « Où en est ma recherche cette semaine ? » |
 
 ## Recette
 

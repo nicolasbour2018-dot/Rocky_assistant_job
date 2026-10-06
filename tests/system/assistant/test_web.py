@@ -34,7 +34,7 @@ def test_the_layout_holds_the_drawer_and_its_question(
 
     assert 'id="rocky-drawer" class="drawer" popover="manual"' in page
     assert 'hx-get="/tiroir"' in page
-    assert "hx-include=\"[form='rocky-question'][name='objet']\"" in page
+    assert 'hx-include="#rocky-question"' in page
     assert '<form id="rocky-question"' in page
     assert 'data-key="Escape">Fermer</button>' in page
     assert "Rocky réfléchit…" in page

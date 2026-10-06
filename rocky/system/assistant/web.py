@@ -99,6 +99,8 @@ def _render(
     unavailable = models.unavailable_reason(ASSISTANT)
     context = {
         "talk": talk,
+        # The suggestions and « Nouvelle conversation » name the object themselves.
+        "objet": "" if talk.subject is None else talk.subject.token,
         "turns": turns,
         "left": left,
         "notice": reply.reason if reply is not None else None,

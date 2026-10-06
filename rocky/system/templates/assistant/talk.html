@@ -21,12 +21,13 @@
 {% else %}
 <p class="muted">Pose une question sur {{ "tes données" if talk.subject is none else "ce que tu regardes" }} : Rocky répond d'après ce qu'il sait, en citant ses sources.</p>
 {% endif %}
-{% if notice %}<p class="assistant-notice" role="status">{{ notice }}</p>{% endif %}
+{# Said once: the limit or the missing model is already said at the top. #}
+{% if notice and notice not in (unavailable, limit_reason) %}<p class="assistant-notice" role="status">{{ notice }}</p>{% endif %}
 {% if not unavailable and not limit_reached and talk.suggestions %}
 <div class="assistant-suggestions">
   {% for suggestion in talk.suggestions %}
   <button type="button" class="btn btn-mini" hx-post="/tiroir/question" hx-target="#drawer-content" hx-swap="innerHTML"
-    hx-include="[form='rocky-question'][name='objet']" hx-vals='{{ {"question": suggestion} | tojson }}'
+    hx-vals='{{ {"question": suggestion, "objet": objet} | tojson }}'
     hx-disabled-elt="#rocky-question button, .assistant-suggestions button" hx-indicator="#rocky-thinking">{{ suggestion }}</button>
   {% endfor %}
 </div>
@@ -35,7 +36,7 @@
   {% if left > 0 %}Il te reste {{ left }} question{{ "s" if left > 1 }} aujourd'hui.{% else %}Plus de question aujourd'hui.{% endif %}
   {% if turns %}
   <button type="button" class="btn btn-link" hx-post="/tiroir/nouvelle" hx-target="#drawer-content" hx-swap="innerHTML"
-    hx-include="[form='rocky-question'][name='objet']">Nouvelle conversation</button>
+    hx-vals='{{ {"objet": objet} | tojson }}'>Nouvelle conversation</button>
   {% endif %}
 </p>
 {% if answered %}

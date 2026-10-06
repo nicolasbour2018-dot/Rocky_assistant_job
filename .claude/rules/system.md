@@ -82,15 +82,25 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Un nom de fichier téléchargé passe par `shell.content_disposition` (nom hors latin‑1).
 
 ## Écrans transverses (`rocky/system/shell.py`, décision `docs/decisions/F1-ecrans-transverses.md`)
-- `system` n'importe aucun module métier : ⚙️ Système et le tiroir 🐾 se construisent par des **registres** remplis à
-  l'installation des modules (`add_system_cards`, `add_drawer`, `add_badge`). L'ordre des blocs est fixé dans
+- `system` n'importe aucun module métier : ⚙️ Système se construit par des **registres** remplis à l'installation des
+  modules (`add_system_cards`, `add_badge`). L'ordre des blocs est fixé dans
   `SYSTEM_ORDER` ; une clé inconnue est refusée.
 - Un bloc est une `Card` (titre, lignes, détails, au plus une `Action`, `problem`, `polling`) : la coque choisit **le
   seul bouton principal** de l'écran (`main_action` : premier problème avec une action, sinon première action, sinon
   l'action de repli). Un module ne rend jamais lui-même de `btn-primary` dans une carte. Tout nouvel état d'un écran
   a son test « exactement un bouton principal ».
 - Un geste d'un écran transverse qui doit y revenir passe `retour=systeme` (valeur fixe, jamais une URL).
-- Le tiroir se lit à son ouverture (`/tiroir?ecran=<clé>`), jamais au rendu de la page ; trois actions au plus.
+
+## Assistant 🐾 (`rocky/system/assistant/`, décision `docs/decisions/G4-assistant.md`)
+- Le tiroir est l'assistant : il se lit à son ouverture (`GET /tiroir`), jamais au rendu de la page. Un écran nomme son
+  objet par `assistant/subject.html` (champ `objet` rattaché au formulaire `#rocky-question`) ; sans objet, ou celui
+  d'un autre compte, c'est la conversation générale.
+- Les faits viennent des modules par registres (`add_facts` par type d'objet, `add_summary` pour le compte, ordre
+  `SUMMARY_KEYS`) ; un lecteur **ne fait que lire** (aucune écriture, aucun `FOR UPDATE` : `tests/candidatures/
+  test_assistant.py`). Chaque fait a un identifiant `<type>.<champ>` unique, jamais un type d'événement
+  (`candidatures.…` est réservé au journal : préfixe `compte.` pour le résumé).
+- `ask` : plafond du jour de Paris, appel **hors transaction**, puis l'appel et le tour écrits ensemble ; une réponse
+  sans fait connu est remplacée (`checked`). Aucun événement au journal pour une question (Q29).
 
 ## Cockpit (`rocky/system/cockpit.py`, décision `docs/decisions/G3-cockpit.md`)
 - 🧭 Cockpit (clé de navigation `today`, route `/`) : chaque module inscrit ses `Parts` par `add_cockpit` (héros,

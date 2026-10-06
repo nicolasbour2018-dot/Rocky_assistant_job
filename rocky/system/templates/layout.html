@@ -64,7 +64,7 @@
      object the screen names (a hidden field ``objet`` attached to the form below); it closes only by « Fermer » or
      Escape, and what is typed stays while the page does (Q27). #}
   <aside id="rocky-drawer" class="drawer" popover="manual" aria-label="Rocky"
-    hx-get="/tiroir" hx-include="[form='rocky-question'][name='objet']" hx-trigger="toggle[newState=='open']"
+    hx-get="/tiroir" hx-include="#rocky-question" hx-trigger="toggle[newState=='open']"
     hx-target="#drawer-content" hx-swap="innerHTML">
     <div class="drawer-head">
       <h2><span aria-hidden="true">🐾</span> Rocky</h2>

@@ -888,9 +888,24 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   réécrit la série passée. À reprendre si l'objectif change souvent (lire `profil.weekly_goal_changed`).
 - **(G3 → G4)** Le tiroir 🐾 du cockpit donne les gestes du problème puis ceux du héros (comportement F1) ; sa place face
   au cockpit est à revoir avec l'assistant (G4).
+  *Résolu en G4 : « À faire ici » est retiré partout, le tiroir est l'assistant (décision G4, Q6).*
 - **(G3 → G7)** Couleurs, typographie, icônes (🧭 provisoire) et animations du cockpit (célébration sans effet en G3).
 - **(G3 → plus tard)** L'onboarding lui-même (Q12, Nicolas) : la liste de démarrage du cockpit n'en est que le rappel.
 - **(G3 → G6)** ⚙️ Système (F1) relit ses cartes pendant une veille par `#cards` avec `hx-target="this"` et
   `hx-swap="outerHTML"`, hérités par les liens et formulaires boostés des cartes (« Reconnecter la boîte »…) : la page
   suivante s'afficherait dans l'écran, comme au cockpit avant sa correction (recette de G3). Même parade : un élément
   vide qui demande la relecture.
+- **(G4 → après F2)** Rédaction par l'assistant (réponse à un recruteur, relance) : avec le suivi et les relances, dans
+  un plan après F2 (décision G4, Q1).
+- **(G4 → bêta)** Conversations de l'assistant gardées entières (données d'entraînement) : pour un déploiement plus
+  large, les réduire à un résumé avant stockage (Q3) ; une mémoire de compte résumée, réinjectée partout (Q10).
+- **(G4 → à part)** Le plafond du classement des messages (E2) reste sur `mail_model_calls` : le migrer proprement sur
+  `model_calls`, qui inscrit déjà ses appels et leurs jetons (Q9, Q17).
+- **(G4 → bêta)** Une vue d'administrateur des coûts de tous les comptes dans l'interface (aujourd'hui :
+  `rocky-admin couts`) (Q19) ; l'effacement des conversations d'un compte et leur durée de conservation (RGPD) (Q22) ;
+  un plafond de questions fixé d'après les coûts de la recette (Q8).
+- **(G4 → plus tard)** Un modèle local (Ollama…) derrière le port `JsonModel` (Q23).
+- **(G4 → recette)** Tarifs de Mistral Medium et Small lus sur une source tierce le 07/10 (absents des pages de
+  Mistral) : à vérifier par Nicolas (`rocky/system/llm/prices.py`) ; les prix de Gemini 3.6 à 3.8 Flash doublent au
+  01/01/2027.
+
