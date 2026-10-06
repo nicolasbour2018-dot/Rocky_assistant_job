@@ -200,6 +200,13 @@ lecture seule).
   n'importe le `web.py` ni le `sql.py` d'un autre ; `system` n'importe un module métier que dans `web.py`, `admin.py`,
   `tables.py`).
 
+### Décisions de Nicolas (06/10, avant le code)
+
+| Sujet | Décision |
+|---|---|
+| Q3 — Test d'architecture | **Oui** : `tests/system/test_architecture.py` lit les imports de `rocky/` (sans base). Un module n'importe ni le `sql` ni les routes (`web`, `*_web`) d'un autre ; dans `system`, seuls `web.py`, `admin.py` et `tables.py` importent un module métier. |
+| Aides d'écran du profil | **Exception nommée.** Les aides du profil qui prennent une `Request` restent où elles sont (G4 décidera) : `profil.web` (`profile_of`, `cv_document`, `cv_drawing`, `cv_fingerprint`, `cv_slots`), `profil.letter_web.generic_letters`, `profil.translation_web` (`to_review`, `english_cv_outdated`). Seul un fichier de routes d'un autre module (`web.py`, `*_web.py`) peut les importer, **par leur nom** ; la liste est fermée, inscrite dans le test et dans `.claude/rules/profil.md`. Le critère de sortie se lit donc : aucun fichier sans route n'importe un fichier de routes d'un autre module, et les routes n'en importent que cette liste. |
+
 **Critère de sortie** : aucun import du `web.py` d'un autre module (`grep -rn "import web as" rocky` ne montre que
 `system/web.py`, et les imports internes d'un module) ; fabrique unique de `MessagesService` ; vérification globale
 verte.
