@@ -116,6 +116,10 @@ modèle qui cite les deux premiers faits reçus ; Chromium sans fenêtre (Playwr
 Corrigé pendant l'essai : le message du plafond affiché deux fois ; l'erreur de console de `hx-include` sur les pages
 sans objet.
 
+Vérification globale (`docker compose run --rm --build check`) : **1 819 tests**, verte, 77,5 s de pytest et 1 min 22
+au total en local ; un premier passage du bloc 1, la machine très chargée (charge 97), avait pris 2 min 00. Sur GitHub :
+verte, pytest en 100 s (bloc 1) puis 118 s (bloc 2), contre 74 s à la fin de G3 (noté au plan, §8).
+
 ## Questions de référence
 
 À poser sur les vraies données de Nicolas (critère 1), à au moins deux fournisseurs (critère 6). Le plafond de 5

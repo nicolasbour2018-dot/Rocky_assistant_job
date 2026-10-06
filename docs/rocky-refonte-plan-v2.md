@@ -908,4 +908,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(G4 → recette)** Tarifs de Mistral Medium et Small lus sur une source tierce le 07/10 (absents des pages de
   Mistral) : à vérifier par Nicolas (`rocky/system/llm/prices.py`) ; les prix de Gemini 3.6 à 3.8 Flash doublent au
   01/01/2027.
-
+- **(G4 → H5 ou G6)** Vérification GitHub : pytest en 118 s à la fin de G4 (74 s à la fin de G3, 100 s après le bloc 1),
+  au-delà de la cible de G1 (1 min 40) ; en local, 77,5 s (73,6 s en G3). Les tests de G4 les plus lents (six questions
+  par HTTP) prennent 2,5 s : l'écart vient surtout du runner, mais la marge est épuisée. Mesurer au repos et, si besoin,
+  alléger les tests web les plus lents (CV, envois).
