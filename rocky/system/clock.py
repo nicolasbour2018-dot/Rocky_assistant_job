@@ -7,7 +7,7 @@ instant, which lags one day between midnight and 2 a.m. in Paris.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from zoneinfo import ZoneInfo
 
 from fastapi import Request
@@ -22,6 +22,11 @@ def utc_now() -> datetime:
 def paris_day(moment: datetime) -> date:
     """The day of ``moment`` in Paris (the user's day, D12)."""
     return moment.astimezone(PARIS).date()
+
+
+def paris_midnight(day: date) -> datetime:
+    """The instant ``day`` starts in Paris (the start of a "per day" limit, step G4), daylight saving included."""
+    return datetime.combine(day, time(0, 0), tzinfo=PARIS)
 
 
 def paris_hour(moment: datetime) -> str:

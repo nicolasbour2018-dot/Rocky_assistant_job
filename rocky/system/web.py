@@ -30,11 +30,19 @@ from rocky.system.auth.model import Account
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import Argon2Hasher, Clock, PasswordHasher
 from rocky.system.auth.web import AuthServices, install
-from rocky.system.clock import paris_hour, paris_time, utc_now
-from rocky.system.config import Settings, load_settings
+from rocky.system.clock import paris_hour, paris_time, today_of, utc_now
+from rocky.system.config import CallType, Settings, load_settings
 from rocky.system.db import create_db_engine
 from rocky.system.errors import UserFacingError
 from rocky.system.llm.calls import Models
+from rocky.system.llm.costs import (
+    CALL_TYPE_LABELS,
+    PERIODS,
+    Costs,
+    costs,
+    prices_note,
+    summary,
+)
 from rocky.system.scheduler import DailyTask, PeriodicTask, Scheduler
 from rocky.system.shell import Card, add_system_cards
 from rocky.system.workstation import WorkstationClient
@@ -127,6 +135,7 @@ def create_app(
     # 📈 Bilan reads the acknowledgements of ``messages`` through a port (decision F1, Q13): no import of the module.
     candidatures_report.install(app, app.state.messages.acknowledged_applications)
     _plan(app, engine, clock)
+    add_system_cards(app, "couts", _costs_cards)
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -196,6 +205,40 @@ def planner_card(scheduler: Scheduler, *, enabled: bool) -> Card:
     return Card(
         "🕒 Planification", ("Un seul planificateur, dans l'application.",), details
     )
+
+
+def _costs_cards(request: Request, account: Account) -> list[Card]:
+    with request.app.state.engine.connect() as connection:
+        found = costs(connection, today_of(request), account.id)
+    return [costs_card(found)]
+
+
+def costs_card(found: Costs) -> Card:
+    """The calls of the account to the models (decision G4, Q16, Q18): the total of each period, then each call type
+    over the periods; an estimate in euros, with the date of the prices."""
+    last = len(PERIODS) - 1
+    if not found.total(last).calls:
+        return Card(
+            "🧮 Appels au modèle",
+            ("Aucun appel au modèle sur 30 jours.", prices_note()),
+        )
+    lines = tuple(
+        f"{label} : {summary(found.total(index))}"
+        for index, (label, _) in enumerate(PERIODS)
+    )
+    details = tuple(
+        (
+            CALL_TYPE_LABELS[call_type],
+            " · ".join(
+                f"{label.lower()} {found.of_type(index, call_type).calls}"
+                for index, (label, _) in enumerate(PERIODS[:last])
+            )
+            + f" · {PERIODS[last][0]} : {summary(found.of_type(last, call_type))}",
+        )
+        for call_type in CallType
+        if found.of_type(last, call_type).calls
+    )
+    return Card("🧮 Appels au modèle", (*lines, prices_note()), details)
 
 
 @asynccontextmanager

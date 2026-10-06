@@ -11,7 +11,7 @@ import json
 import sys
 from collections import Counter
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import TextIO
 
@@ -55,9 +55,16 @@ from rocky.system.auth.model import Account
 from rocky.system.auth.rules import InvalidEmailError, normalize_email
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import Clock
-from rocky.system.clock import utc_now
-from rocky.system.config import load_settings
+from rocky.system.clock import paris_day, utc_now
+from rocky.system.config import CallType, load_settings
 from rocky.system.db import create_db_engine
+from rocky.system.llm.costs import (
+    CALL_TYPE_LABELS,
+    PERIODS,
+    costs,
+    prices_note,
+    summary,
+)
 
 COUNT_LABELS = {
     "skills": "compétences",
@@ -397,6 +404,31 @@ def _csv_value(value: object) -> str:
     return str(value)
 
 
+def model_costs(engine: Engine, *, today: date, out: TextIO) -> int:
+    """The calls of every account to the language models (decision G4, Q19): the total of each period, then each
+    account and each of its call types over 30 days."""
+    with engine.connect() as connection:
+        found = costs(connection, today)
+        store = SqlAuthStore(connection)
+        emails = {
+            account_id: account.email if account is not None else f"compte {account_id}"
+            for account_id in found.accounts()
+            for account in [store.get_account(account_id)]
+        }
+    last = len(PERIODS) - 1
+    out.writelines(f"{label} : {summary(found.total(index))}\n" for index, (label, _) in enumerate(PERIODS))
+    for account_id, email in emails.items():
+        out.write(
+            f"\n{email} ({PERIODS[last][0]}) : {summary(found.of_account(last, account_id))}\n"
+        )
+        for call_type in CallType:
+            one = found.periods[last].get((account_id, call_type))
+            if one is not None:
+                out.write(f"  {CALL_TYPE_LABELS[call_type]} : {summary(one)}\n")
+    out.write(f"\n{prices_note()}\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="rocky-admin", description="Administration de Rocky"
@@ -488,11 +520,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         "avec la décision de Rocky qu'elles revoient (jeu étiqueté, D14)",
     )
     labels_parser.add_argument("email")
+    commands.add_parser(
+        "couts",
+        help="résume les appels aux modèles de langage de tous les comptes (aujourd'hui, 7 et 30 jours), "
+        "par compte et par type, avec leur coût estimé",
+    )
     arguments = parser.parse_args(argv)
 
     settings = load_settings()
     engine = create_db_engine(settings.database_url)
     try:
+        if arguments.command == "couts":
+            return model_costs(engine, today=paris_day(utc_now()), out=sys.stdout)
         if arguments.command == "veille":
             return watch_account(
                 engine,

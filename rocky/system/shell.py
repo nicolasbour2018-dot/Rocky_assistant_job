@@ -260,8 +260,8 @@ class Drawer:
 type CardsProvider = Callable[[Request, Account], Sequence[Card]]
 type DrawerProvider = Callable[[Request, Account], Drawer]
 
-# Decision F1, Q11: the order of the panels of ⚙️ Système.
-SYSTEM_ORDER = ("veille", "boites", "alertes", "planification")
+# Decision F1, Q11: the order of the panels of ⚙️ Système (G4, Q19: the cost of the calls to the models last).
+SYSTEM_ORDER = ("veille", "boites", "alertes", "planification", "couts")
 POLL_EVERY = "15s"
 DRAWER_ACTIONS = 3
 
