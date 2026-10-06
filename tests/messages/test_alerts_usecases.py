@@ -20,6 +20,8 @@ from sqlalchemy import Engine, func, select
 
 from rocky.messages.alerts import rules as alert_rules
 from rocky.messages.alerts.model import (
+    NOT_TRIED_REASONS,
+    AlertCard,
     AlertsReport,
     LinkOutcome,
     NotTried,
@@ -32,6 +34,7 @@ from rocky.messages.alerts.usecases import (
     NO_PROFILE_REASON,
     TECHNICAL_REASON,
     TOO_OLD_REASON,
+    read_alerts,
 )
 from rocky.messages.classification.model import Category
 from rocky.messages.links import AlertOffersLink
@@ -354,7 +357,7 @@ def test_an_alert_older_than_three_days_gives_nothing_and_says_so(
         "hellowork",
         0,
     )
-    assert reading["reason"] == TOO_OLD_REASON
+    assert reading["reason"] == TOO_OLD_REASON.format(days=3)
     assert inbox.offers() == [] and inbox.pages.calls == []
     assert report.too_old == 1
 
@@ -380,6 +383,23 @@ def test_at_most_ten_alerts_a_day_give_their_offers_the_most_recent_first(
 
     tomorrow = _service(inbox.engine, inbox.pages, now=NOW + timedelta(days=1))
     assert tomorrow.read_alerts(inbox.account_id, links=False).alerts == 2
+
+
+def test_the_age_limit_of_an_alert_says_its_own_number_of_days(inbox: Inbox) -> None:
+    """H3: the reason follows ``max_age``, never a number written apart."""
+    inbox.alert("hellowork_alerte", received_at=NOW - timedelta(days=6))
+    inbox.service.classify(inbox.account_id, use_model=False)
+
+    read_alerts(
+        inbox.service.storage,
+        None,
+        account_id=inbox.account_id,
+        clock=lambda: NOW,
+        max_age=timedelta(days=5),
+    )
+
+    (reading,) = inbox.rows(alert_readings)
+    assert "plus de 5 jours" in reading["reason"]
 
 
 def test_a_known_complete_offer_is_not_read_again_and_stays_the_watch_s(
@@ -469,6 +489,28 @@ def test_system_counts_what_the_alerts_gave_by_platform(inbox: Inbox) -> None:
         ),
         PlatformAlerts(None, read=0, unread=1),
     ]
+
+
+def test_cards_without_link_are_two_offers_that_ask_for_their_address(
+    inbox: Inbox, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """H3: no reader gives such a card today; a future one keeps one offer per card, at a Gmail address to replace."""
+    inbox.alert("hellowork_alerte")
+    found = [
+        AlertCard(1, "Data Analyst H/F", "Marvesting", "Levallois-Perret - 92"),
+        AlertCard(2, "Data Engineer H/F", "Marvesting", "Levallois-Perret - 92"),
+    ]
+    monkeypatch.setattr(
+        "rocky.messages.alerts.usecases.cards", lambda message, platform: found
+    )
+
+    inbox.read(links=False)
+
+    offers = inbox.offers()
+    assert len(offers) == 2 and offers[0]["url"] != offers[1]["url"]
+    for offer in offers:
+        assert offer["url"].startswith("https://mail.google.com/")
+        assert NOT_TRIED_REASONS[NotTried.NO_LINK] in offer["incomplete_reason"]
 
 
 def test_a_reader_that_breaks_marks_its_alert_and_the_others_go_on(

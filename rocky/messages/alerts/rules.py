@@ -88,11 +88,11 @@ def card_offer(
     message: AlertMessage, card: AlertCard, platform: Platform, *, reason: str
 ) -> CollectedOffer:
     """The offer of a card: its facts as written, no description yet (``reason`` says why)."""
-    source = SOURCES[platform]
+    external_id = card.platform_id or card_key(card)
     return CollectedOffer(
-        source=source,
-        external_id=card.platform_id or card_key(card),
-        url=card.link or message_link(message),
+        source=SOURCES[platform],
+        external_id=external_id,
+        url=card.link or message_link(message, external_id),
         title=card.title,
         description="",
         description_complete=False,
@@ -129,9 +129,14 @@ def merged(card_offer: CollectedOffer, page: CollectedOffer) -> CollectedOffer:
     return replace(result, url=page.url or card_offer.url)
 
 
-def message_link(message: AlertMessage) -> str:
-    """The alert in Gmail: the address of an offer whose card gives no link (an empty address is never stored)."""
-    return f"https://mail.google.com/mail/u/{quote(message.mailbox_address)}/#all/{quote(message.gmail_id)}"
+def message_link(message: AlertMessage, card_id: str) -> str:
+    """The alert in Gmail: the address of an offer whose card gives no link (an empty address is never stored), until
+    the user gives the posting's. Its own to the card (H3): an offer is also found by its address, and two cards of an
+    alert at the same one would be a single offer."""
+    return (
+        f"https://mail.google.com/mail/u/{quote(message.mailbox_address)}/?carte={quote(card_id)}"
+        f"#all/{quote(message.gmail_id)}"
+    )
 
 
 def platform_label(platform: Platform | None) -> str:

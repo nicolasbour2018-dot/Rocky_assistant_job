@@ -48,7 +48,7 @@ NO_CARD_REASON = (
     "Aucune offre trouvée dans cette alerte : son format a peut-être changé."
 )
 TECHNICAL_REASON = "Erreur technique pendant la lecture de l'alerte (trace dans le journal de l'application)."
-TOO_OLD_REASON = "Alerte de plus de 3 jours : aucune offre n'en est tirée."
+TOO_OLD_REASON = "Alerte de plus de {days} jours : aucune offre n'en est tirée."
 DAY_LIMIT_REASON = "Au plus {limit} alertes par jour donnent leurs offres, les plus récentes d'abord : la suite demain."
 PARTIAL_REASON = "La fiche a été lue, sans description complète."
 NO_PROFILE_REASON = "Le compte n'a pas encore de profil : les offres des alertes ne peuvent pas être notées."
@@ -102,7 +102,9 @@ def read_alerts(
         for index, message in enumerate(alerts):
             if now - message.received_at > max_age:
                 reading = _Reading(
-                    reader_of(message), ReadingStatus.TOO_OLD, TOO_OLD_REASON
+                    reader_of(message),
+                    ReadingStatus.TOO_OLD,
+                    TOO_OLD_REASON.format(days=max_age.days),
                 )
             elif left <= 0:
                 report.postponed += 1
@@ -247,10 +249,11 @@ def _not_tried(
     """Why the posting of a card is not read, or None when it is."""
     if known:
         return NotTried.KNOWN_COMPLETE
-    if not reading:
-        return NotTried.WITHOUT_LINKS
+    # Before a pass without readings: the address to replace is said whatever the pass (H3).
     if card.link is None:
         return NotTried.NO_LINK
+    if not reading:
+        return NotTried.WITHOUT_LINKS
     if stopped:
         return NotTried.HOST_STOPPED
     return None

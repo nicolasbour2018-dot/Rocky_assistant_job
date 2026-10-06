@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -90,6 +91,23 @@ def test_paths_outside_the_root_are_refused(tmp_path: Path, path: str) -> None:
 def test_invalid_names_in_a_bundle_are_refused(tmp_path: Path, name: str) -> None:
     with pytest.raises(ValueError, match="invalid file name"):
         FileStore(tmp_path).put_bundle(3, "gabarits", {name: b"x"})
+
+
+def test_a_corrupted_bundle_skipped_by_the_search_is_logged(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """H3: a bundle found altered is passed over, never silently (AGENTS §4)."""
+    store = FileStore(tmp_path)
+    kept = store.put_bundle(
+        1, "imports", {"texte.sha256": b"abc", "reponse.json": b"{}"}
+    )
+    (tmp_path / kept.path / "reponse.json").write_bytes(b"altered")
+
+    with caplog.at_level(logging.WARNING, logger="rocky.system.files"):
+        assert store.find_bundle(1, "imports", "texte.sha256", b"abc") is None
+
+    (record,) = caplog.records
+    assert kept.path in record.getMessage()
 
 
 def test_a_missing_file_says_so(tmp_path: Path) -> None:

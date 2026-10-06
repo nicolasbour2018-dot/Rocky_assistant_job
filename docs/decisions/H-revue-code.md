@@ -140,6 +140,26 @@ la veille en retard).
   lecteur donnerait la même URL à toutes les cartes d'une alerte, fusionnées en une offre par `SqlStore.find`
   (`offres/sql.py:310`). → Retirer le repli ou rendre l'URL propre à la carte.
 
+### Décisions de Nicolas (grill du 06/10)
+
+| Sujet | Décision |
+|---|---|
+| Q1 — Retard de veille | `LATE_AFTER` = **25 h** : couvre le passage à l'heure d'hiver et jusqu'à une heure de retard du planificateur. Révise C6 Q2 (24 h). |
+| Q2 — eFinancialCareers | `efinancialcareers.fr` ajouté à `ALERT_DOMAINS`, nouvelle `QUERIES_VERSION`, **sans rattrapage** : la fenêtre de collecte ne se rouvre pas, et une alerte de plus de 3 jours ne donne de toute façon aucune offre. |
+| Carte sans lien | **On garde le repli, propre à la carte** : l'adresse de l'offre est celle de l'alerte dans Gmail, avec l'identifiant de la carte (`?carte=…`), pour que deux cartes ne fusionnent jamais. La raison affichée demande de remplacer l'adresse Gmail par celle de l'annonce. Le geste « Remplacer l'adresse » (→ G6) et une ligne du fil du Cockpit, « offres d'alerte sans adresse à compléter » (→ G3), sont notés en §8 du plan : inutiles tant qu'aucun lecteur ne produit ce cas. |
+| Reports cumulés | Le compte additionnerait les deux reports et garderait la raison de la limite du jour. **Sans objet** (vérifié en H3) : une veille en cours ne bloque qu'une alerte qui donne des offres, donc lue tant que la limite du jour n'est pas atteinte (`left > 0`) ; la limite ne reporte qu'ensuite, et seule une alerte trop ancienne (sans offre, sans verrou) s'écrit encore. Les deux reports ne se cumulent jamais dans une passe : le code ne change pas. |
+
+`ALERTS_VERSION` ne change pas : aucun lecteur ne change, et le repli ne sert à aucun lecteur actuel.
+
+*Réalisé (06/10)* : `LATE_AFTER` = 25 h (test du dimanche du passage à l'heure d'hiver, mesuré en UTC comme en base) ;
+`efinancialcareers.fr` dans `ALERT_DOMAINS`, `QUERIES_VERSION = "mail-2026-10-06.1"` (test : chaque adresse de
+`READERS` est couverte par la requête des alertes) ; `TOO_OLD_REASON` formatée depuis `max_age`, la limite du collage
+depuis `MAX_PASTED_CHARACTERS` ; `AccessLostError` relancée pendant le téléchargement d'un message (la collecte
+échouait en « partielle » et la boîte restait connectée ; les messages déjà entrés gardent leurs comptes) ; `find_bundle` journalise un paquet abîmé qu'il saute ;
+`message_link(message, card_id)` donne `…/?carte=<identifiant>#all/<id>`, raison `NotTried.NO_LINK` réécrite et dite
+même lors d'un passage sans lecture des fiches (test : deux cartes sans lien donnent deux offres, avant fusionnées en
+une). Geste et ligne du Cockpit notés en §8 du plan (→ G6, → G3).
+
 **Critère de sortie** : Q1 et Q2 consignées ici ; chaque point a son test ; `ALERTS_VERSION` / `QUERIES_VERSION`
 changées si un lecteur ou une requête change ; vérification globale verte.
 

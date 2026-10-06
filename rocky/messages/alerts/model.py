@@ -101,7 +101,7 @@ NOT_TRIED_REASONS = {
     NotTried.KNOWN_COMPLETE: "Offre déjà connue avec sa description complète.",
     NotTried.TOO_OLD: "Alerte de plus de 7 jours : la fiche n'est pas lue.",
     NotTried.HOST_STOPPED: "Le site a refusé une lecture précédente pendant ce passage : Rocky ne lui redemande rien.",
-    NotTried.NO_LINK: "L'alerte ne donne pas de lien vers la fiche.",
+    NotTried.NO_LINK: "L'alerte ne donne pas le lien de l'annonce : remplace l'adresse Gmail par celle de l'annonce.",
     NotTried.WITHOUT_LINKS: "Passage sans lecture des fiches.",
 }
 

@@ -255,12 +255,17 @@ def test_a_card_without_number_is_known_by_its_key_and_without_link_by_the_alert
 ):
     message = alert("hellowork_alerte")
     card = AlertCard(1, "Data Analyst H/F", "Marvesting", "Levallois-Perret - 92")
+    other = AlertCard(2, "Data Engineer H/F", "Marvesting", "Levallois-Perret - 92")
 
     offer = card_offer(message, card, Platform.HELLOWORK, reason="r")
+    other_offer = card_offer(message, other, Platform.HELLOWORK, reason="r")
 
     assert (offer.source, offer.external_id) == ("hellowork.com", card_key(card))
-    assert offer.url == message_link(message)
+    assert offer.url == message_link(message, card_key(card))
     assert offer.url.startswith("https://mail.google.com/mail/u/camille%40example.com/")
+    assert offer.url.endswith(f"#all/{message.gmail_id}")
+    # H3: the address of each card is its own, or two cards of an alert would be one offer (same address).
+    assert other_offer.url != offer.url
 
 
 def test_the_posting_completes_the_card_and_gives_its_address() -> None:
