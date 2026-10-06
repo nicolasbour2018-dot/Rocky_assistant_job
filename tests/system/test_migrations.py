@@ -65,6 +65,8 @@ HEAD_TABLES = {
     "alert_offers",
     # G4: every call to a language model.
     "model_calls",
+    "assistant_conversations",
+    "assistant_turns",
 }
 
 

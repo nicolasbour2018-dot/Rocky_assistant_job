@@ -58,6 +58,7 @@ from rocky.profil.sql import (
     skills,
     translation_memory,
 )
+from rocky.system.assistant.sql import assistant_conversations, assistant_turns
 from rocky.system.auth.sql import account_tokens, accounts, sessions
 from rocky.system.events import events
 from rocky.system.llm.calls import model_calls
@@ -77,6 +78,8 @@ __all__ = [
     "application_prefills",
     "application_sendings",
     "applications",
+    "assistant_conversations",
+    "assistant_turns",
     "cv_templates",
     "document_revisions",
     "email_messages",
