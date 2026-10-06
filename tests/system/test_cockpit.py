@@ -433,3 +433,27 @@ def test_the_goal_of_the_week_is_changed_from_the_cockpit(
     assert refused.status_code == 422
     assert '<option value="5" selected>5</option>' in page
     assert "0/5" in page
+
+
+def test_no_gesture_of_the_cockpit_inherits_a_target(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    """A boosted link or form inherits ``hx-target`` and ``hx-swap``: on a container, they would put the next page
+    inside the cockpit (recette of G3). The reloads are asked by empty elements."""
+    client, _ = logged_in(app, migrated_engine)
+    running = Status("Veille en cours depuis le 07/10 à 12:00.", polling=True)
+    _parts(
+        app,
+        veille=Parts(status=_given(running)),
+        offres=Parts(heroes=_given(OFFER)),
+    )
+
+    page = client.get("/").text
+
+    assert '<div id="cockpit" class="cockpit">' in page
+    assert '<div id="cockpit-status" class="cockpit-status">' in page
+    assert 'hx-target="this"' not in page
+    assert (
+        '<div hidden hx-get="/cockpit/etat" hx-trigger="every 15s" hx-target="#cockpit-status" '
+        'hx-swap="outerHTML"></div>'
+    ) in page

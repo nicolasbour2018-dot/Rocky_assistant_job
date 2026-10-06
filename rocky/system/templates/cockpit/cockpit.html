@@ -1,8 +1,10 @@
 {# 🧭 Cockpit (step G3), layout A (Q7): the head, the problems, the instruments, then the action beside the progress
    and the feed. A gesture made here sends « cockpit-changed »: the cockpit reads itself again, keeping the previous
-   visit (``depuis``). #}
+   visit (``depuis``). The reload is asked by an empty element: ``hx-target`` and ``hx-swap`` are inherited, and on the
+   container they would send every boosted link and form of the cockpit into it (a page inside the page). #}
 {% from "cockpit/macros.html" import gesture %}
-<div id="cockpit" class="cockpit" hx-get="/?depuis={{ (since.isoformat() if since else '') | urlencode }}" hx-trigger="cockpit-changed from:body" hx-target="this" hx-swap="outerHTML">
+<div id="cockpit" class="cockpit">
+  <div hidden hx-get="/?depuis={{ (since.isoformat() if since else '') | urlencode }}" hx-trigger="cockpit-changed from:body" hx-target="#cockpit" hx-swap="outerHTML"></div>
   <header class="cockpit-head">
     <div>
       <h1>{{ greeting }}</h1>
