@@ -869,6 +869,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(G5 → bêtas, Nicolas)** Espace sous les compétences (D2 Q32) : avec la règle Q2 de G5, une zone du gabarit déduit
   sans carte dessinée n'a plus de ligne d'air ; une compétence de plus qui passe à la ligne est refusée. Acceptable pour
   le Canva de Nicolas (recette du 06/10) ; à revoir sur d'autres designs de CV (zone qui descend jusqu'au texte suivant).
-- **(G5 → B1, vérification)** 1 680 tests : 78 s sur une machine calme, 142 s sous une charge de 12 (agents G et H en
-  parallèle sur le même Docker). Le second design ajoute deux imports (11 s dans un seul processus). Mesure de référence :
-  le passage GitHub.
+- **(G5 → B1, vérification)** Relevé de G5 (1 662 → 1 694 tests, fusion de H3 comprise) : GitHub, pytest **107 s** (job
+  complet 3 min 08, passage `37484044137`), **premier passage au-dessus des 100 s** ; poste, pytest 78 à 93 s au repos,
+  jusqu'à 245 s le poste chargé (deux agents sur le même Docker). Le second design de G5 ajoute deux imports de CV
+  (11 s dans un seul processus) ; les imports de CV sont les tests les plus lents (25 à 33 s chacun sous charge). Si le
+  prochain passage GitHub dépasse aussi 100 s, Nicolas arbitre (règle ci-dessus) ; levier repéré : partager un import
+  du CV fictif par module, comme les rendus en G1.
