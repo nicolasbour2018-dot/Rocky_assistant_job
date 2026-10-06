@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Annotated
-from urllib.parse import quote, urlsplit
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -152,7 +152,7 @@ from rocky.system.auth.web import CurrentAccount
 from rocky.system.events import JsonValue, StoredEvent, events_about
 from rocky.system.files import FileError, FileStore
 from rocky.system.render import RenderError, rasterize
-from rocky.system.shell import page, wants_fragment
+from rocky.system.shell import content_disposition, page, wants_fragment
 from rocky.system.workstation import (
     FIELDS,
     JobFile,
@@ -286,7 +286,7 @@ def _dossier(
     if heading is None or analysis is None:
         return None
     proposal = target(profile.cv, profile, analysis, slots)
-    kept = None if stored is None else selection_of(stored, profile.cv)
+    kept = None if stored is None else selection_of(stored, profile)
     layout = kept or proposal.layout
     sending = sending_in_force(every_change, sendings)
     sent = sent_change(every_change)
@@ -881,7 +881,9 @@ def cv_pdf(
         document.pdf,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'{disposition}; filename="CV_{name}_{language.upper()}.pdf"',
+            "Content-Disposition": content_disposition(
+                disposition, f"CV_{name}_{language.upper()}.pdf"
+            ),
             "Cache-Control": "no-store",
         },
     )
@@ -1014,14 +1016,23 @@ def _letter_gesture(
 ) -> Response:
     if not owns(request, account, application_id):
         return Response(status_code=404)
+    today = today_of(request)
     try:
         with engine_of(request).begin() as connection:
+            store = SqlApplicationStore(connection)
+            application = store.locked_application(account.id, application_id)
+            assert application is not None  # noqa: S101  (owns() checked it)
+            # The sending proposed by the gesture stops at the offer's deadline (decision D6, Q8; step H1).
+            deadline = offres_web.offer_deadlines(
+                connection, account.id, [application.offer_id], today
+            ).get(application.offer_id)
             use_case(
-                SqlApplicationStore(connection),
+                store,
                 account_id=account.id,
                 application_id=application_id,
                 now=now_of(request),
-                today=today_of(request),
+                today=today,
+                deadline=deadline,
             )
     except InvalidChangeError as error:
         return _dossier_page(
@@ -1262,7 +1273,9 @@ def letter_pdf(
         pdf,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'{disposition}; filename="Lettre_{name}_{language.upper()}.pdf"',
+            "Content-Disposition": content_disposition(
+                disposition, f"Lettre_{name}_{language.upper()}.pdf"
+            ),
             "Cache-Control": "no-store",
         },
     )
@@ -1522,12 +1535,6 @@ def generate(
     )
 
 
-def _disposition(kind: str, filename: str) -> str:
-    """``Content-Disposition`` for any name: an ASCII fallback and the exact name (RFC 6266)."""
-    fallback = filename.encode("ascii", "replace").decode().replace("?", "_")
-    return f"{kind}; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename)}"
-
-
 @router.get("/{application_id}/documents/{revision_id}.pdf")
 def revision_pdf(
     request: Request,
@@ -1559,7 +1566,7 @@ def revision_pdf(
             content,
             media_type="application/pdf",
             headers={
-                "Content-Disposition": _disposition(
+                "Content-Disposition": content_disposition(
                     "inline" if apercu else "attachment", filename
                 ),
                 "Cache-Control": "no-store",

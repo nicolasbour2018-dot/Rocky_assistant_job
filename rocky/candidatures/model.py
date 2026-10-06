@@ -15,6 +15,7 @@ from enum import StrEnum
 from typing import Any, Protocol
 
 from rocky.offres.decisions import Author, Decision, DecisionValue
+from rocky.system.errors import UserFacingError
 from rocky.system.events import NewEvent
 
 
@@ -101,7 +102,7 @@ DEFAULT_LANGUAGE = "fr"
 LANGUAGE_LABELS = {"fr": "Français", "en": "Anglais"}
 
 
-class InvalidChangeError(ValueError):
+class InvalidChangeError(UserFacingError, ValueError):
     """The change cannot be made as given; the message is shown to the user."""
 
 

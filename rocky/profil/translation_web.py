@@ -46,7 +46,7 @@ from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.files import FileError, FileStore
-from rocky.system.render import rasterize
+from rocky.system.render import RenderError, rasterize
 from rocky.system.shell import page, wants_fragment
 
 router = APIRouter(prefix="/profil")
@@ -334,22 +334,28 @@ def _english_screen(
         memory = editor.translation_memory()
         english = editor.active_cv_template("en")
     missing_fields, _ = to_translate(profile, memory)
+    preview_refusal: tuple[str, ...] = ()
     if state.refusal is None and state.french is not None:
         clock: Callable[[], datetime] = request.app.state.auth.clock
         files = english_template(
             state.files, state.validated, state.french.sha256, partial=True
         )
-        rendered, _, problems = draw_derived(
-            files, cv_content(profile, "en", clock().date())
-        )
-        preview = base64.b64encode(
-            _png(rasterize(rendered.pdf, PREVIEW_DPI)[0])
-        ).decode()
+        try:
+            rendered, _, problems = draw_derived(
+                files, cv_content(profile, "en", clock().date())
+            )
+            preview = base64.b64encode(
+                _png(rasterize(rendered.pdf, PREVIEW_DPI)[0])
+            ).decode()
+        except (RenderError, CvRefusedError) as refused:
+            # The screen stays usable: the preview says why it is missing (step H1).
+            preview_refusal = refused.lines
     context: Mapping[str, object] = {
         "state": state,
         "proposals": proposals,
         "missing_fields": missing_fields,
         "preview": preview,
+        "preview_refusal": preview_refusal,
         "problems": problems,
         "outdated": english is not None
         and english.source_sha256 is not None

@@ -16,6 +16,7 @@ from markupsafe import Markup
 
 from rocky.profil.cv.content import CvContent
 from rocky.profil.cv.library import font_assets, font_faces
+from rocky.system.errors import UserFacingError
 from rocky.system.render import Rendered, render_pdf
 
 NEUTRAL_DIR = Path(__file__).parent / "neutral"
@@ -60,7 +61,7 @@ _environment = Environment(
 )
 
 
-class CvRefusedError(Exception):
+class CvRefusedError(UserFacingError):
     """The CV cannot be delivered as it is; ``reasons`` are shown as they are (French)."""
 
     def __init__(self, reasons: tuple[str, ...]) -> None:

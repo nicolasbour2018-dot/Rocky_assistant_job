@@ -340,11 +340,14 @@ class ProfileEditor:
     def add_skills(
         self, names_by_category: Mapping[SkillCategory, Iterable[str]]
     ) -> SkillsAdded:
-        """Quick entry of the onboarding: one name per line; a name already known is reported, not added."""
+        """Quick entry of the onboarding: one name per line, empty lines skipped; a name already known is reported,
+        not added."""
         added: list[str] = []
         already_there: list[str] = []
         for category, names in names_by_category.items():
             for name in names:
+                if not name.strip():
+                    continue
                 skill = make_skill(label_fr=name, category=category.value)
                 try:
                     self.add_skill(skill)

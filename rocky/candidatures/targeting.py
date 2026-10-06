@@ -7,7 +7,7 @@ Nothing leaves the CV in silence: what the rules take out, and what they could n
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Any
@@ -259,20 +259,28 @@ def selection_json(layout: CvLayout) -> dict[str, Any]:
     }
 
 
-def selection_of(stored: Mapping[str, Any], master: CvLayout) -> CvLayout | None:
+def selection_of(stored: Mapping[str, Any], profile: Profile) -> CvLayout | None:
     """The kept selection on the master CV's groups, names and hobbies; None when the master's groups changed since
-    (the selection can no longer be placed: the rules propose again, and the screen says so)."""
+    (the selection can no longer be placed: the rules propose again, and the screen says so). A skill or a project
+    removed from the profile since is left out (step H1)."""
+    master = profile.cv
     groups = stored.get("groups", [])
     if [group["name"] for group in groups] != [
         group.name.fr for group in master.groups
     ]:
         return None
+    skills = {skill.id for skill in profile.skills}
+    projects = {project.id for project in profile.projects}
+
+    def known(ids: Iterable[int], existing: set[int]) -> tuple[int, ...]:
+        return tuple(i for i in ids if i in existing)
+
     return replace(
         master,
         groups=tuple(
-            replace(group, skill_ids=tuple(kept["skill_ids"]))
+            replace(group, skill_ids=known(kept["skill_ids"], skills))
             for group, kept in zip(master.groups, groups, strict=True)
         ),
-        transversal=tuple(stored.get("transversal", [])),
-        projects=tuple(stored.get("projects", [])),
+        transversal=known(stored.get("transversal", []), skills),
+        projects=known(stored.get("projects", []), projects),
     )

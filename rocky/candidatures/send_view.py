@@ -280,7 +280,7 @@ def read_sending(form: Mapping[str, str], view: SendView) -> NewSending:
 def _revision_id(value: str) -> int | None:
     if value == NONE:
         return None
-    if not value.isdigit():
+    if not (value.isascii() and value.isdigit()):
         raise InvalidChangeError("Document inconnu.")
     return int(value)
 

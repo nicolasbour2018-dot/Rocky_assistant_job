@@ -38,11 +38,11 @@ dépôt et n'est jamais versionné.
 
 ## 3. Lecture assistée
 
-- « Ouvrir dans le navigateur » (touche `e`) : le poste ouvre l'adresse de l'offre dans un nouvel onglet et le met au
+- « Ouvrir dans le navigateur » (touche `n`) : le poste ouvre l'adresse de l'offre dans un nouvel onglet et le met au
   premier plan. Passe l'éventuel défi, attends que l'annonce soit affichée en entier.
 - **Pas pour Apec** : Apec refuse le navigateur du poste (« Access is temporarily restricted », recette du 05/10) ; une
   offre Apec se complète à la main, par « Coller la description » (décision E5, Q8).
-- « Lire la page affichée » (touche `e`) : le poste rend à Rocky l'adresse affichée et la page telle qu'elle est
+- « Lire la page affichée » (touche `n`) : le poste rend à Rocky l'adresse affichée et la page telle qu'elle est
   dessinée. Rocky en tire la description (annonce structurée, bloc de description connu, sections Apec) et les faits
   qui manquaient ; le score est recalculé aussitôt. L'onglet reste ouvert.
 - Rocky refuse une page d'un autre site que celui de l'offre (« la page affichée n'est plus l'annonce ») ; une page

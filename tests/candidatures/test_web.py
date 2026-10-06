@@ -291,6 +291,29 @@ def test_annuler_undoes_the_changes_then_the_application_and_its_decision(
     assert not dossier(changes).open
 
 
+@pytest.mark.parametrize(
+    ("path", "data"),
+    [
+        ("etape", {"etape": "ready"}),
+        ("action", {"action": "Relancer", "echeance": "2026-10-20"}),
+    ],
+)
+def test_a_change_to_a_cancelled_application_says_why(
+    desk: Desk, path: str, data: dict[str, str]
+) -> None:
+    """Step H1: the refusal of a cancelled application was a 500."""
+    desk.prepare("target_job")
+    desk.post("annuler")
+
+    response = desk.client.post(
+        f"/candidatures/{desk.application_id()}/{path}", data=data, headers=HTMX
+    )
+
+    assert response.status_code == 200
+    assert response.headers["HX-Retarget"] == "#erreur"
+    assert "Cette candidature a été annulée." in response.text
+
+
 def test_without_htmx_preparing_goes_to_the_application_and_changes_to_the_list(
     desk: Desk,
 ) -> None:

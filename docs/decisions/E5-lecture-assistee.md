@@ -48,7 +48,7 @@ Constat : au second essai réel, Apec refuse le navigateur piloté du poste (« 
 | Lecture | `parse_page(html, adresse affichée)` puis `enriched(offre, page)` | Moteur C2, identique à l'import et aux alertes |
 | Écriture | `enrich_offer_from_page` partage avec `enrich_offer` une seule écriture : offre (`update`, `seen=False`), score recalculé, événement `offres.offer_enriched` (`how: browser`, méthode de lecture, score avant/après), dans **une** transaction. Rien de changé : rien n'est écrit, la raison s'affiche. Aucune adresse dans l'événement | AGENTS §4 ; un lien peut porter un jeton (plan §8, C2 → E3) |
 | Réseau | Le poste est appelé hors de toute transaction | Règle de la veille (C6) |
-| Écran | Pour une offre incomplète, à côté de « Coller la description » (fiche et tri, gabarit commun) : « Ouvrir dans le navigateur » (touche `e`), puis « Lire la page affichée » (jeton d'onglet en champ caché, aucun état côté client) | Q1 ; règles de l'écran Offres |
+| Écran | Pour une offre incomplète, à côté de « Coller la description » (fiche et tri, gabarit commun) : « Ouvrir dans le navigateur » (touche `n` ; `e` à l'origine, en double avec « Écarté » : changée en H1, choix de Nicolas le 06/10), puis « Lire la page affichée » (jeton d'onglet en champ caché, aucun état côté client) | Q1 ; règles de l'écran Offres |
 | Lecteur Apec | Forme décidée sur la capture réelle (Q4) ; jeu anonymisé dans `tests/offres/imports/data/apec/` | Aucun lecteur écrit sur une page inventée (C1) |
 | Préremplissage | Reste en sommeil (`PREFILL_ENABLED = False`) | Recette de D5 |
 

@@ -238,7 +238,7 @@ def _offer(item: dict[str, Any]) -> CollectedOffer | None:
 
 def _label(labels: Mapping[int, str], code: object) -> str | None:
     """The label of an Apec code (a number, sometimes sent as text); ``None`` for a code nobody knows."""
-    if isinstance(code, str) and code.isdigit():
+    if isinstance(code, str) and code.isascii() and code.isdigit():
         code = int(code)
     if isinstance(code, bool) or not isinstance(code, int):
         return None

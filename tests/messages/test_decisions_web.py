@@ -196,6 +196,24 @@ def test_correcting_a_message_from_its_panel(screen: Screen) -> None:
     assert "par toi" in saved
 
 
+def test_a_superscript_digit_is_no_application(screen: Screen) -> None:
+    """Step H1: ``"²".isdigit()`` is true, ``int("²")`` fails: it was a 500."""
+    message_id = screen.mail(
+        "Léa Martin via LinkedIn <messages-noreply@linkedin.com>",
+        "Léa vous a envoyé un message",
+        "Bonjour Camille, un poste de data analyst ?",
+    )
+
+    saved = screen.client.post(
+        f"/messages/{message_id}/corriger",
+        data={"categorie": "recruiter_approach", "candidature": "²"},
+        headers=HTMX,
+    )
+
+    assert saved.status_code == 200
+    assert "Correction enregistrée." in saved.text
+
+
 def test_a_panel_without_htmx_goes_back_to_the_page(screen: Screen) -> None:
     message_id = screen.refusal()
 

@@ -110,6 +110,7 @@ from rocky.system.shell import (
     Action,
     Drawer,
     add_drawer,
+    content_disposition,
     is_htmx,
     page,
     wants_fragment,
@@ -504,7 +505,7 @@ def _preferences_values(profile: Profile) -> dict[str, Any]:
 
 def _stored_values(profile: Profile, key: str, editing: str) -> dict[str, Any] | None:
     """Values of the item being edited; None when it does not exist in this profile."""
-    item_id = int(editing) if editing.isdigit() else None
+    item_id = int(editing) if editing.isascii() and editing.isdigit() else None
     if editing != NEW and item_id is None and key not in ("identite", "kit"):
         return None
     finders: dict[str, Callable[[], dict[str, Any] | None]] = {
@@ -538,7 +539,7 @@ def _kit_values(profile: Profile, editing: str) -> dict[str, Any] | None:
         if kind == "loisir"
         else ()
     )
-    if not index.isdigit() or int(index) >= len(items):
+    if not (index.isascii() and index.isdigit()) or int(index) >= len(items):
         return None
     text = items[int(index)].name if kind == "groupe" else items[int(index)].label
     return {"name_fr": text.fr, "name_en": text.en}
@@ -706,7 +707,11 @@ def _text(form: FormData, name: str) -> str:
 
 
 def _ids(form: FormData, name: str) -> list[int]:
-    return [int(v) for v in form.getlist(name) if isinstance(v, str) and v.isdigit()]
+    return [
+        int(v)
+        for v in form.getlist(name)
+        if isinstance(v, str) and v.isascii() and v.isdigit()
+    ]
 
 
 def _track_from(form: FormData) -> Any:
@@ -1141,7 +1146,8 @@ def _cv_editing(gesture: str, form: FormData) -> str:
 
 def _int(form: FormData, name: str) -> int:
     value = _text(form, name)
-    return int(value) if value.lstrip("-").isdigit() else -1
+    digits = value.removeprefix("-")
+    return int(value) if digits.isascii() and digits.isdigit() else -1
 
 
 def _name(form: FormData) -> Text:
@@ -1200,7 +1206,9 @@ def cv_pdf(
         document.pdf,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'{disposition}; filename="CV_{name}_{language.upper()}.pdf"',
+            "Content-Disposition": content_disposition(
+                disposition, f"CV_{name}_{language.upper()}.pdf"
+            ),
             "Cache-Control": "no-store",
         },
     )
@@ -1298,8 +1306,13 @@ def _active_template(
         record = editor.active_cv_template(language)
     if record is None:
         return None
+    return record, _template_files(request, record)
+
+
+def _template_files(request: Request, record: CvTemplateRecord) -> Mapping[str, bytes]:
+    """The files of a stored template; an unreadable one refuses the CV with its reason."""
     try:
-        return record, _files(request).read_bundle(record.path, record.sha256)
+        return _files(request).read_bundle(record.path, record.sha256)
     except (FileError, ProfileInputError) as error:
         reason = error.reason if isinstance(error, FileError) else str(error)
         raise CvRefusedError(
@@ -1313,7 +1326,7 @@ def _slots(request: Request, editor: ProfileEditor) -> Slots:
     record = editor.active_cv_template("fr")
     if record is None:
         return NEUTRAL_SLOTS
-    files = _files(request).read_bundle(record.path, record.sha256)
+    files = _template_files(request, record)
     return slots_of(json.loads(files[TEMPLATE_FILE]))
 
 

@@ -59,6 +59,12 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Un module est prévenu d'un changement d'un autre par un crochet de `app.state` installé par la composition
   (`profile_changed`), jamais par un import de l'un dans l'autre.
 
+## Erreurs métier (`rocky/system/errors.py`, étape H1, `docs/decisions/H-revue-code.md`)
+- Une erreur dont le message (français) est pour l'utilisateur hérite de `UserFacingError` ; une route oubliée ne
+  donne pas de 500 : `shell.show_user_error` la journalise et l'affiche (fragment reciblé sur `#erreur`, page entière
+  sinon). Ce filet ne remplace pas le traitement local d'une route, qui garde le formulaire et son contexte.
+- Un nom de fichier téléchargé passe par `shell.content_disposition` (nom hors latin‑1).
+
 ## Écrans transverses (`rocky/system/shell.py`, décision `docs/decisions/F1-ecrans-transverses.md`)
 - `system` n'importe aucun module métier : 🏠 Aujourd'hui, ⚙️ Système et le tiroir 🐾 se construisent par des
   **registres** remplis à l'installation des modules (`add_today_cards`, `add_system_cards`, `add_drawer`, `add_badge`).

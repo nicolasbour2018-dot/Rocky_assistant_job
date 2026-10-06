@@ -281,6 +281,28 @@ def test_a_ready_letter_leads_to_sending_with_its_pdf(desk: Desk) -> None:
     assert "attendus de cette lettre" in checked
 
 
+def test_a_name_outside_latin_1_downloads_its_letter(
+    desk: Desk, migrated_engine: Engine
+) -> None:
+    """Step H1: the raw name in ``Content-Disposition`` was a UnicodeEncodeError."""
+    with migrated_engine.begin() as connection:
+        desk.seeker.editor(connection).save_identity(
+            make_identity(
+                full_name="Łukasz Ñandú",
+                city="Chartres",
+                contact_email=desk.seeker.email,
+            )
+        )
+    desk.client.post(f"{base(desk)}/lettre/valider", data=form_of(page(desk, LETTER)))
+
+    pdf = desk.client.get(f"{base(desk)}/lettre.pdf")
+
+    assert pdf.status_code == 200
+    assert pdf.headers["content-disposition"].endswith(
+        "filename*=UTF-8''Lettre_%C5%81ukasz_%C3%91and%C3%BA_FR.pdf"
+    )
+
+
 def test_a_letter_ready_needs_a_letter(desk: Desk) -> None:
     html = desk.client.post(f"{base(desk)}/lettre/prete", headers=HTMX).text
 
