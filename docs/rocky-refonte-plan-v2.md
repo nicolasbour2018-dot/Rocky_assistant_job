@@ -175,7 +175,7 @@ la vérification allégée plutôt que sa limite relevée ; une passe UX des aut
 | G2. Lieux et date limite | *Grill me, puis mode plan.* Référentiel versionné (communes, départements → région), sans réseau à l'exécution, pour qu'une région couvre ses villes dans le score ; nouvelle `RULES_VERSION` ; mesures C4/C5 relancées ; offre à date limite passée signalée ; contrat Hellowork lu dans le titre de la page | « Paris 01 - 75 », « Courbevoie - 92 » et « Chartres - 28 » répondent aux lieux des pistes de Nicolas ; écart de classement chiffré et documenté | ✅ |
 | G3. Cockpit | *Grill me avec la skill de design, puis mode plan.* 🏠 Aujourd'hui devient le **Cockpit** (libellé de D12 mis à jour, validé par Nicolas le 05/10) : cartes de métriques, fil défilant de ce que Rocky signale, suggestions d'offres (meilleurs scores pour commencer), veille manuelle ; mécanismes et parcours, sans identité graphique | Fixé au grill | ⬜ |
 | G4. Assistant Rocky | *Grill me, puis mode plan.* Le tiroir 🐾 devient un assistant Gemini (révise la décision F1, Q2) : contexte construit par les cas d'usage des modules (offre, candidature, message, profil), par compte et en lecture seule, jamais de SQL écrit par le modèle ; réponses qui citent les faits ; aucun geste à la place de l'utilisateur ; plafonds d'appels communs dans `system` ; place de « À faire ici » face au cockpit | Fixé au grill | ⬜ |
-| G5. Profil et CV | *Mode plan.* Blocs projets et gabarit neutre du CV (limites de D2) ; compétences qui ne diffèrent que par la casse ou un espace ; listes des pistes « une valeur par ligne » et aide des mots exclus | CV anglais de Nicolas par le gabarit neutre sur une page, coupes signalées ; un texte de projet qui sort de sa carte dessinée est signalé, CV FR de Nicolas sans débordement validé par lui ; second design fictif rangé pareil par deux réponses du modèle ; « ML Flow » proposé comme alias de « MLFlow » ; aides des pistes justes (décision G5) | 🔄 |
+| G5. Profil et CV | *Mode plan.* Blocs projets et gabarit neutre du CV (limites de D2) ; compétences qui ne diffèrent que par la casse ou un espace ; listes des pistes « une valeur par ligne » et aide des mots exclus | CV anglais de Nicolas par le gabarit neutre sur une page, coupes signalées ; un texte de projet qui sort de sa carte dessinée est signalé, CV FR de Nicolas sans débordement validé par lui ; second design fictif rangé pareil par deux réponses du modèle ; « ML Flow » proposé comme alias de « MLFlow » ; aides des pistes justes (décision G5) | ✅ (validé par Nicolas le 06/10 ; lien « Raccourcir » vers le profil ajouté à la recette) |
 | G6. Passe UX des écrans | *Grill me avec la skill de design, puis mode plan.* Offres, Candidatures (parcours du dossier), Messages, Bilan, Profil, Système : mécanismes, boutons, parcours ; frappes perdues (B4 → C7) | Fixé au grill | ⬜ |
 | G7. Identité graphique | *Grill me avec la skill de design.* Couche visuelle de tout Rocky, juste avant F2 | Fixé au grill | ⬜ |
 
@@ -598,8 +598,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   gabarit neutre trop court pour un parcours long (CV anglais de Nicolas sans CV anglais importé : 77 mm de trop).
   À affiner proprement dans une étape dédiée.
   *Placé en G5 (Nicolas, 05/10).* *Traité en G5 : gabarit neutre dense avec coupes signalées (Q1), zone bornée par la
-  carte dessinée (Q2), règles éprouvées sur un second design (Q3) ; rendu réel du Canva à valider par Nicolas (recette,
-  décision G5).*
+  carte dessinée (Q2), règles éprouvées sur un second design (Q3) ; rendu réel du Canva validé par Nicolas (décision
+  G5).*
 - **(D2 → Nicolas)** Ordre des projets du CV maître (Water Potability avant Pilotage, inverse du Canva) : à vérifier.
 - **(D3 → D6 ou F1)** Les gabarits ne se suppriment pas : le compte de Nicolas en a 19 (dont 13 essais de mise au point
   de D2). Ils sont repliés sous « Autres gabarits » dans Profil & kit (D3) ; prévoir de retirer un gabarit inactif.
@@ -607,7 +607,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(D3 → plus tard, remarque de Nicolas)** CV français d'une candidature : le texte du bloc projet « Pilotage
   d'association sportive » sort visuellement de sa carte sans être signalé. Même famille que les limites des blocs
   projets notées à la clôture de D2 (zone mesurée plus large que la carte dessinée).
-  *Traité en G5 (Q2) : la zone d'un projet est bornée par sa carte ; à constater sur le CV réel (recette).*
+  *Résolu en G5 (Q2) : la zone d'un projet est bornée par sa carte, le dépassement nommé et relié au formulaire du
+  projet ; constaté sur le CV réel (recette).*
 - **(D3 → D4, D5, D6)** Parcours du dossier (décision D3, Q25, Q26) : « Prête à envoyer » veut dire « CV prêt » tant
   que la lettre n'existe pas (D4 tranchera) ; les envois confirmés en D3 n'ont ni canal ni révision (D5 les accepte tels
   quels) ; raccourci « Intéressé et préparer » depuis le mode tri, 4e étape « Suivi » : D6.
@@ -854,9 +855,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   côté GitHub, très variable d'un runner à l'autre. Relevé à chaque clôture d'étape (premier : H3, voir sa section
   dans `docs/decisions/H-revue-code.md`) ; si deux passages GitHub d'affilée dépassent 100 s de pytest, Nicolas
   arbitre : revoir la vérification (méthode de G1) ou relever la limite.
-- **(G5 → recette, Nicolas)** Espace sous les compétences (D2 Q32) : avec la règle Q2 de G5, une zone du gabarit déduit
-  sans carte dessinée n'a plus de ligne d'air ; une compétence de plus qui passe à la ligne est refusée. À trancher à la
-  recette de G5 sur le Canva réel (décision G5, recette).
+- **(G5 → bêtas, Nicolas)** Espace sous les compétences (D2 Q32) : avec la règle Q2 de G5, une zone du gabarit déduit
+  sans carte dessinée n'a plus de ligne d'air ; une compétence de plus qui passe à la ligne est refusée. Acceptable pour
+  le Canva de Nicolas (recette du 06/10) ; à revoir sur d'autres designs de CV (zone qui descend jusqu'au texte suivant).
 - **(G5 → B1, vérification)** 1 680 tests : 78 s sur une machine calme, 142 s sous une charge de 12 (agents G et H en
   parallèle sur le même Docker). Le second design ajoute deux imports (11 s dans un seul processus). Mesure de référence :
   le passage GitHub.

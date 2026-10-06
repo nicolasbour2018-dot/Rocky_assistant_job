@@ -58,7 +58,7 @@ Critère de sortie (fixé par le plan de l'étape) :
 | Second design, deux lectures du faux modèle | Mêmes zones, même texte rendu, aucun débordement ; chaque projet dans sa carte |
 | Vérification globale | Verte (1 680 tests) ; 78 s sur une machine calme, 105 à 142 s sous une charge de 12 (deux agents en parallèle) |
 
-## Recette avec Nicolas (critère 2, à faire)
+## Recette avec Nicolas (critère 2)
 
 Application de développement reconstruite avec G5 (`docker compose up -d --build --wait app`). Les deux gabarits actifs
 du compte (FR et sa version anglaise) sont au format 4 : le CV demande un réimport.
@@ -82,3 +82,18 @@ du compte (FR et sa version anglaise) sont au format 4 : le CV demande un réimp
 | « Ouvrir le PDF » ne fait qu'ouvrir la page entière | Le PDF ne se modifie jamais : les textes viennent du profil | **Ajouté (Nicolas, Q5)** : sous l'aperçu du CV d'une candidature, « Raccourcir « X » dans mon profil → » pour chaque projet dont la carte ou le nom déborde (`overflowing_projects`, `CvDrawing.projects_to_shorten`) ; le formulaire du projet s'ouvre, avec « ← Revenir à la candidature » (seule adresse de retour admise : `/candidatures/<n>[?etape=…]`) ; au retour, le CV est recalculé |
 
 Q5 (Nicolas, 06/10) : le lien et le retour se font dans G5, plutôt qu'en G6.
+
+## Critère de sortie et clôture (Nicolas, 06/10)
+
+| Critère | Résultat |
+|---|---|
+| 1. CV anglais de Nicolas par le gabarit neutre sur une page, coupes listées | Une page en français et en anglais, aucune coupe (débordait de 89 et 77 mm) ; parcours « long » fictif aux limites sur une page (test) |
+| 2. Texte de projet hors de sa carte signalé ; CV FR de Nicolas validé | Dépassement nommé (« carte du projet N ») et relié au formulaire du projet ; Canva réimporté (format 6), validé par Nicolas : « tout passe correctement » |
+| 3. Second design fictif rangé pareil par deux réponses du modèle | Mêmes zones, même rendu (tests) |
+| 4. « ML Flow » proposé comme autre nom de « MLFlow » | À l'écran (un geste) et à l'onboarding (tests) |
+| 5. Aides des pistes ; vérification verte | Aides justes (test) ; vérification globale verte en local, puis sur GitHub |
+
+**Espace sous les compétences (D2, Q32)** : avec la règle Q2, une zone sans carte n'a plus de ligne d'air. Jugé
+acceptable par Nicolas pour son Canva ; à revoir sur d'autres designs de CV (bêtas), plan §8.
+
+**Étape validée par Nicolas le 06/10.**
