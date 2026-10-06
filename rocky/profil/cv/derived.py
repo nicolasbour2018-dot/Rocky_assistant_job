@@ -35,6 +35,7 @@ from rocky.profil.cv.pdf_page import (
     PageLayout,
     Style,
     cut_svg,
+    drawn_boxes,
     page_svg,
     photo_candidate,
 )
@@ -49,15 +50,19 @@ from rocky.profil.cv.semantics import PROJECT_ROLES, BlockRole, Role
 from rocky.profil.cv.template import Slots
 from rocky.system.render import Rendered, render_image, render_pdf
 
+# 5: a block's room is its own lines, or the card drawn around it (G5, Q2), and a project name keeps its colon;
 # 4: also the page without any text and the kept texts in units, for its English version (D3, Q24);
 # 3: only the variable blocks are regions (2: every rubric was; 1: the layer was an SVG, drawn black by Preview).
-FORMAT = "rocky-cv-gabarit/4"
-READABLE_FORMATS = frozenset({"rocky-cv-gabarit/3", FORMAT})
+FORMAT = "rocky-cv-gabarit/5"
+READABLE_FORMATS = frozenset({FORMAT})
 TEMPLATE_FILE = "template.json"
 LAYER = "calque.png"
 LAYER_BARE = "calque-sans-texte.png"  # the design without any text: the layer of the English version (D3, Q8)
 LAYER_DPI = 300  # the resolution of the design's own images
-ROOM = 1.0  # a region may grow by one line: fonts measure a hair differently than the design tool
+# The old texts' decorations (bullets, underlines) are erased down to one line below them (D2).
+ERASED_BELOW = 1.0
+# A shape around a text is a card, not the page's background, below this share of the page (G5, Q2).
+CARD_MAX_SHARE = 0.5
 VARIABLE = frozenset({Role.GROUPS, Role.TRANSVERSAL}) | PROJECT_ROLES
 PROJECT_PARTS = (
     Role.PROJECT_PROBLEM,
@@ -103,21 +108,27 @@ def derive(
     blocks = {block.id: block for block in layout.blocks}
     changed = [blocks[r.block_id] for r in roles if r.role in VARIABLE]
     kept = [(r, blocks[r.block_id]) for r in roles if r.role not in VARIABLE]
-    regions = _regions(layout, roles)
     svg = page_svg(pdf)
+    cards = _cards(layout, drawn_boxes(svg))
+    regions = _regions(layout, roles, cards)
+    erased = [region.pop("erased") for region in regions]
     cut = cut_svg(
         svg,
         text_areas=[block.box for block in changed],
         image_areas=(),
-        decoration_areas=[region["room"] for region in regions],
+        decoration_areas=erased,
     )
     units = _units(kept)
+    for unit in units:
+        if unit["kind"] == "paragraph":
+            card = _card_around(_unit_box(unit), cards)
+            unit["card"] = None if card is None else _box_json(card)
     bare = cut_svg(
         svg,
         text_areas=[block.box for block in layout.blocks],
         image_areas=(),
         decoration_areas=[
-            *(region["room"] for region in regions),
+            *erased,
             *(_unit_box(unit) for unit in units if unit["kind"] == "paragraph"),
         ],
     )
@@ -225,7 +236,52 @@ def _starts_with(text: str, label: str) -> bool:
     )
 
 
-def _regions(layout: PageLayout, roles: Sequence[BlockRole]) -> list[dict[str, Any]]:
+def _cards(layout: PageLayout, shapes: Sequence[Box]) -> tuple[Box, ...]:
+    """The drawn shapes a text may sit in: not the page's background."""
+    page_area = layout.width * layout.height
+    return tuple(
+        shape
+        for shape in shapes
+        if 0 < shape.width * shape.height < CARD_MAX_SHARE * page_area
+    )
+
+
+def _card_around(box: Box, cards: Sequence[Box]) -> Box | None:
+    """The smallest card drawn around ``box`` (G5, Q2), None when it sits on the page itself."""
+    around = [
+        card
+        for card in cards
+        if card.contains(box.x, box.y, margin=1)
+        and card.contains(box.right, box.bottom, margin=1)
+        and card.width * card.height > box.width * box.height
+    ]
+    return min(around, key=lambda card: card.width * card.height, default=None)
+
+
+def _room(
+    box: Box, measure: Mapping[str, Any], card: Box | None, below: float | None
+) -> Box:
+    """Where a block's text may go (G5, Q2): its own lines, with their leading; in a drawn card, down and right to the
+    card's inner edge, as far from it as the text stands from its left edge, never over the text below."""
+    half = max((measure["line_height"] - measure["ink"]) / 2, 0)
+    room = Box(box.x - 1, box.y - 1 - half, box.width + 2, box.height + 2 + 2 * half)
+    if card is None:
+        return room
+    inset = max(box.x - card.x, 0)
+    bottom = (
+        card.bottom - inset if below is None else min(card.bottom - inset, below - 1)
+    )
+    return Box(
+        room.x,
+        room.y,
+        max(card.right - inset - room.x, room.width),
+        max(bottom - room.y, room.height),
+    )
+
+
+def _regions(
+    layout: PageLayout, roles: Sequence[BlockRole], cards: Sequence[Box]
+) -> list[dict[str, Any]]:
     """Skill groups, soft skills, and for each project its name and its body."""
     blocks = {block.id: block for block in layout.blocks}
     grouped: dict[tuple[str, int], list[tuple[BlockRole, Block]]] = defaultdict(list)
@@ -253,12 +309,29 @@ def _regions(layout: PageLayout, roles: Sequence[BlockRole]) -> list[dict[str, A
         }
         if kind == "project_body":
             region["parts"] = _parts(members, measure["line_height"])
+        if kind == "project_name":
+            # « Tri des messages : » keeps its colon, written the way of the CV's language.
+            region["colon"] = lines[-1].text.rstrip().endswith(":")
+        card = _card_around(box, cards)
+        own = {id(block) for _, block in members}
+        below = min(
+            (
+                block.box.y
+                for block in layout.blocks
+                if id(block) not in own
+                and block.box.y >= box.bottom - 1
+                and block.box.x < (card or box).right
+                and block.box.right > box.x
+            ),
+            default=None,
+        )
+        region["room"] = _room(box, measure, card, below)
         half = max((measure["line_height"] - measure["ink"]) / 2, 0)
-        region["room"] = Box(
+        region["erased"] = Box(
             box.x - 1,
             box.y - 1 - half,
             box.width + 2,
-            box.height + 1 + half + measure["line_height"] * ROOM,
+            box.height + 1 + half + measure["line_height"] * ERASED_BELOW,
         )
         regions.append(region)
     return regions
@@ -735,7 +808,7 @@ def _region_html(
         return None
     project = content.projects[index]
     if kind == "project_name":
-        return _lines([project.name])
+        return _lines([project.name + (colon if region.get("colon") else "")])
     texts = {
         Role.PROJECT_PROBLEM.value: project.problem,
         Role.PROJECT_STACK.value: ", ".join(project.stack),
@@ -1003,11 +1076,15 @@ def _unit_html(template: Mapping[str, Any], unit: Mapping[str, Any]) -> str:
     half = max((line_height - float(unit["ink"])) / 2, 0)
     top = box["y"] - 1 - half
     if unit["kind"] == "paragraph":
-        width, height = box["width"] + 2, box["height"] + 1 + half + line_height * ROOM
-        if "room_bottom" in unit:  # never over the text below
-            height = max(
-                min(height, unit["room_bottom"] - top), box["height"] + 1 + half
-            )
+        # Its own lines; in a drawn card, down to the card's inner edge, never over the text below (G5, Q2).
+        width, height = box["width"] + 2, box["height"] + 2 + 2 * half
+        card = unit.get("card")
+        if card is not None:
+            inset = max(box["x"] - card["x"], 0)
+            bottom = card["y"] + card["height"] - inset
+            if "room_bottom" in unit:
+                bottom = min(bottom, unit["room_bottom"])
+            height = max(bottom - top, height)
         left, wrap = box["x"] - 1, "normal"
     else:
         width, height = unit["room_width"], line_height + 1

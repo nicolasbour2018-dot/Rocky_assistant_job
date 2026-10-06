@@ -7,6 +7,7 @@ import io
 import json
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 from PIL import ImageFilter
@@ -15,10 +16,12 @@ from pypdf import PdfWriter
 from rocky.profil.cv.check import Fact, check_cv
 from rocky.profil.cv.content import cv_content
 from rocky.profil.cv.derived import (
+    OLD_FORMAT,
     TEMPLATE_FILE,
     _by_column,
     _continued,
     derived_facts,
+    draw_derived,
     render_derived,
     slots_of,
     unspaced,
@@ -40,6 +43,7 @@ from rocky.profil.cv.pdf_page import (
     render_page,
 )
 from rocky.profil.cv.proposals import preview_profile
+from rocky.profil.cv.rendering import CvRefusedError
 from rocky.profil.cv.semantics import BlockRole, Role
 from rocky.profil.model import Profile, Text
 from rocky.system.files import FileStore
@@ -324,3 +328,70 @@ def test_a_title_spaced_letter_by_letter_reads_as_words() -> None:
     assert unspaced("P R O J E T S") == "PROJETS"
     assert unspaced("T E C H N I C A L   S K I L L S") == "TECHNICAL SKILLS"
     assert unspaced("C   O   N   T") == "CONT"
+
+
+# The room of a block (decision G5, Q2): its own lines, or the card drawn around it
+
+
+def _region(template: dict[str, object], kind: str) -> dict[str, Any]:
+    regions = template["regions"]
+    assert isinstance(regions, list)
+    return next(region for region in regions if region["kind"] == kind)
+
+
+def _bottom(box: dict[str, float]) -> float:
+    return box["y"] + box["height"]
+
+
+def test_a_project_block_may_fill_its_drawn_card_and_no_more(shared: Shared) -> None:
+    """Step G5: the room was the original lines plus one line, whatever the card drawn around them; a text could
+    leave the card unreported (« Pilotage d'association sportive », D3)."""
+    template = json.loads(shared.files()[TEMPLATE_FILE])
+    body, name = _region(template, "project_body"), _region(template, "project_name")
+
+    # The card of the fictional design: 200–370 × 330–490 pt, the text 15 pt from its left edge; its widest line
+    # reaches 360.5 pt (a room never shrinks below the original lines).
+    room = body["room"]
+    assert 360 <= room["x"] + room["width"] <= 363
+    assert 474 <= _bottom(room) <= 476
+    # Never over the text below: the name's room stops above the ink of the body's first line.
+    body_ink_top = body["room"]["y"] + 1 + (body["line_height"] - body["ink"]) / 2
+    assert _bottom(name["room"]) <= body_ink_top
+
+
+def test_a_block_without_a_card_has_no_line_of_air(shared: Shared) -> None:
+    """Step G5: a block on the page itself takes its own lines only; one more line would touch what is below."""
+    groups = _region(json.loads(shared.files()[TEMPLATE_FILE]), "groups")
+
+    assert groups["room"]["height"] < (groups["count"] + 0.5) * groups["line_height"]
+
+
+def test_a_project_text_beyond_its_card_is_named(shared: Shared) -> None:
+    def reasons(problem: str) -> tuple[str, ...]:
+        project = {
+            "name": "Tri des messages clients",
+            "problem": problem,
+            "stack": ["Python"],
+        }
+        profile = preview_profile({**PROFILE, "projects": [project]})
+        return draw_derived(shared.files(), cv_content(profile, "fr", TODAY))[2]
+
+    assert reasons("Des milliers de messages clients à orienter chaque jour") == ()
+    assert any(
+        "carte du projet 1" in reason
+        for reason in reasons("Des milliers de messages. " * 30)
+    )
+
+
+def test_a_template_of_an_older_format_asks_for_a_new_import(shared: Shared) -> None:
+    """Step G5: rooms are measured anew (format 5); the model's kept answer remakes the template without a call."""
+    files = dict(shared.files())
+    template = json.loads(files[TEMPLATE_FILE])
+    files[TEMPLATE_FILE] = json.dumps(
+        {**template, "format": "rocky-cv-gabarit/4"}
+    ).encode()
+
+    with pytest.raises(CvRefusedError, match=OLD_FORMAT):
+        draw_derived(
+            files, cv_content(preview_profile(shared.proposals()), "fr", TODAY)
+        )

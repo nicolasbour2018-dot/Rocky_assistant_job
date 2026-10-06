@@ -401,19 +401,68 @@ def cut_svg(
     decoration_areas: Sequence[Box] = (),
 ) -> SvgCut:
     """Remove the glyphs drawn inside ``text_areas``, the images covering ``image_areas``, and the small paths
-    lying wholly inside ``decoration_areas`` (bullets and underlines drawn for the old texts).
-
-    Poppler draws each form of the PDF as a ``source-N`` group used once, placed by a matrix: the matrices are
-    composed from the page down to each glyph and image to know where they land.
+    lying wholly inside ``decoration_areas`` (bullets and underlines drawn for the old texts), placed by ``_drawn``.
     """
-    root = ET.fromstring(svg)  # noqa: S314  (SVG produced by poppler from the user's own PDF, no entity expansion)
-    ids = {element.get("id"): element for element in root.iter() if element.get("id")}
+    root = _svg_root(svg)
     parents = {child: parent for parent in root.iter() for child in parent}
     glyphs: list[ET.Element] = []
     images: list[ET.Element] = []
     paths: list[ET.Element] = []
+    for tag, element, matrix in _drawn(root):
+        if tag == "glyph":
+            x, y = matrix.apply(0, 0)
+            if any(area.contains(x, y, margin=1.5) for area in text_areas):
+                glyphs.append(element)
+        elif tag == "image":
+            drawn = _image_box(element, matrix)
+            if any(
+                drawn.overlap(area) > 0.8 and area.overlap(drawn) > 0.8
+                for area in image_areas
+            ):
+                images.append(element)
+        elif decoration_areas:
+            drawn_path = _path_box(element.get("d", ""), matrix)
+            if drawn_path is not None and any(
+                drawn_path.overlap(area) > 0.99 for area in decoration_areas
+            ):
+                paths.append(element)
+    for element in (*glyphs, *images, *paths):
+        parent = parents.get(element)
+        if parent is not None and element in list(parent):
+            parent.remove(element)
+    return SvgCut(
+        ET.tostring(root, encoding="unicode"), len(glyphs), len(images), len(paths)
+    )
 
-    def visit(element: ET.Element, matrix: Matrix, depth: int) -> None:
+
+def drawn_boxes(svg: str) -> tuple[Box, ...]:
+    """Where each path and image of the page lands: the shapes a text may sit in (a project card, decision G5, Q2)."""
+    boxes: list[Box] = []
+    for tag, element, matrix in _drawn(_svg_root(svg)):
+        if tag == "image":
+            boxes.append(_image_box(element, matrix))
+        elif tag == "path":
+            box = _path_box(element.get("d", ""), matrix)
+            if box is not None:
+                boxes.append(box)
+    return tuple(boxes)
+
+
+def _svg_root(svg: str) -> ET.Element:
+    return ET.fromstring(svg)  # noqa: S314  (SVG produced by poppler from the user's own PDF, no entity expansion)
+
+
+def _drawn(root: ET.Element) -> Iterator[tuple[str, ET.Element, Matrix]]:
+    """Each glyph use, image and path of the page with the matrix placing it.
+
+    Poppler draws each form of the PDF as a ``source-N`` group used once, placed by a matrix: the matrices are
+    composed from the page down to each glyph, image and path to know where they land (a glyph: at its origin).
+    """
+    ids = {element.get("id"): element for element in root.iter() if element.get("id")}
+
+    def visit(
+        element: ET.Element, matrix: Matrix, depth: int
+    ) -> Iterator[tuple[str, ET.Element, Matrix]]:
         if depth > 64:
             return
         matrix = matrix @ _transform(element.get("transform"))
@@ -426,50 +475,27 @@ def cut_svg(
                 float(element.get("x", 0)), float(element.get("y", 0))
             )
             if href.startswith("glyph"):
-                x, y = (matrix @ offset).apply(0, 0)
-                if any(area.contains(x, y, margin=1.5) for area in text_areas):
-                    glyphs.append(element)
+                yield "glyph", element, matrix @ offset
                 return
             target = ids.get(href)
             if target is not None:
-                visit(target, matrix @ offset, depth + 1)
+                yield from visit(target, matrix @ offset, depth + 1)
             return
-        if tag == "image":
-            width, height = (
-                float(element.get("width", 0)),
-                float(element.get("height", 0)),
-            )
-            x0, y0 = matrix.apply(
-                float(element.get("x", 0)), float(element.get("y", 0))
-            )
-            x1, y1 = matrix.apply(
-                float(element.get("x", 0)) + width, float(element.get("y", 0)) + height
-            )
-            drawn = Box(min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0))
-            if any(
-                drawn.overlap(area) > 0.8 and area.overlap(drawn) > 0.8
-                for area in image_areas
-            ):
-                images.append(element)
-            return
-        if tag == "path" and decoration_areas:
-            drawn_path = _path_box(element.get("d", ""), matrix)
-            if drawn_path is not None and any(
-                drawn_path.overlap(area) > 0.99 for area in decoration_areas
-            ):
-                paths.append(element)
+        if tag in ("image", "path"):
+            yield tag, element, matrix
             return
         for child in list(element):
-            visit(child, matrix, depth + 1)
+            yield from visit(child, matrix, depth + 1)
 
-    visit(root, Matrix.identity(), 0)
-    for element in (*glyphs, *images, *paths):
-        parent = parents.get(element)
-        if parent is not None and element in list(parent):
-            parent.remove(element)
-    return SvgCut(
-        ET.tostring(root, encoding="unicode"), len(glyphs), len(images), len(paths)
-    )
+    yield from visit(root, Matrix.identity(), 0)
+
+
+def _image_box(element: ET.Element, matrix: Matrix) -> Box:
+    x, y = float(element.get("x", 0)), float(element.get("y", 0))
+    width, height = float(element.get("width", 0)), float(element.get("height", 0))
+    x0, y0 = matrix.apply(x, y)
+    x1, y1 = matrix.apply(x + width, y + height)
+    return Box(min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0))
 
 
 def _path_box(d: str, matrix: Matrix) -> Box | None:
