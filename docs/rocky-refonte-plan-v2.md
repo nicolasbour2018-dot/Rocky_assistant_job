@@ -876,6 +876,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   (11 s dans un seul processus) ; les imports de CV sont les tests les plus lents (25 à 33 s chacun sous charge). Si le
   prochain passage GitHub dépasse aussi 100 s, Nicolas arbitre (règle ci-dessus) ; levier repéré : partager un import
   du CV fictif par module, comme les rendus en G1.
+  Relevé de G3 (1 694 → 1 736 tests) : GitHub, pytest **85 s** (job complet 2 min 41, passage `37538382057`), de nouveau
+  sous les 100 s ; poste, pytest 74 à 91 s (1 min 18 à 1 min 36 au total), mais 110 s et 2 min 00 au total le poste
+  chargé : la limite locale tient au repos.
 - **(H4 → B1, vérification, à arbitrer par Nicolas)** Relevé de H4 (1 694 → 1 696 tests) : GitHub, pytest **106 s**
   (job complet 2 min 54, passage `37488364317`, PR #40) : **second passage d'affilée au-dessus des 100 s** après G5,
   la règle ci-dessus s'applique (revoir la vérification ou relever la limite). Poste, pytest 170 s (2 min 57 au total)
