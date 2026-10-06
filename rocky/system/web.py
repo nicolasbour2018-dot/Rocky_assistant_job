@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from datetime import time
+from datetime import datetime, time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -13,8 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Engine
 
+from rocky.candidatures import cockpit as candidatures_cockpit
 from rocky.candidatures import report_web as candidatures_report
-from rocky.candidatures import today as candidatures_today
 from rocky.candidatures import web as candidatures_web
 from rocky.messages import web as messages_web
 from rocky.messages.model import COLLECT_EVERY
@@ -22,14 +22,15 @@ from rocky.messages.service import MessagesService
 from rocky.offres import web as offres_web
 from rocky.offres.watch.model import RESCORE_EVERY, WATCH_HOUR
 from rocky.offres.watch.service import WatchService
+from rocky.profil import api as profil_api
 from rocky.profil import web as profil_web
-from rocky.system import shell
+from rocky.system import cockpit, shell
 from rocky.system.auth.mail import Mailer, SmtpMailer
 from rocky.system.auth.model import Account
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import Argon2Hasher, Clock, PasswordHasher
 from rocky.system.auth.web import AuthServices, install
-from rocky.system.clock import paris_time, utc_now
+from rocky.system.clock import paris_hour, paris_time, utc_now
 from rocky.system.config import Settings, load_settings
 from rocky.system.db import create_db_engine
 from rocky.system.errors import UserFacingError
@@ -87,6 +88,7 @@ def create_app(
     app.state.settings = settings
     app.state.templates = Jinja2Templates(directory=TEMPLATE_DIRS)
     app.state.templates.env.filters["paris_time"] = paris_time
+    app.state.templates.env.filters["paris_hour"] = paris_hour
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.state.engine = engine = engine or create_db_engine(settings.database_url)
     # Starlette runs the middleware added last first: the onboarding gate, added before the session
@@ -110,11 +112,15 @@ def create_app(
     # Step H1: a business refusal that a route forgot to catch is shown, never a 500.
     app.add_exception_handler(UserFacingError, shell.show_user_error)
     app.include_router(shell.router)
+    # 🧭 Cockpit (decision G3): the greeting reads the name of the profile (Q18).
+    cockpit.install(app, _name_of)
     offres_web.install(app)
     profil_web.install(app)
     candidatures_web.install(app)
-    candidatures_today.install(app)
     messages_web.install(app)
+    # The start list of the cockpit (Q12) reads when Gmail was connected through a port: ``messages`` imports
+    # ``candidatures`` (decision F1, Q13).
+    candidatures_cockpit.install(app, _gmail_since(app.state.messages))
     # 📈 Bilan reads the acknowledgements of ``messages`` through a port (decision F1, Q13): no import of the module.
     candidatures_report.install(app, app.state.messages.acknowledged_applications)
     _plan(app, engine, clock)
@@ -124,6 +130,24 @@ def create_app(
         return {"status": "ok"}
 
     return app
+
+
+def _name_of(request: Request, account: Account) -> str | None:
+    with request.app.state.engine.connect() as connection:
+        profile = profil_api.stored_profile(connection, account.id)
+    return None if profile is None else profile.identity.full_name
+
+
+def _gmail_since(messages: MessagesService) -> Callable[[int], datetime | None]:
+    def since(account_id: int) -> datetime | None:
+        if not messages.configured:
+            return None
+        return min(
+            (view.mailbox.connected_at for view in messages.mailbox_views(account_id)),
+            default=None,
+        )
+
+    return since
 
 
 def _plan(app: FastAPI, engine: Engine, clock: Clock) -> None:

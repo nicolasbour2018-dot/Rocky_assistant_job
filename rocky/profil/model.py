@@ -394,6 +394,11 @@ class OnboardingState:
     deferred_at: datetime | None = None
 
 
+# Decision G3, Q9: the goal of the week of the cockpit, from 1 to 10 applications sent (3 by default).
+DEFAULT_WEEKLY_GOAL = 3
+WEEKLY_GOALS = range(1, 11)
+
+
 @dataclass(frozen=True)
 class Profile:
     """Everything the profile of one account holds, as read in one transaction."""
@@ -410,6 +415,8 @@ class Profile:
     projects: tuple[Project, ...] = ()
     photo: StoredPhoto | None = None
     cv: CvLayout = CvLayout()
+    # Decision G3, Q9: the applications to send each week, shown by the cockpit.
+    weekly_goal: int = DEFAULT_WEEKLY_GOAL
 
     def skill(self, skill_id: int) -> Skill | None:
         return next((s for s in self.skills if s.id == skill_id), None)
@@ -452,6 +459,8 @@ class ProfileStore(Protocol):
     def save_photo(
         self, profile_id: int, photo: StoredPhoto | None, now: datetime
     ) -> None: ...
+
+    def save_weekly_goal(self, profile_id: int, goal: int, now: datetime) -> None: ...
 
     def save_cv_layout(self, profile_id: int, layout: CvLayout) -> None:
         """Replace the whole layout; the caller has checked it against the profile."""

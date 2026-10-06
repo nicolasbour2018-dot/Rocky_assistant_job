@@ -1,0 +1,52 @@
+{# An instrument (Q13), turned to its chart on a click (Q21): the server renders each face; the chart is read only
+   when turned. #}
+{% from "cockpit/macros.html" import gesture, chart %}
+<section id="instrument-{{ instrument.key }}" class="instrument{% if period %} instrument-back{% endif %}" aria-labelledby="instrument-{{ instrument.key }}-title">
+  <h2 id="instrument-{{ instrument.key }}-title" class="instrument-title">{{ instrument.title }}</h2>
+  {% if period %}
+  <div class="instrument-periods" role="group" aria-label="Période">
+    {% for value, label in ((Period.WEEK, "Semaine"), (Period.MONTH, "Mois")) %}
+    <button type="button" class="btn btn-small{% if value == period %} is-on{% endif %}" aria-pressed="{{ 'true' if value == period else 'false' }}"
+      hx-get="/cockpit/instrument/{{ instrument.key }}?periode={{ value.value }}" hx-target="#instrument-{{ instrument.key }}" hx-swap="outerHTML">{{ label }}</button>
+    {% endfor %}
+  </div>
+  {% if series %}{{ chart(series) }}{% else %}<p class="muted">Pas encore d'historique.</p>{% endif %}
+  <p class="instrument-foot"><span class="muted">{{ "12 dernières semaines" if period == Period.WEEK else "12 derniers mois" }}</span>
+    <button type="button" class="btn btn-ghost btn-small" hx-get="/cockpit/instrument/{{ instrument.key }}" hx-target="#instrument-{{ instrument.key }}" hx-swap="outerHTML">Revenir</button></p>
+  {% else %}
+  {% if instrument.ring %}
+  {% set ring = instrument.ring %}
+  <div class="week">
+    <svg class="ring" viewBox="0 0 80 80" role="img" aria-label="{{ ring.done }} candidature{{ 's' if ring.done > 1 }} envoyée{{ 's' if ring.done > 1 }} sur {{ ring.goal }}">
+      {% set r = 31 %}{% set c = 2 * 3.14159 * r %}{% set f = [ring.done / ring.goal, 1] | min %}
+      <circle class="ring-track" cx="40" cy="40" r="{{ r }}"></circle>
+      {% if ring.done %}<circle class="ring-fill{% if f >= 1 %} ring-full{% endif %}" cx="40" cy="40" r="{{ r }}" stroke-dasharray="{{ c * f }} {{ c }}" transform="rotate(-90 40 40)"></circle>{% endif %}
+      <text x="40" y="46" text-anchor="middle">{{ ring.done }}/{{ ring.goal }}</text>
+    </svg>
+    <div>
+      {% if ring.days %}<p class="week-days" aria-label="Jours actifs cette semaine">{% for day in ring.days %}<span class="week-day{% if day.active %} is-active{% endif %}{% if day.today %} is-today{% endif %}" title="{{ 'actif' if day.active else 'sans geste' }}">{{ day.letter }}</span>{% endfor %}</p>{% endif %}
+      {% for line in instrument.lines %}<p class="instrument-detail">{{ line }}</p>{% endfor %}
+      {% if ring.goal_url %}
+      <form class="goal-form" method="post" action="{{ ring.goal_url }}" hx-post="{{ ring.goal_url }}" hx-trigger="change" hx-swap="none">
+        <label>Objectif <select name="objectif">{% for goal in ring.goals %}<option value="{{ goal }}"{% if goal == ring.goal %} selected{% endif %}>{{ goal }}</option>{% endfor %}</select> / semaine</label>
+        <noscript><button type="submit" class="btn btn-small">Changer</button></noscript>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <p class="instrument-figure">{{ instrument.figure }}</p>
+  {% if instrument.detail %}<p class="instrument-detail">{{ instrument.detail }}</p>{% endif %}
+  {% for line in instrument.lines %}<p class="instrument-detail">{{ line }}</p>{% endfor %}
+  {% endif %}
+  {% if instrument.delta %}
+  {% set change = instrument.delta.change %}
+  <p class="instrument-delta" title="Cette semaine : {{ instrument.delta.now }} ; la semaine dernière au même jour : {{ instrument.delta.before }}"><strong class="{{ 'is-up' if change > 0 else 'is-down' if change < 0 else '' }}">{{ "+" if change > 0 else "−" if change < 0 else "±" }}{{ change | abs }}</strong>
+    {{ instrument.delta_unit }}<br><span class="muted">par rapport à la semaine dernière au même jour</span></p>
+  {% endif %}
+  <p class="instrument-foot">
+    {% if instrument.link %}<a href="{{ instrument.link.url }}">{{ instrument.link.label }}</a>{% else %}<span></span>{% endif %}
+    <button type="button" class="btn btn-small" aria-label="Voir l'évolution : {{ instrument.title }}"
+      hx-get="/cockpit/instrument/{{ instrument.key }}?periode=semaine" hx-target="#instrument-{{ instrument.key }}" hx-swap="outerHTML">Évolution</button></p>
+  {% endif %}
+</section>

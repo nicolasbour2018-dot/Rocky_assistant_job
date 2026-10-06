@@ -1,5 +1,5 @@
 """Web shell: the navigation, the page helper shared by every module, and the cross-cutting screens (step F1):
-🏠 Aujourd'hui, ⚙️ Système and the drawer 🐾, built from what each module registers here.
+⚙️ Système and the drawer 🐾, built from what each module registers here (🧭 Cockpit, step G3: ``cockpit.py``).
 
 The shell imports no business module (decision F1, Q13): a module registers its cards and its drawer at install time,
 the shell orders them, chooses the one main action of the screen and renders them. In ``system``, only the assembly
@@ -44,14 +44,14 @@ class NavEntry:
 
 
 NAVIGATION = (
+    # Decision G3 (Q8, Q25): the cockpit replaces « Aujourd'hui »; its key stays « today ».
     NavEntry(
         "today",
-        "🏠",
-        "Aujourd'hui",
+        "🧭",
+        "Cockpit",
         "/",
         True,
-        "Ce qui demande ton attention maintenant : offres à examiner, dossiers à finir, "
-        "relances dues, réponses à vérifier.",
+        "Piloter ta recherche : où tu en es, ce qui a bougé, la prochaine candidature à faire.",
     ),
     NavEntry(
         "offers",
@@ -150,7 +150,7 @@ def content_disposition(kind: str, filename: str) -> str:
 
 
 def entry_of(path: str) -> NavEntry:
-    """The navigation entry a path belongs to; 🏠 Aujourd'hui for any other."""
+    """The navigation entry a path belongs to; 🧭 Cockpit for any other."""
     return next(
         (
             entry
@@ -222,16 +222,18 @@ def badges(request: Request, account: Account | None) -> dict[str, int]:
 
 @dataclass(frozen=True)
 class Action:
-    """A gesture offered by a card: a link, or a form posted to ``url`` when ``post``."""
+    """A gesture offered by a card: a link, or a form posted to ``url`` when ``post``; ``panel``: a fragment loaded in
+    place, below the hero of the cockpit (decision G3, Q15)."""
 
     label: str
     url: str
     post: bool = False
+    panel: bool = False
 
 
 @dataclass(frozen=True)
 class Card:
-    """A block of 🏠 Aujourd'hui or a panel of ⚙️ Système.
+    """A panel of ⚙️ Système, or a problem shown above the hero of 🧭 Cockpit.
 
     ``problem``: something is wrong (a failed watch, a mailbox to reconnect); the first problem takes the main action.
     ``details``: label and value pairs. ``polling``: the screen reads its cards again every 15 s (a watch running).
@@ -258,17 +260,10 @@ class Drawer:
 type CardsProvider = Callable[[Request, Account], Sequence[Card]]
 type DrawerProvider = Callable[[Request, Account], Drawer]
 
-# Decision F1, Q5: the order of the blocks of 🏠 Aujourd'hui, from the most pressing.
-TODAY_ORDER = ("veille", "messages", "relances", "dossiers", "offres")
 # Decision F1, Q11: the order of the panels of ⚙️ Système.
 SYSTEM_ORDER = ("veille", "boites", "alertes", "planification")
 POLL_EVERY = "15s"
 DRAWER_ACTIONS = 3
-
-
-def add_today_cards(app: FastAPI, key: str, provider: CardsProvider) -> None:
-    """Register the block ``key`` of 🏠 Aujourd'hui (its place is fixed by ``TODAY_ORDER``)."""
-    _add_cards(app, "today_cards", TODAY_ORDER, key, provider)
 
 
 def add_system_cards(app: FastAPI, key: str, provider: CardsProvider) -> None:
@@ -310,10 +305,7 @@ def cards_of(
 
 
 # The screens made of cards: their drawer gives the cards' gestures, the main one first.
-CARD_SCREENS = {
-    "today": ("today_cards", TODAY_ORDER),
-    "system": ("system_cards", SYSTEM_ORDER),
-}
+CARD_SCREENS = {"system": ("system_cards", SYSTEM_ORDER)}
 
 
 def card_actions(cards: Sequence[Card]) -> tuple[Action, ...]:
@@ -363,19 +355,6 @@ def _cards_screen(
         templates: Jinja2Templates = request.app.state.templates
         return templates.TemplateResponse(request, "cards.html", context)
     return page(request, "cards_page.html", active=key, context=context)
-
-
-@router.get("/", response_class=HTMLResponse)
-def today(request: Request, account: CurrentAccount) -> HTMLResponse:
-    """🏠 Aujourd'hui (decision F1, Q5): what asks for attention now, the most pressing first."""
-    return _cards_screen(
-        request,
-        account,
-        key="today",
-        name="today_cards",
-        order=TODAY_ORDER,
-        empty=BROWSE_OFFERS,
-    )
 
 
 @router.get("/systeme", response_class=HTMLResponse)

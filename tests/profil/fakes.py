@@ -50,6 +50,7 @@ class _Profile:
     projects: dict[int, Project] = field(default_factory=dict)
     photo: StoredPhoto | None = None
     cv: CvLayout = field(default_factory=CvLayout)
+    weekly_goal: int = 3
 
 
 class InMemoryProfileStore:
@@ -98,6 +99,7 @@ class InMemoryProfileStore:
             projects=tuple(p.projects.values()),
             photo=p.photo,
             cv=p.cv,
+            weekly_goal=p.weekly_goal,
         )
 
     def save_identity(self, profile_id: int, identity: Identity, now: datetime) -> None:
@@ -110,6 +112,9 @@ class InMemoryProfileStore:
 
     def save_cv_layout(self, profile_id: int, layout: CvLayout) -> None:
         self.profiles[profile_id].cv = layout
+
+    def save_weekly_goal(self, profile_id: int, goal: int, now: datetime) -> None:
+        self.profiles[profile_id].weekly_goal = goal
 
     def save_preferences(
         self, profile_id: int, preferences: Preferences, now: datetime

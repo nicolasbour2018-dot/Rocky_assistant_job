@@ -18,6 +18,7 @@ from datetime import date
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi import Form as FastForm
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Engine
@@ -71,6 +72,7 @@ from rocky.profil.model import (
     SKILL_CATEGORY_LABELS,
     SKILL_LEVEL_LABELS,
     TRACK_STATUS_LABELS,
+    WEEKLY_GOALS,
     Contract,
     CvLayout,
     CvTemplateRecord,
@@ -109,6 +111,7 @@ from rocky.profil.usecases import Clock, ProfileEditor
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import paris_day
+from rocky.system.cockpit import changed
 from rocky.system.files import FileError, FileStore
 from rocky.system.render import RenderError
 from rocky.system.shell import (
@@ -1093,6 +1096,18 @@ def save_identity(request: Request, account: CurrentAccount, form: Form) -> Resp
 @router.post("/preferences", response_class=HTMLResponse)
 def save_preferences(request: Request, account: CurrentAccount, form: Form) -> Response:
     return _write(request, account, form, "identite", "preferences", _save_preferences)
+
+
+@router.post("/objectif")
+def set_weekly_goal(
+    request: Request, account: CurrentAccount, objectif: Annotated[int, FastForm()]
+) -> Response:
+    """The goal of the week, changed from the cockpit (decision G3, Q9): the cockpit reads itself again."""
+    if objectif not in WEEKLY_GOALS:
+        return Response(status_code=422)
+    with _editor(request, account, writes=True) as editor:
+        editor.set_weekly_goal(objectif)
+    return changed() if is_htmx(request) else RedirectResponse("/", status_code=303)
 
 
 # Master CV (section « kit », decision D2, Q7, Q9, Q10)

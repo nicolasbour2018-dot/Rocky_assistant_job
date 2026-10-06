@@ -1,0 +1,27 @@
+{# The hero (Q4, Q27): what to do now. Its ``primary`` gesture is the main one of the screen unless a problem takes
+   it (Q6). #}
+{% from "cockpit/macros.html" import gesture %}
+{% if hero %}
+<section id="hero" class="hero" aria-labelledby="hero-title">
+  <p class="hero-kind">{{ hero.kind }}</p>
+  <h2 id="hero-title">{{ hero.title }}</h2>
+  {% for line in hero.lines %}<p class="hero-line">{{ line }}</p>{% endfor %}
+  {% if hero.chips %}<p class="hero-chips">{% for chip in hero.chips %}<span class="chip">{{ chip }}</span>{% endfor %}</p>{% endif %}
+  {% if hero.steps %}
+  {% set done = hero.steps | selectattr("done") | list | length %}
+  <progress class="hero-progress" max="{{ hero.steps | length }}" value="{{ done }}">{{ done }} sur {{ hero.steps | length }}</progress>
+  <ol class="start-steps">
+    {% for step in hero.steps %}
+    <li class="{{ 'start-done' if step.done }}"><span class="start-tick" aria-hidden="true">{{ "✓" if step.done }}</span>
+      <span class="start-label">{{ step.label }}{% if step.done %}<span class="visually-hidden"> : fait</span>{% endif %}</span>
+      {% if not step.done and step.action %}{{ gesture(step.action, primary=(main == "hero" and step.action == hero.primary), small=true) }}{% endif %}</li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <div id="hero-gestures" class="hero-gestures">
+    {% if hero.primary %}{{ gesture(hero.primary, primary=(main == "hero")) }}{% endif %}
+    {% for action in hero.others %}{{ gesture(action) }}{% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}

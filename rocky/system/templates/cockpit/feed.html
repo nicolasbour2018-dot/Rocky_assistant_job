@@ -1,0 +1,24 @@
+{# The feed (Q5, Q16): what Rocky did and signals, and what you did, over 7 days; new since the previous visit. #}
+{% from "cockpit/macros.html" import gesture %}
+<section class="feed" aria-labelledby="feed-title">
+  <h2 id="feed-title" class="zone-title">Ce que Rocky signale, sur 7 jours</h2>
+  <div class="feed-body" tabindex="0">
+    {% if standing %}
+    <h3 class="feed-day">En ce moment</h3>
+    <ul class="feed-list">
+      {% for entry in standing %}<li class="feed-line"><span class="feed-text">{{ entry.line.text }}{% if entry.line.link %} <a href="{{ entry.line.link.url }}">{{ entry.line.link.label }}</a>{% endif %}</span></li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% for day in days %}
+    <h3 class="feed-day">{{ day.label }}</h3>
+    <ul class="feed-list">
+      {% for entry in day.entries %}
+      <li class="feed-line{% if entry.new %} is-new{% endif %}{% if entry.line.mine %} is-mine{% endif %}">
+        <span class="feed-time">{{ entry.line.at | paris_hour }}</span>
+        <span class="feed-text">{% if entry.line.mine %}<span class="feed-voice">Toi</span> {% endif %}{{ entry.line.text }}{% if entry.line.link %} <a href="{{ entry.line.link.url }}">{{ entry.line.link.label }}</a>{% endif %}{% if entry.new %} <span class="feed-new">nouveau</span>{% endif %}</span></li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+    {% if not standing and not days %}<p class="muted">Rien sur les 7 derniers jours : la prochaine veille remplira ce fil.</p>{% endif %}
+  </div>
+</section>

@@ -1,0 +1,57 @@
+{# 🧭 Cockpit (step G3), layout A (Q7): the head, the problems, the instruments, then the action beside the progress
+   and the feed. A gesture made here sends « cockpit-changed »: the cockpit reads itself again, keeping the previous
+   visit (``depuis``). #}
+{% from "cockpit/macros.html" import gesture %}
+<div id="cockpit" class="cockpit" hx-get="/?depuis={{ (since.isoformat() if since else '') | urlencode }}" hx-trigger="cockpit-changed from:body" hx-target="this" hx-swap="outerHTML">
+  <header class="cockpit-head">
+    <div>
+      <h1>{{ greeting }}</h1>
+      <p class="cockpit-sentence">{{ sentence }}</p>
+      {% if since and news %}<p class="muted cockpit-since">Depuis ton dernier passage, le {{ since | paris_time }} : {{ news | join(', ') }}.</p>{% endif %}
+    </div>
+    {% include "cockpit/status.html" %}
+  </header>
+
+  {% for text in celebrations %}
+  <p class="notice notice-celebrate" role="status">{{ text }}</p>
+  {% endfor %}
+
+  {% set first_problem = namespace(done=false) %}
+  {% for card in problems %}
+  <section class="notice notice-problem" role="alert">
+    <div><strong>{{ card.title }}</strong>{% for line in card.lines %} {{ line }}{% endfor %}</div>
+    {% if card.action %}{{ gesture(card.action, primary=(main == "problem" and not first_problem.done)) }}{% set first_problem.done = true %}{% endif %}
+  </section>
+  {% endfor %}
+
+  {% if instruments %}
+  <div class="instruments">
+    {% for instrument in instruments %}{% with series = none, period = none %}{% include "cockpit/instrument.html" %}{% endwith %}{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="cockpit-split">
+    <div class="cockpit-stack">
+      {% include "cockpit/hero.html" %}
+      {% if suggestions %}
+      <section aria-labelledby="suggestions-title">
+        <h2 id="suggestions-title" class="zone-title">La meilleure offre de chaque piste</h2>
+        {% for group, found in suggestions %}
+        <h3 class="suggestion-group">{{ group }}</h3>
+        <ul class="suggestions">
+          {% for s in found %}
+          <li class="suggestion"><span class="suggestion-score{% if s.level %} score-{{ s.level }}{% endif %}">{{ s.score }}</span>
+            <span class="suggestion-text"><span class="suggestion-title">{{ s.title }}</span><span class="muted">{{ s.subtitle }}</span></span>
+            <a class="btn btn-small" href="{{ s.url }}">Voir</a></li>
+          {% endfor %}
+        </ul>
+        {% endfor %}
+      </section>
+      {% endif %}
+    </div>
+    <div class="cockpit-stack">
+      {% if progress %}{% include "cockpit/progress.html" %}{% endif %}
+      {% include "cockpit/feed.html" %}
+    </div>
+  </div>
+</div>

@@ -6,9 +6,9 @@ The database refuses UPDATE, DELETE and TRUNCATE on ``events`` (triggers of migr
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 
 from sqlalchemy import (
@@ -22,11 +22,13 @@ from sqlalchemy import (
     Index,
     Table,
     Text,
+    cast,
     func,
     insert,
     select,
     text,
 )
+from sqlalchemy import Date as SqlDate
 from sqlalchemy.dialects.postgresql import JSONB
 
 from rocky.system.db import metadata
@@ -155,3 +157,65 @@ def events_about(
         )
         for row in rows
     ]
+
+
+def events_of(
+    connection: Connection,
+    account_id: int,
+    types: Collection[str],
+    since: datetime,
+) -> list[StoredEvent]:
+    """The events of the account of the ``types`` given, appended at ``since`` or later, in order (the cockpit's
+    feed, decision G3, Q16)."""
+    rows = connection.execute(
+        select(events)
+        .where(
+            events.c.account_id == account_id,
+            events.c.type.in_(list(types)),
+            events.c.occurred_at >= since,
+        )
+        .order_by(events.c.id)
+    )
+    return [
+        StoredEvent(
+            id=row.id,
+            occurred_at=row.occurred_at,
+            type=row.type,
+            actor=Actor(row.actor),
+            payload=dict(row.payload),
+        )
+        for row in rows
+    ]
+
+
+def first_occurrences(
+    connection: Connection, account_id: int, types: Collection[str]
+) -> dict[str, datetime]:
+    """When each of the ``types`` was first appended for the account (the cockpit's milestones, decision G3, Q11)."""
+    rows = connection.execute(
+        select(events.c.type, func.min(events.c.occurred_at))
+        .where(events.c.account_id == account_id, events.c.type.in_(list(types)))
+        .group_by(events.c.type)
+    )
+    return dict(rows.tuples().all())
+
+
+def user_days(
+    connection: Connection,
+    account_id: int,
+    modules: Collection[str],
+    since: datetime,
+) -> set[date]:
+    """The Paris days on which the user did something recorded by one of the ``modules`` (decision G3, Q19)."""
+    day = cast(func.timezone("Europe/Paris", events.c.occurred_at), SqlDate)
+    rows = connection.execute(
+        select(day)
+        .distinct()
+        .where(
+            events.c.account_id == account_id,
+            events.c.actor == Actor.USER.value,
+            func.split_part(events.c.type, ".", 1).in_(list(modules)),
+            events.c.occurred_at >= since,
+        )
+    )
+    return {found for (found,) in rows}

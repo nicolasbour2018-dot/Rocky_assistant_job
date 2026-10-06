@@ -431,3 +431,14 @@ def test_an_english_template_keeps_the_french_one_it_comes_from(db: Connection) 
     (template,) = store.cv_templates(profile_id)
 
     assert template.source_sha256 == "fr"
+
+
+def test_the_goal_of_the_week_round_trips_and_the_base_bounds_it(
+    db: Connection,
+) -> None:
+    editor = new_editor(db)
+    editor.set_weekly_goal(7)
+
+    assert editor.profile().weekly_goal == 7
+    with pytest.raises(IntegrityError), db.begin_nested():
+        db.execute(update(profiles).values(weekly_goal=0))

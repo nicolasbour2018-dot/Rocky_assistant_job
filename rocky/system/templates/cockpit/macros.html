@@ -1,0 +1,52 @@
+{# A gesture of the cockpit (decision G3): a link, a form when it posts, or a panel loaded in place of the hero's
+   gestures (Q15). ``primary``: the one main button of the screen (Q6). #}
+{% macro gesture(action, primary=false, small=false) -%}
+{% set classes = "btn" ~ (" btn-primary" if primary else "") ~ (" btn-small" if small else "") %}
+{% if action.panel -%}
+<button type="button" class="{{ classes }}" hx-get="{{ action.url }}" hx-target="#hero-gestures" hx-swap="innerHTML">{{ action.label }}</button>
+{%- elif action.post -%}
+<form method="post" action="{{ action.url }}" class="inline-form"><button type="submit" class="{{ classes }}">{{ action.label }}</button></form>
+{%- else -%}
+<a class="{{ classes }}" href="{{ action.url }}">{{ action.label }}</a>
+{%- endif %}
+{%- endmacro %}
+
+{# The chart of an instrument (Q22): bars on one scale, a value per bar on hover, the goal line, and a table for
+   screen readers. #}
+{% macro chart(series) -%}
+{% set width, height, left, bottom, top = 300, 150, 22, 18, 10 %}
+{% set step = (width - left) / (series.labels | length) %}
+{% set group = step * 0.7 %}
+{% set bar = group / (series.values | length) %}
+{% set inner = height - top - bottom %}
+<div class="chart-legend">{% for name in series.names %}<span><i class="chart-key chart-key-{{ loop.index }}"></i>{{ name }}</span>{% endfor %}</div>
+<svg class="chart" viewBox="0 0 {{ width }} {{ height }}" role="img" aria-label="{{ series.names | join(' et ') }}">
+  {% for tick in [0, (series.top / 2) | round(0, 'ceil') | int, series.top] | unique %}
+  {% set y = top + inner * (1 - tick / series.top) %}
+  <line class="chart-grid" x1="{{ left }}" x2="{{ width }}" y1="{{ y }}" y2="{{ y }}"></line>
+  <text class="chart-tick" x="{{ left - 4 }}" y="{{ y + 3 }}" text-anchor="end">{{ tick }}</text>
+  {% endfor %}
+  {% for label in series.labels %}
+  {% set index = loop.index0 %}
+  {% set x = left + index * step + (step - group) / 2 %}
+  {% for flow in series.values %}
+  {% set value = flow[index] %}
+  {% set h = inner * value / series.top %}
+  <rect class="chart-bar chart-bar-{{ loop.index }}{% if index == series.labels | length - 1 %} chart-bar-now{% endif %}" x="{{ x + loop.index0 * bar }}" y="{{ top + inner - h }}" width="{{ [bar - 1, 1] | max }}" height="{{ h }}" rx="1.5"><title>{{ label }} : {{ value }} — {{ series.names[loop.index0] }}</title></rect>
+  {% endfor %}
+  {% if index % 3 == 2 or loop.last %}<text class="chart-tick" x="{{ x + group / 2 }}" y="{{ height - 4 }}" text-anchor="middle">{{ label }}</text>{% endif %}
+  {% endfor %}
+  {% if series.goal %}
+  {% set y = top + inner * (1 - series.goal / series.top) %}
+  <line class="chart-goal" x1="{{ left }}" x2="{{ width }}" y1="{{ y }}" y2="{{ y }}"></line>
+  <text class="chart-goal-label" x="{{ width }}" y="{{ y - 3 }}" text-anchor="end">objectif {{ series.goal }}</text>
+  {% endif %}
+</svg>
+<table class="visually-hidden">
+  <caption>{{ series.names | join(', ') }}</caption>
+  <tr><th>Période</th>{% for name in series.names %}<th>{{ name }}</th>{% endfor %}</tr>
+  {% for label in series.labels %}{% set index = loop.index0 %}
+  <tr><td>{{ label }}</td>{% for flow in series.values %}<td>{{ flow[index] }}</td>{% endfor %}</tr>
+  {% endfor %}
+</table>
+{%- endmacro %}

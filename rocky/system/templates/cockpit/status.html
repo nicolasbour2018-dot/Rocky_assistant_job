@@ -1,0 +1,8 @@
+{# The state of Rocky (Q13): the watch, the mailboxes; read again every 15 s while a watch runs. #}
+{% from "cockpit/macros.html" import gesture %}
+<div id="cockpit-status" class="cockpit-status"{% if polling %} hx-get="/cockpit/etat" hx-trigger="every {{ poll_every }}" hx-target="this" hx-swap="outerHTML"{% endif %}>
+  {% for line in status %}
+  <p class="status-line{% if line.problem %} is-problem{% endif %}"><span class="status-dot" aria-hidden="true"></span>{{ line.text }}
+    {% if line.action %}{{ gesture(line.action, small=true) }}{% endif %}</p>
+  {% endfor %}
+</div>

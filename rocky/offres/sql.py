@@ -35,6 +35,7 @@ from sqlalchemy import (
     and_,
     delete,
     exists,
+    func,
     insert,
     or_,
     select,
@@ -125,6 +126,10 @@ job_offers = Table(
     Index("ix_job_offers_account_id_url", "account_id", "url"),
     Index("ix_job_offers_account_id_match_key", "account_id", "match_key"),
 )
+
+# An offer of an alert whose card gave no link has the alert's address in Gmail
+# (``messages.alerts.rules.message_link``).
+GMAIL_ADDRESS = "https://mail.google.com/"
 
 watch_runs = Table(
     "watch_runs",
@@ -622,6 +627,7 @@ class SqlStore:
                 job_offers.c.published_on,
                 job_offers.c.description_complete,
                 job_offers.c.match_key,
+                job_offers.c.first_seen_at,
             )
             .where(job_offers.c.account_id == account_id)
             .order_by(job_offers.c.id)
@@ -639,6 +645,7 @@ class SqlStore:
                 track_ids=frozenset(linked.get(row.id, ())),
                 marks=tuple(marks[row.id]),
                 deadline=deadlines.get(row.id),
+                first_seen_at=row.first_seen_at,
             )
             # An offer always has a score (C6); one being written right now is left for the next request.
             for row in rows
@@ -830,6 +837,46 @@ class SqlStore:
     def last_successful_run(self, account_id: int) -> WatchRun | None:
         return self._last(
             account_id, (RunStatus.COMPLETED.value, RunStatus.PARTIAL.value)
+        )
+
+    def first_successful_run(self, account_id: int) -> WatchRun | None:
+        """The account's first watch that brought offers in (the cockpit's milestone, decision G3, Q11)."""
+        row = self._conn.execute(
+            select(watch_runs)
+            .where(
+                watch_runs.c.account_id == account_id,
+                watch_runs.c.status.in_(
+                    (RunStatus.COMPLETED.value, RunStatus.PARTIAL.value)
+                ),
+            )
+            .order_by(watch_runs.c.started_at, watch_runs.c.id)
+            .limit(1)
+        ).one_or_none()
+        return None if row is None else _run(row)
+
+    def finished_runs(self, account_id: int, since: datetime) -> list[WatchRun]:
+        """The account's watches finished at ``since`` or later, the first first (the cockpit's feed, G3 Q16)."""
+        rows = self._conn.execute(
+            select(watch_runs)
+            .where(
+                watch_runs.c.account_id == account_id,
+                watch_runs.c.finished_at >= since,
+            )
+            .order_by(watch_runs.c.finished_at, watch_runs.c.id)
+        ).all()
+        return [_run(row) for row in rows]
+
+    def gmail_addressed(self, account_id: int) -> int:
+        """The offers whose address is still the alert's in Gmail (constat H3 → G3): the card gave no link."""
+        return int(
+            self._conn.execute(
+                select(func.count())
+                .select_from(job_offers)
+                .where(
+                    job_offers.c.account_id == account_id,
+                    job_offers.c.url.startswith(GMAIL_ADDRESS),
+                )
+            ).scalar_one()
         )
 
     def _last(

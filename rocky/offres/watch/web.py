@@ -1,8 +1,8 @@
-"""The watch on screen: the first block of 🏠 Aujourd'hui when the watch is late, running or failed, with the gesture
-that launches it (step C6, Q2; moved from a banner of every page by decision F1, Q6), the counter of 🏠, and the panel
-of ⚙️ Système: the last run, source by source (decision F1, Q11).
+"""The watch on screen: in 🧭 Cockpit (decision G3), a problem above the hero when it is late or failed, a line of
+state always shown (Q13) and the hero « Lancer la veille » when nothing else is to do (Q27); the counter of 🧭, and
+the panel of ⚙️ Système: the last run, source by source (decision F1, Q11).
 
-The watch itself runs in the planner's thread, never in the request: the block is followed by polling the screen.
+The watch itself runs in the planner's thread, never in the request: its line is followed by polling.
 """
 
 from __future__ import annotations
@@ -30,13 +30,13 @@ from rocky.offres.watch.usecases import active_tracks
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import paris_time
+from rocky.system.cockpit import Hero, Parts, Status, add_cockpit
 from rocky.system.scheduler import Scheduler
 from rocky.system.shell import (
     Action,
     Card,
     add_badge,
     add_system_cards,
-    add_today_cards,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,8 @@ RELAUNCH_FROM_SYSTEM = Action(
     "Relancer la veille", "/veille/lancer?retour=systeme", post=True
 )
 DEFINE_TRACK = Action("Définir une piste", "/profil/pistes")
+# 🧭 Cockpit (decision G3, Q13, Q27): the watch launched from the cockpit comes back to it.
+LAUNCH_WATCH = Action("Lancer la veille", "/veille/lancer", post=True)
 
 router = APIRouter(prefix="/veille")
 
@@ -65,7 +67,11 @@ def install(app: FastAPI) -> None:
         limit=settings.sources.results_per_query,
         clock=app.state.auth.clock,
     )
-    add_today_cards(app, "veille", today_cards)
+    add_cockpit(
+        app,
+        "veille",
+        Parts(heroes=_heroes, problems=today_cards, status=_status),
+    )
     add_badge(app, "today", _late_or_failed)
     add_system_cards(app, "veille", system_cards)
     app.include_router(router)
@@ -96,13 +102,92 @@ def _late_or_failed(request: Request, account: Account) -> int:
 
 
 def today_cards(request: Request, account: Account) -> list[Card]:
-    """The block « Veille » of 🏠 Aujourd'hui: running (followed by polling), late or failed; nothing when on time."""
+    """The problem of the watch in 🧭 Cockpit: late or failed (a running watch is a line of state, ``_status``). A watch
+    never run is no problem: the start list proposes it (decision G3, Q12)."""
     state = _watched(request, account)
-    if state is None:
+    if state is None or state.last is None:
         return []
     scheduler: Scheduler = request.app.state.scheduler
     card = watch_card(state, asked=_task_name(account.id) in scheduler.pending())
-    return [] if card is None else [card]
+    return [] if card is None or not card.problem else [card]
+
+
+def _status(request: Request, account: Account) -> list[Status]:
+    state = _watched(request, account)
+    if state is None:
+        return [
+            Status("Aucune piste active : la veille n'a rien à chercher.", DEFINE_TRACK)
+        ]
+    scheduler: Scheduler = request.app.state.scheduler
+    return [status_line(state, asked=_task_name(account.id) in scheduler.pending())]
+
+
+def status_line(state: WatchState, *, asked: bool) -> Status:
+    """The watch in a line (Q13): running, asked, or its last run and « Lancer la veille »."""
+    if state.running is not None:
+        return Status(
+            f"Veille en cours depuis le {paris_time(state.running.started_at)}.",
+            polling=True,
+        )
+    if asked:
+        return Status(
+            "Veille lancée : les offres arrivent dans quelques minutes.", polling=True
+        )
+    last = state.last_successful
+    if last is None:
+        return Status("Aucune veille n'a encore réussi.", LAUNCH_WATCH, problem=True)
+    counts = last.counts
+    s = "s" if counts.found > 1 else ""
+    return Status(
+        f"Dernière veille le {paris_time(last.started_at)} : {counts.found} offre{s}, "
+        f"dont {counts.new} nouvelle{'s' if counts.new > 1 else ''}.",
+        LAUNCH_WATCH,
+        problem=state.late or _failed(state),
+    )
+
+
+def _heroes(request: Request, account: Account) -> list[Hero]:
+    """The start list until the first watch (Q12) is ``candidatures``'; then, nothing else to do: the watch (Q27)."""
+    state = _watched(request, account)
+    if state is None:
+        return [
+            Hero(
+                "veille",
+                "Rien à chercher",
+                "Aucune piste active",
+                ("Une piste dit à Rocky quelles offres chercher, et où.",),
+                primary=DEFINE_TRACK,
+            )
+        ]
+    if state.running is not None:
+        return [
+            Hero(
+                "veille",
+                "Veille en cours",
+                "Rocky cherche de nouvelles offres",
+                (ARRIVING,),
+                primary=Action("Parcourir les offres", "/offres?vue=liste"),
+            )
+        ]
+    next_run = _next_watch(request)
+    return [
+        Hero(
+            "veille",
+            "Tout est à jour",
+            "Aucune offre à examiner, aucun dossier en attente",
+            (f"Prochaine veille le {next_run}." if next_run else "",),
+            primary=LAUNCH_WATCH,
+            others=(Action("Voir tes pistes", "/profil/pistes"),),
+        )
+    ]
+
+
+def _next_watch(request: Request) -> str | None:
+    """The next scheduled watch, when the planner runs (decision F1, Q8)."""
+    if not request.app.state.settings.scheduler_enabled:
+        return None
+    scheduler: Scheduler = request.app.state.scheduler
+    return paris_time(scheduler.next_run("veille"))
 
 
 def watch_card(state: WatchState, *, asked: bool) -> Card | None:

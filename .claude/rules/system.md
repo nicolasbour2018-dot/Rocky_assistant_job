@@ -72,15 +72,25 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
 - Un nom de fichier téléchargé passe par `shell.content_disposition` (nom hors latin‑1).
 
 ## Écrans transverses (`rocky/system/shell.py`, décision `docs/decisions/F1-ecrans-transverses.md`)
-- `system` n'importe aucun module métier : 🏠 Aujourd'hui, ⚙️ Système et le tiroir 🐾 se construisent par des
-  **registres** remplis à l'installation des modules (`add_today_cards`, `add_system_cards`, `add_drawer`, `add_badge`).
-  L'ordre des blocs est fixé dans `TODAY_ORDER` / `SYSTEM_ORDER` ; une clé inconnue est refusée.
+- `system` n'importe aucun module métier : ⚙️ Système et le tiroir 🐾 se construisent par des **registres** remplis à
+  l'installation des modules (`add_system_cards`, `add_drawer`, `add_badge`). L'ordre des blocs est fixé dans
+  `SYSTEM_ORDER` ; une clé inconnue est refusée.
 - Un bloc est une `Card` (titre, lignes, détails, au plus une `Action`, `problem`, `polling`) : la coque choisit **le
   seul bouton principal** de l'écran (`main_action` : premier problème avec une action, sinon première action, sinon
   l'action de repli). Un module ne rend jamais lui-même de `btn-primary` dans une carte. Tout nouvel état d'un écran
   a son test « exactement un bouton principal ».
 - Un geste d'un écran transverse qui doit y revenir passe `retour=systeme` (valeur fixe, jamais une URL).
 - Le tiroir se lit à son ouverture (`/tiroir?ecran=<clé>`), jamais au rendu de la page ; trois actions au plus.
+
+## Cockpit (`rocky/system/cockpit.py`, décision `docs/decisions/G3-cockpit.md`)
+- 🧭 Cockpit (clé de navigation `today`, route `/`) : chaque module inscrit ses `Parts` par `add_cockpit` (héros,
+  instruments et séries, fil, phrases, suggestions, problèmes, lignes d'état, progression, nouveautés, célébrations) ;
+  la coque dispose et choisit (`pick_hero` dans l'ordre `HERO_ORDER`, `main_gesture` : un problème avec un geste,
+  sinon le héros), sans calculer de chiffre métier. Chaque état a son test « exactement un bouton principal ».
+- Un geste fait depuis le cockpit répond `cockpit.changed()` (`HX-Trigger: cockpit-changed`) : le cockpit se relit
+  en fragment, avec la visite précédente (`depuis`). Seul un chargement complet de `/` écrit le repère de visite.
+- Une courbe d'instrument est un **flux** recalculable (dates déjà en base), jamais un stock passé reconstruit ; les
+  semaines et les mois sont ceux de Paris (`system/periods.py`).
 
 ## Tests
 - Fixtures de `tests/conftest.py` : `db` (transaction annulée) pour tout test SQL ; `migrated_engine` quand le

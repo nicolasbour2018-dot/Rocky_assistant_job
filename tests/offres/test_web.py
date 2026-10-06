@@ -16,8 +16,9 @@ from sqlalchemy import Engine, select
 from rocky.offres.imports.rules import BROWSER_REFUSED_REASON, OTHER_PAGE_REASON
 from rocky.offres.model import Origin
 from rocky.offres.rules import scoring_inputs
-from rocky.offres.sql import SqlStore, job_decisions, job_offers
+from rocky.offres.sql import SqlStorage, SqlStore, job_decisions, job_offers
 from rocky.offres.usecases import record_offer
+from rocky.offres.watch.model import RunCounts, RunStatus, Trigger
 from rocky.offres.web import READ_NOTE
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.events import events
@@ -191,21 +192,15 @@ def test_offers_open_on_triage_with_the_best_offer(board: Board) -> None:
     assert "Prototype" not in page.text
 
 
-def test_today_counts_the_offers_to_review_after_the_late_watch(
-    board: Board,
-) -> None:
-    """Decision F1, Q5: the block « Offres à examiner » is the queue of the triage; the watch never run comes first
-    and takes the one main action."""
+def test_the_cockpit_counts_the_offers_to_review(board: Board) -> None:
+    """Decision G3: the instrument « Offres à examiner » is the queue of the triage; before a first watch, the start
+    list is the hero and carries the one main button (Q6, Q12)."""
     page = board.client.get("/").text
 
-    assert "🔎 Offres à examiner" in page
-    assert f"{len(QUEUE)} offres au-dessus du seuil attendent ta décision." in page
-    assert (
-        '<a class="btn card-action" href="/offres?vue=tri">Trier les offres</a>' in page
-    )
-    assert page.index("⏰ Veille en retard") < page.index("🔎 Offres à examiner")
+    assert '<p class="instrument-figure">' + str(len(QUEUE)) + "</p>" in page
+    assert 'href="/offres?vue=tri">Trier les offres</a>' in page
+    assert "Pour démarrer" in page
     assert page.count("btn-primary") == 1
-    assert 'class="btn btn-primary">Lancer maintenant</button>' in page
 
 
 def test_the_drawer_of_offers_gives_the_triage_the_incomplete_and_the_shortcuts(
@@ -848,3 +843,89 @@ def test_at_half_past_midnight_in_paris_the_age_counts_from_the_paris_day(
 
     assert age(TODAY) == "aujourd'hui"
     assert age(date(2026, 9, 28)) == "hier"
+
+
+# 🧭 Cockpit (decision G3): the best offer as the hero, prepared or decided in place
+
+
+def watched(board: Board) -> None:
+    """A first watch that brought offers in: the start list leaves the hero (Q12)."""
+    with SqlStorage(board.engine).transaction() as store:
+        run_id = store.start_run(board.seeker.account_id, Trigger.SCHEDULED, NOW)
+        store.finish_run(
+            run_id,
+            status=RunStatus.COMPLETED,
+            reason=None,
+            counts=RunCounts(found=8, new=8),
+            sources=(),
+            now=NOW,
+        )
+
+
+def test_an_application_is_prepared_from_the_cockpit_in_three_clicks(
+    board: Board,
+) -> None:
+    """Criterion 1 of G3: « Préparer la candidature » (1), a reason (2), « Préparer la candidature » (3)."""
+    watched(board)
+    offer_id = board.id("analyst")
+    page = board.client.get("/").text
+
+    assert page.count("btn-primary") == 1
+    prepare = f"/candidatures/offre/{offer_id}/preparer?contexte=cockpit"
+    assert f'class="btn btn-primary" hx-get="{prepare}"' in page
+    panel = board.client.get(prepare, headers=HTMX)  # click 1
+    assert '<input type="hidden" name="contexte" value="cockpit">' in panel.text
+    assert 'hx-target="#hero-gestures"' in panel.text
+    opened = board.client.post(  # click 2 ticks a reason, click 3 sends
+        f"/candidatures/offre/{offer_id}/preparer",
+        data={"motifs": ["target_job"], "contexte": "cockpit"},
+        headers=HTMX,
+    )
+
+    assert opened.status_code == 200
+    assert re.fullmatch(r"/candidatures/\d+", opened.headers["HX-Redirect"])
+
+
+def test_not_for_me_decides_in_place_and_the_cockpit_reads_itself_again(
+    board: Board,
+) -> None:
+    watched(board)
+    offer_id = board.id("analyst")
+
+    refused = board.client.post(
+        f"/offres/{offer_id}/decision",
+        data={"decision": "rejected", "motifs": [], "contexte": "cockpit"},
+        headers=HTMX,
+    )
+    decided = board.client.post(
+        f"/offres/{offer_id}/decision",
+        data={"decision": "rejected", "motifs": ["not_the_job"], "contexte": "cockpit"},
+        headers=HTMX,
+    )
+    fragment = board.client.get("/", headers=HTMX).text
+
+    assert refused.headers["HX-Retarget"] == "#hero-gestures"
+    assert "Choisis au moins un motif." in refused.text
+    assert (decided.headers["HX-Trigger"], decided.headers["HX-Reswap"]) == (
+        "cockpit-changed",
+        "none",
+    )
+    hero = fragment.split('id="hero"')[1].split("</section>")[0]
+    assert f"/offres/{offer_id}/" not in hero
+    assert title("python") in hero
+
+
+def test_the_suggestions_are_the_best_offers_of_each_track_without_the_hero(
+    board: Board,
+) -> None:
+    watched(board)
+
+    page = board.client.get("/").text
+    suggestions = page.split('id="suggestions-title"')[1].split("</section>")[0]
+
+    assert '<h3 class="suggestion-group">Data</h3>' in suggestions
+    assert '<h3 class="suggestion-group">IA</h3>' in suggestions
+    assert f"/offres/{board.id('analyst')}/fiche" not in suggestions  # the hero
+    assert (
+        suggestions.count('class="suggestion"') == 3
+    )  # two of « Data », one of « IA »

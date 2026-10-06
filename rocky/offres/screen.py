@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from rocky.offres.analysis.model import PostingAnalysis, SkillMatch
 from rocky.offres.analysis.usecases import Summary, SummaryResult
@@ -78,6 +78,8 @@ class ListedOffer:
     marks: tuple[TrackMark, ...]
     # The deadline the analysis read when the offer was scored (decision G2, Q7).
     deadline: date | None = None
+    # When a watch, an alert or an import first brought it (the cockpit's flows, decision G3, Q20).
+    first_seen_at: datetime | None = None
 
     @property
     def best(self) -> TrackMark:

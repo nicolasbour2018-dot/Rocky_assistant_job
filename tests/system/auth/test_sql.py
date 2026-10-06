@@ -164,3 +164,13 @@ def test_expired_revoked_and_used_are_purged(
     ).scalars()
     assert [token.split("-")[0] for token in left] == ["alive"]
     assert store.peek_token(alive_token, TokenPurpose.ACTIVATION, NOW) == account_id
+
+
+def test_a_visit_of_the_cockpit_gives_the_previous_one(store: SqlAuthStore) -> None:
+    """Decision G3, Q14: what happened since the previous visit is marked new."""
+    account_id = store.create_account(f"{uuid4().hex}@example.fr", NOW)
+
+    first = store.swap_cockpit_visit(account_id, NOW)
+    second = store.swap_cockpit_visit(account_id, NOW + timedelta(hours=3))
+
+    assert (first, second) == (None, NOW)

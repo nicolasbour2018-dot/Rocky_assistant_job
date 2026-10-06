@@ -339,3 +339,21 @@ def test_an_import_naming_an_unknown_skill_is_refused() -> None:
 
     with pytest.raises(ProfileInputError, match="« Rust » ne figure pas"):
         editor(InMemoryProfileStore()).import_profile(broken)
+
+
+def test_the_goal_of_the_week_is_journaled_when_it_changes_and_stays_in_bounds() -> (
+    None
+):
+    """Decision G3, Q9: from 1 to 10 applications sent a week, 3 by default."""
+    store = InMemoryProfileStore()
+    profile_editor = editor(store)
+
+    assert profile_editor.profile().weekly_goal == 3
+    profile_editor.set_weekly_goal(5)
+    profile_editor.set_weekly_goal(5)
+    with pytest.raises(ValueError, match="out of range"):
+        profile_editor.set_weekly_goal(11)
+
+    assert profile_editor.profile().weekly_goal == 5
+    assert store.event_types() == ["profil.weekly_goal_changed"]
+    assert store.events[0].payload == {"before": 3, "after": 5}

@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 from markupsafe import Markup
 from sqlalchemy import Engine
 
+from rocky.offres import cockpit as offres_cockpit
 from rocky.offres.analysis.rules import analyze
 from rocky.offres.analysis.text import formatted_description
 from rocky.offres.analysis.usecases import SummaryResult, summarize
@@ -43,7 +44,6 @@ from rocky.offres.rules import match_key, scoring_inputs
 from rocky.offres.screen import (
     DECISION_FILTER_LABELS,
     PAGE_SIZE,
-    Counts,
     ListedOffer,
     ListFilters,
     OfferCard,
@@ -74,13 +74,12 @@ from rocky.profil.web import profile_of
 from rocky.system.auth.model import Account
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import paris_day, today_of
+from rocky.system.cockpit import changed
 from rocky.system.llm import JsonModel
 from rocky.system.shell import (
     Action,
-    Card,
     Drawer,
     add_drawer,
-    add_today_cards,
     page,
     wants_fragment,
 )
@@ -89,6 +88,8 @@ from rocky.system.workstation import Workstation, WorkstationUnavailableError
 TRIAGE = "tri"
 LIST = "liste"
 SHEET = "fiche"
+# The hero of 🧭 Cockpit (decision G3, Q15): « Pas pour moi » and « Plus tard » decided in place.
+COCKPIT = "cockpit"
 SUMMARY = "offres/import_summary.html"
 
 router = APIRouter(prefix="/offres")
@@ -112,7 +113,7 @@ def install(app: FastAPI) -> None:
     )
     imports_web.install(app)
     watch_web.install(app)
-    add_today_cards(app, "offres", _today_cards)
+    offres_cockpit.install(app)
     add_drawer(app, "offers", _drawer)
     app.include_router(router)
 
@@ -171,26 +172,6 @@ def _drawer(request: Request, account: Account) -> Drawer:
         )
     actions.append(IMPORT)
     return Drawer(actions=tuple(actions), shortcuts=SHORTCUTS)
-
-
-def _today_cards(request: Request, account: Account) -> list[Card]:
-    """The block « Offres à examiner » of 🏠 Aujourd'hui (decision F1, Q5): the queue of the triage."""
-    screen = Screen(request, account)
-    card = review_card(counts(screen.offers, screen.decisions))
-    return [] if card is None else [card]
-
-
-def review_card(found: Counts) -> Card | None:
-    if not found.to_review:
-        return None
-    s = "s" if found.to_review > 1 else ""
-    return Card(
-        "🔎 Offres à examiner",
-        (
-            f"{found.to_review} offre{s} au-dessus du seuil attend{'ent' if s else ''} ta décision.",
-        ),
-        action=Action("Trier les offres", f"/offres?vue={TRIAGE}"),
-    )
 
 
 def age(day: date | None, today: date) -> str:
@@ -538,7 +519,9 @@ def decide(
             error=str(error),
         )
         # The form targets the whole card; an error only replaces the panel.
-        response.headers["HX-Retarget"] = "#decision-area"
+        response.headers["HX-Retarget"] = (
+            "#hero-gestures" if contexte == COCKPIT else "#decision-area"
+        )
         response.headers["HX-Reswap"] = "innerHTML"
         return response
     with engine.begin() as connection:
@@ -564,7 +547,13 @@ def _after_change(
     extra: Mapping[str, object] | None = None,
 ) -> Response:
     """The screen after a decision or a pasted description: the sheet again, or the triage card (the next offer
-    after a decision, the same one when ``stay``)."""
+    after a decision, the same one when ``stay``); from the cockpit, the cockpit read again (decision G3, Q15)."""
+    if context == COCKPIT:
+        return (
+            changed()
+            if wants_fragment(request)
+            else RedirectResponse("/", status_code=303)
+        )
     if not wants_fragment(request):
         if context == SHEET:
             return RedirectResponse(f"/offres/{offer_id}/fiche", status_code=303)

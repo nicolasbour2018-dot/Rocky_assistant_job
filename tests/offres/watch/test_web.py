@@ -82,34 +82,50 @@ def seed_run(
             )
 
 
-def test_a_watch_never_run_is_proposed_in_today_and_nowhere_else(
+def test_a_watch_never_run_is_a_step_of_the_start_list_not_a_problem(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
+    """Decision G3, Q12: the start list proposes the first watch; the line of state says none succeeded."""
     client, _ = account(app, migrated_engine)
 
     page = client.get("/").text
 
-    assert "⏰ Veille en retard" in page
+    assert "Veille en retard" not in page
     assert "Aucune veille n&#39;a encore réussi." in page
-    assert 'class="btn btn-primary">Lancer maintenant</button>' in page
-    assert "Veille en retard" not in client.get("/profil").text
+    assert "Pour démarrer" in page and "Première veille" in page
+    assert page.count("btn-primary") == 1
 
 
-def test_no_block_without_an_active_track(
+def test_no_problem_without_an_active_track(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
     client, _ = account(app, migrated_engine, track=False)
 
-    assert "Veille" not in client.get("/").text
+    page = client.get("/").text
+
+    assert "notice-problem" not in page
+    assert "Aucune piste active : la veille n&#39;a rien à chercher." in page
 
 
-def test_no_block_after_a_recent_successful_watch(
+def test_no_problem_after_a_recent_successful_watch(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
+    """Decision G3, Q13: the line of state says the last watch, with « Lancer la veille » as a plain button."""
     client, account_id = account(app, migrated_engine)
-    seed_run(app, migrated_engine, account_id, RunStatus.PARTIAL, hours_ago=3)
+    seed_run(
+        app,
+        migrated_engine,
+        account_id,
+        RunStatus.PARTIAL,
+        hours_ago=3,
+        counts=RunCounts(found=12, new=4),
+    )
 
-    assert "Veille" not in client.get("/").text
+    page = client.get("/").text
+
+    assert "notice-problem" not in page
+    assert "Dernière veille le 24/09 à 11:00 : 12 offres, dont 4 nouvelles." in page
+    assert 'class="btn btn-small">Lancer la veille</button>' in page
 
 
 def test_a_late_watch_says_when_it_last_succeeded(
@@ -131,12 +147,12 @@ def test_a_failed_watch_shows_its_reason(app: FastAPI, migrated_engine: Engine) 
 
     page = client.get("/").text
 
-    assert "screen-card-problem" in page
+    assert "notice-problem" in page
     assert "⚠️ Veille échouée" in page
     assert "Apec : En panne (HTTP 503)" in page
 
 
-def test_a_running_watch_is_followed_by_polling_today(
+def test_a_running_watch_is_followed_by_polling_its_line(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
     client, account_id = account(app, migrated_engine)
@@ -145,7 +161,7 @@ def test_a_running_watch_is_followed_by_polling_today(
     page = client.get("/").text
 
     assert "Veille en cours depuis le 24/09 à 14:00." in page
-    assert 'hx-get="/" hx-trigger="every 15s"' in page
+    assert 'hx-get="/cockpit/etat" hx-trigger="every 15s"' in page
     assert "Lancer maintenant" not in page
 
 
@@ -179,7 +195,7 @@ def test_the_counter_of_today_says_the_watch_asks_for_a_gesture(
     assert (f"{shown} hidden" in page) is (count == 0)
 
 
-def test_launching_asks_the_planner_once_and_today_follows_the_watch(
+def test_launching_asks_the_planner_once_and_the_cockpit_follows_the_watch(
     app: FastAPI, migrated_engine: Engine
 ) -> None:
     client, account_id = account(app, migrated_engine)
@@ -190,13 +206,18 @@ def test_launching_asks_the_planner_once_and_today_follows_the_watch(
 
     assert (launched.status_code, launched.headers["location"]) == (303, "/")
     assert scheduler.pending() == [f"veille-compte-{account_id}"]
-    assert "🔄 Veille lancée" in client.get("/").text
+    assert (
+        "Veille lancée : les offres arrivent dans quelques minutes."
+        in client.get("/").text
+    )
     assert f"veille-compte-{account_id}" in scheduler.tick()
     with SqlStorage(migrated_engine).transaction() as store:
         run = store.last_run(account_id)
     assert run is not None
     assert (run.trigger, run.status) == (Trigger.CATCH_UP, RunStatus.COMPLETED)
-    assert "Veille" not in client.get("/").text
+    page = client.get("/").text
+    assert "Veille lancée" not in page
+    assert "Dernière veille le 24/09 à 14:00" in page
 
 
 # ⚙️ Système (decision F1, Q11): the last run, source by source; the first problem takes the main action.

@@ -1,9 +1,11 @@
 {# The reasons of « Intéressé » recorded with the application (D1, Q8): « candidature préparée » is added by itself.
-   From the offer's sheet (``#dossier``) or from the triage (``contexte=tri``, D6 Q8: ``#decision-area``). #}
-{% set target = "#decision-area" if context == "tri" else "#dossier" %}
+   From the offer's sheet (``#dossier``), from the triage (``contexte=tri``, D6 Q8: ``#decision-area``) or from the
+   hero of the cockpit (``contexte=cockpit``, G3 Q15: ``#hero-gestures``). #}
+{% set target = "#decision-area" if context == "tri" else "#hero-gestures" if context == "cockpit" else "#dossier" %}
 <form class="reasons" method="post" action="/candidatures/offre/{{ offer_id }}/preparer"
   hx-post="/candidatures/offre/{{ offer_id }}/preparer" hx-target="{{ target }}" hx-swap="innerHTML">
   {% if context == "tri" %}<input type="hidden" name="contexte" value="tri"><input type="hidden" name="piste" value="{{ piste }}">{% endif %}
+  {% if context == "cockpit" %}<input type="hidden" name="contexte" value="cockpit">{% endif %}
   <fieldset>
     <legend>Pourquoi cette offre t'intéresse ? <span class="muted">plusieurs possibles</span></legend>
     {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
@@ -24,6 +26,8 @@
     {% if context == "tri" %}
     <button type="button" class="btn btn-ghost" hx-get="/offres/{{ offer_id }}/actions?contexte=tri&amp;piste={{ piste }}"
       hx-target="#decision-area" hx-swap="innerHTML">Revenir</button>
+    {% elif context == "cockpit" %}
+    <button type="button" class="btn btn-ghost" hx-get="/cockpit/recharger" hx-swap="none">Revenir</button>
     {% else %}
     <button type="button" class="btn btn-ghost" hx-get="/candidatures/offre/{{ offer_id }}" hx-target="#dossier"
       hx-swap="innerHTML">Revenir</button>

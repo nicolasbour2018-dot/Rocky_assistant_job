@@ -24,6 +24,11 @@ def paris_day(moment: datetime) -> date:
     return moment.astimezone(PARIS).date()
 
 
+def paris_hour(moment: datetime) -> str:
+    """« 12:04 »: the hour of an instant in Paris (the cockpit's feed, step G3)."""
+    return moment.astimezone(PARIS).strftime("%H:%M")
+
+
 def paris_time(moment: datetime) -> str:
     """``moment`` as the screens show it, in Paris: « 06/10 à 00:30 »."""
     return moment.astimezone(PARIS).strftime("%d/%m à %H:%M")

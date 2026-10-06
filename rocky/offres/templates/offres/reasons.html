@@ -1,5 +1,5 @@
 <form class="reasons" method="post" action="/offres/{{ offer_id }}/decision" hx-post="/offres/{{ offer_id }}/decision"
-  {% if context == "fiche" %}hx-target="#fiche" hx-swap="innerHTML"{% else %}hx-target="#triage" hx-swap="outerHTML"{% endif %}>
+  {% if context == "fiche" %}hx-target="#fiche" hx-swap="innerHTML"{% elif context == "cockpit" %}hx-target="#hero-gestures" hx-swap="innerHTML"{% else %}hx-target="#triage" hx-swap="outerHTML"{% endif %}>
   <input type="hidden" name="decision" value="{{ value }}">
   <input type="hidden" name="contexte" value="{{ context }}">
   <input type="hidden" name="piste" value="{{ piste }}">
@@ -26,8 +26,12 @@
     <button type="submit" class="btn" data-key="d" formaction="/candidatures/offre/{{ offer_id }}/preparer"
       hx-post="/candidatures/offre/{{ offer_id }}/preparer" hx-target="#decision-area" hx-swap="innerHTML">Valider et préparer la candidature <kbd>d</kbd></button>
     {% endif %}
+    {% if context == "cockpit" %}
+    <button type="button" class="btn btn-ghost" hx-get="/cockpit/recharger" hx-swap="none">Revenir</button>
+    {% else %}
     <button type="button" class="btn btn-ghost" data-key="Escape"
       hx-get="/offres/{{ offer_id }}/actions?contexte={{ context }}&amp;piste={{ piste }}" hx-target="#decision-area"
       hx-swap="innerHTML">Revenir <kbd>Échap</kbd></button>
+    {% endif %}
   </div>
 </form>

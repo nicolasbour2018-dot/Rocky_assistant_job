@@ -1,12 +1,22 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, date, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import Connection, Engine, func, insert, select, text
 from sqlalchemy.exc import IntegrityError
 
-from rocky.system.events import Actor, NewEvent, append_event, events
+from rocky.system.auth.sql import SqlAuthStore
+from rocky.system.events import (
+    Actor,
+    NewEvent,
+    append_event,
+    events,
+    events_of,
+    first_occurrences,
+    user_days,
+)
 
 
 def test_append_event_stores_every_field(db: Connection) -> None:
@@ -116,3 +126,81 @@ def test_new_event_rejects_an_incomplete_subject(
             subject_type=subject_type,
             subject_id=subject_id,
         )
+
+
+# What the cockpit reads in the journal (decision G3)
+
+
+def _account(db: Connection) -> int:
+    return SqlAuthStore(db).create_account(f"{uuid4().hex}@example.fr", NOW)
+
+
+def _at(
+    db: Connection,
+    account_id: int,
+    kind: str,
+    moment: datetime,
+    actor: Actor = Actor.USER,
+) -> None:
+    db.execute(
+        insert(events).values(
+            type=kind,
+            actor=actor.value,
+            account_id=account_id,
+            occurred_at=moment,
+            payload={},
+        )
+    )
+
+
+NOW = datetime(2026, 10, 7, 10, tzinfo=UTC)
+
+
+def test_the_events_of_an_account_since_a_moment(db: Connection) -> None:
+    account_id, other = _account(db), _account(db)
+    _at(db, account_id, "messages.alert_read", NOW - timedelta(days=8))
+    _at(db, account_id, "messages.alert_read", NOW - timedelta(days=1))
+    _at(db, account_id, "messages.sync_finished", NOW)
+    _at(db, other, "messages.alert_read", NOW)
+
+    found = events_of(db, account_id, ("messages.alert_read",), NOW - timedelta(days=7))
+
+    assert [(e.type, e.occurred_at) for e in found] == [
+        ("messages.alert_read", NOW - timedelta(days=1))
+    ]
+
+
+def test_the_first_time_of_each_type(db: Connection) -> None:
+    account_id = _account(db)
+    _at(db, account_id, "profil.track_created", NOW)
+    _at(db, account_id, "profil.track_created", NOW - timedelta(days=3))
+
+    assert first_occurrences(
+        db, account_id, ("profil.track_created", "profil.profile_imported")
+    ) == {"profil.track_created": NOW - timedelta(days=3)}
+
+
+def test_the_days_of_the_user_are_paris_days(db: Connection) -> None:
+    account_id = _account(db)
+    # 22:30 UTC on 5 October is 00:30 on the 6th in Paris.
+    _at(
+        db,
+        account_id,
+        "offres.decision_recorded",
+        datetime(2026, 10, 5, 22, 30, tzinfo=UTC),
+    )
+    _at(db, account_id, "candidatures.stage_changed", NOW)
+    _at(
+        db,
+        account_id,
+        "candidatures.stage_changed",
+        NOW - timedelta(days=4),
+        Actor.RULE,
+    )
+    _at(db, account_id, "profil.track_created", NOW - timedelta(days=5))
+
+    days = user_days(
+        db, account_id, ("offres", "candidatures"), NOW - timedelta(days=30)
+    )
+
+    assert days == {date(2026, 10, 6), date(2026, 10, 7)}

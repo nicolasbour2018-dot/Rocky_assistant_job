@@ -1,0 +1,17 @@
+{# The streaks and the milestones (Q10, Q11). #}
+<section class="progress" aria-labelledby="progress-title">
+  <h2 id="progress-title" class="zone-title">Progression</h2>
+  <p class="streaks"><span><strong>{{ progress.day_streak }}</strong> jour{{ 's' if progress.day_streak > 1 }} actif{{ 's' if progress.day_streak > 1 }} d'affilée</span>
+    <span><strong>{{ progress.week_streak }}</strong> semaine{{ 's' if progress.week_streak > 1 }} à l'objectif</span></p>
+  {% if progress.last %}<p class="milestone-last">Dernier jalon : {{ progress.last.label }}{% if progress.last.when %} ({{ progress.last.when }}){% endif %}</p>{% endif %}
+  {% if progress.next %}<p class="milestone-next">Prochain jalon : <strong>{{ progress.next.label }}</strong>{% if progress.next.remaining %} <span class="muted">— {{ progress.next.remaining }}</span>{% endif %}</p>{% endif %}
+  {% set reached = progress.milestones | selectattr("done") | list | length %}
+  <details class="milestones">
+    <summary>Tous les jalons ({{ reached }} sur {{ progress.milestones | length }})</summary>
+    <ol>
+      {% for m in progress.milestones %}
+      <li class="{{ 'is-done' if m.done else 'is-todo' }}"><span>{{ "✓" if m.done else "○" }} {{ m.label }}</span><span class="muted">{{ m.when if m.done else (m.remaining or "") }}</span></li>
+      {% endfor %}
+    </ol>
+  </details>
+</section>

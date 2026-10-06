@@ -21,6 +21,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from rocky.candidatures.model import STAGE_LABELS, InvalidChangeError
+from rocky.messages import cockpit as messages_cockpit
 from rocky.messages.alerts.model import (
     ALERTS_PER_DAY,
     LINK_OUTCOME_LABELS,
@@ -60,7 +61,6 @@ from rocky.messages.oauth import (
     seal_pending,
 )
 from rocky.messages.service import (
-    Attention,
     MailboxView,
     MessagesService,
     messages_service,
@@ -85,7 +85,6 @@ from rocky.system.shell import (
     add_badge,
     add_drawer,
     add_system_cards,
-    add_today_cards,
     is_htmx,
     page,
     wants_fragment,
@@ -171,53 +170,13 @@ def install(app: FastAPI) -> None:
     )
     # E4 (Q5): the lines of « Ce qui a bougé » beside 📬 in the navigation.
     add_badge(app, "messages", _pending_count)
-    # Decision F1, Q7: a summary in 🏠 Aujourd'hui; the gestures stay here.
-    add_today_cards(app, "messages", _today_cards)
+    # Decisions F1 (Q7) and G3 (Q16): lines of the cockpit's feed; the gestures stay here.
+    messages_cockpit.install(app)
     # Decision F1, Q11: the mailboxes and the alerts in ⚙️ Système.
     add_system_cards(app, "boites", _mailbox_cards)
     add_system_cards(app, "alertes", _alert_cards)
     add_drawer(app, "messages", _drawer)
     app.include_router(router)
-
-
-# The lines of « Ce qui a bougé » shown in 🏠 Aujourd'hui; the others are counted.
-SHOWN_MOVES = 3
-
-
-def _today_cards(request: Request, account: Account) -> list[Card]:
-    card = attention_card(_service(request).attention(account.id))
-    return [] if card is None else [card]
-
-
-def attention_card(attention: Attention) -> Card | None:
-    """The block « Messages » of 🏠 Aujourd'hui (decision F1, Q7): one line by change, the decisions to check."""
-    moved, to_check = attention.moved, attention.to_check
-    if not moved and not to_check:
-        return None
-    lines = [
-        f"{attention.applications.get(line.transition.application_id, 'Candidature')} : "
-        f"{STAGE_LABELS[line.transition.from_stage]} → {STAGE_LABELS[line.transition.to_stage]}"
-        + (" (proposé)" if line.transition.outcome is Outcome.PROPOSED else "")
-        for line in moved[:SHOWN_MOVES]
-    ]
-    if len(moved) > SHOWN_MOVES:
-        others = len(moved) - SHOWN_MOVES
-        lines.append(
-            f"… et {others} autre{'s' if others > 1 else ''} changement{'s' if others > 1 else ''}."
-        )
-    if to_check:
-        s = "s" if to_check > 1 else ""
-        lines.append(
-            f"{to_check} message{s} à vérifier : Rocky n'est pas sûr de son classement."
-        )
-    return Card(
-        "📬 Ce qui a bougé" if moved else "📬 Messages à vérifier",
-        tuple(lines),
-        action=Action(
-            "Voir dans Messages",
-            "/messages" if moved else f"/messages?vue={View.TO_CHECK.value}",
-        ),
-    )
 
 
 def _drawer(request: Request, account: Account) -> Drawer:

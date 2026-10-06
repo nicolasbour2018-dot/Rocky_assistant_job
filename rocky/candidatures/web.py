@@ -487,6 +487,9 @@ def undo(
 # The box of an offer's sheet (loaded by the sheet of ``offres``), and « Intéressé et préparer » of its triage.
 
 TRIAGE = "tri"
+# The hero of 🧭 Cockpit (decision G3, Q15): the panel takes the place of the hero's gestures.
+COCKPIT = "cockpit"
+CONTEXTS = frozenset({TRIAGE, COCKPIT})
 
 
 def _box(
@@ -525,9 +528,11 @@ def offer_box(request: Request, account: CurrentAccount, offer_id: int) -> Respo
 
 
 @router.get("/offre/{offer_id}/preparer", response_class=HTMLResponse)
-def prepare_panel(request: Request, account: CurrentAccount, offer_id: int) -> Response:
+def prepare_panel(
+    request: Request, account: CurrentAccount, offer_id: int, contexte: str = ""
+) -> Response:
     """The reasons of « Intéressé » to choose before the application is opened (Q8)."""
-    return _panel(request, account, offer_id)
+    return _panel(request, account, offer_id, origin=contexte)
 
 
 def _panel(
@@ -538,10 +543,11 @@ def _panel(
     checked: tuple[str, ...] = (),
     note: str = "",
     error: str | None = None,
-    triage: bool = False,
+    origin: str = "",
     piste: str = "",
 ) -> Response:
-    """``triage``: asked from the triage of the offers (D6, Q8), the panel takes the place of its decision."""
+    """``origin``: asked from the triage of the offers (D6, Q8), the panel takes the place of its decision; from the
+    cockpit (decision G3, Q15), the place of the hero's gestures."""
     with engine_of(request).begin() as connection:
         if not offres_api.offer_headings(connection, account.id, [offer_id]):
             return Response(status_code=404)
@@ -551,7 +557,7 @@ def _panel(
         "checked": checked,
         "note": note,
         "error": error,
-        "context": TRIAGE if triage else "",
+        "context": origin if origin in CONTEXTS else "",
         "piste": piste if piste.isdigit() else "",
     }
     if wants_fragment(request):
@@ -596,7 +602,7 @@ def prepare(
                 checked=tuple(motifs or ()),
                 note=precision,
                 error=str(error),
-                triage=contexte == TRIAGE,
+                origin=contexte,
                 piste=piste,
             )
     try:
@@ -612,6 +618,8 @@ def prepare(
                 deadline=deadline,
             )
     except InvalidChangeError as error:
+        if contexte == COCKPIT:
+            raise  # shown in the error area of the cockpit (step H1)
         if not wants_fragment(request):
             return RedirectResponse(f"/offres/{offer_id}/fiche", status_code=303)
         return _box(request, account, offer_id, error=str(error))

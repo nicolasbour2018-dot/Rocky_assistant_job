@@ -54,6 +54,8 @@ accounts = Table(
     Column(
         "created_at", DateTime(timezone=True), nullable=False, server_default=func.now()
     ),
+    # Decision G3, Q14: the previous visit of the cockpit (what happened since is marked new).
+    Column("cockpit_seen_at", DateTime(timezone=True)),
     CheckConstraint(_in("status", AccountStatus), name="status"),
     CheckConstraint(
         "status <> 'active' OR password_hash IS NOT NULL", name="active_has_password"
@@ -284,6 +286,16 @@ class SqlAuthStore:
             )
         ).rowcount
         return purged_sessions, purged_tokens
+
+    def swap_cockpit_visit(self, account_id: int, now: datetime) -> datetime | None:
+        """Record this visit of the cockpit and return the previous one (decision G3, Q14), None on the first."""
+        previous: datetime | None = self._conn.execute(
+            select(accounts.c.cockpit_seen_at)
+            .where(accounts.c.id == account_id)
+            .with_for_update()
+        ).scalar_one()
+        self._update_account(account_id, cockpit_seen_at=now)
+        return previous
 
     def append_event(self, event: NewEvent) -> None:
         append_event(self._conn, event)

@@ -23,6 +23,7 @@ from sqlalchemy import (
     Integer,
     PrimaryKeyConstraint,
     Row,
+    SmallInteger,
     Table,
     Text,
     UniqueConstraint,
@@ -128,6 +129,7 @@ profiles = Table(
     Column("show_age", Boolean, nullable=False, server_default=text("false")),
     Column("photo_path", Text),
     Column("photo_sha256", Text),
+    Column("weekly_goal", SmallInteger, nullable=False, server_default="3"),
     UniqueConstraint("account_id"),
     CheckConstraint(_all_in("contracts", Contract), name="contracts"),
     CheckConstraint(_all_in("remote_modes", RemoteMode), name="remote_modes"),
@@ -136,6 +138,7 @@ profiles = Table(
     CheckConstraint(
         "(photo_path IS NULL) = (photo_sha256 IS NULL)", name="photo_complete"
     ),
+    CheckConstraint("weekly_goal BETWEEN 1 AND 10", name="weekly_goal_range"),
 )
 
 # Public links of the profile, in order (decision D2, Q8).
@@ -461,6 +464,7 @@ class SqlProfileStore:
                 else None
             ),
             cv=self._cv_layout(profile_id),
+            weekly_goal=row.weekly_goal,
         )
 
     def save_identity(
@@ -573,6 +577,9 @@ class SqlProfileStore:
             min_salary_eur=preferences.min_salary_eur,
             min_daily_rate_eur=preferences.min_daily_rate_eur,
         )
+
+    def save_weekly_goal(self, profile_id: int, goal: int, now: datetime) -> None:
+        self._update_profile(profile_id, now, weekly_goal=goal)
 
     def mark_onboarding_completed(self, profile_id: int, now: datetime) -> None:
         self._update_profile(profile_id, now, onboarding_completed_at=now)

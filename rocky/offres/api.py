@@ -126,6 +126,18 @@ def interested_offers(connection: Connection, account_id: int) -> list[int]:
     return [row.offer_id for row in sorted(kept, key=lambda row: row.id, reverse=True)]
 
 
+def decided_moments(connection: Connection, account_id: int) -> list[datetime]:
+    """When each offer of the account got its decision in force, the first first (the cockpit, decision G3, Q11)."""
+    rows = effective_decisions(SqlStore(connection).decision_rows(account_id))
+    return sorted(row.decided_at for row in rows.values())
+
+
+def first_watch_at(connection: Connection, account_id: int) -> datetime | None:
+    """When the account's first watch that brought offers in started (the start list of the cockpit, G3 Q12)."""
+    run = SqlStore(connection).first_successful_run(account_id)
+    return None if run is None else run.started_at
+
+
 def record_application_decision(
     connection: Connection,
     *,

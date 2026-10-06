@@ -20,6 +20,7 @@ from rocky.profil.cv.layout import (
 from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
 from rocky.profil.letter import letter_sha256
 from rocky.profil.model import (
+    WEEKLY_GOALS,
     CvLayout,
     CvTemplateRecord,
     ExperienceDraft,
@@ -128,6 +129,21 @@ class ProfileEditor:
                 "min_salary_eur": preferences.min_salary_eur,
                 "min_daily_rate_eur": preferences.min_daily_rate_eur,
             },
+        )
+
+    def set_weekly_goal(self, goal: int) -> None:
+        """The goal of the week of the cockpit (decision G3, Q9), from 1 to 10."""
+        if goal not in WEEKLY_GOALS:
+            raise ValueError(f"weekly goal out of range: {goal}")
+        profile = self.profile()
+        if goal == profile.weekly_goal:
+            return
+        self._store.save_weekly_goal(profile.id, goal, self._clock())
+        self._event(
+            "profil.weekly_goal_changed",
+            "profile",
+            profile.id,
+            {"before": profile.weekly_goal, "after": goal},
         )
 
     def save_photo(self, photo: StoredPhoto | None) -> None:
