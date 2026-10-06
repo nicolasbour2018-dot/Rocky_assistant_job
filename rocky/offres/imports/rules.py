@@ -280,7 +280,9 @@ def with_pasted_description(offer: CollectedOffer, value: str) -> CollectedOffer
         raise InvalidPasteError("Colle le texte de l'annonce.")
     if len(description) > MAX_PASTED_CHARACTERS:
         raise InvalidPasteError(
-            "Le texte collé est trop long pour une annonce (50 000 caractères au plus)."
+            f"Le texte collé est trop long pour une annonce ({MAX_PASTED_CHARACTERS:,} caractères au plus).".replace(
+                ",", " "
+            )
         )
     return replace(
         offer,

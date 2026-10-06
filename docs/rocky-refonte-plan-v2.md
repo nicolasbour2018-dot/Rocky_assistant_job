@@ -192,7 +192,7 @@ tableau et la section 8. Règles de travail en parallèle : même décision.
 |---|---|---|---|---|
 | H1. Erreurs visibles et bugs bloquants | *Direct* (gestionnaire : *mode plan*). Touche `e` en double (« Écarté » / lecture assistée) ; gestionnaire global des erreurs métier ; 500 de l'onboarding (ligne vide), d'une candidature annulée, d'une sélection CV qui vise un élément supprimé, des noms hors latin‑1, des fichiers et rendus non convertis ; date limite oubliée par « Lettre prête » / « Pas de lettre » | Maintenant (pendant G2) ; avant le code de G3 et G5 | Un test par point, qui échouait avant ; vérification verte | ✅ (touche `n` choisie par Nicolas ; gestionnaire `shell.show_user_error`) |
 | H2. Un seul jour de Paris | *Direct.* `paris_day`, `utc_now`, heure de Paris : une définition chacun dans `system`, utilisée partout (import, veille, filtre `age`, envois) ; horloge ignorée par `import_profile` | Après G2 ; avant le code de G3 | À 00 h 30 heure de Paris, même jour partout (test) ; vérification verte | ✅ (`system/clock.py` ; `import_today` retiré : une seule horloge) |
-| H3. Veille, Gmail et alertes | *Grill me court (marge du retard de veille, eFinancialCareers), puis direct.* Comptes des alertes reportées, raisons formatées depuis les constantes, `AccessLostError` pendant la collecte, paquet corrompu journalisé, repli « carte sans lien » | Avant le code de G3 | Décisions consignées ; un test par point ; versions changées si besoin ; vérification verte | ⬜ |
+| H3. Veille, Gmail et alertes | *Grill me court (marge du retard de veille, eFinancialCareers), puis direct.* Comptes des alertes reportées, raisons formatées depuis les constantes, `AccessLostError` pendant la collecte, paquet corrompu journalisé, repli « carte sans lien » | Avant le code de G3 | Décisions consignées ; un test par point ; versions changées si besoin ; vérification verte | ✅ (retard après 25 h ; eFinancialCareers dans la requête des alertes ; carte sans lien à une adresse Gmail propre ; comptes des reports : constat sans objet) |
 | H4. API publique des modules | *Mode plan.* Fonctions publiques d'`offres/web.py` et `candidatures/web.py` (et `profil.web.stored_profile`) déplacées dans `<module>/api.py`, sans nouvelle abstraction ; fabrique unique de `MessagesService` ; aides de `admin.py` ; règles d'agent à jour ; test d'architecture si Nicolas le veut | Après H1 ; avant G4 | Aucun module n'importe le `web.py` d'un autre ; vérification verte | ⬜ |
 | H5. Petites dettes et code mort | *Direct.* Code mort, idempotence de « Pas de lettre », recalcul réveillé pour rien, routes « une offre » qui lisent la liste, doublon de formatage des sources, redirection `back_to`, noms, docstrings et textes | Avant le code de G6 | Chaque point traité ou noté en §8 ; vérification verte | ⬜ |
 
@@ -855,6 +855,17 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   côté GitHub, très variable d'un runner à l'autre. Relevé à chaque clôture d'étape (premier : H3, voir sa section
   dans `docs/decisions/H-revue-code.md`) ; si deux passages GitHub d'affilée dépassent 100 s de pytest, Nicolas
   arbitre : revoir la vérification (méthode de G1) ou relever la limite.
+  Relevé de H3 (1 661 → 1 662 tests) : GitHub, pytest **94 s** (job complet 164 s, PR #39) ; poste, pytest 77 s
+  (1 min 24 au total) puis 69 s, mais 137 s puis 97 s (1 min 43 au total) le poste chargé (charge moyenne 22, un
+  autre agent au travail) : la limite locale tient au repos, pas sous forte charge.
+- **(H3 → G3)** Une offre d'alerte dont la carte ne donne pas de lien a pour adresse celle de l'alerte dans Gmail
+  (propre à la carte, `messages.alerts.rules.message_link`), avec la raison « remplace l'adresse Gmail par celle de
+  l'annonce ». Décision de Nicolas : une ligne du fil du Cockpit, « N offres d'alerte sans adresse à compléter ».
+  Aucun lecteur actuel ne produit ce cas.
+- **(H3 → G6)** Geste « Remplacer l'adresse » sur la fiche d'une telle offre : écrire `job_offers.url` (aujourd'hui,
+  aucune écriture ne change l'adresse d'une offre : `SqlStore.update` n'écrit que `FACT_COLUMNS`), refuser une adresse
+  déjà prise par une autre offre du compte, journaliser l'événement ; ou remplacement par « Lire la page affichée »
+  (E5) quand l'adresse est celle de Gmail.
 - **(G5 → bêtas, Nicolas)** Espace sous les compétences (D2 Q32) : avec la règle Q2 de G5, une zone du gabarit déduit
   sans carte dessinée n'a plus de ligne d'air ; une compétence de plus qui passe à la ligne est refusée. Acceptable pour
   le Canva de Nicolas (recette du 06/10) ; à revoir sur d'autres designs de CV (zone qui descend jusqu'au texte suivant).

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from rocky.offres.sources.model import SearchQuery, SourceCode
 from rocky.offres.sources.usecases import Outcome, SourceOutcome
@@ -14,6 +14,7 @@ from rocky.offres.watch.rules import (
     track_queries,
 )
 from rocky.profil.model import Track, TrackDraft, TrackStatus
+from rocky.system.clock import PARIS
 from tests.offres.fakes import NOW, posting
 
 
@@ -88,12 +89,32 @@ def run(status: RunStatus, hours_ago: float) -> WatchRun:
     )
 
 
-def test_the_watch_is_late_after_24_hours_without_a_successful_run() -> None:
+def test_the_watch_is_late_after_25_hours_without_a_successful_run() -> None:
     assert is_late(None, NOW)
-    assert not is_late(run(RunStatus.COMPLETED, 23), NOW)
-    assert not is_late(run(RunStatus.PARTIAL, 23), NOW)
-    assert is_late(run(RunStatus.COMPLETED, 25), NOW)
+    assert not is_late(run(RunStatus.COMPLETED, 24.5), NOW)
+    assert not is_late(run(RunStatus.PARTIAL, 24.5), NOW)
+    assert is_late(run(RunStatus.COMPLETED, 25.1), NOW)
     assert is_late(run(RunStatus.FAILED, 1), NOW)
+
+
+def test_the_watch_is_not_late_on_the_day_the_clocks_go_back() -> None:
+    # H3, Q1: from 12 h CEST on Saturday to 12 h CET on Sunday, 25 hours pass between two scheduled watches.
+    # Stored and compared in UTC, as the database and the clock give them.
+    saturday = datetime(2026, 10, 24, 12, tzinfo=PARIS).astimezone(UTC)
+    last = WatchRun(
+        1,
+        1,
+        Trigger.SCHEDULED,
+        RunStatus.COMPLETED,
+        saturday,
+        saturday,
+        None,
+        RunCounts(),
+    )
+    sunday = datetime(2026, 10, 25, 11, 30, tzinfo=PARIS).astimezone(UTC)
+    assert sunday - saturday == timedelta(hours=24, minutes=30)
+    assert not is_late(last, sunday)
+    assert is_late(last, saturday + timedelta(hours=25, minutes=1))
 
 
 def track(track_id: int, titles: tuple[str, ...], locations: tuple[str, ...]) -> Track:

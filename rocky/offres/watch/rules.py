@@ -23,8 +23,9 @@ from rocky.offres.watch.model import (
 )
 from rocky.profil.model import Track
 
-# Q2: past this delay without a successful run, the watch is late and a catch-up is proposed.
-LATE_AFTER = timedelta(hours=24)
+# Q2: past this delay without a successful run, the watch is late and a catch-up is proposed. 25 hours (H3, Q1): the
+# day the clocks go back, or a scheduler an hour late, does not make the daily watch late.
+LATE_AFTER = timedelta(hours=25)
 # Outcomes that do not count as a failure (Q3): the source was not asked.
 NOT_ASKED = frozenset({Outcome.PENDING_ACCESS, Outcome.NOT_CONFIGURED})
 FAILURES = frozenset({Outcome.REFUSED, Outcome.FAILED})
@@ -143,7 +144,7 @@ def source_runs(
 
 
 def is_late(last_successful: WatchRun | None, now: datetime) -> bool:
-    """Q2: no successful run in the last 24 hours (a run in progress is not late: it is shown as running)."""
+    """Q2: no successful run within ``LATE_AFTER`` (a run in progress is not late: it is shown as running)."""
     if last_successful is None or last_successful.status not in SUCCESSFUL:
         return True
     return now - last_successful.started_at > LATE_AFTER

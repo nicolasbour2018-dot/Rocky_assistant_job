@@ -230,6 +230,11 @@ def _collect(
                         sync_id=result.sync_id,
                         now=clock(),
                     )
+            except AccessLostError:
+                # The mailbox's access, not this message: the collection stops and the mailbox is to reconnect,
+                # with the counts of what came in before.
+                result.counts = counts
+                raise
             except (GmailError, MessageUnreadableError) as error:
                 counts = replace(counts, not_written=counts.not_written + 1)
                 write_failure = write_failure or error.reason

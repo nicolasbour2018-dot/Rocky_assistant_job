@@ -8,12 +8,15 @@ content written twice gives the same path and writes nothing (idempotent).
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import shutil
 import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+
+logger = logging.getLogger(__name__)
 
 MANIFEST = "SHA256SUMS"
 
@@ -114,11 +117,12 @@ class FileStore:
             candidate = entry / name
             if not candidate.is_file() or candidate.read_bytes() != content:
                 continue
+            path = _relative(account_id, kind, entry.name)
             try:
-                return self.read_bundle(
-                    _relative(account_id, kind, entry.name), entry.name
-                )
-            except FileError:
+                return self.read_bundle(path, entry.name)
+            except FileError as error:
+                # Another copy may still be intact: the search goes on, the damaged one is made visible.
+                logger.warning("bundle %s skipped: %s", path, error)
                 continue
         return None
 
