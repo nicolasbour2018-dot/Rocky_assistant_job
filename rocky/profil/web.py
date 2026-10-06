@@ -26,7 +26,7 @@ from starlette.datastructures import FormData, UploadFile
 from rocky.profil import letter_web, translation_web
 from rocky.profil.cv import layout
 from rocky.profil.cv.check import CvCheck, Fact, check_cv, expected_facts
-from rocky.profil.cv.content import cv_content
+from rocky.profil.cv.content import LANGUAGES, cv_content
 from rocky.profil.cv.derived import (
     READABLE_FORMATS,
     TEMPLATE_FILE,
@@ -54,6 +54,7 @@ from rocky.profil.cv.rendering import (
     CvRefusedError,
     Photo,
     draw_neutral,
+    fit_neutral,
     neutral_headings,
     neutral_html,
     render_neutral,
@@ -361,15 +362,25 @@ def _render(
     states = {section.key: SectionState() for section in SECTIONS}
     if key is not None and state is not None:
         states[key] = state
+    today = paris_day(request.app.state.auth.clock())
+    templates = _templates_of(request, profile)
+    contents = {
+        language: cv_content(profile, language, today) for language in LANGUAGES
+    }
     context = {
         "profile": profile,
         "states": states,
         "skills_by_id": {skill.id: skill for skill in profile.skills},
         "missing": missing_for_ready(profile),
-        "cv_templates": _templates_of(request, profile),
-        "cv_missing_en": cv_content(
-            profile, "en", paris_day(request.app.state.auth.clock())
-        ).missing,
+        "cv_templates": templates,
+        "cv_missing_en": contents["en"].missing,
+        # What the neutral template cuts in a language without an active template (decision G5, Q1).
+        "cv_cuts": {
+            language: fit_neutral(content)[1]
+            for language, content in contents.items()
+            if not content.missing
+            and not any(t.active and t.language == language for t in templates)
+        },
         "onboarding_open": needs_onboarding(profile.onboarding),
         "unknown_places": {
             track.id: unknown_locations(track.content.locations)
@@ -1274,19 +1285,20 @@ def cv_document(
 
 def cv_drawing(
     request: Request, account: Account, profile: Profile, language: str
-) -> tuple[bytes, tuple[str, ...]]:
-    """The CV of ``profile`` drawn whatever its overflows, and its problems: what a preview shows (decision D6,
-    recette). Raises ``CvRefusedError`` when it cannot be drawn at all (English missing, template unreadable)."""
+) -> tuple[bytes, tuple[str, ...], tuple[str, ...]]:
+    """The CV of ``profile`` drawn whatever its overflows, its problems, and what the neutral template cut to hold one
+    page (decision G5, Q1): what a preview shows (decision D6, recette). Raises ``CvRefusedError`` when it cannot be
+    drawn at all (English missing, template unreadable)."""
     clock: Clock = request.app.state.auth.clock
     content = cv_content(profile, language, paris_day(clock()))
     active = _active_template(request, account, language)
     if active is None:
         rendered, _, reasons = draw_neutral(content, _photo_of(request, profile))
-        return rendered.pdf, reasons
+        return rendered.pdf, reasons, fit_neutral(content)[1]
     _, files = active
     refuse_missing_variable_texts(content)
     rendered, _, reasons = draw_derived(files, content)
-    return rendered.pdf, reasons
+    return rendered.pdf, reasons, ()
 
 
 def cv_fingerprint(

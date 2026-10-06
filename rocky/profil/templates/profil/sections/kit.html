@@ -77,6 +77,9 @@
     <a class="btn btn-ghost" href="/profil/cv/pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
     {% endif %}
   </p>
+  {% for code, cuts_label in (("fr", "CV français"), ("en", "CV anglais")) %}{% with cuts = cv_cuts.get(code, ()) %}
+  {% if cuts %}{% include "profil/cv_cuts.html" %}{% endif %}
+  {% endwith %}{% endfor %}
   <p><a class="btn" href="/profil/cv-anglais">Préparer mon CV anglais</a> <span class="muted small">— la version anglaise de ton CV importé, dans le même design.</span></p>
   <p><a class="btn" href="/profil/lettre">Ma lettre de motivation</a> <span class="muted small">— ta lettre générique, base de chaque candidature, en français et en anglais.</span></p>
   <div class="cv-downloads">

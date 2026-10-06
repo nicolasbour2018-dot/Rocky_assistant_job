@@ -858,3 +858,27 @@ def test_the_track_lists_say_one_per_line_and_what_an_excluded_word_does(
     assert "un par ligne ou séparés par des virgules" in page
     assert "département (nom ou numéro)" in page
     assert "sont écartées" not in page
+
+
+def test_the_kit_says_what_the_neutral_template_cuts(client: TestClient) -> None:
+    """Step G5: a paragraph beyond its limit is cut to hold one page, and Profil & kit says so (Q1)."""
+    client.post(
+        "/profil/parcours",
+        data={
+            "kind": "job",
+            "title_fr": "Analyste de données",
+            "organisation": "Exemple SA",
+            "start": "2022-03",
+            "end": "",
+            "bullets_fr": "Tableaux de bord " * 20,
+        },
+        headers=HTMX,
+    )
+
+    kit = section(client.get("/profil").text, "kit")
+
+    assert (
+        "CV français : pour tenir sur une page, le gabarit neutre a coupé 1 texte"
+        in kit
+    )
+    assert "Expérience « Analyste de données », puce 1 : coupé à 140 caractères." in kit

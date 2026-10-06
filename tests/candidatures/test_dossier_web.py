@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from fastapi import FastAPI
 from sqlalchemy import Engine, select
@@ -345,6 +347,28 @@ def test_the_cv_of_the_application_is_previewed_as_an_image(desk: Desk) -> None:
     refused = desk.client.get(f"{base}/cv/apercu", headers=HTMX).text
     assert "<img" not in refused
     assert "Projet « Prévision » : stack" in refused
+
+
+def test_the_cv_preview_says_what_the_neutral_template_cut(
+    desk: Desk, migrated_engine: Engine
+) -> None:
+    """Step G5, Q1: a project text beyond its limit is cut to hold one page, and the preview says so."""
+    base = f"/candidatures/{desk.application_id()}"
+    with migrated_engine.begin() as connection:
+        editor = desk.seeker.editor(connection)
+        forecast = next(
+            p for p in editor.profile().projects if p.content.name.fr == "Prévision"
+        )
+        long = Text("Prévoir la demande des entrepôts régionaux chaque semaine. " * 4)
+        assert editor.update_project(
+            forecast.id, replace(forecast.content, problem=long)
+        )
+
+    preview = desk.client.get(f"{base}/cv/apercu", headers=HTMX).text
+
+    assert '<img src="data:image/png;base64,' in preview
+    assert "le gabarit neutre a coupé 1 texte" in preview
+    assert "Projet « Prévision », problème : coupé à 140 caractères." in preview
 
 
 def test_the_employer_domain_is_typed_in_the_follow_up(desk: Desk) -> None:

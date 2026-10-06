@@ -1,5 +1,5 @@
 {# A page as it would be sent, as an image (decision D6, recette): the CV or the letter seen at a glance; what spills
-   over is named under it. The PDF itself opens in a new tab. #}
+   over is named under it, what the neutral CV template cut too (decision G5, Q1). The PDF itself opens in a new tab. #}
 <figure class="sheet-preview">
   {% if preview %}
   <a href="{{ pdf_url }}" target="_blank" rel="noopener" hx-boost="false" title="Ouvrir le PDF">
@@ -8,6 +8,7 @@
     {% if preview.problems %}{% for problem in preview.problems %}<span class="badge badge-warn">{{ problem }}</span>{% endfor %}
     {% else %}<span class="line-good small">✓ {{ "Le CV" if document == "CV" else "La lettre" }} tient sur une page.</span>{% endif %}
     <a class="small" href="{{ pdf_url }}" target="_blank" rel="noopener" hx-boost="false">Ouvrir le PDF ↗</a>
+    {% if preview.notices %}{% with cuts = preview.notices %}{% include "profil/cv_cuts.html" %}{% endwith %}{% endif %}
   </figcaption>
   {% else %}
   <div class="alert alert-error small" role="alert">

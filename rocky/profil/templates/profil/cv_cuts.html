@@ -1,0 +1,7 @@
+{# What the neutral CV template cut to hold one page (decision G5, Q1): a small alert, never a refusal; ``cuts``,
+   ``cuts_label`` (optional: which CV). #}
+<details class="note small cv-cuts">
+  <summary>⚠ {% if cuts_label is defined %}{{ cuts_label }} : p{% else %}P{% endif %}our tenir sur une page, le gabarit neutre a coupé {{ cuts | length }} texte{{ "s" if cuts | length > 1 }}</summary>
+  <ul>{% for cut in cuts %}<li>{{ cut }}</li>{% endfor %}</ul>
+  <p>Raccourcis-le{{ "s" if cuts | length > 1 }} dans ton profil pour choisir toi-même ce qui reste.</p>
+</details>

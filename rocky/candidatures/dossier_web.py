@@ -1084,15 +1084,21 @@ class LetterPreview:
 
     png_base64: str
     problems: tuple[str, ...]
+    # What the neutral CV template cut to hold one page (decision G5, Q1): said, not a problem.
+    notices: tuple[str, ...] = ()
 
 
 PREVIEW_DPI = 110
 
 
-def _preview(pdf: bytes, problems: tuple[str, ...]) -> LetterPreview:
+def _preview(
+    pdf: bytes, problems: tuple[str, ...], notices: tuple[str, ...] = ()
+) -> LetterPreview:
     buffer = io.BytesIO()
     rasterize(pdf, PREVIEW_DPI)[0].save(buffer, format="PNG", optimize=True)
-    return LetterPreview(base64.b64encode(buffer.getvalue()).decode(), problems)
+    return LetterPreview(
+        base64.b64encode(buffer.getvalue()).decode(), problems, notices
+    )
 
 
 PREVIEW = "candidatures/page_preview.html"
@@ -1130,8 +1136,10 @@ def cv_preview(
     profile = replace(found.profile, cv=found.layout)
     pdf_url = f"/candidatures/{application_id}/cv.pdf?apercu=1"
     try:
-        pdf, problems = profil_web.cv_drawing(request, account, profile, found.language)
-        preview = _preview(pdf, problems)
+        pdf, problems, notices = profil_web.cv_drawing(
+            request, account, profile, found.language
+        )
+        preview = _preview(pdf, problems, notices)
     except CvRefusedError as error:
         return _preview_fragment(
             request, None, document="CV", pdf_url=pdf_url, refusal=error.reasons

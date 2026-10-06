@@ -8,33 +8,32 @@
 @page { size: A4; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-body { font-family: "Poppins", sans-serif; font-size: 8.6pt; line-height: 1.38; color: #22262e; }
-.page { width: 210mm; height: 297mm; display: grid; grid-template-columns: 66mm 1fr; overflow: hidden; }
-.side { background: #eef1f5; padding: 14mm 7mm 10mm 9mm; overflow: hidden; }
-.main { padding: 14mm 11mm 10mm 9mm; overflow: hidden; }
-.photo { width: 34mm; height: 34mm; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 6mm; }
-h1 { font-family: "Glacial Indifference", sans-serif; font-weight: 700; font-size: 25pt; line-height: 1.05; letter-spacing: 0.04em; text-transform: uppercase; margin: 0; }
-.title { font-family: "Questrial", sans-serif; font-size: 12.5pt; letter-spacing: 0.05em; text-transform: uppercase; color: #2d6e8e; margin: 2mm 0 0; }
+body { font-family: "Poppins", sans-serif; font-size: 8pt; line-height: 1.25; color: #22262e; }
+.page { width: 210mm; height: 297mm; display: grid; grid-template-columns: 55mm 1fr; overflow: hidden; }
+.side { background: #eef1f5; padding: 11mm 6mm 8mm 8mm; overflow: hidden; }
+.main { padding: 11mm 10mm 8mm 8mm; overflow: hidden; }
+.photo { width: 32mm; height: 32mm; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 5mm; }
+h1 { font-family: "Glacial Indifference", sans-serif; font-weight: 700; font-size: 22pt; line-height: 1.05; letter-spacing: 0.04em; text-transform: uppercase; margin: 0; }
+.title { font-family: "Questrial", sans-serif; font-size: 11.5pt; letter-spacing: 0.05em; text-transform: uppercase; color: #2d6e8e; margin: 1.5mm 0 0; }
 .age { color: #5b6270; margin: 1mm 0 0; }
-.headline { margin: 5mm 0 0; }
-.headline p { margin: 0 0 2mm; }
-h2 { font-family: "Glacial Indifference", sans-serif; font-weight: 700; font-size: 10pt; letter-spacing: 0.05em; text-transform: uppercase; color: #2d6e8e; margin: 6mm 0 2mm; padding-bottom: 1mm; border-bottom: 0.4mm solid #bcd3de; }
-.side h2 { margin-top: 5mm; }
-.side h3 { font-size: 8.4pt; font-weight: 700; margin: 2.5mm 0 0.5mm; }
+.headline { margin: 3mm 0 0; }
+.headline p { margin: 0 0 1.2mm; }
+h2 { font-family: "Glacial Indifference", sans-serif; font-weight: 700; font-size: 10pt; letter-spacing: 0.05em; text-transform: uppercase; color: #2d6e8e; margin: 4mm 0 1.5mm; padding-bottom: 0.8mm; border-bottom: 0.4mm solid #bcd3de; }
+.side h2 { margin-top: 4mm; }
+.side h3 { font-size: 8pt; font-weight: 700; margin: 2mm 0 0.3mm; }
 ul { margin: 0; padding: 0; list-style: none; }
-.side li { margin: 0 0 0.6mm; }
+.side li { margin: 0 0 0.4mm; }
 .contact li { overflow-wrap: anywhere; }
-.entry { margin: 0 0 3mm; break-inside: avoid; }
+.entry { margin: 0 0 2mm; break-inside: avoid; }
 .entry-head { display: flex; justify-content: space-between; gap: 3mm; }
 .entry-title { font-weight: 700; }
 .period { color: #5b6270; white-space: nowrap; }
 .organisation { color: #2d6e8e; }
-.bullets { padding-left: 3.5mm; list-style: disc; margin-top: 0.8mm; }
-.project { margin: 0 0 2.5mm; }
+.bullets { padding-left: 3.5mm; list-style: disc; margin-top: 0.3mm; }
+.project { margin: 0 0 2mm; }
 .project-name { font-weight: 700; }
-.project dl { margin: 0.5mm 0 0; display: grid; grid-template-columns: max-content 1fr; column-gap: 2mm; }
-.project dt { color: #5b6270; }
-.project dd { margin: 0; }
+.project p { margin: 0.2mm 0 0; }
+.part { color: #5b6270; }
 </style>
 </head>
 <body>
@@ -77,8 +76,7 @@ ul { margin: 0; padding: 0; list-style: none; }
     <h2>{{ labels.experiences }}</h2>
     {% for entry in cv.experiences %}
     <div class="entry">
-      <div class="entry-head"><span class="entry-title">{{ entry.title }}</span><span class="period">{{ entry.period }}</span></div>
-      <div class="organisation">{{ entry.organisation }}{% if entry.place %} · {{ entry.place }}{% endif %}</div>
+      <div class="entry-head"><span><span class="entry-title">{{ entry.title }}</span> · <span class="organisation">{{ entry.organisation }}{% if entry.place %} · {{ entry.place }}{% endif %}</span></span><span class="period">{{ entry.period }}</span></div>
       {% if entry.bullets %}<ul class="bullets">{% for bullet in entry.bullets %}<li>{{ bullet }}</li>{% endfor %}</ul>{% endif %}
     </div>
     {% endfor %}
@@ -88,12 +86,10 @@ ul { margin: 0; padding: 0; list-style: none; }
     {% for project in cv.projects %}
     <div class="project">
       <div class="project-name">{{ project.name }}</div>
-      <dl>
-        {% if project.problem %}<dt>{{ labels.problem }}</dt><dd>{{ project.problem }}</dd>{% endif %}
-        {% if project.stack %}<dt>{{ labels.stack }}</dt><dd>{{ project.stack | join(", ") }}</dd>{% endif %}
-        {% if project.work %}<dt>{{ labels.work }}</dt><dd>{{ project.work }}</dd>{% endif %}
-        {% if project.results %}<dt>{{ labels.results }}</dt><dd>{{ project.results }}</dd>{% endif %}
-      </dl>
+      {% if project.problem %}<p><span class="part">{{ labels.problem }}{{ colon }}</span> {{ project.problem }}</p>{% endif %}
+      {% if project.stack %}<p><span class="part">{{ labels.stack }}{{ colon }}</span> {{ project.stack | join(", ") }}</p>{% endif %}
+      {% if project.work %}<p><span class="part">{{ labels.work }}{{ colon }}</span> {{ project.work }}</p>{% endif %}
+      {% if project.results %}<p><span class="part">{{ labels.results }}{{ colon }}</span> {{ project.results }}</p>{% endif %}
     </div>
     {% endfor %}
     {% endif %}
@@ -101,8 +97,7 @@ ul { margin: 0; padding: 0; list-style: none; }
     <h2>{{ labels.education }}</h2>
     {% for entry in cv.education %}
     <div class="entry">
-      <div class="entry-head"><span class="entry-title">{{ entry.title }}</span><span class="period">{{ entry.period }}</span></div>
-      <div class="organisation">{{ entry.organisation }}{% if entry.place %} · {{ entry.place }}{% endif %}</div>
+      <div class="entry-head"><span><span class="entry-title">{{ entry.title }}</span> · <span class="organisation">{{ entry.organisation }}{% if entry.place %} · {{ entry.place }}{% endif %}</span></span><span class="period">{{ entry.period }}</span></div>
       {% if entry.bullets %}<ul class="bullets">{% for bullet in entry.bullets %}<li>{{ bullet }}</li>{% endfor %}</ul>{% endif %}
     </div>
     {% endfor %}
