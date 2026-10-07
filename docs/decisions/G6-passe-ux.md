@@ -3,6 +3,53 @@
 Date : 07/10/2026 · Étape : G6 (plan v2) · Préparation : audit UX du code, *grill me* avec la skill de design
 (Q1–Q28), prototype de Codex (`docs/procedures/g6-ux/rocky-g6.html`), puis mode plan
 
+## Reprise (état au 07/10, fin de session)
+
+À lire en premier pour reprendre G6 dans une nouvelle conversation.
+
+- **Faits et poussés** : décision et cadrage (`4e7cb29`), bloc 0 défauts A1–A9 (`9e9d899`), recette initiale R1–R10
+  (`848feee`, `f92dd56`, `8d6266d`), bloc 1 coque (`ce07296` : attente, `ui.html` notice / waiting / window, fenêtre
+  `#fenetre`, lexique et `tests/system/test_lexicon.py`, heures avec l'année). Vérification verte en local et sur
+  GitHub (pytest 128 s, passage `37626432637`, à reporter dans « Essais et mesures »).
+- **Maquette de référence** (recette initiale close) : artifact https://claude.ai/artifact/9982upNV24d21qd7Puk18N,
+  version 4 ; sa source était dans le scratchpad de la session (perdue) : la relire avec l'outil Artifact (`read`).
+  Elle fixe la présentation (Codex) et la profondeur (Claude) de chaque écran.
+- **Bloc 2 (Offres) commencé, rien de commité** : seul `rocky/offres/screen.py` est modifié dans l'arbre de travail
+  (non testé) : `ListFilters` étendu (`query`, `min_score`, `source`, `place`, `below_only`, `complete_only`, `sort`),
+  `make_filters` (paramètres `q`, `score_min`, `source`, `lieu`, `description`, `tri`, `sous_seuil=inclus|seulement`),
+  `place_of`, `places`, `sources`, `SORT_LABELS`, `DESCRIPTION_LABELS`, `listed` (facettes et ordre), `following`
+  (offre suivante après une décision), `neighbours_in` (j / k du mode focus sur la liste filtrée), `track_counts`
+  (compteurs des puces de piste). Relire le diff (`git diff rocky/offres/screen.py`), le tester (règles pures dans
+  `tests/offres/test_screen.py`), puis continuer.
+- **Reste du bloc 2** (choix faits, à coder) :
+  - `offres/web.py` : `list_query` avec les nouveaux paramètres ; `offers_page` et `/offres/liste` les lisent ; vue par
+    défaut **Explorer** (`vue=liste`, libellé « Explorer ») ; « Mode focus » (`vue=tri`) suit la liste filtrée
+    (`triage_context` sur `listed` + `neighbours_in`, `/offres/tri/{id}` avec la requête des filtres) ; une route de
+    fragment `/offres/resultats` (en-tête `HX-Push-Url` vers `/offres?…`) ; filtres d'une décision relus dans
+    `HX-Current-URL` ;
+  - fiche dans la fenêtre : `sheet.html` avec la macro `window` de `ui.html`, cible `#fenetre-contenu` partout où
+    c'était `#fiche` (`offer_body.html`, `reasons.html`, `offer_rows.html`) ; sans HTMX, page entière avec la fiche ;
+  - décision depuis la fiche : fiche de l'offre suivante (`following`) dans la fenêtre, carte retirée ou remplacée hors
+    bande (`carte-{id}`), compteurs ; fermeture par `HX-Trigger: fenetre-fermer` quand la liste est vide ;
+  - message de succès (`ui.notice`, zone `#offres-notice`) avec « ↶ Annuler » après une décision, en Explorer comme
+    en focus ; `/offres/annuler` relit les résultats en Explorer ;
+  - gabarits (présentation de Codex, couleurs actuelles, R9) : `page.html` (en-tête « 🔎 Offres », « Ajouter une
+    annonce » principal, « Raccourcis ») ; formulaire `#offres-filtres` (recherche `q`, facettes : décision, score
+    minimum, « Où ? », source, description, « Inclure sous le seuil » et lien « Voir seulement les N sous le seuil »,
+    « Tout remettre à zéro », tri) ; `results.html` (puces de piste avec compteurs, nombre d'offres, filtres actifs
+    retirables, grille ou focus) ; `offer_cards.html` (cartes : entreprise, score / 100, titre, lieu, pistes,
+    « À compléter », limite, décision, source et âge, « Regarder de plus près ») remplaçant `list.html`,
+    `list_rows.html`, `offer_rows.html` ; `triage.html` en carte focus (« Une offre à la fois · n / N ») ;
+  - motifs : panneau unique dans la zone `#decision-area` de la carte (focus) ou de la fiche (fenêtre), « Valider et
+    préparer la candidature » aussi depuis la fiche ; « Préparer la candidature » de l'encart candidature de la fiche
+    passe par ce panneau (Q10) ;
+  - les trois gestes de décision sans bouton principal (R7) ; « Ajouter une annonce » est le principal de l'écran ;
+  - cartes sans contrat ni télétravail (bruts en base, analysés seulement dans la fiche) : écart assumé à la maquette ;
+  - tests : réécrire `tests/offres/test_web.py` pour la nouvelle page (cibles `#fenetre-contenu`, vue par défaut,
+    facettes, ordre, suivante après décision), garder le critère « un bouton principal » ; essai Chromium.
+- **Ensuite** : blocs 3 à 7 tels que décrits plus bas (plan d'implémentation dans les décisions techniques de chaque
+  bloc), puis recette finale de Nicolas dans l'application.
+
 Critère de sortie (fixé au grill, Q26) :
 
 1. **Défauts** : A1–A9 (ci-dessous) ont chacun un test qui échouait avant ; un test transversal vérifie qu'aucun
