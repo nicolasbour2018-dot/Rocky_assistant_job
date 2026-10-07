@@ -124,7 +124,8 @@ docs/
 ## 8. Vérification
 
 - Vérification globale : `docker compose run --rm --build check` (ruff format, ruff check, mypy strict, pytest
-  sur la base de test) — doit rester verte en moins de 2 min.
+  sur la base de test) — doit rester verte en moins de 3 min (limite relevée de 2 min par Nicolas le 07/10 ;
+  sur GitHub, pytest sous 150 s, plan §8 « H2 → suivi de la vérification »).
 - Tests seuls, boucle rapide : `docker compose up -d test-db` puis `uv run pytest` (`-n auto` pour tout lancer en
   parallèle, comme `check` ; idem `uv run ruff check`, `uv run mypy`).
 - Lancer l'application : `docker compose up -d --build --wait app` → `http://127.0.0.1:8000/health`

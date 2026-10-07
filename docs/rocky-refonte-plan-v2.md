@@ -856,6 +856,9 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   côté GitHub, très variable d'un runner à l'autre. Relevé à chaque clôture d'étape (premier : H3, voir sa section
   dans `docs/decisions/H-revue-code.md`) ; si deux passages GitHub d'affilée dépassent 100 s de pytest, Nicolas
   arbitre : revoir la vérification (méthode de G1) ou relever la limite.
+  *Limites relevées par Nicolas (07/10, après le relevé de H5) pour garder de la marge* : vérification **locale sous
+  3 min** (au lieu de 2, `AGENTS.md` §8) ; sur GitHub, **150 s de pytest** (au lieu de 100). La règle reste : relevé à
+  chaque clôture d'étape, et si deux passages GitHub d'affilée dépassent 150 s de pytest, Nicolas arbitre.
   Relevé de H3 (1 661 → 1 662 tests) : GitHub, pytest **94 s** (job complet 164 s, PR #39) ; poste, pytest 77 s
   (1 min 24 au total) puis 69 s, mais 137 s puis 97 s (1 min 43 au total) le poste chargé (charge moyenne 22, un
   autre agent au travail) : la limite locale tient au repos, pas sous forte charge.
@@ -916,7 +919,10 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   passage `37592356165`, PR #41) : **second passage d'affilée au-dessus des 100 s** après G4, la règle du constat
   « H2 → suivi de la vérification » s'applique (Nicolas arbitre : revoir la vérification ou relever la limite). Poste :
   pas de mesure au repos possible pendant l'étape (autre application chargeant le poste) ; pytest 189 s (charge 15 à 22)
-  puis 133 s et **2 min 20 au total** (charge 7 à 14), au-dessus de la limite locale des 2 min sous charge.
+  puis 133 s et **2 min 20 au total** (charge 7 à 14), au-dessus de la limite locale des 2 min sous charge. Dernier
+  passage GitHub de la PR : pytest 107,7 s (job complet 2 min 53, passage `37592756889`).
+  *Tranché par Nicolas (07/10) : limites relevées (locale 3 min, GitHub 150 s de pytest), voir « H2 → suivi de la
+  vérification ».*
 - **(G4 → G7 ou plus tard)** Ton de l'assistant : travailler ses consignes (`rocky/system/assistant/model.py`,
   `INSTRUCTIONS`) pour des réponses plus chaleureuses et agréables, sans perdre les faits cités (retour de recette de
   Nicolas, 07/10). Toute nouvelle consigne s'éprouve sur les questions de référence de la décision G4, à deux
