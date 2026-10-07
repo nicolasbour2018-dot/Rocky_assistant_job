@@ -30,8 +30,6 @@ LABEL = SOURCE_LABELS[SourceCode.APEC]
 SEARCH_URL = "https://www.apec.fr/cms/webservices/rechercheOffre"
 PLACES_URL = "https://www.apec.fr/cms/webservices/autocompletion/lieuautocomplete"
 DETAIL_URL = "https://www.apec.fr/cms/webservices/offre/public"
-# Labels of Apec's codes (contract, remote work), as the apec.fr pages read them (C3, Q8).
-REFERENCE_URL = "https://www.apec.fr/cms/webservices/referentielstatique/presentations/code/{code}/visuels"
 SEARCH_PAGE = "https://www.apec.fr/candidat/recherche-emploi.html/emploi"
 OFFER_PAGE = f"{SEARCH_PAGE}/detail-offre"
 EXCERPT_REASON = (

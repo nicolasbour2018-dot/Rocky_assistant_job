@@ -19,7 +19,6 @@ from bs4 import BeautifulSoup, Tag
 from bs4.element import Comment, NavigableString
 
 from rocky.messages.alerts.model import (
-    PLATFORM_LABELS,
     AlertCard,
     AlertMessage,
     Platform,
@@ -137,10 +136,6 @@ def message_link(message: AlertMessage, card_id: str) -> str:
         f"https://mail.google.com/mail/u/{quote(message.mailbox_address)}/?carte={quote(card_id)}"
         f"#all/{quote(message.gmail_id)}"
     )
-
-
-def platform_label(platform: Platform | None) -> str:
-    return "" if platform is None else PLATFORM_LABELS[platform]
 
 
 # Readers

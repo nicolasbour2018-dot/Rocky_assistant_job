@@ -6,7 +6,6 @@ import pytest
 
 from rocky.offres.decisions import (
     APPLICATION_STARTED,
-    MAX_REASON_KEYS,
     OTHER,
     OTHER_KEY,
     REASONS,
@@ -24,6 +23,8 @@ from rocky.offres.decisions import (
 )
 
 AT = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
+# Keys 1–9 tick the reasons by rank (C7, Q10).
+MAX_REASON_KEYS = 9
 
 
 def test_a_decision_keeps_its_reasons_once_and_in_order() -> None:

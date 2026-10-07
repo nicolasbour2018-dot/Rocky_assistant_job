@@ -62,7 +62,7 @@ from rocky.profil.cv.rendering import (
     neutral_html,
     render_neutral,
 )
-from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
+from rocky.profil.cv.template import NEUTRAL_NAME, NEUTRAL_SLOTS, Slots
 from rocky.profil.model import (
     CONTRACT_LABELS,
     EXPERIENCE_KIND_LABELS,
@@ -1345,7 +1345,7 @@ def cv_fingerprint(
         photo = profile.photo
         suffix = photo.path.rsplit(".", 1)[-1] if photo else "jpg"
         html = neutral_html(content, with_photo=photo is not None, suffix=suffix)
-        parts: tuple[str, ...] = ("neutre", photo.sha256 if photo else "", html)
+        parts: tuple[str, ...] = (NEUTRAL_NAME, photo.sha256 if photo else "", html)
     else:
         record, files = active
         template = json.loads(files[TEMPLATE_FILE])

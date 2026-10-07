@@ -19,8 +19,6 @@ from pathlib import Path
 from rocky.profil.rules import normalize_term
 
 REFERENCE = Path(__file__).parent / "data" / "lieux-cog-2026.csv"
-# Kept with the score detail so that a change of the reference is visible (Q1).
-REFERENCE_NAME = "COG INSEE 2026"
 # "France" covers the whole country: the score reads it apart, it is not a place of the reference.
 FRANCE_KEYS = frozenset({"france", "fr", "fra"})
 # Remote work written as a track location (the form suggests it): not a place, never reported as unknown.
