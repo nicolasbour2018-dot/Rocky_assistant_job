@@ -169,7 +169,7 @@ def test_a_collection_is_completed_partial_or_failed_with_its_reason() -> None:
         write_failure="message 18f incomplet",
     ) == (
         SyncStatus.PARTIAL,
-        "2 messages non écrits, repris à la prochaine collecte : message 18f incomplet",
+        "2 messages non écrits, repris au prochain relevé : message 18f incomplet",
     )
     assert sync_status(
         SyncCounts(),

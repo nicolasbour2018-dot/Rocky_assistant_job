@@ -143,7 +143,7 @@ def test_a_mailbox_is_connected_through_google_then_collected(
 
     assert "camille.dupont@example.com" in page.text
     assert "Connectée" in page.text
-    assert "Boîte connectée : sa première collecte est lancée." in page.text
+    assert "Boîte connectée : son premier relevé est lancé." in page.text
     assert "Votre candidature : Data Analyst" in page.text
     assert "3 nouveaux messages" in re.sub(r"\s+", " ", page.text)
     # The hook was replaced: nothing is decided, the messages wait in the default view.
@@ -271,7 +271,7 @@ def test_collect_now_runs_once_and_the_screen_follows_it(
 
     assert scheduler.pending() == [scheduler.pending()[0]]
     assert 'hx-trigger="every 3s"' in first.text
-    assert "Collecte en cours…" in first.text
+    assert "Relevé en cours…" in first.text
     gets = len(gmail.reader_.gets)
     scheduler.tick()
     fragment = client.get("/messages/contenu?vue=tous", headers=HTMX)
@@ -303,7 +303,7 @@ def test_while_a_collection_runs_only_the_mailboxes_are_read_again(
         '<div hidden hx-get="/messages/boites" hx-trigger="every 3s" hx-target="#boites" '
         'hx-swap="outerHTML"></div>'
     ) in asked.text
-    assert "Collecte en cours…" in running.text
+    assert "Relevé en cours…" in running.text
     assert "HX-Trigger" not in running.headers
     assert '<section id="boites"' in ended.text
     assert ended.headers["HX-Trigger"] == "messages-changed"
@@ -335,7 +335,7 @@ def test_a_mailbox_google_withdrew_asks_to_be_reconnected(
     assert "À reconnecter" in page.text
     assert ACCESS_LOST_REASON.replace("'", "&#39;") in page.text
     assert "Reconnecter" in page.text
-    assert "Relever maintenant" not in page.text
+    assert "Relever les messages" not in page.text
 
 
 def test_disconnecting_revokes_at_google_and_keeps_the_messages(

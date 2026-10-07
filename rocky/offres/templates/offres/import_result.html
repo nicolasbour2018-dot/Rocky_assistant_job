@@ -27,7 +27,7 @@
       <summary>Description ({{ description | length }} caractères)</summary>
       <div class="description-text">{{ description }}</div>
     </details>
-    <p><a href="{{ offer.url }}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce d'origine</a></p>
+    <p><a href="{{ offer.url }}" target="_blank" rel="noopener noreferrer">Voir l'annonce d'origine ↗</a></p>
     <form class="form-actions import-add" method="post" action="/offres/importer/ajouter"
           hx-post="/offres/importer/ajouter" hx-target="this" hx-swap="outerHTML">
       <input type="hidden" name="offre" value="{{ offer_json(offer) }}">

@@ -87,7 +87,12 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
   relecture, sinon les liens et formulaires boostés qu'il contient en héritent (décision G6, A1–A3 ;
   `tests/system/test_inheritance.py`). Un geste qui quitte Rocky (Google) est une `Action(leaves=True)`, non boostée.
 - `rocky.js` met en attente une touche frappée pendant une requête HTMX et la rejoue après `htmx:afterSettle`
-  (décision G6, A8 ; `tests/system/test_keys.py`, Chromium headless).
+  (décision G6, A8 ; `tests/system/test_browser.py`, Chromium headless). Il désactive le bouton d'une requête en vol
+  et montre la barre d'attente après 300 ms ; il ouvre la fenêtre (`#fenetre`) quand un fragment arrive dans
+  `#fenetre-contenu`, la ferme sur « Fermer » (`data-close-window`), Échap ou l'événement `fenetre-fermer`.
+- Pièces partagées des écrans : `system/templates/ui.html` (`notice` pour un geste fait, `waiting` pour un appel long,
+  `window` pour l'en-tête de la fenêtre). Un module ne refait pas sa propre version (décision G6, bloc 1).
+- Un libellé suit le lexique de la décision G6 ; un nom écarté est refusé par `tests/system/test_lexicon.py`.
 
 ## Écrans transverses (`rocky/system/shell.py`, décision `docs/decisions/F1-ecrans-transverses.md`)
 - `system` n'importe aucun module métier : ⚙️ Système se construit par des **registres** remplis à l'installation des

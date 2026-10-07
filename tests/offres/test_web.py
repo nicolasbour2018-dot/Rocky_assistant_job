@@ -228,7 +228,7 @@ def test_the_reasons_panel_lists_the_reasons_of_the_decision(board: Board) -> No
         headers=HTMX,
     ).text
 
-    assert "Pourquoi écartée ?" in panel
+    assert "Pourquoi « Pas pour moi » ?" in panel
     assert 'value="sector"' in panel and 'value="blocking_condition"' in panel
     assert 'value="too_junior"' not in panel
     assert 'data-key="9"' in panel

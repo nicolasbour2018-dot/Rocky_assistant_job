@@ -1,0 +1,23 @@
+{# The shared pieces of the screens (decision G6, block 1). A module imports them: {% from "ui.html" import … %}. #}
+
+{# A gesture done (Q8): one place, read by screen readers. ``link`` (address, words) names what the gesture was about;
+   the caller gives « ↶ Annuler » when the gesture undoes. #}
+{% macro notice(text, link=none) -%}
+<div class="notice notice-done" role="status">
+  <p>{% if link %}<strong>✓ <a href="{{ link[0] }}">{{ link[1] }}</a></strong> — {% endif %}{{ text }}</p>
+  {% if caller %}<div class="notice-undo">{{ caller() }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{# A long call (Q8: the model, the PDFs, the import of a CV): the sentence shows while the request ``hx-indicator``
+   names it is on its way. #}
+{% macro waiting(id, sentence) -%}
+<p id="{{ id }}" class="waiting htmx-indicator" role="status">{{ sentence }}</p>
+{%- endmacro %}
+
+{# The window (R2, R3): a fragment swapped into #fenetre-contenu opens it (rocky.js); « Fermer » and Escape close it. #}
+{% macro window(title) -%}
+<div class="window-head"><h2 id="fenetre-titre">{{ title }}</h2>
+  <button type="button" class="btn btn-ghost" data-close-window data-key="Escape">Fermer <kbd>Échap</kbd></button></div>
+<div class="window-body">{{ caller() }}</div>
+{%- endmacro %}

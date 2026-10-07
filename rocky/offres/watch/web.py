@@ -46,14 +46,14 @@ logger = logging.getLogger(__name__)
 
 # The last run is shown when it brought nothing in.
 SHOWN_FAILURES = frozenset({RunStatus.FAILED, RunStatus.INTERRUPTED})
-LAUNCH = Action("Lancer maintenant", "/veille/lancer", post=True)
+LAUNCH = Action("Lancer la veille", "/veille/lancer", post=True)
 ARRIVING = "Les nouvelles offres arrivent dans quelques minutes."
 # ⚙️ Système launches the watch and stays there (a fixed value, never a URL).
 LAUNCH_FROM_SYSTEM = Action(
-    "Lancer la veille maintenant", "/veille/lancer?retour=systeme", post=True
+    "Lancer la veille", "/veille/lancer?retour=systeme", post=True
 )
 RELAUNCH_FROM_SYSTEM = Action(
-    "Relancer la veille", "/veille/lancer?retour=systeme", post=True
+    "Lancer la veille", "/veille/lancer?retour=systeme", post=True
 )
 DEFINE_TRACK = Action("Définir une piste", "/profil/pistes")
 # 🧭 Cockpit (decision G3, Q13, Q27): the watch launched from the cockpit comes back to it.

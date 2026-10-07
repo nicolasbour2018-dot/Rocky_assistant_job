@@ -20,7 +20,7 @@
         <form method="post" action="{{ base }}/vu" class="inline-form" hx-post="{{ base }}/vu" hx-target="#messages-contenu" hx-swap="outerHTML">
           <button type="submit" class="btn btn-mini">Vu</button></form>
         <form method="post" action="{{ base }}/annuler" class="inline-form" hx-post="{{ base }}/annuler" hx-target="#messages-contenu" hx-swap="outerHTML">
-          <button type="submit" class="btn btn-ghost btn-mini" title="Remettre la candidature à « {{ stage_labels[transition.from_stage] }} »">Annuler</button></form>
+          <button type="submit" class="btn btn-ghost btn-mini" title="Remettre la candidature à « {{ stage_labels[transition.from_stage] }} »">↶ Annuler</button></form>
         {% else %}
         <form method="post" action="{{ base }}/appliquer" class="inline-form" hx-post="{{ base }}/appliquer" hx-target="#messages-contenu" hx-swap="outerHTML">
           <button type="submit" class="btn btn-mini">Appliquer</button></form>

@@ -24,6 +24,7 @@ from rocky.offres.analysis.text import formatted_description
 from rocky.offres.analysis.usecases import SummaryResult, summarize
 from rocky.offres.api import OFFERS_CHANGED
 from rocky.offres.decisions import (
+    DECISION_GESTURES,
     DECISION_KEYS,
     DECISION_LABELS,
     REASON_QUESTIONS,
@@ -100,6 +101,7 @@ def install(app: FastAPI) -> None:
     templates: Jinja2Templates = app.state.templates
     templates.env.globals.update(
         decision_labels=DECISION_LABELS,
+        decision_gestures=DECISION_GESTURES,
         decision_keys=DECISION_KEYS,
         decision_filter_labels=DECISION_FILTER_LABELS,
         reason_label=reason_label,
@@ -142,7 +144,7 @@ SHORTCUTS: tuple[tuple[Markup, Markup | str], ...] = (
         _kbd("n"),
         "Ouvrir une annonce incomplète dans le navigateur, puis lire la page affichée",
     ),
-    (_kbd("o"), "Ouvrir l'annonce d'origine"),
+    (_kbd("o"), "Voir l'annonce d'origine ↗"),
     (_kbd("?"), "Cette aide"),
 )
 IMPORT = Action("Importer une annonce", "/offres/importer")

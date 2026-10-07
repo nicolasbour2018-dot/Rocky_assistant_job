@@ -73,8 +73,8 @@
     {% if cv_missing_en %}
     <a class="btn" href="/profil/traduction?retour=/profil/kit">Anglais : traduire les champs manquants</a>
     {% else %}
-    <a class="btn btn-primary" href="/profil/cv/pdf?langue=en" download hx-boost="false">Download in English</a>
-    <a class="btn btn-ghost" href="/profil/cv/pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Preview</a>
+    <a class="btn btn-primary" href="/profil/cv/pdf?langue=en" download hx-boost="false">Télécharger en anglais</a>
+    <a class="btn btn-ghost" href="/profil/cv/pdf?langue=en&amp;apercu=1" target="_blank" rel="noopener">Aperçu</a>
     {% endif %}
   </p>
   {% for code, cuts_label in (("fr", "CV français"), ("en", "CV anglais")) %}{% with cuts = cv_cuts.get(code, ()) %}
@@ -83,7 +83,7 @@
   <p><a class="btn" href="/profil/cv-anglais">Préparer mon CV anglais</a> <span class="muted small">— la version anglaise de ton CV importé, dans le même design.</span></p>
   <p><a class="btn" href="/profil/lettre">Ma lettre de motivation</a> <span class="muted small">— ta lettre générique, base de chaque candidature, en français et en anglais.</span></p>
   <div class="cv-downloads">
-    {% for code, label in (("fr", "Vérifier mon CV"), ("en", "Check my CV")) if code == "fr" or not cv_missing_en %}
+    {% for code, label in (("fr", "Vérifier mon CV"), ("en", "Vérifier mon CV anglais")) if code == "fr" or not cv_missing_en %}
     {{ m.form_open(key, "/profil/cv/verifier", "inline-form") }}<input type="hidden" name="langue" value="{{ code }}"><button type="submit" class="btn btn-ghost">{{ label }}</button></form>
     {% endfor %}
   </div>

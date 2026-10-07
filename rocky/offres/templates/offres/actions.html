@@ -4,7 +4,7 @@
   {% if chosen.note %}({{ chosen.note }}){% endif %}</p>
 {% endif %}
 <div class="decision-buttons">
-  {% for value, label in decision_labels.items() %}
+  {% for value, label in decision_gestures.items() %}
   <button type="button" class="btn btn-decision decision-{{ value }}" data-key="{{ decision_keys[value] }}"
     hx-get="/offres/{{ offer_id }}/motifs?decision={{ value }}&amp;contexte={{ context }}&amp;piste={{ piste }}"
     hx-target="#decision-area" hx-swap="innerHTML">

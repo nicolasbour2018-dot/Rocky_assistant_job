@@ -20,7 +20,7 @@ from fastapi import APIRouter, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from rocky.candidatures.model import STAGE_LABELS, InvalidChangeError
+from rocky.candidatures.model import InvalidChangeError
 from rocky.messages import cockpit as messages_cockpit
 from rocky.messages.alerts.model import (
     ALERTS_PER_DAY,
@@ -105,8 +105,8 @@ COOKIE_PATH = "/messages/gmail"
 
 # What a redirection to the page says (``?boite=…``): fixed texts, never a value from the address.
 NOTICES = {
-    "connectee": "Boîte connectée : sa première collecte est lancée.",
-    "reconnectee": "Boîte reconnectée : la collecte reprend.",
+    "connectee": "Boîte connectée : son premier relevé est lancé.",
+    "reconnectee": "Boîte reconnectée : le relevé reprend.",
     "deconnectee": "Boîte déconnectée : Rocky n'y a plus accès, ses messages restent.",
     "revocation": (
         "Boîte déconnectée, mais Google n'a pas pu être prévenu : retire l'accès de Rocky dans ton compte Google "
@@ -157,7 +157,6 @@ def install(app: FastAPI) -> None:
         level_labels=LEVEL_LABELS,
         tier_labels=TIER_LABELS,
         view_labels=VIEW_LABELS,
-        stage_labels=STAGE_LABELS,
         platform_labels=PLATFORM_LABELS,
         reading_labels=READING_LABELS,
         link_outcome_labels=LINK_OUTCOME_LABELS,
@@ -165,6 +164,7 @@ def install(app: FastAPI) -> None:
         LinkOutcome=LinkOutcome,
         alerts_per_day=ALERTS_PER_DAY,
     )
+    # ``stage_labels`` is set once, by 📝 Candidatures (decision G6, Q5).
     # E4 (Q5): the lines of « Ce qui a bougé » beside 📬 in the navigation.
     add_badge(app, "messages", _pending_count)
     # Decisions F1 (Q7) and G3 (Q16): lines of the cockpit's feed; the gestures stay here.
@@ -184,7 +184,7 @@ RECONNECT = Action(
     "Reconnecter la boîte", "/messages/gmail/connecter", post=True, leaves=True
 )
 COLLECT_FROM_SYSTEM = Action(
-    "Relever maintenant", "/messages/relever?retour=systeme", post=True
+    "Relever les messages", "/messages/relever?retour=systeme", post=True
 )
 
 

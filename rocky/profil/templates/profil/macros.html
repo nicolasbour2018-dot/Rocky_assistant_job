@@ -15,7 +15,7 @@ hx-target="#section-{{ key }}" hx-swap="outerHTML"
 {% macro actions(key, state) -%}
 <div class="form-actions">
   <button type="submit" class="btn btn-primary">Enregistrer</button>
-  {{ link(key, "Annuler", "?langue=" ~ state.language) }}
+  {{ link(key, "Fermer", "?langue=" ~ state.language) }}
 </div>
 {%- endmacro %}
 

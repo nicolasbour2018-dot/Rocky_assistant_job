@@ -765,3 +765,25 @@ button.chip { font: inherit; color: var(--text); }
   .instruments { order: 2; }
   .cockpit-split section:not(.hero) { order: 3; }
 }
+
+/* The shared pieces of the screens (decision G6, block 1): wait, notice, window. Layout only: colours with G7. */
+.busybar { position: fixed; inset: 0 0 auto; z-index: 50; height: 3px; overflow: hidden; visibility: hidden; }
+.busybar::before { content: ""; display: block; width: 40%; height: 100%; background: var(--accent); animation: busy-slide 1s linear infinite; }
+.is-busy .busybar { visibility: visible; }
+@keyframes busy-slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) { .busybar::before { width: 100%; animation: none; opacity: 0.6; } }
+.notice-done { margin-bottom: var(--space-4); border: 1px solid var(--good); background: var(--good-soft); }
+.notice-done p { margin: 0; }
+.notice-undo { display: flex; gap: var(--space-2); }
+.waiting { display: flex; align-items: center; gap: var(--space-2); margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-small); background: var(--surface-2); }
+.waiting::before { content: ""; width: 12px; height: 12px; flex: none; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: waiting-turn 0.8s linear infinite; }
+.waiting.htmx-indicator { display: none; }
+.waiting.htmx-request, .htmx-request .waiting.htmx-indicator { display: flex; }
+@keyframes waiting-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .waiting::before { animation: none; } }
+.window { width: min(680px, calc(100vw - 32px)); max-height: 85vh; padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); box-shadow: var(--shadow); overflow-y: auto; }
+.window::backdrop { background: rgb(0 0 0 / 25%); }
+.window-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
+.window-head h2 { margin: 0; }
+.window-body { display: grid; gap: var(--space-3); }
+@media (max-width: 899px) { .window { width: calc(100vw - 16px); padding: var(--space-4); } }

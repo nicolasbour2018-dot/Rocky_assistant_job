@@ -53,8 +53,8 @@ WINDOW_MARGIN = timedelta(days=1)
 # Q5: each body is kept up to this many characters.
 BODY_LIMIT = 500_000
 
-INTERRUPTED_REASON = "Collecte interrompue (Rocky s'est arrêté pendant la collecte)."
-TECHNICAL_REASON = "Erreur technique pendant la collecte (détail dans les journaux)."
+INTERRUPTED_REASON = "Relevé interrompu (Rocky s'est arrêté pendant le relevé)."
+TECHNICAL_REASON = "Erreur technique pendant le relevé (détail dans les journaux)."
 
 _BLOCKS = ["p", "div", "li", "tr", "table", "h1", "h2", "h3", "h4", "h5", "h6"]
 _SPACES = re.compile(r"[ \t ]+")
@@ -83,7 +83,7 @@ def sync_status(
         return status, listing_failure
     if counts.not_written:
         plural = "s" if counts.not_written > 1 else ""
-        reason = f"{counts.not_written} message{plural} non écrit{plural}, repris à la prochaine collecte"
+        reason = f"{counts.not_written} message{plural} non écrit{plural}, repris au prochain relevé"
         return (
             SyncStatus.PARTIAL,
             f"{reason} : {write_failure}" if write_failure else reason,

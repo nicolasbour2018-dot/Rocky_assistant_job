@@ -103,17 +103,54 @@ Dette du §8 adressée à G6 : calculs dans les gabarits (`kit.html`, `offer_bod
 | A5 | Messages : pendant un relevé, seules les boîtes se relisent (`GET /messages/boites`, toutes les 3 s) ; à la fin, leur réponse émet `messages-changed` et le contenu se relit une fois. Révèle aussi que les onglets de Messages héritaient de `hx-swap="outerHTML"` pendant un relevé | `test_while_a_collection_runs_only_the_mailboxes_are_read_again` |
 | A6 | « Valider cette lettre » refusée rend le formulaire tel que l'utilisateur l'a laissé ; « Adapter à l'annonce » emporte la lettre en cours (`hx-include`) et garde les paragraphes réécrits (`letter_view.written_over`), les autres prenant le texte proposé | `test_a_refused_validation_keeps_what_was_written`, `test_adapting_keeps_the_paragraphs_written_over` |
 | A7 | Une candidature close jamais envoyée montre le formulaire de confirmation ; une candidature close déjà envoyée (`ApplicationFile.ever_sent`, `web_common.was_sent`, règle `sent_change`) est rouverte sans second envoi, et « Envoyée » ne lui est plus proposée dans le Suivi | `test_an_application_withdrawn_before_its_sending_can_still_be_sent`, `test_an_application_closed_after_its_sending_is_opened_again_without_a_second_sending` |
-| A8 | `rocky.js` : une touche frappée pendant une requête HTMX attend et se rejoue après `htmx:afterSettle` (ou quand la réponse ne remplace rien, échoue ou expire) ; abandonnée après une navigation boostée | `tests/system/test_keys.py` : Chromium headless, page servie par le routage du navigateur, réponse retenue pendant la frappe de `i`, `1`, `Entrée` |
+| A8 | `rocky.js` : une touche frappée pendant une requête HTMX attend et se rejoue après `htmx:afterSettle` (ou quand la réponse ne remplace rien, échoue ou expire) ; abandonnée après une navigation boostée | `tests/system/test_browser.py` : Chromium headless, page servie par le routage du navigateur, réponse retenue pendant la frappe de `i`, `1`, `Entrée` |
+
+### Bloc 1 — coque (07/10)
+
+| Sujet | Décision | Test |
+|---|---|---|
+| Attente (Q8) | `rocky.js` désactive le bouton qui a envoyé la requête (lui-même ou le `submitter` de son formulaire) jusqu'à la réponse ; la classe `is-busy` sur `<html>` montre la barre fine (`.busybar` du gabarit) après 300 ms seulement | `tests/system/test_browser.py` |
+| Appel long (Q8) | Macro `waiting(id, phrase)` de `ui.html` : la phrase s'affiche pendant la requête qui la nomme par `hx-indicator` ; posée sur les gestes du modèle, des PDF et de l'import de CV aux blocs 3 et 5 | — (blocs 3, 5) |
+| Succès (Q8) | Macro `notice(texte, lien)` de `ui.html`, l'appelant donne « ↶ Annuler » ; adoptée par la liste des candidatures, puis par chaque écran à son bloc | `tests/candidatures/test_screen_web.py` |
+| Fenêtre (R2, R3) | Un `<dialog id="fenetre">` dans le gabarit ; un fragment placé dans `#fenetre-contenu` l'ouvre, « Fermer » (`data-close-window`, touche Échap) ou l'événement `fenetre-fermer` la ferment ; ouverte, elle prend les touches ; Échap dans un de ses champs ne quitte que le champ. Macro `window(titre)` pour son en-tête | `tests/system/test_browser.py` |
+| Lexique | Libellés à leur module (`DECISION_GESTURES` d'`offres.decisions`, `TAB_LABELS`, `VIEW_LABELS`, actions de veille et de Gmail…) ; `stage_labels` posé une seule fois (par `candidatures`) ; « Fermer » pour abandonner une saisie | `tests/system/test_lexicon.py` |
+| Heures | `paris_time(instant, today)` et le filtre `paris_time` (jour lu sur l'horloge de la requête) : l'année quand elle n'est pas celle de l'utilisateur | `tests/system/test_clock.py` |
 
 ## Lexique
 
-Arrêté à la recette de l'artifact.
+Arrêté à la recette de l'artifact (onglet « Lexique », version 3), avec R8 et R10 ; appliqué au bloc 1 et gardé par
+`tests/system/test_lexicon.py` (gabarits sans commentaires, chaînes du code sans docstrings).
+
+| Ce que c'est | Nom retenu | Écarté |
+|---|---|---|
+| Défaire le dernier geste | « ↶ Annuler » | — |
+| Abandonner une saisie | « Fermer » | « Annuler », « Abandonner les modifications » |
+| Gestes de décision sur une offre | « Ça m'intéresse », « Pas pour moi », « J'y reviens » | — |
+| Décision enregistrée (D14) | « Intéressé », « Écarté », « Plus tard » | — |
+| Question des motifs | « Pourquoi « <geste> » ? » | « Pourquoi intéressé ? », « Pourquoi écartée ? »… |
+| Onglets des candidatures | « Prêtes à envoyer », « Suivi » (R10) | « Prêtes » |
+| Candidature restée sans réponse | « Sans réponse » | « Sans nouvelles » |
+| Proposition d'embauche, objet suivi, classement confirmé | « Offre », « candidature » / « dossier », « Juste » (R8) | — |
+| Lire les boîtes Gmail | « relevé », « Relever les messages » | « collecte » (dans `messages`), « Relever maintenant » |
+| Chercher des offres | « Lancer la veille » | « Lancer maintenant », « Lancer la veille maintenant », « Relancer la veille » |
+| Rétablir l'accès à une boîte | « Reconnecter la boîte » | « Reconnecter » |
+| Accusé automatique | « Accusé(s) de réception » | « Accusés » |
+| Explications repliées | « Pourquoi ce score ? », « Pourquoi ce classement ? », « Ce qu'on compte, exactement » | « Comment ces chiffres sont comptés » |
+| Annonce chez le recruteur | « Voir l'annonce d'origine ↗ » | « Ouvrir l'annonce d'origine » |
+| Libellés du kit et de la lettre | « Télécharger en anglais », « Aperçu », « Vérifier mon CV anglais », « Aperçu de la page » | « Download in English », « Preview », « Check my CV », « Check this CV » |
+| Heures | « 07/10 à 12:01 », l'année en plus quand elle n'est pas celle de l'utilisateur (filtre `paris_time`) | — |
+
+Écart à la ligne « Dates » de l'artifact : les **jours** (« 07/10/2026 ») gardent leur année, sans ambiguïté ; seules
+les **heures** la prennent quand elle diffère. Les heures écrites en Python (dernier relevé, dernière veille) sont
+récentes et restent sans année. Les libellés de fin d'étape du dossier (« Valider le CV et continuer », « Valider la
+lettre et continuer ») et les gestes d'IA nommant le modèle suivent le bloc 3, avec leur comportement.
 
 ## Essais et mesures
 
 | Bloc | Vérification globale (`docker compose run --rm --build check`) | GitHub |
 |---|---|---|
 | 0 | 1 848 tests, verte : 122,7 s de pytest, 2 min 13 au total (charge moyenne 3 à 12) ; garde-fou 34 sur 34 | verte : pytest 114,5 s (passage `37604023405`) |
+| 1 | 1 854 tests, verte : 156 s de pytest (lancée en même temps que d'autres tâches du poste) | voir le passage du bloc 1 |
 
 Bloc 0 : A3 (redirection vers Google) n'a pas été essayé dans un vrai navigateur : aucun client Google n'est
 configuré sur l'instance d'essai ; il est couvert par les tests HTTP (formulaire non boosté, redirection 303).
@@ -141,6 +178,7 @@ Version 2 de l'artifact publiée le 07/10 à la même adresse (présentation de 
 | R7 | « Ça m'intéresse » en bouton principal (Codex) ou trois décisions de même poids (Q10) | **Même poids, aucun bouton principal** : rien ne doit influencer le choix. Exception écrite au critère 2. |
 | R9 | Ce que G6 reprend de la présentation de Codex | La **mise en page** : coque, panneaux, onglets, fenêtres, cartes d'offres, facettes, mode focus, tableaux, dossier en panneaux numérotés, tuiles et lignes à jauge du Bilan, avec les couleurs actuelles de Rocky. **Restent pour G7** : les couleurs, la police (Georgia du logo et des titres), les animations d'apparition et les phrases d'ambiance (« Et si c'était celle-ci ? », « Du recul, pas de pression », barre « Ton espace pour avancer »). |
 | R8 | Lignes « à trancher » du lexique | On garde les premières versions : **« Offre »** (étape, catégorie de message), **« dossier »** (à côté de « candidature »), **« Juste »**. |
+| R10 | Onglet des candidatures après l'envoi (pendant le bloc 1) | Il garde son nom : **« Suivi »** (et l'étape 4 du dossier aussi). |
 
 Version 3 publiée avec R7 et R8. Le lexique de l'artifact (onglet « Lexique ») est celui que le bloc 1 applique et
 que le test du critère 5 garde.

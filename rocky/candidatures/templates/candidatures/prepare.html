@@ -7,7 +7,7 @@
   {% if context == "tri" %}<input type="hidden" name="contexte" value="tri"><input type="hidden" name="piste" value="{{ piste }}">{% endif %}
   {% if context == "cockpit" %}<input type="hidden" name="contexte" value="cockpit">{% endif %}
   <fieldset>
-    <legend>Pourquoi cette offre t'intéresse ? <span class="muted">plusieurs possibles</span></legend>
+    <legend>Pourquoi « Ça m'intéresse » ? <span class="muted">plusieurs possibles</span></legend>
     {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
     <div class="chips">
       {% for reason in reasons %}

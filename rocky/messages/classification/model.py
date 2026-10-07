@@ -227,7 +227,7 @@ VIEW_LABELS = {
     View.TO_LOOK_AT: "À regarder",
     View.TO_CHECK: "À vérifier",
     View.EMPLOYERS: "Retours d'employeurs",
-    View.ACKNOWLEDGEMENTS: "Accusés",
+    View.ACKNOWLEDGEMENTS: "Accusés de réception",
     View.PLATFORM: "Avis de plateforme",
     View.ALERTS: "Alertes",
     View.APPROACHES: "Approches",

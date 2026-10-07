@@ -54,10 +54,14 @@ DECISION_KEYS = {
     DecisionValue.REJECTED: "e",
     DecisionValue.LATER: "p",
 }
+# Decision G6 (lexicon, R2): a decision is made by a gesture and recorded under its label (the D14 labels above).
+DECISION_GESTURES = {
+    DecisionValue.INTERESTED: "Ça m'intéresse",
+    DecisionValue.REJECTED: "Pas pour moi",
+    DecisionValue.LATER: "J'y reviens",
+}
 REASON_QUESTIONS = {
-    DecisionValue.INTERESTED: "Pourquoi intéressé ?",
-    DecisionValue.REJECTED: "Pourquoi écartée ?",
-    DecisionValue.LATER: "Pourquoi plus tard ?",
+    value: f"Pourquoi « {gesture} » ?" for value, gesture in DECISION_GESTURES.items()
 }
 
 

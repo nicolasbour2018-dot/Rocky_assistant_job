@@ -1,5 +1,6 @@
 {# The screen 📝 Candidatures (decision D6, Q1): tabs by stage, « À faire » across them and open by default; one line
    per application, its gestures in one click. Every gesture keeps the tab it was made from (``vue``). #}
+{% from "ui.html" import notice as done %}
 {% set tab = screen.tab %}
 {% set swap = 'hx-target="#candidatures" hx-swap="outerHTML"' %}
 {% macro keep_tab() %}<input type="hidden" name="vue" value="{{ tab.value }}">{% endmacro %}
@@ -15,12 +16,11 @@
   {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
   {% if notice %}
   {# What « Fait » did (recette of D6): said in words, with « Annuler », even when the line left the tab. #}
-  <div class="alert alert-done" role="status">
-    <p><strong>✓ <a href="/candidatures/{{ notice.id }}?etape=suivi">{{ notice.title }}</a></strong> — {{ notice.text }}</p>
+  {% call done(notice.text, ("/candidatures/" ~ notice.id ~ "?etape=suivi", notice.title)) %}
     <form method="post" action="/candidatures/{{ notice.id }}/annuler" hx-post="/candidatures/{{ notice.id }}/annuler" {{ swap | safe }} class="inline-form">
       {{ keep_tab() }}<button type="submit" class="btn btn-ghost btn-mini">↶ Annuler</button>
     </form>
-  </div>
+  {% endcall %}
   {% endif %}
 
   {% if tab == Tab.TO_PREPARE %}

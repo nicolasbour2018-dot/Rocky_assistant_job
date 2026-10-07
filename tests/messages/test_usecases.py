@@ -181,7 +181,7 @@ def test_a_message_that_fails_is_not_written_and_is_taken_up_by_the_next_collect
 
     assert first.status is SyncStatus.PARTIAL
     assert first.reason == (
-        "1 message non écrit, repris à la prochaine collecte : message 18f incomplet"
+        "1 message non écrit, repris au prochain relevé : message 18f incomplet"
     )
     assert first.counts == SyncCounts(listed=3, known=0, new=2, not_written=1)
     assert LATIN_ID not in stored(migrated_engine, box)

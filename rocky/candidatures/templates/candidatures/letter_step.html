@@ -76,7 +76,7 @@
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">Valider cette lettre</button>
       <button type="submit" class="btn btn-ghost" formaction="{{ base }}/lettre/apercu" hx-post="{{ base }}/lettre/apercu" {{ swap | safe }}>Aperçu de la page</button>
-      {% if letter.version %}<a class="btn btn-ghost" href="{{ base }}?etape={{ Step.LETTER.value }}">Abandonner les modifications</a>{% endif %}
+      {% if letter.version %}<a class="btn btn-ghost" href="{{ base }}?etape={{ Step.LETTER.value }}">Fermer</a>{% endif %}
     </div>
     <p class="muted small">Seule la lettre validée est gardée ; une nouvelle validation ajoute une version, sans effacer les précédentes.</p>
   </form>
@@ -92,7 +92,7 @@
   <div class="cv-downloads">
     <a class="btn" href="{{ base }}?etape={{ Step.LETTER.value }}&amp;modifier=1">Modifier</a>
     <form method="post" action="{{ base }}/lettre/apercu" hx-post="{{ base }}/lettre/apercu" {{ swap | safe }} class="inline-form">
-      <button type="submit" class="btn btn-ghost">{{ "Aperçu de la page" if language == "fr" else "Preview" }}</button>
+      <button type="submit" class="btn btn-ghost">Aperçu de la page</button>
     </form>
     <form method="post" action="{{ base }}/lettre/verifier" hx-post="{{ base }}/lettre/verifier" {{ swap | safe }} class="inline-form">
       <button type="submit" class="btn btn-ghost">Vérifier cette lettre</button>

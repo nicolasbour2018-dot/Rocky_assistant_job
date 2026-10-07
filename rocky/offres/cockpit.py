@@ -140,7 +140,7 @@ def offer_hero(offer: ListedOffer, track: str | None, why: tuple[str, ...]) -> H
                 panel=True,
             ),
             Action(
-                "Plus tard",
+                "J'y reviens",
                 f"/offres/{offer.id}/motifs?decision=later&contexte={COCKPIT}",
                 panel=True,
             ),

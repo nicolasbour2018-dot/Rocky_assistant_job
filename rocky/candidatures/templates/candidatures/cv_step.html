@@ -92,7 +92,7 @@
 
     <div class="cv-downloads">
       <form method="post" action="{{ base }}/cv/verifier" hx-post="{{ base }}/cv/verifier" {{ swap | safe }} class="inline-form">
-        <button type="submit" class="btn btn-ghost">{{ "Vérifier ce CV" if language == "fr" else "Check this CV" }}</button>
+        <button type="submit" class="btn btn-ghost">Vérifier ce CV</button>
       </form>
       {% if view.adjusted %}
       <form method="post" action="{{ base }}/cv/proposition" hx-post="{{ base }}/cv/proposition" {{ swap | safe }} class="inline-form">

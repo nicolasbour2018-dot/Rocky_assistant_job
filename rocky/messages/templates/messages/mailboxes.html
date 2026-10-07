@@ -20,19 +20,19 @@
       </div>
       {% if last %}
       <p class="small">
-        {% if last.status == SyncStatus.RUNNING %}Collecte en cours depuis le {{ last.started_at | paris_time }}…
-        {% else %}Dernière collecte le {{ last.started_at | paris_time }} : {{ sync_status_labels[last.status] | lower }},
+        {% if last.status == SyncStatus.RUNNING %}Relevé en cours depuis le {{ last.started_at | paris_time }}…
+        {% else %}Dernier relevé le {{ last.started_at | paris_time }} : {{ sync_status_labels[last.status] | lower }},
           {{ last.counts.new }} nouveau{{ 'x' if last.counts.new > 1 }} message{{ 's' if last.counts.new > 1 }}
           ({{ last.counts.known }} déjà relevé{{ 's' if last.counts.known > 1 }}).{% endif %}
       </p>
       {% if last.reason and last.status != SyncStatus.COMPLETED %}<p class="small watch-reason">{{ last.reason }}</p>{% endif %}
       {% elif mailbox.status == MailboxStatus.CONNECTED %}
-      <p class="small muted">Première collecte à venir.</p>
+      <p class="small muted">Premier relevé à venir.</p>
       {% endif %}
       <div class="item-actions">
         {% if mailbox.status != MailboxStatus.CONNECTED %}
         <form method="post" action="/messages/gmail/connecter" hx-boost="false" class="inline-form">
-          <button type="submit" class="btn {{ 'btn-primary' if mailbox.status == MailboxStatus.ACCESS_LOST else 'btn-ghost' }}">Reconnecter</button>
+          <button type="submit" class="btn {{ 'btn-primary' if mailbox.status == MailboxStatus.ACCESS_LOST else 'btn-ghost' }}">Reconnecter la boîte</button>
         </form>
         {% else %}
         <form method="post" action="/messages/boites/{{ mailbox.id }}/deconnecter" class="inline-form">
@@ -52,7 +52,7 @@
     </form>
     {% if state.mailboxes | selectattr("mailbox.status", "equalto", MailboxStatus.CONNECTED) | list %}
     <form method="post" action="/messages/relever" hx-post="/messages/relever" hx-target="#messages-contenu" hx-swap="outerHTML" class="inline-form">
-      <button type="submit" class="btn btn-primary" {% if running %}disabled{% endif %}>{{ "Collecte en cours…" if running else "Relever maintenant" }}</button>
+      <button type="submit" class="btn btn-primary" {% if running %}disabled{% endif %}>{{ "Relevé en cours…" if running else "Relever les messages" }}</button>
     </form>
     {% endif %}
   </div>

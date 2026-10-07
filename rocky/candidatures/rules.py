@@ -247,7 +247,7 @@ TAB_LABELS = {
     Tab.TO_DO: "À faire",
     Tab.TO_PREPARE: "À préparer",
     Tab.PREPARING: "En préparation",
-    Tab.READY: "Prêtes",
+    Tab.READY: "Prêtes à envoyer",
     Tab.FOLLOW_UP: "Suivi",
     Tab.CLOSED: "Closes",
 }

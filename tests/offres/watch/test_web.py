@@ -1,5 +1,5 @@
 """The watch on screen (C6, Q2; decision F1, Q6): the first block of 🏠 Aujourd'hui when the watch is late, running or
-failed, with « Lancer maintenant », and the counter of 🏠."""
+failed, with « Lancer la veille », and the counter of 🏠."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from datetime import timedelta
 
 import pytest
+from bs4 import BeautifulSoup
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
@@ -162,7 +163,13 @@ def test_a_running_watch_is_followed_by_polling_its_line(
 
     assert "Veille en cours depuis le 24/09 à 14:00." in page
     assert 'hx-get="/cockpit/etat" hx-trigger="every 15s"' in page
-    assert "Lancer maintenant" not in page
+    found = BeautifulSoup(page, "html.parser").find(id="cockpit-status")
+    assert found is not None
+    status = found.get_text(" ")
+    assert "Veille en cours depuis le" in status
+    assert (
+        "Lancer la veille" not in status
+    )  # the line of the watch offers no launch while it runs
 
 
 @pytest.mark.parametrize(
@@ -267,7 +274,7 @@ def test_system_tells_the_last_run_source_by_source(
     assert "12 offres trouvées, dont 5 nouvelles." in page
     assert "<dt>Apec</dt>" in page and "<dt>LinkedIn</dt>" in page
     assert page.count("btn-primary") == 1
-    assert 'class="btn btn-primary">Lancer la veille maintenant</button>' in page
+    assert 'class="btn btn-primary">Lancer la veille</button>' in page
     assert '<section class="card screen-card">\n    <h2>🔎 Veille</h2>' in page
 
 
@@ -285,7 +292,7 @@ def test_system_proposes_to_relaunch_a_failed_watch_and_stays_there(
         '<section class="card screen-card screen-card-problem">\n    <h2>🔎 Veille</h2>'
         in page
     )
-    assert 'class="btn btn-primary">Relancer la veille</button>' in page
+    assert 'class="btn btn-primary">Lancer la veille</button>' in page
     assert page.count("btn-primary") == 1
     assert launched.headers["location"] == "/systeme"
     assert client.post("/veille/lancer?retour=ailleurs").headers["location"] == "/"

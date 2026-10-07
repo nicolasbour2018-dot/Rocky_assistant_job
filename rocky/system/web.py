@@ -35,7 +35,13 @@ from rocky.system.auth.model import Account
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.auth.usecases import Argon2Hasher, Clock, PasswordHasher
 from rocky.system.auth.web import AuthServices, install
-from rocky.system.clock import paris_hour, paris_time, today_of, utc_now
+from rocky.system.clock import (
+    paris_hour,
+    paris_time,
+    paris_time_filter,
+    today_of,
+    utc_now,
+)
 from rocky.system.config import CallType, Settings, load_settings
 from rocky.system.db import create_db_engine
 from rocky.system.errors import UserFacingError
@@ -101,7 +107,7 @@ def create_app(
     app = FastAPI(title="Rocky", lifespan=_lifespan)
     app.state.settings = settings
     app.state.templates = Jinja2Templates(directory=TEMPLATE_DIRS)
-    app.state.templates.env.filters["paris_time"] = paris_time
+    app.state.templates.env.filters["paris_time"] = paris_time_filter
     app.state.templates.env.filters["paris_hour"] = paris_hour
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.state.engine = engine = engine or create_db_engine(settings.database_url)

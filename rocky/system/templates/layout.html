@@ -13,6 +13,8 @@
   <script src="/static/rocky.js" defer></script>
 </head>
 <body hx-boost="true">
+  {# Decision G6 (Q8): shown by rocky.js when a request takes more than 300 ms. #}
+  <div class="busybar" aria-hidden="true"></div>
   <div class="shell">
     <nav class="sidebar" aria-label="Navigation principale">
       <a class="brand" href="/">Rocky <span aria-hidden="true">🐾</span></a>
@@ -86,6 +88,9 @@
       </div>
     </form>
   </aside>
+
+  {# The window (decision G6, R2, R3): its content is swapped by the server, rocky.js opens and closes it. #}
+  <dialog id="fenetre" class="window" aria-labelledby="fenetre-titre"><div id="fenetre-contenu"></div></dialog>
 
   {% block overlays %}{% endblock %}
 </body>
