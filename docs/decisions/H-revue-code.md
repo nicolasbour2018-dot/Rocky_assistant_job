@@ -252,6 +252,13 @@ Règles d'agent, AGENTS §4 et plan §3 : « ce qu'un module donne aux autres es
 
 **Critère de sortie** : chaque point traité ou noté en §8 avec sa raison ; vérification globale verte.
 
+### Décisions de Nicolas (07/10, avant le code)
+
+| Sujet | Décision |
+|---|---|
+| `Report.since` | **On garde `changed_at`** : le jour (heure de Paris) du premier passage à une étape d'envoi, même horloge que le cockpit (séries, objectif de la semaine, lus dans le journal). La date déclarée `sent_on` n'est pas lue ; seul le commentaire le dit. |
+| Vérification (plan §8, « G4 → H5 ou G6 ») | **Relevé seulement** : pytest local au repos et passages GitHub de l'étape, ajoutés au §8. Si deux passages GitHub d'affilée dépassent 100 s de pytest, Nicolas arbitre ; aucun allègement de tests dans H5. |
+
 ## Hors H : rattaché à une étape existante (plan §8)
 
 - **→ G2** : date limite sans année (`offres/analysis/rules.py:817`) : « avant le 15 janvier » lu le 20 décembre
