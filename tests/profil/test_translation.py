@@ -21,7 +21,7 @@ from rocky.profil.translation import (
     TranslationError,
     checks,
     glossary_pairs,
-    is_stale,
+    is_stale_translation,
     propose,
     protected_names,
     segments_of,
@@ -250,7 +250,7 @@ def test_an_english_translated_from_an_older_french_is_to_review() -> None:
     hand_written = next(
         s for s in segments_of(editor.profile()) if s.key == f"project:{project}:name"
     )
-    assert not is_stale(hand_written, editor.translation_memory())
+    assert not is_stale_translation(hand_written, editor.translation_memory())
 
 
 def test_a_glossary_term_needs_both_languages() -> None:

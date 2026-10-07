@@ -125,7 +125,7 @@ class Review:
 
 
 @dataclass(frozen=True)
-class EnglishState:
+class EnglishLetterState:
     segments: tuple[Segment, ...] = ()
     validated: Mapping[str, str] = field(default_factory=dict)  # segment key → English
 
@@ -134,12 +134,14 @@ class EnglishState:
         return tuple(s for s in self.segments if s.key not in self.validated)
 
 
-def _english_state(letters: GenericLetters, editor: ProfileEditor) -> EnglishState:
+def _english_state(
+    letters: GenericLetters, editor: ProfileEditor
+) -> EnglishLetterState:
     if letters.fr is None:
-        return EnglishState()
+        return EnglishLetterState()
     memory = editor.translation_memory()
     segments = letter_segments(letters.fr.letter)
-    return EnglishState(
+    return EnglishLetterState(
         segments,
         {
             s.key: memory[s.source_sha256].translation

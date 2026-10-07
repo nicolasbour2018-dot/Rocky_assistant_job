@@ -7,7 +7,7 @@ import io
 from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Protocol
 from urllib.parse import quote, urlsplit
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -57,6 +57,7 @@ from rocky.candidatures.model import (
     FORWARD,
     ISSUES,
     LANGUAGE_LABELS,
+    ApplicationStore,
     Change,
     Channel,
     InvalidChangeError,
@@ -1011,11 +1012,26 @@ def letter_is_ready(
     return _letter_gesture(request, account, application_id, letter_ready)
 
 
+class _LetterGesture(Protocol):
+    """``skip_letter`` or ``letter_ready``."""
+
+    def __call__(
+        self,
+        store: ApplicationStore,
+        *,
+        account_id: int,
+        application_id: int,
+        now: datetime,
+        today: date,
+        deadline: date | None = None,
+    ) -> object: ...
+
+
 def _letter_gesture(
     request: Request,
     account: Account,
     application_id: int,
-    use_case: Callable[..., object],
+    use_case: _LetterGesture,
 ) -> Response:
     if not owns(request, account, application_id):
         return Response(status_code=404)

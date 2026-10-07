@@ -77,18 +77,23 @@ from rocky.profil.model import (
     CvLayout,
     CvTemplateRecord,
     Experience,
+    ExperienceDraft,
     ExperienceKind,
     Language,
+    LanguageDraft,
     LanguageLevel,
     Profile,
     Project,
+    ProjectDraft,
     RemoteMode,
     Skill,
     SkillCategory,
+    SkillDraft,
     SkillLevel,
     StoredPhoto,
     Text,
     Track,
+    TrackDraft,
     TrackStatus,
 )
 from rocky.profil.places import unknown_locations
@@ -741,7 +746,7 @@ def _ids(form: FormData, name: str) -> list[int]:
     ]
 
 
-def _track_from(form: FormData) -> Any:
+def _track_from(form: FormData) -> TrackDraft:
     return make_track(
         name=_text(form, "name"),
         titles=_text(form, "titles"),
@@ -821,7 +826,7 @@ def track_action(
     )
 
 
-def _skill_from(form: FormData) -> Any:
+def _skill_from(form: FormData) -> SkillDraft:
     return make_skill(
         label_fr=_text(form, "label_fr"),
         label_en=_text(form, "label_en"),
@@ -889,7 +894,7 @@ def delete_skill(
     )
 
 
-def _language_from(form: FormData) -> Any:
+def _language_from(form: FormData) -> LanguageDraft:
     return make_language(code_value=_text(form, "code"), level=_text(form, "level"))
 
 
@@ -933,7 +938,7 @@ def delete_language(
     )
 
 
-def _experience_from(form: FormData) -> Any:
+def _experience_from(form: FormData) -> ExperienceDraft:
     return make_experience(
         kind=_text(form, "kind"),
         title_fr=_text(form, "title_fr"),
@@ -988,7 +993,7 @@ def delete_experience(
     )
 
 
-def _project_from(form: FormData) -> Any:
+def _project_from(form: FormData) -> ProjectDraft:
     return make_project(
         name_fr=_text(form, "name_fr"),
         name_en=_text(form, "name_en"),

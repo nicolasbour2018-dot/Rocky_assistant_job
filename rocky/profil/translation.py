@@ -123,7 +123,7 @@ def segments_of(profile: Profile) -> tuple[Segment, ...]:
     return tuple(found)
 
 
-def is_stale(segment: Segment, memory: Mapping[str, Remembered]) -> bool:
+def is_stale_translation(segment: Segment, memory: Mapping[str, Remembered]) -> bool:
     """An English the user validated for another French text: the French changed since (Q14). An English written by
     hand, never validated through a translation, is never stale."""
     if segment.english is None:
@@ -140,7 +140,7 @@ def to_translate(
     """The texts without English, and those to review (their French changed since their translation)."""
     segments = segments_of(profile)
     missing = tuple(s for s in segments if s.english is None)
-    stale = tuple(s for s in segments if is_stale(s, memory))
+    stale = tuple(s for s in segments if is_stale_translation(s, memory))
     return missing, stale
 
 

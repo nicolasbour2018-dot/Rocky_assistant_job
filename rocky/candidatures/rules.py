@@ -327,7 +327,7 @@ def latest_revisions(
     return latest
 
 
-def is_stale(revision: Revision, inputs_sha256: str | None) -> bool:
+def is_stale_revision(revision: Revision, inputs_sha256: str | None) -> bool:
     """The document has changed since this revision was generated (None: it cannot be made any more)."""
     return inputs_sha256 != revision.inputs_sha256
 

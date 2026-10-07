@@ -268,7 +268,7 @@ def to_review(request: Request, account: Account) -> tuple[str, ...]:
 
 
 @dataclass(frozen=True)
-class EnglishState:
+class EnglishCvState:
     """Where the English version of the account's French template stands."""
 
     french: CvTemplateRecord | None
@@ -284,12 +284,12 @@ class EnglishState:
         return tuple(text for text in self.texts if text.id not in self.validated)
 
 
-def _english_state(request: Request, account: Account) -> EnglishState:
+def _english_state(request: Request, account: Account) -> EnglishCvState:
     with _editor(request, account) as editor:
         french = editor.active_cv_template("fr")
         memory = editor.translation_memory()
     if french is None:
-        return EnglishState(
+        return EnglishCvState(
             None,
             "Ton CV anglais se prépare à partir de ton CV français importé : importe-le d'abord dans Profil & kit.",
         )
@@ -302,13 +302,13 @@ def _english_state(request: Request, account: Account) -> EnglishState:
             if isinstance(error, CvRefusedError)
             else error.reason
         )
-        return EnglishState(french, reason)
+        return EnglishCvState(french, reason)
     validated = {
         text.id: memory[text_sha256(text.text)].translation
         for text in texts
         if text_sha256(text.text) in memory
     }
-    return EnglishState(french, None, texts, validated, files)
+    return EnglishCvState(french, None, texts, validated, files)
 
 
 def _file_store(request: Request) -> FileStore:

@@ -38,7 +38,8 @@ HUMAN_ANSWERS = frozenset(
 @dataclass(frozen=True)
 class Report:
     sent: int
-    # The day of the first sending (in Paris), None before it.
+    # The day (in Paris) the first application reached a sent stage, None before it: the clock of the cockpit, not the
+    # date declared at the confirmation (``sent_on``, decision of Nicolas, step H5).
     since: date | None
     acknowledged_only: int
     answered: int

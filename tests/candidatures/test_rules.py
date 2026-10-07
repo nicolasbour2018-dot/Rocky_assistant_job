@@ -28,7 +28,7 @@ from rocky.candidatures.rules import (
     employer_domain,
     is_due,
     is_overdue,
-    is_stale,
+    is_stale_revision,
     journey,
     language_in_force,
     last_done,
@@ -309,9 +309,9 @@ def test_the_latest_revision_of_each_kind_in_the_language_is_proposed() -> None:
 def test_a_revision_is_stale_once_its_inputs_differ() -> None:
     cv = revision(1, RevisionKind.CV)
 
-    assert not is_stale(cv, "inputs1")
-    assert is_stale(cv, "inputs2")
-    assert is_stale(cv, None)
+    assert not is_stale_revision(cv, "inputs1")
+    assert is_stale_revision(cv, "inputs2")
+    assert is_stale_revision(cv, None)
 
 
 def test_the_file_name_the_recruiter_sees() -> None:
