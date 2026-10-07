@@ -157,6 +157,11 @@ def test_a_gesture_refused_says_why(screen: Screen) -> None:
     assert again.status_code == 400
     assert "Ce changement n&#39;est plus à traiter." in again.text
     assert unknown.status_code == 404
+    # Decision G6, A4: HTMX shows the refusal in the error area; the open panels stay as they are.
+    for refused in (again, unknown):
+        assert refused.headers["HX-Retarget"] == "#erreur"
+        assert 'role="alert"' in refused.text
+    assert "Geste inconnu." in unknown.text
 
 
 def test_correcting_a_message_from_its_panel(screen: Screen) -> None:

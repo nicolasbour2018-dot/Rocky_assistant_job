@@ -28,7 +28,8 @@
   {% if not letter.adapted %}
   <details class="note adapt-box"{% if letter_error and not letter_preview %} open{% endif %}>
     <summary>✨ Adapter à l'annonce avec Gemini</summary>
-    <form method="post" action="{{ base }}/lettre/adapter" hx-post="{{ base }}/lettre/adapter" {{ swap | safe }} class="stack">
+    {# The letter being written goes with the request: what the user wrote over stays (decision G6, A6). #}
+    <form method="post" action="{{ base }}/lettre/adapter" hx-post="{{ base }}/lettre/adapter" hx-include=".letter-editor" {{ swap | safe }} class="stack">
       <p class="small">Gemini écrit le paragraphe « Pourquoi vous » et sa propre version de chaque paragraphe, pour cette annonce, sans rien inventer ; tu gardes, paragraphe par paragraphe, celle que tu préfères. Il reçoit l'annonce, tes motifs d'intérêt, les projets retenus pour ce CV et le texte de ta lettre : jamais ton nom ni tes coordonnées.</p>
       <label class="check"><input type="checkbox" name="consentement" value="1"> J'accepte cet envoi à Gemini.</label>
       <p><button type="submit" class="btn btn-primary">Adapter à l'annonce</button></p>

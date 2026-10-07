@@ -283,6 +283,33 @@ def test_collect_now_runs_once_and_the_screen_follows_it(
     assert len(gmail.reader_.gets) == gets  # Nothing downloaded again.
 
 
+def test_while_a_collection_runs_only_the_mailboxes_are_read_again(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    """Decision G6, A5: an open « Corriger » panel is no longer wiped every 3 s; the content is read once, at the
+    end."""
+    configure(app, migrated_engine)
+    client, _ = logged_in(app, migrated_engine)
+    connected(app, client)
+    scheduler: Scheduler = app.state.scheduler
+
+    asked = client.post("/messages/relever", headers=HTMX)
+    running = client.get("/messages/boites", headers=HTMX)
+    scheduler.tick()
+    ended = client.get("/messages/boites", headers=HTMX)
+
+    assert '<div id="messages-contenu" class="profile-sections">' in asked.text
+    assert (
+        '<div hidden hx-get="/messages/boites" hx-trigger="every 3s" hx-target="#boites" '
+        'hx-swap="outerHTML"></div>'
+    ) in asked.text
+    assert "Collecte en cours…" in running.text
+    assert "HX-Trigger" not in running.headers
+    assert '<section id="boites"' in ended.text
+    assert ended.headers["HX-Trigger"] == "messages-changed"
+    assert client.get("/messages/boites").status_code == 303
+
+
 def test_the_content_fragment_is_never_a_page(
     app: FastAPI, migrated_engine: Engine
 ) -> None:

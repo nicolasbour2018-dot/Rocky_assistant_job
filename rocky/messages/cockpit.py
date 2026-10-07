@@ -22,8 +22,12 @@ from rocky.system.cockpit import FeedLine, Parts, Sentence, Status, add_cockpit
 from rocky.system.events import StoredEvent, events_of
 from rocky.system.shell import Action, Card
 
-CONNECT = Action("Connecter une boîte Gmail", "/messages/gmail/connecter", post=True)
-RECONNECT = Action("Reconnecter la boîte", "/messages/gmail/connecter", post=True)
+CONNECT = Action(
+    "Connecter une boîte Gmail", "/messages/gmail/connecter", post=True, leaves=True
+)
+RECONNECT = Action(
+    "Reconnecter la boîte", "/messages/gmail/connecter", post=True, leaves=True
+)
 SEE_MESSAGES = Action("Voir dans Messages", "/messages")
 # An answer of a person (decision F1, Q9): the sentence of the day says it first.
 ANSWERS = frozenset({Stage.IN_DISCUSSION, Stage.INTERVIEW, Stage.OFFER})

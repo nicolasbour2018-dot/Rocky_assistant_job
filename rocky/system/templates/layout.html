@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
+  {# Decision G6 (A4, A9): HTMX swaps a 4xx answer like a 2xx one — a refusal is always shown, never dropped. #}
+  <meta name="htmx-config" content='{"responseHandling": [{"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "4..", "swap": true}, {"code": "...", "swap": false, "error": true}]}'>
   <title>{% block title %}Rocky{% endblock %}</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/rocky.css">
@@ -63,9 +65,11 @@
   {# Decision G4: the drawer is the assistant. It reads its conversation each time it opens, never before, about the
      object the screen names (a hidden field ``objet`` attached to the form below); it closes only by « Fermer » or
      Escape, and what is typed stays while the page does (Q27). #}
-  <aside id="rocky-drawer" class="drawer" popover="manual" aria-label="Rocky"
-    hx-get="/tiroir" hx-include="#rocky-question" hx-trigger="toggle[newState=='open']"
-    hx-target="#drawer-content" hx-swap="innerHTML">
+  <aside id="rocky-drawer" class="drawer" popover="manual" aria-label="Rocky">
+    {# The reading is asked by an empty element: on the drawer, ``hx-target`` would be inherited by the boosted links
+       of the facts it cites, and the next page would open inside it (decision G6, A2). #}
+    <div hidden hx-get="/tiroir" hx-include="#rocky-question" hx-trigger="toggle[newState=='open'] from:#rocky-drawer"
+      hx-target="#drawer-content" hx-swap="innerHTML"></div>
     <div class="drawer-head">
       <h2><span aria-hidden="true">🐾</span> Rocky</h2>
       <button type="button" class="btn btn-ghost" popovertarget="rocky-drawer" popovertargetaction="hide" data-key="Escape">Fermer</button>

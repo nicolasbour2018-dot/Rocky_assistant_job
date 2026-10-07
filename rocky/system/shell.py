@@ -9,7 +9,7 @@ imports the modules: the application (``web.py``), the command line (``admin.py`
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from urllib.parse import quote
 
@@ -27,6 +27,12 @@ type BadgeProvider = Callable[[Request, Account], int]
 HTMX_SCRIPT = "htmx-2.0.11.min.js"
 # Where the layout shows a business refusal answered to an HTMX fragment (step H1).
 ERROR_AREA = "#erreur"
+# Decision G6 (A4, A9): what a refusal says when its route gave no words of its own.
+REFUSALS = {
+    404: "Rocky ne trouve pas ce que ce geste demande : il n'existe pas, ou plus.",
+    422: "Il manque quelque chose à cette demande : vérifie ce que tu as saisi.",
+}
+OTHER_REFUSAL = "Ce geste n'a pas pu se faire."
 
 logger = logging.getLogger(__name__)
 
@@ -176,13 +182,7 @@ def show_user_error(request: Request, error: Exception) -> Response:
         error,
     )
     if wants_fragment(request):
-        templates: Jinja2Templates = request.app.state.templates
-        response = templates.TemplateResponse(
-            request, "user_error.html", {"lines": error.lines}
-        )
-        response.headers["HX-Retarget"] = ERROR_AREA
-        response.headers["HX-Reswap"] = "innerHTML"
-        return response
+        return refusal(request, *error.lines)
     status_code = 200 if is_htmx(request) else 409
     if getattr(request.state, "account", None) is None:
         # No layout without an account: the reasons alone.
@@ -194,6 +194,38 @@ def show_user_error(request: Request, error: Exception) -> Response:
         active=entry.key,
         status_code=status_code,
         context={"lines": error.lines, "entry": entry},
+    )
+
+
+def refusal(request: Request, *lines: str, status_code: int = 200) -> Response:
+    """A refusal of a gesture made by HTMX, shown in the error area of the page whatever the target of the request
+    (decision G6, A4): the panel being filled stays as it is."""
+    templates: Jinja2Templates = request.app.state.templates
+    response = templates.TemplateResponse(
+        request, "user_error.html", {"lines": lines}, status_code=status_code
+    )
+    response.headers["HX-Retarget"] = ERROR_AREA
+    response.headers["HX-Reswap"] = "innerHTML"
+    return response
+
+
+async def show_refusals(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """No silent refusal (decision G6, A4, A9): the layout has HTMX swap 4xx answers; one without HTML of its own (an
+    empty 404, the JSON of a refused form) becomes a refusal in the error area. The status is kept."""
+    response = await call_next(request)
+    if not is_htmx(request) or not 400 <= response.status_code < 500:
+        return response
+    if "HX-Retarget" in response.headers or "HX-Redirect" in response.headers:
+        return response
+    has_html = response.headers.get("content-type", "").startswith("text/html")
+    if has_html and response.headers.get("content-length") != "0":
+        return response
+    return refusal(
+        request,
+        REFUSALS.get(response.status_code, OTHER_REFUSAL),
+        status_code=response.status_code,
     )
 
 
@@ -222,12 +254,14 @@ def badges(request: Request, account: Account | None) -> dict[str, int]:
 @dataclass(frozen=True)
 class Action:
     """A gesture offered by a card: a link, or a form posted to ``url`` when ``post``; ``panel``: a fragment loaded in
-    place, below the hero of the cockpit (decision G3, Q15)."""
+    place, below the hero of the cockpit (decision G3, Q15); ``leaves``: it goes to another site (Google's consent
+    page), which a boosted request cannot follow (decision G6, A3)."""
 
     label: str
     url: str
     post: bool = False
     panel: bool = False
+    leaves: bool = False
 
 
 @dataclass(frozen=True)

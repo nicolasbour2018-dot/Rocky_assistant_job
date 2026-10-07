@@ -185,6 +185,40 @@ def test_adapting_asks_consent_and_sends_neither_name_nor_contact(
     assert WHY_YOU.replace("'", "&#39;") in html
 
 
+WRITTEN = "Mon parcours, réécrit à la main pour cette annonce."
+
+
+def test_a_refused_validation_keeps_what_was_written(desk: Desk) -> None:
+    """Decision G6, A6: the paragraphs written over came back empty after a refusal."""
+    fields = form_of(page(desk, LETTER))
+    fields["texte_1"] = WRITTEN
+    fields["empreinte"] = "une-version-perimee"
+
+    refused = desk.client.post(f"{base(desk)}/lettre/valider", data=fields).text
+
+    assert "Ta lettre générique a changé pendant ce temps" in refused
+    assert form_of(refused)["texte_1"] == WRITTEN
+
+
+def test_adapting_keeps_the_paragraphs_written_over(desk: Desk) -> None:
+    """Decision G6, A6: « Adapter à l'annonce » took the letter as it was stored, not as it was being written."""
+    fields = form_of(page(desk, LETTER))
+    fields["texte_1"] = WRITTEN
+
+    html = desk.client.post(
+        f"{base(desk)}/lettre/adapter",
+        data={**fields, "consentement": "1"},
+        headers=HTMX,
+    ).text
+
+    adapted_fields = form_of(html)
+    assert adapted_fields["texte_1"] == WRITTEN
+    assert (
+        adapted_fields["texte_2"] == WHY_YOU
+    )  # the proposed « pourquoi vous » still comes in
+    assert adapted_fields["adapte_0"] == ADAPTED_OPENING
+
+
 def test_the_letter_validated_paragraph_by_paragraph_is_kept_with_its_origins(
     desk: Desk, migrated_engine: Engine
 ) -> None:

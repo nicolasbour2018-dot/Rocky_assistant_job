@@ -335,6 +335,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   *Résolu en C7 : `job_decisions` en ajout seul, changements et annulations journalisés ; prototype supprimé.*
 - **(B4 → C7, VPS)** Une touche frappée pendant l'arrivée d'un fragment HTMX se perd : envoyer les panneaux de motifs
   avec la carte, ou sérialiser les requêtes (`hx-sync`), si la latence du VPS le rend sensible.
+  *Résolu en G6 (bloc 0, A8) : `rocky.js` met la touche en attente et la rejoue après `htmx:afterSettle`.*
 - **(B4 → C7)** HTMX fait hériter `hx-swap` et `hx-target` de ses ancêtres : un élément placé dans un conteneur qui
   en déclare un autre doit déclarer les siens (bug « Revenir » trouvé par Nicolas, corrigé en B4). D6 confirmé :
   HTMX retenu par Nicolas, cinq critères tenus.
@@ -548,6 +549,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   offre (auteur `rule`) ou la sortir de la file, si la double décision gêne à l'usage.
 - **(C7 → VPS)** Frappes perdues (constat B4 → C7) : toujours ouvert. `hx-sync` n'y répond pas (la touche perdue ne
   déclenche aucune requête) ; parade à juger sur le VPS : panneaux de motifs envoyés avec la carte.
+  *Résolu en G6 (bloc 0, A8), sans attendre le VPS : `tests/system/test_keys.py` (Chromium).*
 - **(C7)** La liste se calcule en mémoire sur toutes les offres du compte (13 ms pour 520) : passer à une requête filtrée
   en SQL si un compte dépasse quelques milliers d'offres.
 - **(C7 → étape à placer, avant le recalibrage)** **Lieux structurés, mesuré le 29/09** : les pistes de Nicolas ont pour
@@ -814,6 +816,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `messages/row.html` employeur cité) ; découpage de `candidatures/dossier_web.py` par étape ; « Envoyée » depuis une
   candidature close mène à une étape sans formulaire (à vérifier en recette) ; `stage_labels` posé deux fois dans
   les globales Jinja. Détail : `docs/decisions/H-revue-code.md`.
+  *« Envoyée » depuis une candidature close : résolu en G6 (bloc 0, A7). Le reste suit les blocs de G6 (décision G6, Q5).*
 - **(Revue H → au fil de l'eau)** Doublons sans bug (verrou consultatif, `_in`, `_editor`, `_png`, `LANGUAGES`…),
   découpage de `messages/sql.py`, normalisations divergentes des noms d'employeur entre `offres` et `messages` : à
   traiter seulement quand une étape touche le fichier. Détail : `docs/decisions/H-revue-code.md`.
@@ -900,6 +903,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `hx-swap="outerHTML"`, hérités par les liens et formulaires boostés des cartes (« Reconnecter la boîte »…) : la page
   suivante s'afficherait dans l'écran, comme au cockpit avant sa correction (recette de G3). Même parade : un élément
   vide qui demande la relecture.
+  *Résolu en G6 (bloc 0, A1) ; même défaut corrigé dans le tiroir 🐾 et dans 📬 Messages, test transversal
+  `tests/system/test_inheritance.py`.*
 - **(G4 → après F2)** Rédaction par l'assistant (réponse à un recruteur, relance) : avec le suivi et les relances, dans
   un plan après F2 (décision G4, Q1).
 - **(G4 → bêta)** Conversations de l'assistant gardées entières (données d'entraînement) : pour un déploiement plus

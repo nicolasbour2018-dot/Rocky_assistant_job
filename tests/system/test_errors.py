@@ -6,6 +6,7 @@ import logging
 
 import pytest
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 
@@ -101,3 +102,67 @@ def test_every_page_has_the_error_area(client: TestClient) -> None:
     page = client.get("/offres").text
 
     assert 'id="erreur"' in page
+
+
+def test_htmx_is_told_to_show_the_4xx_answers(client: TestClient) -> None:
+    """Decision G6 (A4, A9): HTMX 2 drops a 4xx answer unless told otherwise."""
+    page = client.get("/").text
+
+    assert '<meta name="htmx-config"' in page
+    assert '{"code": "4..", "swap": true}' in page
+
+
+@pytest.mark.parametrize(
+    ("path", "status_code", "words"),
+    [
+        (
+            "/offres/999999/motifs/interested",
+            404,
+            "Rocky ne trouve pas ce que ce geste demande",
+        ),
+        ("/offres/999999/actions", 404, "Rocky ne trouve pas ce que ce geste demande"),
+    ],
+    ids=["reasons", "actions"],
+)
+def test_a_refusal_without_words_is_shown_in_the_error_area(
+    client: TestClient, path: str, status_code: int, words: str
+) -> None:
+    """Decision G6, A9: an empty 404 of 🔎 Offres said nothing on screen."""
+    response = client.get(path, headers=HTMX)
+
+    assert response.status_code == status_code
+    assert response.headers["HX-Retarget"] == "#erreur"
+    assert words in response.text
+
+
+def test_a_refused_form_shows_its_reason(client: TestClient) -> None:
+    """The JSON of a form FastAPI refuses becomes words in the error area."""
+    response = client.post("/offres/1/decision", data={}, headers=HTMX)
+
+    assert response.status_code == 422
+    assert response.headers["HX-Retarget"] == "#erreur"
+    assert "Il manque quelque chose à cette demande" in response.text
+
+
+def test_a_refusal_with_its_own_html_is_left_to_its_target(
+    migrated_engine: Engine,
+) -> None:
+    app: FastAPI = make_app(migrated_engine)
+
+    @app.get("/essai-refus")
+    def refused() -> HTMLResponse:
+        return HTMLResponse("<p>Le nom est obligatoire.</p>", status_code=422)
+
+    browser, _ = logged_in(app, migrated_engine)
+    response = browser.get("/essai-refus", headers=HTMX)
+
+    assert response.status_code == 422
+    assert "HX-Retarget" not in response.headers
+    assert response.text == "<p>Le nom est obligatoire.</p>"
+
+
+def test_a_refusal_without_htmx_is_left_as_it_is(client: TestClient) -> None:
+    response = client.get("/offres/999999/actions")
+
+    assert response.status_code == 404
+    assert "HX-Retarget" not in response.headers

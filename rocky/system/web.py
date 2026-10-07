@@ -110,6 +110,8 @@ def create_app(
     # Starlette runs the middleware added last first: the onboarding gate, added before the session
     # middleware, sees the account that the session middleware found.
     app.middleware("http")(profil_web.onboarding_gate(profil_web.MAIN_PATHS))
+    # Decision G6 (A4, A9): a refusal answered to HTMX is always shown.
+    app.middleware("http")(shell.show_refusals)
     install(
         app,
         AuthServices(

@@ -1,7 +1,10 @@
-{# What moved, the mailboxes and the last messages, polled together while a collection runs: the list follows the
-   collection. Every gesture of E4 answers with this fragment, its notice or error on top. #}
-<div id="messages-contenu" class="profile-sections"
-  {% if running %}hx-get="/messages/contenu?vue={{ state.view.value }}" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+{# What moved, the mailboxes and the last messages. Every gesture of E4 answers with this fragment, its notice or error
+   on top. While a collection runs, only the mailboxes are read again (an open panel stays as it is); when it ends,
+   their answer sends « messages-changed » and the whole content is read once (decision G6, A5). The reloads are asked
+   by empty elements: on the container, ``hx-target`` and ``hx-swap`` would be inherited by its boosted links. #}
+<div id="messages-contenu" class="profile-sections">
+  <div hidden hx-get="/messages/contenu?vue={{ state.view.value }}" hx-trigger="messages-changed from:body" hx-target="#messages-contenu" hx-swap="outerHTML"></div>
+  {% if running %}<div hidden hx-get="/messages/boites" hx-trigger="every 3s" hx-target="#boites" hx-swap="outerHTML"></div>{% endif %}
   {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
   {% if notice %}<p class="alert alert-done" role="status">{{ notice }}{% if notice_link %} <a href="{{ notice_link[0] }}">{{ notice_link[1] }}</a>{% endif %}</p>{% endif %}
   {% include "messages/moved.html" %}

@@ -55,7 +55,8 @@
       <h3 class="group-title">Étape : {{ stage_labels[dossier.stage] }}</h3>
       {# One gesture per stage (plan, §3); « Envoyée » leads to its confirmation (D5, Q5), « Entretien » asks its date. #}
       <div class="stage-moves">
-        {% set position = forward.index(dossier.stage) if dossier.stage in forward else -1 %}
+        {# Closed after its sending, an application is opened again after « Envoyée » (decision G6, A7). #}
+        {% set position = forward.index(Stage.SENT) if dossier.journey.closed and dossier.ever_sent else (forward.index(dossier.stage) if dossier.stage in forward else -1) %}
         {% for stage in forward[position + 1:] if stage != Stage.INTERVIEW %}
         <form method="post" action="{{ base }}/etape" hx-boost="false" class="inline-form">
           {{ back() }}<input type="hidden" name="etape" value="{{ stage.value }}">

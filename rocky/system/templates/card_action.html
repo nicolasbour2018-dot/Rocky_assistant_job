@@ -1,6 +1,6 @@
 {# A card's gesture (step F1): a link, or a form when it posts; ``primary`` makes it the screen's main action. #}
 {% if action.post %}
-<form method="post" action="{{ action.url }}" class="card-action">
+<form method="post" action="{{ action.url }}" class="card-action"{% if action.leaves %} hx-boost="false"{% endif %}>
   <button type="submit" class="btn{% if primary %} btn-primary{% endif %}">{{ action.label }}</button>
 </form>
 {% else %}

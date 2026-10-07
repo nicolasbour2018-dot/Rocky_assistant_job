@@ -177,6 +177,47 @@ def test_the_sending_is_linked_to_the_exact_revision_even_an_older_one(
     assert "la lettre a été modifiée depuis" in letter
 
 
+def move(desk: Desk, stage: str) -> str:
+    response = desk.client.post(f"{base(desk)}/etape", data={"etape": stage})
+    assert response.status_code == 303
+    return str(response.headers["location"])
+
+
+def test_an_application_withdrawn_before_its_sending_can_still_be_sent(
+    desk: Desk,
+) -> None:
+    """Decision G6, A7: « Envoyée » from a closed application led to a step « Envoi » without its form."""
+    generate(desk)
+    move(desk, "withdrawn")
+
+    target = move(desk, "sent")
+    fields = sent_form(page(desk, "/envoi"))
+    confirmed = desk.client.post(f"{base(desk)}/envoi", data=fields)
+
+    assert target == f"{base(desk)}/envoi"
+    assert confirmed.headers["location"] == f"{base(desk)}?etape=suivi"
+    _, sendings, _ = stored(desk)
+    assert len(sendings) == 1
+
+
+def test_an_application_closed_after_its_sending_is_opened_again_without_a_second_sending(
+    desk: Desk,
+) -> None:
+    generate(desk)
+    desk.client.post(f"{base(desk)}/envoi", data=sent_form(page(desk, "/envoi")))
+    move(desk, "rejected")
+    follow = page(desk, "?etape=suivi")
+
+    target = move(desk, "sent")
+
+    assert 'name="etape" value="sent"' not in follow  # « Envoyée » is not offered again
+    assert 'name="etape" value="in_discussion"' in follow
+    assert target != f"{base(desk)}/envoi"
+    _, sendings, _ = stored(desk)
+    assert len(sendings) == 1
+    assert "envoyée le" in page(desk, "?etape=envoi")
+
+
 def test_an_altered_file_is_refused_with_its_reason(desk: Desk, tmp_path: Path) -> None:
     generate(desk)
     revisions, _, _ = stored(desk)

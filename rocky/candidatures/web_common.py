@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import Engine
 
+from rocky.candidatures.rules import sent_change
 from rocky.candidatures.sql import SqlApplicationStore
 from rocky.system.auth.model import Account
 
@@ -35,3 +36,10 @@ def owns(request: Request, account: Account, application_id: int) -> bool:
     with engine_of(request).begin() as connection:
         store = SqlApplicationStore(connection)
         return store.locked_application(account.id, application_id) is not None
+
+
+def was_sent(request: Request, application_id: int) -> bool:
+    """A change « Envoyée » is in force: the application was sent, even if it is closed since."""
+    with engine_of(request).connect() as connection:
+        changes = SqlApplicationStore(connection).changes(application_id)
+    return sent_change(changes) is not None

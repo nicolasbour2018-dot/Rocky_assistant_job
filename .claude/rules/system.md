@@ -80,6 +80,14 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décisions : `docs/de
   donne pas de 500 : `shell.show_user_error` la journalise et l'affiche (fragment reciblé sur `#erreur`, page entière
   sinon). Ce filet ne remplace pas le traitement local d'une route, qui garde le formulaire et son contexte.
 - Un nom de fichier téléchargé passe par `shell.content_disposition` (nom hors latin‑1).
+- Aucun refus muet sous HTMX (décision G6, A4, A9) : la coque fait afficher les réponses 4xx (`htmx-config` du
+  gabarit) et `shell.show_refusals` change une réponse 4xx sans HTML (404 vide, JSON d'un formulaire refusé) en
+  message dans `#erreur`, statut gardé. Un refus qui doit laisser un panneau ouvert répond `shell.refusal(...)`.
+- Aucun conteneur ne porte `hx-target` ni `hx-swap` pour se relire lui-même : un élément vide et caché demande la
+  relecture, sinon les liens et formulaires boostés qu'il contient en héritent (décision G6, A1–A3 ;
+  `tests/system/test_inheritance.py`). Un geste qui quitte Rocky (Google) est une `Action(leaves=True)`, non boostée.
+- `rocky.js` met en attente une touche frappée pendant une requête HTMX et la rejoue après `htmx:afterSettle`
+  (décision G6, A8 ; `tests/system/test_keys.py`, Chromium headless).
 
 ## Écrans transverses (`rocky/system/shell.py`, décision `docs/decisions/F1-ecrans-transverses.md`)
 - `system` n'importe aucun module métier : ⚙️ Système se construit par des **registres** remplis à l'installation des

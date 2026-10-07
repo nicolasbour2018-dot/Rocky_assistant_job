@@ -1,6 +1,9 @@
 {# The cards of a cross-cutting screen (step F1). One main action per screen (Q14): the card ``main``, or else the
-   screen's ``empty`` action; every other action is a plain button. #}
-<div id="cards" class="screen-cards"{% if polling %} hx-get="{{ entry.path }}" hx-trigger="every {{ poll_every }}" hx-target="this" hx-swap="outerHTML"{% endif %}>
+   screen's ``empty`` action; every other action is a plain button. The reload during a watch is asked by an empty
+   element: on the container, ``hx-target`` and ``hx-swap`` would be inherited by the boosted gestures of the cards
+   and put the next page inside the screen (decision G6, A1). #}
+<div id="cards" class="screen-cards">
+  {% if polling %}<div hidden hx-get="{{ entry.path }}" hx-trigger="every {{ poll_every }}" hx-target="#cards" hx-swap="outerHTML"></div>{% endif %}
   {% for card in cards %}
   <section class="card screen-card{% if card.problem %} screen-card-problem{% endif %}">
     <h2>{{ card.title }}</h2>

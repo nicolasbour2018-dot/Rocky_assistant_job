@@ -86,6 +86,7 @@ from rocky.system.shell import (
     add_system_cards,
     is_htmx,
     page,
+    refusal,
     wants_fragment,
 )
 
@@ -94,6 +95,7 @@ logger = logging.getLogger(__name__)
 TEMPLATES = Path(__file__).parent / "templates"
 PAGE = "messages/page.html"
 CONTENT = "messages/content.html"
+MAILBOXES = "messages/mailboxes.html"
 CORRECT_PANEL = "messages/correct_panel.html"
 CREATE_PANEL = "messages/create_panel.html"
 APPLICATION_MESSAGES = "messages/application_messages.html"
@@ -175,8 +177,12 @@ def install(app: FastAPI) -> None:
 
 # ⚙️ Système (decision F1, Q11): the mailboxes and what the alerts gave over the last days.
 ALERT_DAYS = 7
-CONNECT = Action("Connecter une boîte Gmail", "/messages/gmail/connecter", post=True)
-RECONNECT = Action("Reconnecter la boîte", "/messages/gmail/connecter", post=True)
+CONNECT = Action(
+    "Connecter une boîte Gmail", "/messages/gmail/connecter", post=True, leaves=True
+)
+RECONNECT = Action(
+    "Reconnecter la boîte", "/messages/gmail/connecter", post=True, leaves=True
+)
 COLLECT_FROM_SYSTEM = Action(
     "Relever maintenant", "/messages/relever?retour=systeme", post=True
 )
@@ -378,6 +384,20 @@ def content_fragment(
     )
 
 
+@router.get("/boites", response_class=HTMLResponse)
+def mailboxes_fragment(request: Request, account: CurrentAccount) -> Response:
+    """The mailboxes, read again while a collection runs; at its end, the whole content is read once
+    (decision G6, A5)."""
+    if not wants_fragment(request):
+        return RedirectResponse("/messages", status_code=303)
+    context = _context(request, account.id, fragment=True)
+    templates: Jinja2Templates = request.app.state.templates
+    response = templates.TemplateResponse(request, MAILBOXES, context)
+    if not context["running"]:
+        response.headers["HX-Trigger"] = "messages-changed"
+    return response
+
+
 @router.post("/relever", response_class=HTMLResponse)
 def collect_now(
     request: Request, account: CurrentAccount, retour: str = ""
@@ -388,8 +408,8 @@ def collect_now(
     name = _task_name(account.id)
     if service.configured and name not in scheduler.pending():
         scheduler.submit(name, lambda: _collect_quietly(service, account.id))
-    if not is_htmx(request):
-        # ⚙️ Système asks with a fixed value, never a URL.
+    if not wants_fragment(request):
+        # ⚙️ Système asks with a fixed value, never a URL; its boosted form wants the next page (decision G6, A3).
         back = "/systeme" if retour == "systeme" else "/messages"
         return RedirectResponse(back, status_code=303)
     templates: Jinja2Templates = request.app.state.templates
@@ -761,6 +781,9 @@ def _content(
         if status_code == 200:
             return RedirectResponse("/messages", status_code=303)
         return _page(request, account_id, status_code=status_code, **extra)
+    if status_code >= 400:
+        # The open panel stays as it is; the refusal shows in the error area (decision G6, A4).
+        return refusal(request, extra["error"], status_code=status_code)
     templates: Jinja2Templates = request.app.state.templates
     return templates.TemplateResponse(
         request,

@@ -219,6 +219,17 @@ def with_form(
     return tuple(kept)
 
 
+def written_over(rows: Sequence[LetterRow], form: Mapping[str, str]) -> dict[str, str]:
+    """What the user wrote of their own in ``form`` (the header, the paragraphs written over): what « Adapter à
+    l'annonce » keeps of a letter being written (decision G6, A6). The other paragraphs take the proposed text."""
+    kept = {key: form[key] for key in ("objet", "destinataire") if key in form}
+    for row in with_form(rows, form):
+        if row.mine and row.text == row.mine:
+            kept[f"texte_{row.index}"] = row.text
+            kept[f"mien_{row.index}"] = row.mine
+    return kept
+
+
 SWITCHES = (ORIGINAL, ADAPTED, MINE)
 
 

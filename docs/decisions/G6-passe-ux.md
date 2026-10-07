@@ -91,7 +91,18 @@ Dette du §8 adressée à G6 : calculs dans les gabarits (`kit.html`, `offer_bod
 
 ## Décisions techniques
 
-Complétées bloc par bloc.
+### Bloc 0 — défauts A1–A9 (07/10)
+
+| Défaut | Décision | Test (échouait avant) |
+|---|---|---|
+| A1 | `cards.html` : la relecture pendant une veille est demandée par un élément vide et caché (`hx-target="#cards"`), la parade du cockpit | `tests/system/test_inheritance.py` (toutes les pages de la navigation, au repos et pendant une veille et un relevé) |
+| A2 | Tiroir : la lecture à l'ouverture passe par un enfant caché (`toggle[newState=='open'] from:#rocky-drawer`) ; le tiroir ne déclare plus de cible | `test_the_drawer_lends_no_target_to_the_links_it_shows` |
+| A3 | `Action.leaves` (geste qui quitte Rocky) : formulaire non boosté pour « Connecter / Reconnecter une boîte Gmail » (cartes de Système, cockpit) ; `collect_now` répond la redirection à un formulaire boosté (`wants_fragment`) | `test_connecting_a_mailbox_leaves_rocky_without_boost`, `test_collecting_from_system_by_a_boosted_form_comes_back_to_system` |
+| A4, A9 | Garantie centrale : `htmx-config` du gabarit fait afficher les réponses 4xx ; `shell.show_refusals` (intergiciel) change une réponse 4xx sans HTML (404 vide, JSON de FastAPI) adressée à HTMX en message dans `#erreur`, statut gardé ; `shell.refusal` pour un refus qui laisse le panneau ouvert (Messages). Les fragments HTML renvoyés en 4xx (Profil, lettre, import), muets jusqu'ici, s'affichent dans leur cible | `tests/system/test_errors.py` (offres, formulaire refusé, HTML gardé, sans HTMX), `test_a_gesture_refused_says_why` |
+| A5 | Messages : pendant un relevé, seules les boîtes se relisent (`GET /messages/boites`, toutes les 3 s) ; à la fin, leur réponse émet `messages-changed` et le contenu se relit une fois. Révèle aussi que les onglets de Messages héritaient de `hx-swap="outerHTML"` pendant un relevé | `test_while_a_collection_runs_only_the_mailboxes_are_read_again` |
+| A6 | « Valider cette lettre » refusée rend le formulaire tel que l'utilisateur l'a laissé ; « Adapter à l'annonce » emporte la lettre en cours (`hx-include`) et garde les paragraphes réécrits (`letter_view.written_over`), les autres prenant le texte proposé | `test_a_refused_validation_keeps_what_was_written`, `test_adapting_keeps_the_paragraphs_written_over` |
+| A7 | Une candidature close jamais envoyée montre le formulaire de confirmation ; une candidature close déjà envoyée (`ApplicationFile.ever_sent`, `web_common.was_sent`, règle `sent_change`) est rouverte sans second envoi, et « Envoyée » ne lui est plus proposée dans le Suivi | `test_an_application_withdrawn_before_its_sending_can_still_be_sent`, `test_an_application_closed_after_its_sending_is_opened_again_without_a_second_sending` |
+| A8 | `rocky.js` : une touche frappée pendant une requête HTMX attend et se rejoue après `htmx:afterSettle` (ou quand la réponse ne remplace rien, échoue ou expire) ; abandonnée après une navigation boostée | `tests/system/test_keys.py` : Chromium headless, page servie par le routage du navigateur, réponse retenue pendant la frappe de `i`, `1`, `Entrée` |
 
 ## Lexique
 
@@ -99,8 +110,18 @@ Arrêté à la recette de l'artifact.
 
 ## Essais et mesures
 
-Complétés bloc par bloc.
+| Bloc | Vérification globale (`docker compose run --rm --build check`) | GitHub |
+|---|---|---|
+| 0 | 1 848 tests, verte : 122,7 s de pytest, 2 min 13 au total (charge moyenne 3 à 12) ; garde-fou 34 sur 34 | voir le passage de la PR |
+
+Bloc 0 : A3 (redirection vers Google) n'a pas été essayé dans un vrai navigateur : aucun client Google n'est
+configuré sur l'instance d'essai ; il est couvert par les tests HTTP (formulaire non boosté, redirection 303).
 
 ## Recette
 
-À venir : artifact (avant le bloc 1), application (après le bloc 7).
+Artifact de la recette initiale (prototype cliquable, privé) : https://claude.ai/artifact/9982upNV24d21qd7Puk18N,
+publié le 07/10 ; commentaires de Nicolas à reprendre ici avant le bloc 1. Point soumis à Nicolas dans l'artifact :
+en Tri, panneau fermé, aucun bouton principal (Q10) alors que le critère 2 en demande un par état (exception
+proposée).
+
+À venir : recette dans l'application (après le bloc 7).

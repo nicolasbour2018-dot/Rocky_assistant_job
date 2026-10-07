@@ -125,7 +125,8 @@
 <section id="envoi" class="dossier-step" aria-label="Envoi de la candidature">
   <h2 class="visually-hidden">Envoi</h2>
   {% if send_error %}<p class="alert alert-error" role="alert">{{ send_error }}</p>{% endif %}
-  {% if dossier.journey.sent %}
+  {# An application closed after its sending tells it; one closed before it can still be sent (decision G6, A7). #}
+  {% if dossier.journey.sent or dossier.ever_sent %}
   {% set sent = send.sent %}
   <p class="line-good">✅ {{ stage_labels[dossier.stage] }}{% if sent %} : envoyée le {{ sent.on.strftime("%d/%m/%Y") }}{% if sent.linked %} via {{ sent.channel }}{% endif %}{% endif %}.
     <a href="{{ base }}?etape={{ Step.FOLLOW.value }}">Voir le suivi →</a></p>
@@ -144,7 +145,7 @@
   </details>
   {% endif %}
   {{ message_block() }}
-  {% elif dossier.journey.current == Step.SEND %}
+  {% elif dossier.journey.current == Step.SEND or dossier.journey.closed %}
   <p class="muted">Rocky ne postule jamais à ta place : tu déposes ta candidature toi-même, avec les documents de Rocky.</p>
   {# DORMANT: the report of the workstation; nothing is prefilled while the prefilling is off. #}
   {% if send.prefill %}

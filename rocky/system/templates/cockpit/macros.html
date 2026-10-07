@@ -5,7 +5,7 @@
 {% if action.panel -%}
 <button type="button" class="{{ classes }}" hx-get="{{ action.url }}" hx-target="#hero-gestures" hx-swap="innerHTML">{{ action.label }}</button>
 {%- elif action.post -%}
-<form method="post" action="{{ action.url }}" class="inline-form"><button type="submit" class="{{ classes }}">{{ action.label }}</button></form>
+<form method="post" action="{{ action.url }}" class="inline-form"{% if action.leaves %} hx-boost="false"{% endif %}><button type="submit" class="{{ classes }}">{{ action.label }}</button></form>
 {%- else -%}
 <a class="{{ classes }}" href="{{ action.url }}">{{ action.label }}</a>
 {%- endif %}

@@ -47,6 +47,7 @@ from rocky.candidatures.letter_view import (
     read_letter,
     read_message,
     read_switch,
+    written_over,
 )
 from rocky.candidatures.model import (
     BEFORE_SENDING,
@@ -232,6 +233,8 @@ class ApplicationFile:
     changes: tuple[Change, ...] = ()
     revisions: tuple[Revision, ...] = ()
     sendings: tuple[Sending, ...] = ()
+    # A change « Envoyée » is in force: sent, even if closed since (decision G6, A7).
+    ever_sent: bool = False
     prefills: tuple[Prefill, ...] = ()  # DORMANT: forms prefilled by the workstation
     summary: Summary | None = None
     interest: tuple[tuple[str, ...], str | None] | None = (
@@ -316,6 +319,7 @@ def _dossier(
         messages=messages,
         sent_at=sent.changed_at if sent is not None and sending is None else None,
         sent_letter_id=sent_letter_id,
+        ever_sent=sent is not None,
         changes=every_change,
         revisions=revisions,
         sendings=sendings,
@@ -913,16 +917,17 @@ def _to_step(application_id: int, step: Step) -> Response:
 
 @router.post("/{application_id}/lettre/adapter", response_class=HTMLResponse)
 def adapt_letter(
-    request: Request,
-    account: CurrentAccount,
-    application_id: int,
-    consentement: Annotated[str, Form()] = "",
+    request: Request, account: CurrentAccount, application_id: int, form: FormFields
 ) -> Response:
-    """« Adapter à l'annonce » (Q7, Q14, Q15): one call to the model after the user's consent; nothing is stored."""
+    """« Adapter à l'annonce » (Q7, Q14, Q15): one call to the model after the user's consent; nothing is stored.
+    The letter being written comes with the request: what the user wrote over stays (decision G6, A6)."""
     found = _dossier(request, account, application_id)
     if found is None:
         return Response(status_code=404)
     language = found.language
+    fields = {key: value for key, value in form.multi_items() if isinstance(value, str)}
+    letter = _letter(request, account, found, language)
+    kept = written_over(letter.view.rows, fields)
 
     def again(
         letter_error: str | None = None, adaptation: Adaptation | None = None
@@ -933,14 +938,15 @@ def adapt_letter(
             application_id,
             letter_error=letter_error,
             adaptation=adaptation,
+            editing=bool(kept),
+            submitted=kept or None,
             step=Step.LETTER,
         )
 
-    if not consentement:
+    if not fields.get("consentement"):
         return again(
             letter_error="Coche l'accord d'envoi pour que Rocky propose une adaptation."
         )
-    letter = _letter(request, account, found, language)
     if letter.view.refusal is not None:
         return again(letter_error=letter.view.refusal)
     try:
@@ -961,12 +967,10 @@ def validate(
     language = found.language
     letter = _letter(request, account, found, language)
     generic = letter.view.generic
+    fields = {key: value for key, value in form.multi_items() if isinstance(value, str)}
     try:
         if generic is None:
             raise InvalidChangeError(letter.view.refusal or "Aucune lettre générique.")
-        fields = {
-            key: value for key, value in form.multi_items() if isinstance(value, str)
-        }
         new = read_letter(
             fields,
             language=language,
@@ -985,12 +989,17 @@ def validate(
                 now=now_of(request),
             )
     except InvalidChangeError as error:
+        # The letter comes back as the user left it (decision G6, A6).
         return _dossier_page(
             request,
             account,
             application_id,
             editing=True,
             letter_error=str(error),
+            adaptation=None
+            if generic is None
+            else adaptation_from_form(fields, generic),
+            submitted=fields,
             step=Step.LETTER,
         )
     return _to_step(application_id, Step.LETTER)

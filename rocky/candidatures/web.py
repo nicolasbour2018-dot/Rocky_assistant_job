@@ -56,6 +56,7 @@ from rocky.candidatures.web_common import (
     now_of,
     owns,
     render_fragment,
+    was_sent,
 )
 from rocky.offres import api as offres_api
 from rocky.offres.decisions import (
@@ -298,8 +299,9 @@ def move(
     if etape not in Stage or not owns(request, account, application_id):
         return Response(status_code=404)
     stage = Stage(etape)
-    if stage is Stage.SENT:
-        # No sending without its date, channel and documents (decision D5, Q5): the confirmation form.
+    if stage is Stage.SENT and not was_sent(request, application_id):
+        # No sending without its date, channel and documents (decision D5, Q5): the confirmation form. An application
+        # sent then closed is opened again without a second sending (decision G6, A7).
         target = dossier_web.CONFIRM_URL.format(application_id)
         if wants_fragment(request):
             return Response(status_code=200, headers={"HX-Redirect": target})
