@@ -84,13 +84,13 @@ def after_failed_login(previous_failures: int, now: datetime) -> LoginFailure:
     return LoginFailure(failures=failures, locked_until=locked_until)
 
 
-def safe_next_path(value: str | None) -> str:
-    """Local path to go back to after login; anything else falls back to the home page."""
+def safe_next_path(value: str | None, default: str = "/") -> str:
+    """Local path to go back to (after login, « Revenir »); anything else falls back to ``default``."""
     if not value or not value.startswith("/") or value.startswith("//"):
-        return "/"
+        return default
     if "\\" in value or any(ord(char) < 32 for char in value):
-        return "/"
+        return default
     parts = urlsplit(value)
     if parts.scheme or parts.netloc:
-        return "/"
+        return default
     return value

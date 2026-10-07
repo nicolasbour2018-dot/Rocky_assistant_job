@@ -11,6 +11,7 @@ from sqlalchemy import Engine
 
 from rocky.profil.rules import make_project
 from rocky.profil.sql import SqlProfileStore
+from rocky.profil.translation_web import back_to
 from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.sql import SqlAuthStore
 from tests.profil.test_translation import EchoModel
@@ -45,6 +46,22 @@ def client(app: FastAPI, migrated_engine: Engine) -> TestClient:
             make_project(name_fr="Tri des messages", stack="Python\nBase vectorielle")
         )
     return client
+
+
+@pytest.mark.parametrize(
+    ("retour", "expected"),
+    [
+        ("/candidatures/3?etape=cv", "/candidatures/3?etape=cv"),
+        ("/profil/cv-anglais", "/profil/cv-anglais"),
+        ("/\\evil.example", "/profil/kit"),
+        ("//evil.example", "/profil/kit"),
+        ("https://evil.example", "/profil/kit"),
+        ("", "/profil/kit"),
+    ],
+)
+def test_revenir_only_leads_to_a_page_of_rocky(retour: str, expected: str) -> None:
+    """Step H5: « /\\evil.example » is « //evil.example » for a browser."""
+    assert back_to(retour) == expected
 
 
 def test_the_screen_lists_what_has_no_english_and_asks_consent(

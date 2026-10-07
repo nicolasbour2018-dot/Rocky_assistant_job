@@ -44,6 +44,7 @@ from rocky.profil.translation import (
 )
 from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.model import Account
+from rocky.system.auth.rules import safe_next_path
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import paris_day
 from rocky.system.config import CallType
@@ -75,10 +76,8 @@ def html_id(key: str) -> str:
 
 
 def back_to(value: str) -> str:
-    """Where « Revenir » leads: a path of Rocky only (never another site)."""
-    return (
-        value if value.startswith("/") and not value.startswith("//") else "/profil/kit"
-    )
+    """Where « Revenir » leads: a path of Rocky only (never another site, step H5)."""
+    return safe_next_path(value, default="/profil/kit")
 
 
 def _screen(
