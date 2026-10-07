@@ -7,8 +7,9 @@ Critère de sortie (fixé au grill, Q26) :
 
 1. **Défauts** : A1–A9 (ci-dessous) ont chacun un test qui échouait avant ; un test transversal vérifie qu'aucun
    geste boosté n'hérite d'une cible, sur toutes les pages ;
-2. **un bouton principal**, exactement, par écran et par état (vide, normal, problème) : Offres (Tri, Liste),
-   Messages, chaque étape du dossier, chaque sous-page du Profil, Bilan, Système ;
+2. **un bouton principal**, exactement, par écran et par état (vide, normal, problème) : Offres (Explorer, Mode
+   focus), Messages, chaque étape du dossier, chaque section du Profil, Bilan, Système ; **seule exception** : les
+   trois gestes de décision sur une offre ont le même poids, sans bouton principal (R7) ;
 3. **parcours chiffrés** (tests HTTP et essai Chromium) : « À préparer » → « Envoyée » en **5 clics au plus** sans
    Gemini ; une décision au clavier sans frappe perdue (`i`, `1`, `Entrée` sans pause) ; relance due en 2 clics et
    dossier depuis le cockpit en 3 clics toujours tenus ;
@@ -133,9 +134,15 @@ publié le 07/10 ; commentaires de Nicolas à reprendre ici avant le bloc 1.
 | R5 | ⚙️ Système | La version de Claude entière : Codex n'a pas la profondeur attendue. |
 | R6 | 📝 Candidatures | Les onglets de Claude (À faire, À préparer, En préparation, Prêtes à envoyer, Envoyées, Closes) dans la présentation de Codex (tableau, dossier en panneaux numérotés, aperçu en document). | Point soumis à Nicolas dans l'artifact :
 
-Version 2 de l'artifact publiée le 07/10 à la même adresse (présentation de Codex, profondeur de Claude). Points
-soumis à Nicolas : « Ça m'intéresse » en bouton principal (Codex) contre Q10 (trois décisions de même poids) ; les
-lignes « à trancher » du lexique.
+Version 2 de l'artifact publiée le 07/10 à la même adresse (présentation de Codex, profondeur de Claude).
+
+| # | Point soumis | Décision de Nicolas (07/10) |
+|---|---|---|
+| R7 | « Ça m'intéresse » en bouton principal (Codex) ou trois décisions de même poids (Q10) | **Même poids, aucun bouton principal** : rien ne doit influencer le choix. Exception écrite au critère 2. |
+| R8 | Lignes « à trancher » du lexique | On garde les premières versions : **« Offre »** (étape, catégorie de message), **« dossier »** (à côté de « candidature »), **« Juste »**. |
+
+Version 3 publiée avec R7 et R8. Le lexique de l'artifact (onglet « Lexique ») est celui que le bloc 1 applique et
+que le test du critère 5 garde.
 en Tri, panneau fermé, aucun bouton principal (Q10) alors que le critère 2 en demande un par état (exception
 proposée).
 
