@@ -195,7 +195,7 @@ tableau et la section 8. Règles de travail en parallèle : même décision.
 | H2. Un seul jour de Paris | *Direct.* `paris_day`, `utc_now`, heure de Paris : une définition chacun dans `system`, utilisée partout (import, veille, filtre `age`, envois) ; horloge ignorée par `import_profile` | Après G2 ; avant le code de G3 | À 00 h 30 heure de Paris, même jour partout (test) ; vérification verte | ✅ (`system/clock.py` ; `import_today` retiré : une seule horloge) |
 | H3. Veille, Gmail et alertes | *Grill me court (marge du retard de veille, eFinancialCareers), puis direct.* Comptes des alertes reportées, raisons formatées depuis les constantes, `AccessLostError` pendant la collecte, paquet corrompu journalisé, repli « carte sans lien » | Avant le code de G3 | Décisions consignées ; un test par point ; versions changées si besoin ; vérification verte | ✅ (retard après 25 h ; eFinancialCareers dans la requête des alertes ; carte sans lien à une adresse Gmail propre ; comptes des reports : constat sans objet) |
 | H4. API publique des modules | *Mode plan.* Fonctions publiques d'`offres/web.py` et `candidatures/web.py` (et `profil.web.stored_profile`) déplacées dans `<module>/api.py`, sans nouvelle abstraction ; fabrique unique de `MessagesService` ; aides de `admin.py` ; règles d'agent à jour ; test d'architecture si Nicolas le veut | Après H1 ; avant G4 | Aucun module n'importe le `web.py` d'un autre ; vérification verte | ✅ (`api.py` dans `offres`, `candidatures`, `profil` ; aides d'écran du profil en liste fermée ; `messages_service` ; `tests/system/test_architecture.py`) |
-| H5. Petites dettes et code mort | *Direct.* Code mort, idempotence de « Pas de lettre », recalcul réveillé pour rien, routes « une offre » qui lisent la liste, doublon de formatage des sources, redirection `back_to`, noms, docstrings et textes | Avant le code de G6 | Chaque point traité ou noté en §8 ; vérification verte | 🔄 |
+| H5. Petites dettes et code mort | *Direct.* Code mort, idempotence de « Pas de lettre », recalcul réveillé pour rien, routes « une offre » qui lisent la liste, doublon de formatage des sources, redirection `back_to`, noms, docstrings et textes | Avant le code de G6 | Chaque point traité ou noté en §8 ; vérification verte | ✅ (`Report.since` garde `changed_at` ; « (s) » retirés des écrans, gardés par `rocky-admin` ; durée de la vérification à arbitrer, §8) |
 
 ## 5. Hors refonte (plus tard)
 
@@ -912,6 +912,11 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   au-delà de la cible de G1 (1 min 40) ; en local, 77,5 s (73,6 s en G3). Les tests de G4 les plus lents (six questions
   par HTTP) prennent 2,5 s : l'écart vient surtout du runner, mais la marge est épuisée. Mesurer au repos et, si besoin,
   alléger les tests web les plus lents (CV, envois).
+  Relevé de H5 (1 830 tests ; relevé seulement, décision de Nicolas) : GitHub, pytest **110,6 s** (job complet 2 min 57,
+  passage `37592356165`, PR #41) : **second passage d'affilée au-dessus des 100 s** après G4, la règle du constat
+  « H2 → suivi de la vérification » s'applique (Nicolas arbitre : revoir la vérification ou relever la limite). Poste :
+  pas de mesure au repos possible pendant l'étape (autre application chargeant le poste) ; pytest 189 s (charge 15 à 22)
+  puis 133 s et **2 min 20 au total** (charge 7 à 14), au-dessus de la limite locale des 2 min sous charge.
 - **(G4 → G7 ou plus tard)** Ton de l'assistant : travailler ses consignes (`rocky/system/assistant/model.py`,
   `INSTRUCTIONS`) pour des réponses plus chaleureuses et agréables, sans perdre les faits cités (retour de recette de
   Nicolas, 07/10). Toute nouvelle consigne s'éprouve sur les questions de référence de la décision G4, à deux
