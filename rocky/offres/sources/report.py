@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 
 from rocky.offres.sources.model import SOURCE_LABELS
 from rocky.offres.sources.usecases import (
@@ -58,12 +58,9 @@ def report_lines(
             lines.append(
                 "  lieu non filtré par cette source : une requête par intitulé"
             )
-        # One unknown place skips a query per job title: the reason is told once, with its count.
-        reasons = Counter(skipped.reason for skipped in outcome.skipped)
         lines.extend(
-            f"  requête{'s' if count > 1 else ''} sautée{'s' if count > 1 else ''}"
-            f"{f' ({count})' if count > 1 else ''} : {reason}"
-            for reason, count in reasons.items()
+            f"  {line}"
+            for line in skipped_queries(skipped.reason for skipped in outcome.skipped)
         )
         if detail and outcome.source in detail.stopped:
             lines.append(f"  détail arrêté : {detail.stopped[outcome.source]}")
@@ -75,7 +72,22 @@ def _headline(outcome: SourceOutcome, count: int, incomplete: int) -> str:
     if outcome.status in {Outcome.OK, Outcome.REFUSED, Outcome.FAILED} and (
         count or outcome.status is Outcome.OK
     ):
-        headline += f" · {count} offre{'s' if count > 1 else ''}"
-        if incomplete:
-            headline += f" dont {incomplete} incomplète{'s' if incomplete > 1 else ''}"
+        headline += f" · {offers_found(count, incomplete)}"
     return headline
+
+
+def offers_found(count: int, incomplete: int) -> str:
+    """« 12 offres dont 3 incomplètes » (also a line of ⚙️ Système)."""
+    found = f"{count} offre{'s' if count > 1 else ''}"
+    if incomplete:
+        found += f" dont {incomplete} incomplète{'s' if incomplete > 1 else ''}"
+    return found
+
+
+def skipped_queries(reasons: Iterable[str]) -> list[str]:
+    """One line per reason of the skipped queries, with its count: one unknown place skips a query per job title."""
+    return [
+        f"requête{'s' if count > 1 else ''} sautée{'s' if count > 1 else ''}"
+        f"{f' ({count})' if count > 1 else ''} : {reason}"
+        for reason, count in Counter(reasons).items()
+    ]
