@@ -29,6 +29,7 @@ from rocky.offres.decisions import (
     REASON_QUESTIONS,
     REASONS,
     Decision,
+    DecisionRow,
     DecisionValue,
     InvalidDecisionError,
     effective_decisions,
@@ -219,30 +220,13 @@ class Screen:
 
     def card(self, offer_id: int, track_id: int | None = None) -> OfferCard | None:
         """The card of an offer of the account; None for an unknown offer or one of another account."""
-        with self.engine.begin() as connection:
-            store = SqlStore(connection)
-            stored = store.offer_of(self.account.id, offer_id)
-            score = None if stored is None else store.current_score(offer_id)
-            if stored is None or score is None:
-                return None
-            linked = store.track_ids(offer_id)
-            same = store.same_posting(
-                self.account.id, offer_id, match_key(stored.offer)
-            )
-            summary = stored_summary(store, stored)
-        inputs = scoring_inputs(self.profile)
-        return offer_card(
-            stored,
-            score=score,
-            analysis=analyze(stored.offer, inputs.skills, today=today_of(self.request)),
-            profile=inputs.profile,
-            track_names=self.track_names,
-            linked=linked,
-            same_posting=same,
-            decision=self.decisions.get(offer_id),
-            summary=summary,
-            today=today_of(self.request),
-            track_id=track_id,
+        return _card(
+            self.request,
+            self.account,
+            offer_id,
+            track_id,
+            profile=self.profile,
+            decisions=self.decisions,
         )
 
     def triage_context(self, current: int | None) -> dict[str, object]:
@@ -279,6 +263,46 @@ class Screen:
             status_code=status_code,
             context={**base, **(values or {})},
         )
+
+
+def _card(
+    request: Request,
+    account: Account,
+    offer_id: int,
+    track_id: int | None = None,
+    *,
+    profile: Profile | None = None,
+    decisions: Mapping[int, DecisionRow] | None = None,
+) -> OfferCard | None:
+    """The card of an offer of the account (None for an unknown offer or one of another account), read for that offer
+    only: a route about one offer never reads the list (step H5). ``profile``, ``decisions``: what a ``Screen`` read."""
+    engine: Engine = request.app.state.engine
+    with engine.begin() as connection:
+        store = SqlStore(connection)
+        stored = store.offer_of(account.id, offer_id)
+        score = None if stored is None else store.current_score(offer_id)
+        if stored is None or score is None:
+            return None
+        linked = store.track_ids(offer_id)
+        same = store.same_posting(account.id, offer_id, match_key(stored.offer))
+        summary = stored_summary(store, stored)
+        if decisions is None:
+            decisions = effective_decisions(store.decision_rows(account.id, offer_id))
+    profile = profile_of(request, account) if profile is None else profile
+    inputs = scoring_inputs(profile)
+    return offer_card(
+        stored,
+        score=score,
+        analysis=analyze(stored.offer, inputs.skills, today=today_of(request)),
+        profile=inputs.profile,
+        track_names={track.id: track.name for track in profile.tracks},
+        linked=linked,
+        same_posting=same,
+        decision=decisions.get(offer_id),
+        summary=summary,
+        today=today_of(request),
+        track_id=track_id,
+    )
 
 
 def _decision_of(
@@ -589,15 +613,15 @@ def paste_description(
     piste: Annotated[str, Form()] = "",
 ) -> Response:
     """« Coller la description » (Q5, Q13): the score is computed again at once; the offer stays on screen."""
-    screen = Screen(request, account)
-    with screen.engine.begin() as connection:
+    engine: Engine = request.app.state.engine
+    with engine.begin() as connection:
         stored = SqlStore(connection).offer_of(account.id, offer_id)
     if stored is None:
         return Response(status_code=404)
-    inputs = scoring_inputs(screen.profile)
+    inputs = scoring_inputs(profile_of(request, account))
     error: str | None = None
     try:
-        with screen.engine.begin() as connection:
+        with engine.begin() as connection:
             enrich_offer(
                 SqlStore(connection),
                 stored,
@@ -637,8 +661,8 @@ def open_in_browser(
     piste: Annotated[str, Form()] = "",
 ) -> Response:
     """« Ouvrir dans le navigateur »: the posting in a tab of the workstation; then « Lire la page affichée »."""
-    screen = Screen(request, account)
-    with screen.engine.begin() as connection:
+    engine: Engine = request.app.state.engine
+    with engine.begin() as connection:
         stored = SqlStore(connection).offer_of(account.id, offer_id)
     if stored is None:
         return Response(status_code=404)
@@ -652,11 +676,14 @@ def open_in_browser(
         except WorkstationUnavailableError as error:
             values["reading_error"] = error.reason
     if not wants_fragment(request):
+        screen = Screen(request, account)
         card = screen.card(offer_id, _track(piste))
         filters = ListFilters(track_id=_track(piste))
         return _whole_page(screen, LIST, filters, sheet=card, sheet_extra=values)
-    return screen.render(
-        READING, {"offer_id": offer_id, "context": contexte, "piste": piste, **values}
+    return _fragment(
+        request,
+        READING,
+        {"offer_id": offer_id, "context": contexte, "piste": piste, **values},
     )
 
 
@@ -671,8 +698,8 @@ def read_shown_page(
 ) -> Response:
     """« Lire la page affichée »: the page shown in the tab completes the offer (``enrich_offer_from_page``), whose
     score is computed again at once; the offer stays on screen with what the reading gave."""
-    screen = Screen(request, account)
-    with screen.engine.begin() as connection:
+    engine: Engine = request.app.state.engine
+    with engine.begin() as connection:
         stored = SqlStore(connection).offer_of(account.id, offer_id)
     if stored is None:
         return Response(status_code=404)
@@ -682,13 +709,13 @@ def read_shown_page(
     except WorkstationUnavailableError as error:
         message = ("error", error.reason)
     else:
-        with screen.engine.begin() as connection:
+        with engine.begin() as connection:
             reading = enrich_offer_from_page(
                 SqlStore(connection),
                 stored,
                 shown.url,
                 shown.html,
-                inputs=scoring_inputs(screen.profile),
+                inputs=scoring_inputs(profile_of(request, account)),
                 now=_now(request),
                 today=today_of(request),
             )
@@ -750,25 +777,27 @@ def summary(request: Request, account: CurrentAccount, offer_id: int) -> Respons
 def why(
     request: Request, account: CurrentAccount, offer_id: int, piste: str | None = None
 ) -> Response:
-    screen = Screen(request, account)
-    card = screen.card(offer_id, _track(piste))
+    card = _card(request, account, offer_id, _track(piste))
     if card is None:
         return Response(status_code=404)
-    return screen.render("offres/why.html", {"card": card})
+    return _fragment(request, "offres/why.html", {"card": card})
 
 
 @router.get("/{offer_id}/fiche", response_class=HTMLResponse)
 def sheet(
     request: Request, account: CurrentAccount, offer_id: int, piste: str | None = None
 ) -> Response:
-    screen = Screen(request, account)
-    card = screen.card(offer_id, _track(piste))
-    if card is None:
-        return Response(status_code=404)
     if not wants_fragment(request):
+        screen = Screen(request, account)
+        card = screen.card(offer_id, _track(piste))
+        if card is None:
+            return Response(status_code=404)
         filters = ListFilters(track_id=_track(piste))
         return _whole_page(screen, LIST, filters, sheet=card)
-    return screen.render("offres/sheet.html", {"card": card})
+    card = _card(request, account, offer_id, _track(piste))
+    if card is None:
+        return Response(status_code=404)
+    return _fragment(request, "offres/sheet.html", {"card": card})
 
 
 @router.get("/fiche/fermer", response_class=HTMLResponse)
