@@ -22,7 +22,6 @@ APPLICATION_STARTED = "application_started"
 APPLIED_OUTSIDE = "applied_outside"
 # Keyboard key of "other" in the reasons panel; the other reasons take 1–9 by rank.
 OTHER_KEY = "0"
-MAX_REASON_KEYS = 9
 
 
 class DecisionValue(StrEnum):

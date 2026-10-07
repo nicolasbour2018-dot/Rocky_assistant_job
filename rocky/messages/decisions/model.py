@@ -43,15 +43,6 @@ class Gesture(StrEnum):
     REPLACED = "replaced"  # a later decision about the message proposes something else
 
 
-GESTURE_LABELS = {
-    Gesture.SEEN: "Vu",
-    Gesture.APPLIED: "Appliquée",
-    Gesture.DISMISSED: "Ignorée",
-    Gesture.CANCELLED: "Annulée",
-    Gesture.CORRECTED: "Message corrigé",
-    Gesture.REPLACED: "Remplacée",
-}
-
 # Q7: a rule per sender only gives a category that concerns no application.
 RULE_CATEGORIES = frozenset(
     {Category.RECRUITER_APPROACH, Category.JOB_ALERT, Category.UNRELATED}

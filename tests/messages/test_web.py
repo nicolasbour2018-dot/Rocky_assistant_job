@@ -16,8 +16,8 @@ from sqlalchemy import Engine
 from rocky.messages.classification.model import View
 from rocky.messages.model import AccessLostError, MailboxStatus
 from rocky.messages.oauth import ACCESS_LOST_REASON
-from rocky.messages.service import MessagesService
-from rocky.messages.web import EXPIRED, NOT_CONFIGURED, REFUSED, STATE_COOKIE
+from rocky.messages.service import NOT_CONFIGURED, MessagesService
+from rocky.messages.web import EXPIRED, REFUSED, STATE_COOKIE
 from rocky.system.auth.sql import SqlAuthStore
 from rocky.system.scheduler import Scheduler
 from tests.messages.fakes import (
@@ -109,7 +109,7 @@ def test_without_gmail_settings_the_page_says_what_is_missing(
     refused = client.post("/messages/gmail/connecter")
 
     assert page.status_code == 200
-    assert "Gmail n'est pas configuré" in page.text
+    assert NOT_CONFIGURED.replace("'", "&#39;") in page.text
     assert "Connecter une boîte Gmail" not in page.text
     assert refused.status_code == 400
     assert NOT_CONFIGURED.replace("'", "&#39;") in refused.text

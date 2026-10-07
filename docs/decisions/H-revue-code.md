@@ -252,6 +252,39 @@ Règles d'agent, AGENTS §4 et plan §3 : « ce qu'un module donne aux autres es
 
 **Critère de sortie** : chaque point traité ou noté en §8 avec sa raison ; vérification globale verte.
 
+### Décisions de Nicolas (07/10, avant le code)
+
+| Sujet | Décision |
+|---|---|
+| `Report.since` | **On garde `changed_at`** : le jour (heure de Paris) du premier passage à une étape d'envoi, même horloge que le cockpit (séries, objectif de la semaine, lus dans le journal). La date déclarée `sent_on` n'est pas lue ; seul le commentaire le dit. |
+| Vérification (plan §8, « G4 → H5 ou G6 ») | **Relevé seulement** : pytest local au repos et passages GitHub de l'étape, ajoutés au §8. Si deux passages GitHub d'affilée dépassent 100 s de pytest, Nicolas arbitre ; aucun allègement de tests dans H5. |
+
+*Réalisé (07/10)*, chaque constat revérifié sur `7532a7d` :
+- **Code mort** : `REVISION_LABELS` ne l'est plus (lu par l'assistant de G4). Supprimés : `GESTURE_LABELS`,
+  `platform_label`, `REFERENCE_URL` d'Apec (l'adresse reste dans `docs/procedures/c1-captures/`), et deux noms trouvés par
+  un balayage de tous les noms de premier niveau de `rocky/` : `DEFAULT_GOAL` (`candidatures/progress.py`, doublon de
+  `DEFAULT_WEEKLY_GOAL`) et `REFERENCE_NAME` (`profil/places.py`, dit « gardé avec le détail du score » sans l'être : un
+  changement de référentiel change déjà `RULES_VERSION`). `NEUTRAL_NAME` remplace les deux `"neutre"` écrits en dur ;
+  `MAX_REASON_KEYS` passe dans son seul lecteur, le test. Le balayage ne trouve plus rien.
+- **« Pas de lettre »** : une lettre déjà écartée n'écrit plus rien (double clic : une ligne `none`, un événement).
+- **Recalcul** : une modification qui ne trouve pas son élément (404) ne réveille plus `recalcul` (exception dans la
+  transaction du profil, rien n'est validé). Les autres écritures qui ne touchent pas le score (objectif, photo…) le
+  réveillent encore : sans enjeu, la tâche tourne chaque minute (`RESCORE_EVERY`) et `inputs_hash` évite toute réécriture.
+- **Une offre** : `_card` lit l'offre, sa décision et ses pistes seulement ; fiche (fragment), « Pourquoi ? », collage,
+  « Ouvrir dans le navigateur » et « Lire la page affichée » ne construisent plus `Screen` (test : la lecture de la
+  liste échoue, ces routes répondent). Après un changement, `_after_change` relit la liste, comme l'écran l'exige.
+- **Sources** : `offers_found` et `skipped_queries` (`offres/sources/report.py`) servent `rocky-admin sources` et
+  ⚙️ Système ; sorties inchangées.
+- **`back_to`** : `safe_next_path` (`system/auth/rules.py`), avec un repli donné (`/profil/kit`) ; `/\evil.example` refusé.
+- **Noms** : `EnglishLetterState` / `EnglishCvState`, `is_stale_translation` / `is_stale_revision` ; protocole
+  `_LetterGesture` à la place de `Callable[..., object]` ; types des brouillons du profil à la place de `Any` ;
+  docstring de `send_view.py` ; commentaire de `Report.since` (décision ci-dessus).
+- **Textes** : la preuve « Un employeur où tu as candidaté est reconnu. » est stockée avec les décisions →
+  `CLASSIFY_VERSION = "mail-classify-2026-10-07.1"` (test de l'archive vert, aucun reclassement). « Gmail n'est pas
+  configuré » : une constante (`messages.service.NOT_CONFIGURED`) pour l'écran, son gabarit et `rocky-admin`. Plus de
+  « (s) » dans les **écrans** (lettre et CV anglais, avertissement de traduction, import et gabarit du CV) ; les lignes
+  de `rocky-admin` le gardent toutes, convention de l'outil de diagnostic (une vingtaine de lignes et leurs tests).
+
 ## Hors H : rattaché à une étape existante (plan §8)
 
 - **→ G2** : date limite sans année (`offres/analysis/rules.py:817`) : « avant le 15 janvier » lu le 20 décembre

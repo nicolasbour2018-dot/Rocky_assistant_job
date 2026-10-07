@@ -8,13 +8,16 @@ The watch itself runs in the planner's thread, never in the request: its line is
 from __future__ import annotations
 
 import logging
-from collections import Counter
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import RedirectResponse, Response
 
 from rocky.offres.sources.model import SOURCE_LABELS, SourceCode
-from rocky.offres.sources.report import UNAVAILABLE_HINTS
+from rocky.offres.sources.report import (
+    UNAVAILABLE_HINTS,
+    offers_found,
+    skipped_queries,
+)
 from rocky.offres.sources.usecases import OUTCOME_LABELS, Outcome
 from rocky.offres.watch.model import (
     RUN_STATUS_LABELS,
@@ -309,22 +312,12 @@ def source_line(run: SourceRun) -> str:
     if run.outcome in (Outcome.OK, Outcome.REFUSED, Outcome.FAILED) and (
         run.offers or run.outcome is Outcome.OK
     ):
-        found = f"{run.offers} offre{'s' if run.offers > 1 else ''}"
-        if run.incomplete:
-            found += (
-                f" dont {run.incomplete} incomplète{'s' if run.incomplete > 1 else ''}"
-            )
-        parts.append(found)
+        parts.append(offers_found(run.offers, run.incomplete))
     if run.reason:
         parts.append(run.reason)
     if run.outcome in UNAVAILABLE_HINTS:
         parts.append(UNAVAILABLE_HINTS[run.outcome])
-    reasons = Counter(reason for _, _, reason in run.skipped)
-    parts.extend(
-        f"requête{'s' if count > 1 else ''} sautée{'s' if count > 1 else ''}"
-        f"{f' ({count})' if count > 1 else ''} : {reason}"
-        for reason, count in reasons.items()
-    )
+    parts.extend(skipped_queries(reason for _, _, reason in run.skipped))
     if run.detail_stopped:
         parts.append(f"détail arrêté : {run.detail_stopped}")
     return " · ".join(parts)

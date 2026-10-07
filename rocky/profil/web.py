@@ -62,7 +62,7 @@ from rocky.profil.cv.rendering import (
     neutral_html,
     render_neutral,
 )
-from rocky.profil.cv.template import NEUTRAL_SLOTS, Slots
+from rocky.profil.cv.template import NEUTRAL_NAME, NEUTRAL_SLOTS, Slots
 from rocky.profil.model import (
     CONTRACT_LABELS,
     EXPERIENCE_KIND_LABELS,
@@ -77,18 +77,23 @@ from rocky.profil.model import (
     CvLayout,
     CvTemplateRecord,
     Experience,
+    ExperienceDraft,
     ExperienceKind,
     Language,
+    LanguageDraft,
     LanguageLevel,
     Profile,
     Project,
+    ProjectDraft,
     RemoteMode,
     Skill,
     SkillCategory,
+    SkillDraft,
     SkillLevel,
     StoredPhoto,
     Text,
     Track,
+    TrackDraft,
     TrackStatus,
 )
 from rocky.profil.places import unknown_locations
@@ -741,7 +746,7 @@ def _ids(form: FormData, name: str) -> list[int]:
     ]
 
 
-def _track_from(form: FormData) -> Any:
+def _track_from(form: FormData) -> TrackDraft:
     return make_track(
         name=_text(form, "name"),
         titles=_text(form, "titles"),
@@ -752,6 +757,10 @@ def _track_from(form: FormData) -> Any:
 
 
 type Change = Callable[[ProfileEditor, FormData], bool | int]
+
+
+class _NothingChangedError(Exception):
+    """Raised inside ``_editor``: nothing is committed and the rescoring is not woken up (step H5)."""
 
 
 def _write(
@@ -765,8 +774,10 @@ def _write(
     try:
         with _editor(request, account, writes=True) as editor:
             if change(editor, form) is False:
-                return Response(status_code=404)
+                raise _NothingChangedError
             profile = editor.profile()
+    except _NothingChangedError:
+        return Response(status_code=404)
     except ProfileInputError as error:
         return _refused(
             request, profile_of(request, account), key, editing, form, error
@@ -815,7 +826,7 @@ def track_action(
     )
 
 
-def _skill_from(form: FormData) -> Any:
+def _skill_from(form: FormData) -> SkillDraft:
     return make_skill(
         label_fr=_text(form, "label_fr"),
         label_en=_text(form, "label_en"),
@@ -883,7 +894,7 @@ def delete_skill(
     )
 
 
-def _language_from(form: FormData) -> Any:
+def _language_from(form: FormData) -> LanguageDraft:
     return make_language(code_value=_text(form, "code"), level=_text(form, "level"))
 
 
@@ -927,7 +938,7 @@ def delete_language(
     )
 
 
-def _experience_from(form: FormData) -> Any:
+def _experience_from(form: FormData) -> ExperienceDraft:
     return make_experience(
         kind=_text(form, "kind"),
         title_fr=_text(form, "title_fr"),
@@ -982,7 +993,7 @@ def delete_experience(
     )
 
 
-def _project_from(form: FormData) -> Any:
+def _project_from(form: FormData) -> ProjectDraft:
     return make_project(
         name_fr=_text(form, "name_fr"),
         name_en=_text(form, "name_en"),
@@ -1345,7 +1356,7 @@ def cv_fingerprint(
         photo = profile.photo
         suffix = photo.path.rsplit(".", 1)[-1] if photo else "jpg"
         html = neutral_html(content, with_photo=photo is not None, suffix=suffix)
-        parts: tuple[str, ...] = ("neutre", photo.sha256 if photo else "", html)
+        parts: tuple[str, ...] = (NEUTRAL_NAME, photo.sha256 if photo else "", html)
     else:
         record, files = active
         template = json.loads(files[TEMPLATE_FILE])

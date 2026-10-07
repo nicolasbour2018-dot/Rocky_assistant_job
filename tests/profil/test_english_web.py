@@ -102,7 +102,7 @@ def test_the_english_cv_is_made_from_the_validated_texts(
     model: EchoModel = used_model(app)
     assert "camille.martin@example.org" not in model.prompts[0]
     refused = client.post("/profil/cv-anglais/creer", headers=HTMX).text
-    assert "Il reste 10 texte(s) à valider" in refused
+    assert "Il reste 10 textes à valider" in refused
 
     first, *others = rows
     accept(client, *first)

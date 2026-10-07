@@ -105,6 +105,11 @@ type Recorder = Callable[[JsonModel, int], JsonModel]
 MAIL_CLASSIFICATION = CallType.MAIL_CLASSIFICATION
 SHOWN_MESSAGES = 50
 NEXT_ROUND_REASON = "Classement au prochain passage (toutes les heures)."
+# Said by 📬 Messages and by ``rocky-admin`` alike (step H5).
+NOT_CONFIGURED = (
+    "Gmail n'est pas configuré : il manque le client Google ou la clé de Rocky (ROCKY_SECRET_KEY) ; "
+    "la procédure est dans docs/procedures/e1-gmail/."
+)
 
 
 class GmailNotConfiguredError(Exception):

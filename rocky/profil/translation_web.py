@@ -44,6 +44,7 @@ from rocky.profil.translation import (
 )
 from rocky.profil.usecases import ProfileEditor
 from rocky.system.auth.model import Account
+from rocky.system.auth.rules import safe_next_path
 from rocky.system.auth.web import CurrentAccount
 from rocky.system.clock import paris_day
 from rocky.system.config import CallType
@@ -75,10 +76,8 @@ def html_id(key: str) -> str:
 
 
 def back_to(value: str) -> str:
-    """Where « Revenir » leads: a path of Rocky only (never another site)."""
-    return (
-        value if value.startswith("/") and not value.startswith("//") else "/profil/kit"
-    )
+    """Where « Revenir » leads: a path of Rocky only (never another site, step H5)."""
+    return safe_next_path(value, default="/profil/kit")
 
 
 def _screen(
@@ -269,7 +268,7 @@ def to_review(request: Request, account: Account) -> tuple[str, ...]:
 
 
 @dataclass(frozen=True)
-class EnglishState:
+class EnglishCvState:
     """Where the English version of the account's French template stands."""
 
     french: CvTemplateRecord | None
@@ -285,12 +284,12 @@ class EnglishState:
         return tuple(text for text in self.texts if text.id not in self.validated)
 
 
-def _english_state(request: Request, account: Account) -> EnglishState:
+def _english_state(request: Request, account: Account) -> EnglishCvState:
     with _editor(request, account) as editor:
         french = editor.active_cv_template("fr")
         memory = editor.translation_memory()
     if french is None:
-        return EnglishState(
+        return EnglishCvState(
             None,
             "Ton CV anglais se prépare à partir de ton CV français importé : importe-le d'abord dans Profil & kit.",
         )
@@ -303,13 +302,13 @@ def _english_state(request: Request, account: Account) -> EnglishState:
             if isinstance(error, CvRefusedError)
             else error.reason
         )
-        return EnglishState(french, reason)
+        return EnglishCvState(french, reason)
     validated = {
         text.id: memory[text_sha256(text.text)].translation
         for text in texts
         if text_sha256(text.text) in memory
     }
-    return EnglishState(french, None, texts, validated, files)
+    return EnglishCvState(french, None, texts, validated, files)
 
 
 def _file_store(request: Request) -> FileStore:
@@ -499,7 +498,10 @@ def create_english_cv(request: Request, account: CurrentAccount) -> Response:
         return _english_screen(
             request,
             account,
-            error=f"Il reste {len(state.to_translate)} texte(s) à valider avant de créer ton CV anglais.",
+            error=(
+                f"Il reste {len(state.to_translate)} texte{'s' if len(state.to_translate) > 1 else ''} à valider "
+                "avant de créer ton CV anglais."
+            ),
         )
     files = english_template(state.files, state.validated, state.french.sha256)
     stored = _file_store(request).put_bundle(account.id, TEMPLATES, files)

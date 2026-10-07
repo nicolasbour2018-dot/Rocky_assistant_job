@@ -66,7 +66,7 @@ Complète `AGENTS.md` ; ne répète pas ce qui s'y trouve. Décision : `docs/dec
   **avant** les routes du profil (`/profil/{key}` prendrait `/profil/traduction`).
 - Un texte traduisible a une clé stable (`segments_of`) ; `accept_translation` refuse si le français a changé depuis la
   proposition (empreinte). Rien de non validé n'est stocké ; la mémoire (`translation_memory`) garde chaque validation.
-- « À revoir » se déduit de la mémoire (`is_stale`) : aucune colonne d'état ; un anglais saisi à la main n'est jamais
+- « À revoir » se déduit de la mémoire (`is_stale_translation`) : aucune colonne d'état ; un anglais saisi à la main n'est jamais
   marqué.
 
 ## Écran

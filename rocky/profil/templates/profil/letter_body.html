@@ -97,7 +97,7 @@
   {% endif %}
   <form method="post" action="/profil/lettre/anglais/creer" hx-post="/profil/lettre/anglais/creer" {{ swap | safe }} class="inline-form">
     <button type="submit" class="btn{{ ' btn-primary' if not english.to_translate }}">Créer ma lettre anglaise</button>
-    <span class="muted small">{% if english.to_translate %}{{ english.to_translate | length }} paragraphe(s) encore à valider.{% else %}Tous les paragraphes sont validés.{% endif %}</span>
+    <span class="muted small">{% if english.to_translate %}{% set left = english.to_translate | length %}{{ left }} paragraphe{{ 's' if left > 1 }} encore à valider.{% else %}Tous les paragraphes sont validés.{% endif %}</span>
   </form>
   {% endif %}
   {% endif %}

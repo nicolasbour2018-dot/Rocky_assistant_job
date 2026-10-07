@@ -711,6 +711,33 @@ def test_the_reading_of_another_account_s_offer_is_not_found(
     assert browser(app).opened == [] and browser(app).read == []
 
 
+def test_a_route_about_one_offer_never_reads_the_list(
+    board: Board, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Step H5 (rule of the screen): only the screen that shows the list reads it."""
+
+    def no_list(*_: object) -> None:
+        raise AssertionError("the list was read")
+
+    monkeypatch.setattr(SqlStore, "listed_offers", no_list)
+    offer = board.id("manager")
+    cockpit = {"contexte": "cockpit", "piste": ""}
+
+    with pytest.raises(AssertionError, match="the list was read"):
+        board.client.get("/offres", headers=HTMX)  # the check bites
+    assert board.client.get(f"/offres/{offer}/fiche", headers=HTMX).status_code == 200
+    assert (
+        board.client.get(f"/offres/{offer}/pourquoi", headers=HTMX).status_code == 200
+    )
+    for path, data in (
+        ("navigateur", cockpit),
+        ("navigateur/lire", {**cockpit, "onglet": "onglet-1"}),
+        ("description", {**cockpit, "texte": "Chef de projet data, Python et SQL."}),
+    ):
+        response = board.client.post(f"/offres/{offer}/{path}", data=data, headers=HTMX)
+        assert response.status_code == 200, path
+
+
 def test_the_reading_works_without_javascript(board: Board, app: FastAPI) -> None:
     offer = board.id("manager")
 

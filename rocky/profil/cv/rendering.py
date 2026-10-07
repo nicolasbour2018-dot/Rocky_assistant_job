@@ -19,6 +19,7 @@ from markupsafe import Markup
 
 from rocky.profil.cv.content import CvContent, CvEntry, CvProject, Span
 from rocky.profil.cv.library import font_assets, font_faces
+from rocky.profil.cv.template import NEUTRAL_NAME
 from rocky.system.errors import UserFacingError
 from rocky.system.render import Rendered, render_pdf
 
@@ -236,7 +237,7 @@ def render_neutral(content: CvContent, photo: Photo | None) -> CvPdf:
     return CvPdf(
         pdf=rendered.pdf,
         html_sha256=hashlib.sha256(html.encode()).hexdigest(),
-        template="neutre",
+        template=NEUTRAL_NAME,
         notices=fit_neutral(content)[1],
     )
 

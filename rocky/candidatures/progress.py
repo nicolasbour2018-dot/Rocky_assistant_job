@@ -18,8 +18,6 @@ from rocky.candidatures.rules import standing
 from rocky.system.clock import paris_day
 from rocky.system.periods import week_start
 
-# Q9: the goal of the week, chosen by the user (``profil``), and its bounds.
-DEFAULT_GOAL = 3
 WEEKDAY_LETTERS = ("L", "M", "M", "J", "V")
 
 

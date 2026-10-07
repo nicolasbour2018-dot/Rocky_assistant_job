@@ -995,7 +995,8 @@ def _beyond_slots(template: Mapping[str, Any], content: CvContent) -> list[str]:
     if len(content.projects) > slots.projects:
         return [
             (
-                f"Ton gabarit a {slots.projects} emplacement(s) de projet et ton CV maître en choisit "
+                f"Ton gabarit a {slots.projects} emplacement{'s' if slots.projects > 1 else ''} de projet et "
+                f"ton CV maître en choisit "
                 f"{len(content.projects)} : retires-en de ton CV maître."
             )
         ]

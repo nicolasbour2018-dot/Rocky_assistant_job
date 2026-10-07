@@ -1,6 +1,6 @@
 """What the step « Envoi » of an application shows, and how its forms are read back (decision D5): the revisions to
 send, the form that confirms a sending, what was sent, and what the workstation will fill. No FastAPI here: the
-routes are in ``web.py``.
+routes are in ``dossier_web.py``.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from rocky.candidatures.model import (
     Stage,
 )
 from rocky.candidatures.rules import (
-    is_stale,
+    is_stale_revision,
     latest_revisions,
     proposed_channel,
     revision_filename,
@@ -133,7 +133,7 @@ def send_view(
             filename=revision_filename(
                 revision.kind, identity.full_name, revision.language
             ),
-            stale=current and is_stale(revision, inputs.get(revision.kind)),
+            stale=current and is_stale_revision(revision, inputs.get(revision.kind)),
             sent=revision.id in sent_ids,
         )
 

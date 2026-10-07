@@ -204,9 +204,13 @@ def block_roles(answer: Any, blocks: Sequence[Block]) -> tuple[BlockRole, ...]:
         )
     missing = sorted(known - set(found))
     if missing:
+        blocks_left = (
+            f"{len(missing)} blocs du CV n'ont pas pu être rattachés"
+            if len(missing) > 1
+            else "1 bloc du CV n'a pas pu être rattaché"
+        )
         raise SemanticsError(
-            f"{len(missing)} bloc(s) du CV n'ont pas pu être rattachés à une rubrique : "
-            "Rocky ne peut pas reproduire ce CV à l'identique."
+            f"{blocks_left} à une rubrique : Rocky ne peut pas reproduire ce CV à l'identique."
         )
     return tuple(found[block.id] for block in blocks)
 

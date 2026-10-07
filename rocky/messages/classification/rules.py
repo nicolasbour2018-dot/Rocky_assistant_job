@@ -931,7 +931,7 @@ def _signals(
                 Tier.SIGNAL,
                 "signal.employer",
                 mail.subject_excerpt,
-                "Un employeur candidaté est reconnu.",
+                "Un employeur où tu as candidaté est reconnu.",
             )
         )
     expression = _expression(mail)

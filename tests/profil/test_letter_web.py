@@ -171,7 +171,7 @@ def test_the_english_letter_is_validated_paragraph_by_paragraph(
     assert len(keys) == 4
 
     early = client.post("/profil/lettre/anglais/creer", headers=HTMX).text
-    assert "Il reste 4 paragraphe(s) à valider" in early
+    assert "Il reste 4 paragraphes à valider" in early
     for key, fingerprint, english in zip(keys, prints, englishes, strict=True):
         accepted = client.post(
             "/profil/lettre/anglais/accepter",

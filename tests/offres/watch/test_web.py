@@ -315,3 +315,17 @@ def test_a_profile_change_wakes_the_rescoring_up(
     client.get("/profil")
 
     assert changed == [account_id]
+
+
+def test_a_change_of_nothing_does_not_wake_the_rescoring_up(
+    app: FastAPI, migrated_engine: Engine
+) -> None:
+    """Step H5: an unknown track writes nothing, so nothing is rescored."""
+    client, _ = account(app, migrated_engine)
+    changed: list[int] = []
+    app.state.profile_changed = changed.append
+
+    response = client.post("/profil/pistes/999999", data={**TRACK, "name": "BI"})
+
+    assert response.status_code == 404
+    assert changed == []

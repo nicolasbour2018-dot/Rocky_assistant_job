@@ -471,8 +471,10 @@ def skip_letter(
     deadline: date | None = None,
 ) -> None:
     """« Pas de lettre pour cette candidature » (Q4, Q16): kept, and an application in preparation becomes « Prête à
-    envoyer » with it, in the same transaction."""
+    envoyer » with it, in the same transaction. Already set aside (a double click, step H5): nothing is written."""
     application, current = _open(store, account_id, application_id)
+    if letter_state(store.letters(application.id)) is LetterState.SKIPPED:
+        return
     store.insert_letter(account_id, application.id, None, now)
     _event(store, application, "candidatures.letter_skipped", Author.USER, {})
     if current.stage is Stage.PREPARING:

@@ -125,7 +125,7 @@ class Review:
 
 
 @dataclass(frozen=True)
-class EnglishState:
+class EnglishLetterState:
     segments: tuple[Segment, ...] = ()
     validated: Mapping[str, str] = field(default_factory=dict)  # segment key → English
 
@@ -134,12 +134,14 @@ class EnglishState:
         return tuple(s for s in self.segments if s.key not in self.validated)
 
 
-def _english_state(letters: GenericLetters, editor: ProfileEditor) -> EnglishState:
+def _english_state(
+    letters: GenericLetters, editor: ProfileEditor
+) -> EnglishLetterState:
     if letters.fr is None:
-        return EnglishState()
+        return EnglishLetterState()
     memory = editor.translation_memory()
     segments = letter_segments(letters.fr.letter)
-    return EnglishState(
+    return EnglishLetterState(
         segments,
         {
             s.key: memory[s.source_sha256].translation
@@ -418,7 +420,8 @@ def create_english_letter(request: Request, account: CurrentAccount) -> Response
         if letters.fr is None:
             error = "Importe d'abord ta lettre en français."
         elif state.to_translate:
-            error = f"Il reste {len(state.to_translate)} paragraphe(s) à valider avant de créer ta lettre anglaise."
+            left = len(state.to_translate)
+            error = f"Il reste {left} paragraphe{'s' if left > 1 else ''} à valider avant de créer ta lettre anglaise."
         else:
             editor.save_generic_letter(
                 english_letter(letters.fr.letter, state.validated),
