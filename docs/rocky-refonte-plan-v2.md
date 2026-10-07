@@ -939,3 +939,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(G6 → bêta, Nicolas 07/10)** ⚙️ Système devient en G6 la page d'administration et de monitoring (Q17, Q20) : à la
   bêta, la passer en administrateur seul et la remplacer, pour les autres comptes, par une page Système / Paramètres.
   Sous-page DevOps (déploiement VPS) après F2.
+- **(G6 → G7, Nicolas 07/10)** De la maquette de Codex (`docs/procedures/g6-ux/rocky-g6.html`), G6 ne reprend que la
+  mise en page (décision G6, R9). Pour G7 : couleurs, police (Georgia du logo et des titres), animations d'apparition,
+  phrases d'ambiance (« Et si c'était celle-ci ? », « Du recul, pas de pression », barre « Ton espace pour avancer »),
+  bandeau sombre et cartes qui se retournent du cockpit.

@@ -139,6 +139,7 @@ Version 2 de l'artifact publiée le 07/10 à la même adresse (présentation de 
 | # | Point soumis | Décision de Nicolas (07/10) |
 |---|---|---|
 | R7 | « Ça m'intéresse » en bouton principal (Codex) ou trois décisions de même poids (Q10) | **Même poids, aucun bouton principal** : rien ne doit influencer le choix. Exception écrite au critère 2. |
+| R9 | Ce que G6 reprend de la présentation de Codex | La **mise en page** : coque, panneaux, onglets, fenêtres, cartes d'offres, facettes, mode focus, tableaux, dossier en panneaux numérotés, tuiles et lignes à jauge du Bilan, avec les couleurs actuelles de Rocky. **Restent pour G7** : les couleurs, la police (Georgia du logo et des titres), les animations d'apparition et les phrases d'ambiance (« Et si c'était celle-ci ? », « Du recul, pas de pression », barre « Ton espace pour avancer »). |
 | R8 | Lignes « à trancher » du lexique | On garde les premières versions : **« Offre »** (étape, catégorie de message), **« dossier »** (à côté de « candidature »), **« Juste »**. |
 
 Version 3 publiée avec R7 et R8. Le lexique de l'artifact (onglet « Lexique ») est celui que le bloc 1 applique et
