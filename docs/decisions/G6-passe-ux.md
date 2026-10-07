@@ -10,7 +10,7 @@ Date : 07/10/2026 · Étape : G6 (plan v2) · Préparation : audit UX du code, *
 - **Faits et poussés** : décision et cadrage (`4e7cb29`), bloc 0 défauts A1–A9 (`9e9d899`), recette initiale R1–R10
   (`848feee`, `f92dd56`, `8d6266d`), bloc 1 coque (`ce07296` : attente, `ui.html` notice / waiting / window, fenêtre
   `#fenetre`, lexique et `tests/system/test_lexicon.py`, heures avec l'année). Vérification verte en local et sur
-  GitHub (pytest 128 s, passage `37626432637`, à reporter dans « Essais et mesures »).
+  GitHub (pytest 128 s, passage `37626432637`, reporté dans « Essais et mesures »).
 - **Maquette de référence** (recette initiale close) : artifact https://claude.ai/artifact/9982upNV24d21qd7Puk18N,
   version 4 ; sa source était dans le scratchpad de la session (perdue) : la relire avec l'outil Artifact (`read`).
   Elle fixe la présentation (Codex) et la profondeur (Claude) de chaque écran.
@@ -197,7 +197,7 @@ lettre et continuer ») et les gestes d'IA nommant le modèle suivent le bloc 3,
 | Bloc | Vérification globale (`docker compose run --rm --build check`) | GitHub |
 |---|---|---|
 | 0 | 1 848 tests, verte : 122,7 s de pytest, 2 min 13 au total (charge moyenne 3 à 12) ; garde-fou 34 sur 34 | verte : pytest 114,5 s (passage `37604023405`) |
-| 1 | 1 854 tests, verte : 156 s de pytest (lancée en même temps que d'autres tâches du poste) | voir le passage du bloc 1 |
+| 1 | 1 854 tests, verte : 156 s de pytest (lancée en même temps que d'autres tâches du poste) | verte : pytest 128,1 s (passage `37626432637`) |
 
 Bloc 0 : A3 (redirection vers Google) n'a pas été essayé dans un vrai navigateur : aucun client Google n'est
 configuré sur l'instance d'essai ; il est couvert par les tests HTTP (formulaire non boosté, redirection 303).
