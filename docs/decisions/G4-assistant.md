@@ -134,4 +134,25 @@ questions par jour se relève pour la recette (`ROCKY_ASSISTANT_DAY_LIMIT`).
 
 ## Recette
 
-*(à venir)*
+### Premier passage (07/10)
+
+| Fournisseur | Résultat |
+|---|---|
+| Gemini (`gemini-3.5-flash-lite`) | Les questions de référence répondent, sauf une : « Je ne trouve pas de quoi répondre dans tes données ». Entre 2 100 et 4 100 jetons d'entrée et 58 à 200 de sortie par question, environ 1 s |
+| Mistral (`ministral-8b-2512`) | Clé refusée (HTTP 401), appel inscrit avec sa raison ; compte Mistral à régler (offre gratuite ?). Modèle absent des tarifs : « sans tarif » |
+| OpenAI (`gpt-5.4-mini`) | Toutes les réponses remplacées par « Je ne trouve pas de quoi répondre dans tes données » |
+
+Cause, lue dans les réponses brutes gardées (`assistant_turns.raw_answer`) : le modèle cite les faits **tels que le
+prompt les montre**, entre crochets (`"[cockpit.priorite]"`), et la vérification les comparait à l'identique. Les
+réponses elles-mêmes étaient justes et appuyées sur les bons faits ; la question « ratée » de Gemini était le même cas
+(`"[offre.score.skills]"`). Corrigé : les crochets et espaces autour d'un identifiant cité sont retirés avant la
+comparaison, qui reste exacte (un identifiant inconnu est toujours refusé, Q12) ; la consigne demande l'identifiant
+sans crochets. Tests : `test_an_id_cited_as_shown_in_the_prompt_with_its_brackets_is_known`,
+`test_a_bracketed_id_that_is_not_a_fact_is_still_unknown`.
+
+Retour de Nicolas : les réponses fonctionnent ; leur ton est à travailler (plus chaleureux et agréable), noté au plan
+(§8).
+
+### Second passage
+
+*(à venir : GPT-5.4 mini après la correction, comparaison des réponses et des coûts)*

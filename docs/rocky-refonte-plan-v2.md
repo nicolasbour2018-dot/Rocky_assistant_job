@@ -912,3 +912,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   au-delà de la cible de G1 (1 min 40) ; en local, 77,5 s (73,6 s en G3). Les tests de G4 les plus lents (six questions
   par HTTP) prennent 2,5 s : l'écart vient surtout du runner, mais la marge est épuisée. Mesurer au repos et, si besoin,
   alléger les tests web les plus lents (CV, envois).
+- **(G4 → G7 ou plus tard)** Ton de l'assistant : travailler ses consignes (`rocky/system/assistant/model.py`,
+  `INSTRUCTIONS`) pour des réponses plus chaleureuses et agréables, sans perdre les faits cités (retour de recette de
+  Nicolas, 07/10). Toute nouvelle consigne s'éprouve sur les questions de référence de la décision G4, à deux
+  fournisseurs au moins.
+

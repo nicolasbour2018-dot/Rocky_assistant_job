@@ -128,3 +128,31 @@ def test_an_answer_without_known_facts_is_replaced(raw: object) -> None:
         NO_FACTS_ANSWER,
         (),
     )
+
+
+def test_an_id_cited_as_shown_in_the_prompt_with_its_brackets_is_known() -> None:
+    """Recette of G4: GPT-5.4 mini, and Gemini once, cited « [offre.score] » as the prompt shows it."""
+    answer = checked(
+        {
+            "reponse": "Ton score est de 62.",
+            "faits": ["[offre.score]", " offre.titre "],
+            "sans_reponse": False,
+        },
+        [SCORE, TITLE],
+    )
+
+    assert answer.outcome is AnswerOutcome.ANSWERED
+    assert answer.cited == (SCORE, TITLE)
+
+
+def test_a_bracketed_id_that_is_not_a_fact_is_still_unknown() -> None:
+    answer = checked(
+        {
+            "reponse": "Ton score est de 90.",
+            "faits": ["[offre.salaire]"],
+            "sans_reponse": False,
+        },
+        [SCORE],
+    )
+
+    assert answer.outcome is AnswerOutcome.REJECTED
