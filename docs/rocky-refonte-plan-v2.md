@@ -177,7 +177,7 @@ la vérification allégée plutôt que sa limite relevée ; une passe UX des aut
 | G3. Cockpit | *Grill me avec la skill de design, puis mode plan.* 🏠 Aujourd'hui devient le **Cockpit** (libellé de D12 mis à jour, validé par Nicolas le 05/10) : cartes de métriques, fil défilant de ce que Rocky signale, suggestions d'offres (meilleurs scores pour commencer), veille manuelle ; mécanismes et parcours, sans identité graphique | Depuis le cockpit : une candidature préparée en 3 clics au plus ; delta et graphique (semaines, mois) sur chaque instrument ; objectif, séries et jalons recalculés exactement depuis le journal ; un seul bouton principal par état (nouveau compte, problème, normal, rien à faire) ; recette de Nicolas (décision G3) | ✅ (validé par Nicolas le 07/10 ; miniature de page corrigée à la recette) |
 | G4. Assistant Rocky | *Grill me, puis mode plan.* Le tiroir 🐾 devient un assistant Gemini (révise la décision F1, Q2) : contexte construit par les cas d'usage des modules (offre, candidature, message, profil), par compte et en lecture seule, jamais de SQL écrit par le modèle ; réponses qui citent les faits ; aucun geste à la place de l'utilisateur ; plafonds d'appels communs dans `system` ; place de « À faire ici » face au cockpit | Fixé au grill (décision G4) : questions de référence citées sur les vraies données (2 offre, 2 candidature, 1 message, 2 cockpit) ; plafond et panne avec un message clair ; aucune écriture hors des tables de l'assistant et des appels ; coûts de tous les appels au modèle, globaux et par type ; questions posées à deux fournisseurs au moins ; recette de Nicolas | ✅ (validé par Nicolas le 07/10 ; Gemini et OpenAI, Mistral à la clé refusée ; identifiants cités entre crochets acceptés à la recette) |
 | G5. Profil et CV | *Mode plan.* Blocs projets et gabarit neutre du CV (limites de D2) ; compétences qui ne diffèrent que par la casse ou un espace ; listes des pistes « une valeur par ligne » et aide des mots exclus | CV anglais de Nicolas par le gabarit neutre sur une page, coupes signalées ; un texte de projet qui sort de sa carte dessinée est signalé, CV FR de Nicolas sans débordement validé par lui ; second design fictif rangé pareil par deux réponses du modèle ; « ML Flow » proposé comme alias de « MLFlow » ; aides des pistes justes (décision G5) | ✅ (validé par Nicolas le 06/10 ; lien « Raccourcir » vers le profil ajouté à la recette) |
-| G6. Passe UX des écrans | *Grill me avec la skill de design, puis mode plan.* Offres, Candidatures (parcours du dossier), Messages, Bilan, Profil, Système : mécanismes, boutons, parcours ; frappes perdues (B4 → C7) | Fixé au grill | ⬜ |
+| G6. Passe UX des écrans | *Grill me avec la skill de design, puis mode plan.* Offres, Candidatures (parcours du dossier), Messages, Bilan, Profil, Système : mécanismes, boutons, parcours ; frappes perdues (B4 → C7) | Fixé au grill (décision G6) : défauts A1–A9 testés et aucun geste boosté qui hérite d'une cible ; un bouton principal par écran et par état ; « À préparer » → « Envoyée » en 5 clics au plus sans Gemini, décision au clavier sans frappe perdue ; aucune erreur muette ; un nom par chose (lexique testé) ; Bilan statistique recalculé exactement, chaque chiffre vers sa liste ; Système d'administration (état des modules, passages planifiés, partie « Application » réservée) ; recette de Nicolas sur l'artifact puis dans l'application | 🔄 |
 | G7. Identité graphique | *Grill me avec la skill de design.* Couche visuelle de tout Rocky, juste avant F2 | Fixé au grill | ⬜ |
 
 ### H. Revue de code, en parallèle de G
@@ -795,6 +795,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(F1 → plus tard, §5 VPS)** Un échec d'une tâche du planificateur (purge, recalcul) n'est écrit que dans le journal
   de l'application : ⚙️ Système ne le montre pas (décision F1, Q8, sans nouvelle table). Veille et relevé Gmail ont leur
   état en base. À reprendre si une tâche échoue sans bruit à l'usage (table des passages planifiés).
+  *Repris en G6 (Q21) : table des passages planifiés, lue par ⚙️ Système (Planification).*
 - **(F1, vérification)** `tests/system/test_render.py` a échoué une fois sur le poste (lancement de Chromium hors
   délai sous une charge de 13, `uv run pytest` hors Docker) ; vert seul et dans le service `check`. À surveiller si
   cela se répète.
@@ -870,6 +871,7 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   aucune écriture ne change l'adresse d'une offre : `SqlStore.update` n'écrit que `FACT_COLUMNS`), refuser une adresse
   déjà prise par une autre offre du compte, journaliser l'événement ; ou remplacement par « Lire la page affichée »
   (E5) quand l'adresse est celle de Gmail.
+  *Reporté en G6 (Q6) : non codé tant qu'aucun lecteur ne produit ce cas ; à faire au premier cas réel.*
 - **(G5 → bêtas, Nicolas)** Espace sous les compétences (D2 Q32) : avec la règle Q2 de G5, une zone du gabarit déduit
   sans carte dessinée n'a plus de ligne d'air ; une compétence de plus qui passe à la ligne est refusée. Acceptable pour
   le Canva de Nicolas (recette du 06/10) ; à revoir sur d'autres designs de CV (zone qui descend jusqu'au texte suivant).
@@ -907,6 +909,8 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
 - **(G4 → bêta)** Une vue d'administrateur des coûts de tous les comptes dans l'interface (aujourd'hui :
   `rocky-admin couts`) (Q19) ; l'effacement des conversations d'un compte et leur durée de conservation (RGPD) (Q22) ;
   un plafond de questions fixé d'après les coûts de la recette (Q8).
+  *Vue d'administrateur des coûts : en G6 (Q20, Q21), partie « Application » de ⚙️ Système réservée aux comptes de
+  `ROCKY_ADMIN_EMAILS`.*
 - **(G4 → plus tard)** Un modèle local (Ollama…) derrière le port `JsonModel` (Q23).
 - **(G4 → recette)** Tarifs de Mistral Medium et Small lus sur une source tierce le 07/10 (absents des pages de
   Mistral) : à vérifier par Nicolas (`rocky/system/llm/prices.py`) ; les prix de Gemini 3.6 à 3.8 Flash doublent au
@@ -927,4 +931,6 @@ Ne comparer des périodes qu'une fois dénominateurs et qualité des événement
   `INSTRUCTIONS`) pour des réponses plus chaleureuses et agréables, sans perdre les faits cités (retour de recette de
   Nicolas, 07/10). Toute nouvelle consigne s'éprouve sur les questions de référence de la décision G4, à deux
   fournisseurs au moins.
-
+- **(G6 → bêta, Nicolas 07/10)** ⚙️ Système devient en G6 la page d'administration et de monitoring (Q17, Q20) : à la
+  bêta, la passer en administrateur seul et la remplacer, pour les autres comptes, par une page Système / Paramètres.
+  Sous-page DevOps (déploiement VPS) après F2.
