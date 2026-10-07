@@ -153,6 +153,19 @@ sans crochets. Tests : `test_an_id_cited_as_shown_in_the_prompt_with_its_bracket
 Retour de Nicolas : les réponses fonctionnent ; leur ton est à travailler (plus chaleureux et agréable), noté au plan
 (§8).
 
-### Second passage
+### Second passage et comparaison (07/10)
 
-*(à venir : GPT-5.4 mini après la correction, comparaison des réponses et des coûts)*
+Après la correction, GPT-5.4 mini répond aux questions de référence (7 réponses acceptées sur 7) ; Nicolas : « ça
+fonctionne ». Moyennes par question, lues dans `model_calls` (coût estimé avec les tarifs de `prices.py`) :
+
+| Modèle | Questions | Jetons d'entrée | Jetons de sortie | Durée | Coût estimé |
+|---|---|---|---|---|---|
+| `gemini-3.5-flash-lite` | 11 (10 acceptées) | 2 610 | 100 | 1,1 s | ≈ 0,92 € pour 1 000 questions |
+| `gpt-5.4-mini` | 9 (7 acceptées après la correction) | 2 279 | 79 | 1,7 s | ≈ 1,83 € pour 1 000 questions |
+
+Les deux citent leurs faits ; Gemini est deux fois moins cher et plus rapide sur ces questions. Le plafond de la bêta
+(Q8) se fixera sur ces ordres de grandeur : à 5 questions par jour, un compte coûte moins d'un centime par jour avec
+l'un ou l'autre.
+
+**Étape close par Nicolas le 07/10** : critère vérifié par les tests (points 2 et 3), l'essai, la recette sur ses
+données avec Gemini et OpenAI (points 1, 4 et 6) et la vérification verte en local et sur GitHub (point 5).
