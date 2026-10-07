@@ -346,6 +346,18 @@ def test_no_letter_makes_a_prepared_application_ready_at_once() -> None:
     ]
 
 
+def test_no_letter_twice_writes_once() -> None:
+    """A double click on « Pas de lettre » (step H5): the second one finds the letter already set aside."""
+    store, offers = FakeStore(), FakeOffers()
+    prepare(store, offers)
+
+    for _ in range(2):
+        skip_letter(store, account_id=ACCOUNT, application_id=1, now=NOW, today=TODAY)
+
+    assert len(store.letters(1)) == 1
+    assert store.event_types.count("candidatures.letter_skipped") == 1
+
+
 def test_letter_ready_waits_for_a_letter() -> None:
     store, offers = FakeStore(), FakeOffers()
     prepare(store, offers)
