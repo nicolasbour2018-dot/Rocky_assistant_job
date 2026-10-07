@@ -4,8 +4,7 @@
     <h2 id="boites-titre">Boîtes Gmail</h2>
   </div>
   {% if not configured %}
-  <p class="alert alert-info" role="status">Gmail n'est pas configuré : il manque le client Google ou la clé de Rocky.
-    La procédure est dans <code>docs/procedures/e1-gmail/</code>.</p>
+  <p class="alert alert-info" role="status">{{ not_configured }}</p>
   {% else %}
   <p class="muted small">Rocky lit tes e-mails sans jamais rien modifier ni envoyer : ta boîte principale (hors
     promotions, réseaux sociaux et forums) et les messages des sites d'alertes emploi, chaque heure.</p>

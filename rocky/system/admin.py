@@ -27,7 +27,7 @@ from rocky.messages.classification.model import (
 from rocky.messages.classification.usecases import ClassifyBusyError
 from rocky.messages.model import SYNC_STATUS_LABELS, SyncStatus
 from rocky.messages.model import Trigger as MailTrigger
-from rocky.messages.service import MessagesService, messages_service
+from rocky.messages.service import NOT_CONFIGURED, MessagesService, messages_service
 from rocky.offres.sources.http import PublicHttp
 from rocky.offres.sources.model import JobSource
 from rocky.offres.sources.registry import build_sources
@@ -243,10 +243,7 @@ def collect_messages(
 ) -> int:
     """Collect every connected Gmail mailbox of ``email`` for real (decision E1), then tell each collection."""
     if not service.configured:
-        out.write(
-            "Gmail n'est pas configuré : il manque le client Google ou ROCKY_SECRET_KEY "
-            "(docs/procedures/e1-gmail/).\n"
-        )
+        out.write(f"{NOT_CONFIGURED}\n")
         return 1
     account = _account(engine, email, out)
     if isinstance(account, int):

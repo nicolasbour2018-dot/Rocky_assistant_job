@@ -20,7 +20,7 @@ from rocky.offres.decisions import Author
 from rocky.system.events import NewEvent
 
 # Changes whenever a rule, a list or the model's instructions change: kept with every decision (Q6, D14).
-CLASSIFY_VERSION = "mail-classify-2026-10-05.7"
+CLASSIFY_VERSION = "mail-classify-2026-10-07.1"
 
 
 class Category(StrEnum):

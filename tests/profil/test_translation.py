@@ -155,7 +155,7 @@ def test_a_proposal_that_breaks_the_rules_says_why() -> None:
     )
 
     assert warnings == (
-        "2 ligne(s) en français, 1 en anglais.",
+        "2 lignes en français, 1 en anglais.",
         "Le gras (**…**) n'est pas repris comme en français.",
         "Glossaire : « Pilotage » devait devenir « Steering ».",
         "« Chartres » devait rester tel quel.",

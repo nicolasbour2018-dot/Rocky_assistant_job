@@ -498,7 +498,10 @@ def create_english_cv(request: Request, account: CurrentAccount) -> Response:
         return _english_screen(
             request,
             account,
-            error=f"Il reste {len(state.to_translate)} texte(s) à valider avant de créer ton CV anglais.",
+            error=(
+                f"Il reste {len(state.to_translate)} texte{'s' if len(state.to_translate) > 1 else ''} à valider "
+                "avant de créer ton CV anglais."
+            ),
         )
     files = english_template(state.files, state.validated, state.french.sha256)
     stored = _file_store(request).put_bundle(account.id, TEMPLATES, files)

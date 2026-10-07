@@ -61,6 +61,7 @@ from rocky.messages.oauth import (
     seal_pending,
 )
 from rocky.messages.service import (
+    NOT_CONFIGURED,
     MailboxView,
     MessagesService,
     messages_service,
@@ -110,10 +111,6 @@ NOTICES = {
         "(Sécurité, « Applications tierces »)."
     ),
 }
-NOT_CONFIGURED = (
-    "Gmail n'est pas configuré : il manque le client Google ou la clé de Rocky "
-    "(docs/procedures/e1-gmail/)."
-)
 EXPIRED = (
     "La demande d'autorisation a expiré ou ne vient pas de cette page : "
     "recommence « Connecter une boîte Gmail »."
@@ -326,6 +323,7 @@ def _context(
     scheduler: Scheduler = request.app.state.scheduler
     return {
         "configured": service.configured,
+        "not_configured": NOT_CONFIGURED,
         "state": state,
         "running": launched
         or state.running

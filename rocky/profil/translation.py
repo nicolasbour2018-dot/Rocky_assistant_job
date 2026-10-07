@@ -185,8 +185,9 @@ def checks(
     """What a proposal breaks, said plainly; nothing when it keeps lines, bold, glossary and names (Q6, Q21)."""
     warnings: list[str] = []
     if len(source.split("\n")) != len(english.split("\n")):
+        lines = len(source.split("\n"))
         warnings.append(
-            f"{len(source.split(chr(10)))} ligne(s) en français, {len(english.split(chr(10)))} en anglais."
+            f"{lines} ligne{'s' if lines > 1 else ''} en français, {len(english.split(chr(10)))} en anglais."
         )
     if source.count("**") != english.count("**"):
         warnings.append("Le gras (**…**) n'est pas repris comme en français.")
