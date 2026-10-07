@@ -754,6 +754,10 @@ def _track_from(form: FormData) -> Any:
 type Change = Callable[[ProfileEditor, FormData], bool | int]
 
 
+class _NothingChangedError(Exception):
+    """Raised inside ``_editor``: nothing is committed and the rescoring is not woken up (step H5)."""
+
+
 def _write(
     request: Request,
     account: Account,
@@ -765,8 +769,10 @@ def _write(
     try:
         with _editor(request, account, writes=True) as editor:
             if change(editor, form) is False:
-                return Response(status_code=404)
+                raise _NothingChangedError
             profile = editor.profile()
+    except _NothingChangedError:
+        return Response(status_code=404)
     except ProfileInputError as error:
         return _refused(
             request, profile_of(request, account), key, editing, form, error
