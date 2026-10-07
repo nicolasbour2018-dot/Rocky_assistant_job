@@ -112,7 +112,7 @@ Arrêté à la recette de l'artifact.
 
 | Bloc | Vérification globale (`docker compose run --rm --build check`) | GitHub |
 |---|---|---|
-| 0 | 1 848 tests, verte : 122,7 s de pytest, 2 min 13 au total (charge moyenne 3 à 12) ; garde-fou 34 sur 34 | voir le passage de la PR |
+| 0 | 1 848 tests, verte : 122,7 s de pytest, 2 min 13 au total (charge moyenne 3 à 12) ; garde-fou 34 sur 34 | verte : pytest 114,5 s (passage `37604023405`) |
 
 Bloc 0 : A3 (redirection vers Google) n'a pas été essayé dans un vrai navigateur : aucun client Google n'est
 configuré sur l'instance d'essai ; il est couvert par les tests HTTP (formulaire non boosté, redirection 303).
@@ -120,7 +120,22 @@ configuré sur l'instance d'essai ; il est couvert par les tests HTTP (formulair
 ## Recette
 
 Artifact de la recette initiale (prototype cliquable, privé) : https://claude.ai/artifact/9982upNV24d21qd7Puk18N,
-publié le 07/10 ; commentaires de Nicolas à reprendre ici avant le bloc 1. Point soumis à Nicolas dans l'artifact :
+publié le 07/10 ; commentaires de Nicolas à reprendre ici avant le bloc 1.
+
+### Recette initiale, premier retour de Nicolas (07/10)
+
+| # | Retour | Décision |
+|---|---|---|
+| R1 | La maquette de Claude est austère ; celle de Codex est plus claire et plus attrayante, mais moins profonde | On garde la **profondeur** de la version de Claude (mécanismes, gestes, états, adresses, clavier, parcours) et la **présentation** de Codex pour ce qui s'affiche à l'écran (`docs/procedures/g6-ux/rocky-g6.html`). |
+| R2 | 🔎 Offres | Présentation de Codex entière : recherche, pistes en puces, facettes, cartes d'opportunité, « Explorer » / « Mode focus », fiche et motifs en fenêtre, gestes « Ça m'intéresse », « Pas pour moi », « J'y reviens ». |
+| R3 | 📬 Messages | Présentation de Codex entière : « Ce qui a bougé » en tête avec sa preuve dépliée, messages en cartes, onglets de Codex, correction en fenêtre, boîtes rangées en bas vers Système. |
+| R4 | 👤 Profil & kit | Organisation visuelle de Codex (index des sections, une section à la fois), **« CV & kit » en premier** : compétences, expériences, projets et langues sont préremplis par la lecture du CV. On garde « Identité & préférences » avec l'accord pour l'IA, qui **nomme le modèle utilisé** (Gemini, GPT, Mistral ou Claude, selon la configuration). Révise Q15 (4 sous-pages) et Q12 (accord « Gemini » → accord pour l'IA). |
+| R5 | ⚙️ Système | La version de Claude entière : Codex n'a pas la profondeur attendue. |
+| R6 | 📝 Candidatures | Les onglets de Claude (À faire, À préparer, En préparation, Prêtes à envoyer, Envoyées, Closes) dans la présentation de Codex (tableau, dossier en panneaux numérotés, aperçu en document). | Point soumis à Nicolas dans l'artifact :
+
+Version 2 de l'artifact publiée le 07/10 à la même adresse (présentation de Codex, profondeur de Claude). Points
+soumis à Nicolas : « Ça m'intéresse » en bouton principal (Codex) contre Q10 (trois décisions de même poids) ; les
+lignes « à trancher » du lexique.
 en Tri, panneau fermé, aucun bouton principal (Q10) alors que le critère 2 en demande un par état (exception
 proposée).
 
